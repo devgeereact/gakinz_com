@@ -2,113 +2,114 @@
 @tailwind components;
 @tailwind utilities;
 
-/* GAkinz brand fonts */
-@import url('https://fonts.googleapis.com/css2?family=Merriweather:wght@400;700;900&family=Montserrat:wght@400;500;600;700;800&family=Source+Code+Pro:wght@400;500&display=swap');
+/* GAkinz brand fonts — Inter (sans), JetBrains Mono (mono), Georgia (serif, system) */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @layer base {
-  /* GAkinz brand theme — green / warm cream / espresso (see GAkinzOS brand kit) */
+  /* GAkinz brand theme — violet (#6e56cf) / lavender-white. Hex from the brand
+     palette converted to shadcn HSL triplets (kit uses hsl(var(--token))). */
   :root {
-    --background: 39 33% 96%;        /* warm cream #f8f5f0 */
-    --foreground: 9 28% 19%;         /* espresso #3e2723 */
-    --card: 0 0% 100%;
-    --card-foreground: 9 28% 19%;
+    --background: 240 100% 98%;      /* #f5f5ff */
+    --foreground: 240 27% 23%;       /* #2a2a4a */
+    --card: 0 0% 100%;               /* #ffffff */
+    --card-foreground: 240 27% 23%;
     --popover: 0 0% 100%;
-    --popover-foreground: 9 28% 19%;
-    --primary: 123 46% 33%;          /* GAkinz green #2e7d32 */
-    --primary-foreground: 0 0% 100%;
-    --secondary: 125 39% 94%;        /* light green #e8f5e9 */
-    --secondary-foreground: 124 55% 24%;
-    --muted: 39 25% 92%;
-    --muted-foreground: 16 22% 45%;  /* soft espresso */
-    --accent: 125 39% 94%;
-    --accent-foreground: 124 55% 24%;
-    --destructive: 0 72% 46%;        /* #c62828 */
+    --popover-foreground: 240 27% 23%;
+    --primary: 252 56% 57%;          /* #6e56cf */
+    --primary-foreground: 0 0% 100%; /* #ffffff */
+    --secondary: 249 100% 94%;       /* #e4dfff */
+    --secondary-foreground: 249 33% 38%; /* #4a4080 */
+    --muted: 240 50% 96%;            /* #f0f0fa */
+    --muted-foreground: 240 12% 48%; /* #6c6c8a */
+    --accent: 218 100% 92%;          /* #d8e6ff */
+    --accent-foreground: 240 27% 23%;
+    --destructive: 350 100% 66%;     /* #ff5470 */
     --destructive-foreground: 0 0% 100%;
-    --border: 34 27% 83%;            /* warm border #e0d6c9 */
-    --input: 34 27% 83%;
-    --ring: 123 46% 33%;
-    --chart-1: 123 40% 58%;
-    --chart-2: 123 44% 46%;
-    --chart-3: 123 50% 36%;
-    --chart-4: 124 55% 28%;
-    --chart-5: 124 60% 20%;
+    --border: 240 35% 91%;           /* #e0e0f0 */
+    --input: 240 35% 91%;
+    --ring: 252 56% 57%;             /* #6e56cf */
+    --chart-1: 252 56% 57%;          /* #6e56cf */
+    --chart-2: 250 95% 77%;          /* #9e8cfc */
+    --chart-3: 239 82% 65%;          /* #5d5fef */
+    --chart-4: 243 93% 72%;          /* #7c75fa */
+    --chart-5: 244 47% 48%;          /* #4740b3 */
     --radius: 0.5rem;
-    --sidebar-background: 39 33% 97%;
-    --sidebar-foreground: 9 24% 28%;
-    --sidebar-primary: 123 46% 33%;
+    --sidebar-background: 240 50% 96%;   /* #f0f0fa */
+    --sidebar-foreground: 240 27% 23%;
+    --sidebar-primary: 252 56% 57%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 125 39% 94%;
-    --sidebar-accent-foreground: 124 55% 24%;
-    --sidebar-border: 34 27% 88%;
-    --sidebar-ring: 123 46% 33%;
-    /* GAkinz raw brand tokens (for non-token marketing styling) */
-    --gk-green: #2e7d32;
-    --gk-green-dk: #1b5e20;
-    --gk-green-darkest: #0a1f0c;
-    --gk-cream: #f8f5f0;
-    --gk-espresso: #3e2723;
-    --font-serif: 'Merriweather', Georgia, serif;
+    --sidebar-accent: 218 100% 92%;      /* #d8e6ff */
+    --sidebar-accent-foreground: 240 27% 23%;
+    --sidebar-border: 240 35% 91%;
+    --sidebar-ring: 252 56% 57%;
+    /* Raw brand tokens for non-token marketing styling */
+    --gk-violet: #6e56cf;
+    --gk-violet-2: #9e8cfc;
+    --gk-violet-dk: #4740b3;
+    --gk-bg: #f5f5ff;
+    --gk-ink: #2a2a4a;
+    --font-serif: Georgia, 'Times New Roman', serif;
   }
 
   /* Public corporate site always renders in the designed light brand theme,
      regardless of the visitor's OS dark-mode preference. Re-declaring the
      tokens on the wrapper overrides any inherited .dark values for its subtree. */
   .gk-public {
-    --background: 39 33% 96%;
-    --foreground: 9 28% 19%;
+    --background: 240 100% 98%;
+    --foreground: 240 27% 23%;
     --card: 0 0% 100%;
-    --card-foreground: 9 28% 19%;
+    --card-foreground: 240 27% 23%;
     --popover: 0 0% 100%;
-    --popover-foreground: 9 28% 19%;
-    --primary: 123 46% 33%;
+    --popover-foreground: 240 27% 23%;
+    --primary: 252 56% 57%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 125 39% 94%;
-    --secondary-foreground: 124 55% 24%;
-    --muted: 39 25% 92%;
-    --muted-foreground: 16 22% 45%;
-    --accent: 125 39% 94%;
-    --accent-foreground: 124 55% 24%;
-    --destructive: 0 72% 46%;
+    --secondary: 249 100% 94%;
+    --secondary-foreground: 249 33% 38%;
+    --muted: 240 50% 96%;
+    --muted-foreground: 240 12% 48%;
+    --accent: 218 100% 92%;
+    --accent-foreground: 240 27% 23%;
+    --destructive: 350 100% 66%;
     --destructive-foreground: 0 0% 100%;
-    --border: 34 27% 83%;
-    --input: 34 27% 83%;
-    --ring: 123 46% 33%;
+    --border: 240 35% 91%;
+    --input: 240 35% 91%;
+    --ring: 252 56% 57%;
     color-scheme: light;
   }
 
   .dark {
-    --background: 126 42% 7%;        /* near brand-darkest #0a1f0c */
-    --foreground: 39 33% 96%;
-    --card: 124 24% 10%;
-    --card-foreground: 39 33% 96%;
-    --popover: 124 24% 10%;
-    --popover-foreground: 39 33% 96%;
-    --primary: 123 45% 50%;          /* brighter green on dark */
-    --primary-foreground: 124 55% 10%;
-    --secondary: 124 16% 17%;
-    --secondary-foreground: 39 33% 96%;
-    --muted: 124 14% 16%;
-    --muted-foreground: 120 8% 66%;
-    --accent: 124 18% 19%;
-    --accent-foreground: 39 33% 96%;
-    --destructive: 0 62% 40%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 124 14% 17%;
-    --input: 124 14% 17%;
-    --ring: 123 45% 50%;
-    --chart-1: 123 42% 62%;
-    --chart-2: 123 46% 52%;
-    --chart-3: 123 50% 44%;
-    --chart-4: 124 55% 36%;
-    --chart-5: 124 60% 28%;
-    --sidebar-background: 126 38% 9%;
-    --sidebar-foreground: 39 20% 90%;
-    --sidebar-primary: 123 45% 50%;
-    --sidebar-primary-foreground: 124 55% 10%;
-    --sidebar-accent: 124 16% 17%;
-    --sidebar-accent-foreground: 39 33% 96%;
-    --sidebar-border: 124 14% 17%;
-    --sidebar-ring: 123 45% 50%;
+    --background: 240 27% 8%;        /* #0f0f1a */
+    --foreground: 240 49% 92%;       /* #e2e2f5 */
+    --card: 240 28% 14%;             /* #1a1a2e */
+    --card-foreground: 240 49% 92%;
+    --popover: 240 28% 14%;
+    --popover-foreground: 240 49% 92%;
+    --primary: 251 100% 78%;         /* #a48fff */
+    --primary-foreground: 240 27% 8%;
+    --secondary: 243 33% 25%;        /* #2d2b55 */
+    --secondary-foreground: 242 100% 88%; /* #c4c2ff */
+    --muted: 240 33% 20%;            /* #222244 */
+    --muted-foreground: 240 20% 69%; /* #a0a0c0 */
+    --accent: 240 33% 28%;           /* #303060 */
+    --accent-foreground: 240 49% 92%;
+    --destructive: 350 100% 66%;     /* #ff5470 */
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 26% 25%;           /* #303052 */
+    --input: 240 26% 25%;
+    --ring: 251 100% 78%;            /* #a48fff */
+    --chart-1: 251 100% 78%;         /* #a48fff */
+    --chart-2: 231 44% 64%;          /* #7986cb */
+    --chart-3: 207 89% 68%;          /* #64b5f6 */
+    --chart-4: 174 42% 51%;          /* #4db6ac */
+    --chart-5: 326 100% 74%;         /* #ff79c6 */
+    --sidebar-background: 240 28% 14%;   /* #1a1a2e */
+    --sidebar-foreground: 240 49% 92%;
+    --sidebar-primary: 251 100% 78%;
+    --sidebar-primary-foreground: 240 27% 8%;
+    --sidebar-accent: 240 33% 28%;       /* #303060 */
+    --sidebar-accent-foreground: 240 49% 92%;
+    --sidebar-border: 240 26% 25%;
+    --sidebar-ring: 251 100% 78%;
   }
 }
 

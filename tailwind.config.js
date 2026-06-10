@@ -20,6 +20,11 @@ var config = {
                 md: 'calc(var(--radius) - 2px)',
                 sm: 'calc(var(--radius) - 4px)'
             },
+            fontFamily: {
+                sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                serif: ['Georgia', 'Times New Roman', 'serif'],
+                mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
+            },
             colors: {
                 background: 'hsl(var(--background))',
                 foreground: 'hsl(var(--foreground))',

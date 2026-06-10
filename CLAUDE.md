@@ -179,9 +179,12 @@ the same static `dist/` (`tsc -b && vite build`), so deploy is unaffected. (Over
 - `/login` → kit `LoginPage` (AuthLayout).
 - CMS at `/app/*` → kit `AppLayout` + dashboards (still demo content; to become GAkinzOS modules).
 
-**Brand theme:** GAkinz green `#2e7d32` / warm cream `#f8f5f0` / espresso `#3e2723`, set as
-shadcn HSL tokens in `src/index.css` (`:root` + `.dark` + `.gk-public`). Fonts: Montserrat +
-Merriweather (serif headings).
+**Brand theme:** violet `#6e56cf` / lavender-white `#f5f5ff` / navy ink `#2a2a4a` (dark: violet
+`#a48fff` on `#0f0f1a`). Supplied as a hex palette; converted to shadcn HSL triplets in
+`src/index.css` (`:root` + `.dark` + `.gk-public`) because the kit is Tailwind v3 and references
+`hsl(var(--token))` — raw hex would break those. Fonts: Inter (sans) + Georgia (serif headings) +
+JetBrains Mono, set in `tailwind.config.js`. NOTE: the active Tailwind config is
+`tailwind.config.js` (Tailwind picks `.js` over the near-empty `.ts`).
 
 **PHP API — `server/` (version-controlled, NOT auto-deployed; uploaded to the doc root by hand):**
 `api.php` (items smoke test), `contact.php` (enquiry → `enquiries`), `ai.php` (OpenRouter proxy,
