@@ -10,8 +10,8 @@
 
 // ── Database (cPanel / MySQL) ───────────────────────────────────────────────
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'REPLACE_db_name');
-define('DB_USER', 'REPLACE_db_user');
+define('DB_NAME', 'gakinz_com');
+define('DB_USER', 'gakinz_com');
 define('DB_PASS', 'REPLACE_db_password');
 
 // ── OpenRouter (server-side AI, never exposed to the browser) ────────────────
