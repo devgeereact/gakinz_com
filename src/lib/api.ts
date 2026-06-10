@@ -105,6 +105,45 @@ export const clients = {
     api.post<{ id: number; existing?: boolean }>("/clients.php?action=convert", { lead_id: leadId }),
 }
 
+// Projects & Tasks (§6 Projects & Tasks).
+export type ProjectStatus = "planning" | "in_progress" | "on_hold" | "launched"
+export type Project = {
+  id: number
+  name: string
+  status: ProjectStatus
+  due_date: string | null
+  client_id: number | null
+  client_company: string | null
+  task_count: number
+  done_count: number
+  created_at: string
+}
+export const projects = {
+  list: () => api.get<Project[]>("/projects.php"),
+  create: (payload: { name: string; client_id?: number | null; due_date?: string }) =>
+    api.post<{ id: number }>("/projects.php?action=create", payload),
+  setStatus: (id: number, status: ProjectStatus) =>
+    api.post<{ ok: boolean }>("/projects.php?action=status", { id, status }),
+}
+
+export type TaskStatus = "todo" | "doing" | "review" | "done"
+export type Task = {
+  id: number
+  project_id: number
+  title: string
+  status: TaskStatus
+  assignee: string | null
+  due_date: string | null
+  created_at: string
+}
+export const tasks = {
+  list: (projectId: number) => api.get<Task[]>(`/tasks.php?project_id=${projectId}`),
+  create: (payload: { project_id: number; title: string; assignee?: string; due_date?: string }) =>
+    api.post<{ id: number }>("/tasks.php?action=create", payload),
+  setStatus: (id: number, status: TaskStatus) =>
+    api.post<{ ok: boolean }>("/tasks.php?action=status", { id, status }),
+}
+
 // Auth (§6.1). Token + user persisted in the auth store; api attaches the bearer.
 export type LoginResponse = { token: string; expires: string; user: AuthUser }
 export const auth = {

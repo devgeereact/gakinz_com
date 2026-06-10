@@ -88,6 +88,33 @@ CREATE TABLE IF NOT EXISTS clients (
   CONSTRAINT fk_client_lead FOREIGN KEY (source_lead_id) REFERENCES enquiries(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Projects (§6 Projects & Tasks). One workspace per client build.
+CREATE TABLE IF NOT EXISTS projects (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  client_id  INT NULL,
+  name       VARCHAR(200) NOT NULL,
+  status     VARCHAR(30) NOT NULL DEFAULT 'planning', -- planning | in_progress | on_hold | launched
+  due_date   DATE NULL DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT fk_project_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Tasks within a project (kanban: todo | doing | review | done)
+CREATE TABLE IF NOT EXISTS tasks (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  project_id INT NOT NULL,
+  title      VARCHAR(300) NOT NULL,
+  status     VARCHAR(20) NOT NULL DEFAULT 'todo',
+  assignee   VARCHAR(120) DEFAULT NULL,
+  due_date   DATE NULL DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT fk_task_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Certificates with public verification (§6.8)
 CREATE TABLE IF NOT EXISTS certificates (
   id         INT AUTO_INCREMENT PRIMARY KEY,
