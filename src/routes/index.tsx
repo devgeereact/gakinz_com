@@ -122,7 +122,7 @@ export const router = createBrowserRouter([
       { path: "support", element: <ModuleStub title="Support Tickets" blurb="Clients raise issues, you resolve and track them. Post-launch care." /> },
       { path: "comms", element: <ModuleStub title="Communication Hub" blurb="Email, client messages, internal notes — every conversation tied to its project." /> },
       { path: "analytics", element: <ModuleStub title="Analytics & Reporting" blurb="Revenue, pipeline, project profitability, utilisation." /> },
-      { path: "platform", element: <ModuleStub title="Platform & Settings" blurb="Team roles, brand kit, integrations, automations, audit trail." /> },
+      { path: "platform", lazy: lz(() => import("@/app/modules/Platform")) },
 
       { path: "dashboard/analytics", lazy: lz(() => import("@/pages/dashboard/analytics/AnalyticsDashboard")) },
       { path: "dashboard/crm", lazy: lz(() => import("@/pages/dashboard/crm/CrmDashboard")) },

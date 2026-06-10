@@ -1,0 +1,101 @@
+<?php
+/**
+ * User & role management (GAkinzOS §6.11 Platform). Admin only.
+ *
+ *   GET  /users.php                 → list users
+ *   POST /users.php?action=create   {name, email, password, role}
+ *   POST /users.php?action=role     {id, role}
+ *   POST /users.php?action=status   {id, status}   status: active | suspended
+ *
+ * Roles come from VALID_ROLES. A user cannot change their own role or status
+ * (prevents self-lockout / self-demotion).
+ */
+require __DIR__ . '/_bootstrap.php';
+
+const ADMINS = ['super_admin', 'admin'];
+
+$method = $_SERVER['REQUEST_METHOD'];
+$action = $_GET['action'] ?? '';
+
+if ($method === 'GET') {
+  require_auth($conn, ADMINS);
+  $rows = [];
+  $sql = 'SELECT id, name, email, role, status, created_at FROM users WHERE deleted_at IS NULL ORDER BY id ASC';
+  if ($res = $conn->query($sql)) {
+    while ($r = $res->fetch_assoc()) {
+      $r['id'] = (int)$r['id'];
+      $rows[] = $r;
+    }
+  }
+  ok($rows);
+}
+
+if ($method === 'POST' && $action === 'create') {
+  $admin = require_auth($conn, ADMINS);
+  $in = body();
+  $name  = str_field($in, 'name', 200);
+  $email = strtolower(str_field($in, 'email', 200));
+  $pass  = (string)($in['password'] ?? '');
+  $role  = str_field($in, 'role', 30);
+  if ($name === '') fail('A name is required.');
+  if (!filter_var($email, FILTER_VALIDATE_EMAIL)) fail('A valid email is required.');
+  if (strlen($pass) < 8) fail('Password must be at least 8 characters.');
+  if (!in_array($role, VALID_ROLES, true)) fail('Invalid role.');
+  // Only a super_admin may create another super_admin.
+  if ($role === 'super_admin' && $admin['role'] !== 'super_admin') fail('Only a super admin can create a super admin.', 403);
+
+  $chk = $conn->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
+  $chk->bind_param('s', $email);
+  $chk->execute();
+  if ($chk->get_result()->fetch_assoc()) fail('A user with that email already exists.', 409);
+
+  $hash = password_hash($pass, PASSWORD_BCRYPT);
+  $stmt = $conn->prepare('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)');
+  $stmt->bind_param('ssss', $name, $email, $hash, $role);
+  if (!$stmt->execute()) fail('Could not create the user.', 500);
+  audit($conn, $admin['id'], 'user_create', "$email ($role)");
+  ok(['id' => $conn->insert_id], 201);
+}
+
+if ($method === 'POST' && $action === 'role') {
+  $admin = require_auth($conn, ADMINS);
+  $in = body();
+  $id = (int)($in['id'] ?? 0);
+  $role = str_field($in, 'role', 30);
+  if ($id <= 0) fail('A user id is required.');
+  if (!in_array($role, VALID_ROLES, true)) fail('Invalid role.');
+  if ($id === $admin['id']) fail('You cannot change your own role.', 403);
+  if ($role === 'super_admin' && $admin['role'] !== 'super_admin') fail('Only a super admin can grant super admin.', 403);
+
+  $stmt = $conn->prepare('UPDATE users SET role = ? WHERE id = ? AND deleted_at IS NULL');
+  $stmt->bind_param('si', $role, $id);
+  $stmt->execute();
+  if ($stmt->affected_rows < 1) fail('User not found.', 404);
+  audit($conn, $admin['id'], 'user_role', "#$id → $role");
+  ok(['ok' => true]);
+}
+
+if ($method === 'POST' && $action === 'status') {
+  $admin = require_auth($conn, ADMINS);
+  $in = body();
+  $id = (int)($in['id'] ?? 0);
+  $status = str_field($in, 'status', 20);
+  if ($id <= 0) fail('A user id is required.');
+  if (!in_array($status, ['active', 'suspended'], true)) fail('Invalid status.');
+  if ($id === $admin['id']) fail('You cannot change your own status.', 403);
+
+  $stmt = $conn->prepare('UPDATE users SET status = ? WHERE id = ? AND deleted_at IS NULL');
+  $stmt->bind_param('si', $status, $id);
+  $stmt->execute();
+  if ($stmt->affected_rows < 1) fail('User not found.', 404);
+  // A suspended user's existing sessions should stop working immediately.
+  if ($status === 'suspended') {
+    $del = $conn->prepare('DELETE FROM auth_tokens WHERE user_id = ?');
+    $del->bind_param('i', $id);
+    $del->execute();
+  }
+  audit($conn, $admin['id'], 'user_status', "#$id → $status");
+  ok(['ok' => true]);
+}
+
+fail('Method not allowed.', 405);

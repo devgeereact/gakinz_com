@@ -1,7 +1,7 @@
 // Central API helper.
 // Dev → hit the live API on the domain (api.php enables CORS).
 // Production (same domain) → relative path.
-import { getStoredToken, type AuthUser } from "@/store/auth.store"
+import { getStoredToken, type AuthUser, type Role } from "@/store/auth.store"
 
 export const API_BASE = import.meta.env.DEV ? "https://gakinz.com" : ""
 
@@ -142,6 +142,39 @@ export const tasks = {
     api.post<{ id: number }>("/tasks.php?action=create", payload),
   setStatus: (id: number, status: TaskStatus) =>
     api.post<{ ok: boolean }>("/tasks.php?action=status", { id, status }),
+}
+
+// Users & roles (§6.11 Platform). Admin only.
+export type UserStatus = "active" | "suspended"
+export type ManagedUser = {
+  id: number
+  name: string
+  email: string
+  role: Role
+  status: UserStatus
+  created_at: string
+}
+export const users = {
+  list: () => api.get<ManagedUser[]>("/users.php"),
+  create: (payload: { name: string; email: string; password: string; role: Role }) =>
+    api.post<{ id: number }>("/users.php?action=create", payload),
+  setRole: (id: number, role: Role) => api.post<{ ok: boolean }>("/users.php?action=role", { id, role }),
+  setStatus: (id: number, status: UserStatus) =>
+    api.post<{ ok: boolean }>("/users.php?action=status", { id, status }),
+}
+
+// Audit log (§6.1).
+export type AuditEntry = {
+  id: number
+  action: string
+  detail: string | null
+  ip: string | null
+  created_at: string
+  user_name: string | null
+  user_email: string | null
+}
+export const audit = {
+  list: () => api.get<AuditEntry[]>("/audit.php"),
 }
 
 // Auth (§6.1). Token + user persisted in the auth store; api attaches the bearer.
