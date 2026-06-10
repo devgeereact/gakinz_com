@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GAkinzOS — Agency Operations Platform · Feature Specification 2026</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  /* GAkinz brand palette — exact from brief */
+  --brand:     #2e7d32;
+  --brand-2:   #388e3c;
+  --brand-3:   #4caf50;
+  --brand-dk:  #1b5e20;
+  --brand-darkest: #0a1f0c;
+  --brand-lt:  rgba(46,125,50,.08);
+  --brand-mid: rgba(46,125,50,.15);
+  --accent:    #c8e6c9;
+  --secondary: #e8f5e9;
+  /* Layout — warm cream foreground from brief */
+  --bg:        #f8f5f0;
+  --surface:   #ffffff;
+  --raised:    #f0e9e0;
+  --card:      #f8f5f0;
+  --border:    #e0d6c9;
+  --border2:   #d4c8b8;
+  /* Type — espresso brown from brief */
+  --ink:       #3e2723;
+  --mid:       #6d4c41;
+  --soft:      #9c8579;
+  --hint:      #c4b5a8;
+  /* Semantic */
+  --green:     #2e7d32; --green-lt: rgba(46,125,50,.1);
+  --purple:    #6a4c93; --purple-lt: rgba(106,76,147,.1);
+  --amber:     #b8860b; --amber-lt: rgba(184,134,11,.1);
+  --red:       #c62828; --red-lt: rgba(198,40,40,.1);
+  --r-sm: 6px; --r-md: 10px; --r-lg: 14px; --r-xl: 20px;
+  --font-sans: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-serif: 'Merriweather', Georgia, serif;
+  --font-mono: 'Source Code Pro', monospace;
+  font-family: var(--font-sans);
+  font-size: 16px; line-height: 1.5;
+}
+body { background: var(--bg); color: var(--ink); min-height: 100vh; }
+.page { max-width: 1060px; margin: 0 auto; padding: 2rem 1.25rem 5rem; }
+
+.banner { background: linear-gradient(120deg, var(--brand-dk), var(--brand-2));
+  border-radius: var(--r-xl) var(--r-xl) 0 0; padding: .55rem 1.5rem;
+  display: flex; align-items: center; justify-content: space-between; }
+.banner-l { font-size: 11px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: rgba(255,255,255,.9); }
+.banner-r { font-size: 11px; font-weight: 600; color: rgba(255,255,255,.7); }
+
+.cover { background: var(--surface); border: 1px solid var(--border); border-top: none;
+  border-radius: 0 0 var(--r-xl) var(--r-xl); padding: 2.5rem 2rem 2rem;
+  margin-bottom: 1.5rem; box-shadow: 0 4px 28px rgba(46,125,50,.07);
+  position: relative; overflow: hidden; }
+.cover::after { content:''; position:absolute; right:-50px; top:-50px;
+  width: 240px; height: 240px;
+  background: radial-gradient(circle, var(--brand-lt) 0%, transparent 70%);
+  border-radius: 50%; }
+.cover-eyebrow { font-size: 11px; font-weight: 600; letter-spacing: .09em;
+  text-transform: uppercase; color: var(--brand); margin-bottom: .5rem; }
+.cover-title { font-family: var(--font-serif); font-size: 2.6rem; font-weight: 700;
+  line-height: 1.1; margin-bottom: .4rem; }
+.cover-title span { color: var(--brand); }
+.cover-tagline { font-size: 1.1rem; color: var(--mid); margin-bottom: 1.75rem; }
+
+.amv-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; margin-bottom: 1.75rem; }
+.amv-card { background: var(--raised); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 1.1rem 1.15rem; border-top: 3px solid var(--brand); }
+.amv-card.full { grid-column: 1 / -1; }
+.amv-label { font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--brand); margin-bottom: .4rem; }
+.amv-text { font-size: .85rem; color: var(--mid); line-height: 1.6; }
+
+.cover-stats { display: flex; flex-wrap: wrap; gap: .75rem;
+  padding-top: 1.5rem; border-top: 1px solid var(--border); }
+.cstat { display: flex; flex-direction: column; align-items: center;
+  background: var(--brand-lt); border-radius: var(--r-md);
+  padding: .65rem 1.1rem; border: 1px solid var(--brand-mid); min-width: 88px; }
+.cstat-n { font-family: var(--font-serif); font-size: 1.5rem; font-weight: 700; color: var(--brand); }
+.cstat-l { font-size: 10px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--mid); margin-top: 1px; }
+
+.legend { background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: .8rem 1.1rem; display: flex;
+  flex-wrap: wrap; gap: .75rem 1.5rem; margin-bottom: 1.1rem;
+  box-shadow: 0 1px 4px rgba(0,0,0,.03); align-items: center; }
+.l-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--mid); }
+.ldot { width: 9px; height: 9px; border-radius: 50%; }
+
+.filters { display: flex; flex-wrap: wrap; gap: .4rem; margin-bottom: 1rem; }
+.fb { font-size: 12px; padding: 5px 14px; border-radius: 20px;
+  border: 1px solid var(--border); background: var(--surface); color: var(--mid);
+  cursor: pointer; transition: all .15s; font-weight: 500;
+  box-shadow: 0 1px 3px rgba(0,0,0,.03); }
+.fb:hover { background: var(--raised); border-color: var(--border2); }
+.fb.on { background: var(--brand); color: #fff; border-color: var(--brand);
+  box-shadow: 0 2px 8px var(--brand-mid); }
+
+.search-wrap { position: relative; margin-bottom: 1.25rem; }
+.search-wrap input { width: 100%; padding: .65rem 1rem .65rem 2.5rem;
+  border: 1px solid var(--border); border-radius: var(--r-lg);
+  font-size: .875rem; background: var(--surface); color: var(--ink);
+  outline: none; transition: all .15s; box-shadow: 0 1px 4px rgba(0,0,0,.03);
+  font-family: var(--font-sans); }
+.search-wrap input::placeholder { color: var(--hint); }
+.search-wrap input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px var(--brand-lt); }
+.sico { position: absolute; left: .85rem; top: 50%; transform: translateY(-50%);
+  color: var(--soft); font-size: .95rem; }
+
+.modules { display: flex; flex-direction: column; gap: .75rem; }
+.mod { background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-xl); overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,.04);
+  transition: box-shadow .2s, border-color .2s; }
+.mod:hover { box-shadow: 0 4px 16px rgba(0,0,0,.08); border-color: var(--border2); }
+.mod.hide { display: none; }
+.m-head { display: flex; align-items: center; gap: .9rem; padding: 1rem 1.25rem;
+  cursor: pointer; transition: background .15s; border-left: 4px solid transparent; }
+.m-head.open-head { border-left-color: var(--brand); }
+.m-head:hover { background: var(--raised); }
+.m-icon { width: 42px; height: 42px; border-radius: var(--r-md); display: flex;
+  align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0; }
+.m-info { flex: 1; min-width: 0; }
+.m-name { font-size: .96rem; font-weight: 700; color: var(--ink); }
+.m-desc { font-size: .78rem; color: var(--soft); margin-top: 2px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-right { display: flex; align-items: center; gap: .4rem; flex-shrink: 0; }
+.mpill { font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 20px; border: 1px solid; }
+.mp-cnt { background: var(--raised); color: var(--soft); border-color: var(--border); }
+.mp-ai  { background: var(--purple-lt); color: var(--purple); border-color: rgba(106,76,147,.25); }
+.mp-new { background: var(--amber-lt); color: var(--amber); border-color: rgba(184,134,11,.25); }
+.mp-mvp { background: var(--green-lt); color: var(--green); border-color: rgba(46,125,50,.25); }
+.chev { font-size: .85rem; color: var(--soft); transition: transform .2s; margin-left: .2rem; }
+.chev.open { transform: rotate(180deg); }
+
+.m-body { display: none; border-top: 1px solid var(--border); padding: 1.1rem 1.25rem; background: var(--raised); }
+.m-body.open { display: block; }
+.sec-lbl { font-size: 9.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--soft); margin-bottom: .55rem; margin-top: .9rem; display: flex; align-items: center; gap: .5rem; }
+.sec-lbl::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+.sec-lbl:first-child { margin-top: 0; }
+.f-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: .4rem; }
+.feat { display: flex; align-items: flex-start; gap: .5rem; padding: .55rem .7rem;
+  background: var(--surface); border-radius: var(--r-md); border: 1px solid var(--border);
+  transition: all .15s; }
+.feat:hover { border-color: var(--brand); box-shadow: 0 2px 8px var(--brand-lt); }
+.fdot { width: 7px; height: 7px; border-radius: 50%; margin-top: 5px; flex-shrink: 0; }
+.ftext { font-size: .8rem; color: var(--ink); line-height: 1.45; flex: 1; }
+.ftip { font-size: .69rem; color: var(--soft); display: block; margin-top: 1px; }
+.ftag { font-size: 9.5px; font-weight: 700; padding: 1px 6px; border-radius: 6px;
+  margin-left: auto; align-self: flex-start; margin-top: 2px; flex-shrink: 0; border: 1px solid; white-space: nowrap; }
+.t-mvp { background: var(--green-lt); color: var(--green); border-color: rgba(46,125,50,.25); }
+.t-ai  { background: var(--purple-lt); color: var(--purple); border-color: rgba(106,76,147,.25); }
+.t-new { background: var(--amber-lt); color: var(--amber); border-color: rgba(184,134,11,.25); }
+.t-crit{ background: var(--red-lt); color: var(--red); border-color: rgba(198,40,40,.25); }
+
+.foot { margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border);
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: .5rem;
+  font-size: .8rem; color: var(--soft); }
+
+@media(max-width:680px){
+  .amv-grid { grid-template-columns: 1fr; }
+  .cover-title { font-size: 1.9rem; }
+  .f-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<div class="banner">
+  <span class="banner-l">GAkinzOS · Agency Operations Platform</span>
+  <span class="banner-r">2026 Edition · GAkinz</span>
+</div>
+
+<div class="cover">
+  <div class="cover-eyebrow">Lead to Paid · One Platform · Feature Specification 2026</div>
+  <div class="cover-title"><span>GAkinz</span>OS</div>
+  <div class="cover-tagline">From first enquiry to final invoice — the studio runs every client, project and payment from one place.</div>
+
+  <div class="amv-grid">
+    <div class="amv-card full">
+      <div class="amv-label">About GAkinz</div>
+      <div class="amv-text">GAkinz is a web design and development studio that takes pride in work crafted with care, from the look of a site to how it behaves in a visitor's hands. We sit at the crossroads of design and development, so a client gets one team that both draws the vision and builds it properly. GAkinzOS is the system that runs the studio: it tracks every lead, client, project and pound, so the team can spend its hours on the craft instead of the admin.</div>
+    </div>
+    <div class="amv-card">
+      <div class="amv-label">Our Mission</div>
+      <div class="amv-text">GAkinz exists to give businesses one team for both design and build, so their website looks right and works right, without the handoff gaps that slow most projects down.</div>
+    </div>
+    <div class="amv-card">
+      <div class="amv-label">Our Vision</div>
+      <div class="amv-text">A web where any business can hand its whole site to one studio and watch it move from sketch to launch without ever falling between design and code.</div>
+    </div>
+    <div class="amv-card">
+      <div class="amv-label">What We Build</div>
+      <div class="amv-text">GAkinzOS is the studio operating system: leads, clients, projects, proposals, invoices, a client portal, time tracking and support, all under one roof and one brand.</div>
+    </div>
+  </div>
+
+  <div class="cover-stats">
+    <div class="cstat"><div class="cstat-n">12</div><div class="cstat-l">Modules</div></div>
+    <div class="cstat"><div class="cstat-n">168</div><div class="cstat-l">Features</div></div>
+    <div class="cstat"><div class="cstat-n">52</div><div class="cstat-l">AI Features</div></div>
+    <div class="cstat"><div class="cstat-n">8</div><div class="cstat-l">Core asks</div></div>
+    <div class="cstat"><div class="cstat-n">1</div><div class="cstat-l">Platform</div></div>
+  </div>
+</div>
+
+<div class="legend">
+  <span style="font-size:11px;font-weight:700;color:var(--mid);margin-right:.25rem">Tags:</span>
+  <div class="l-item"><span class="ldot" style="background:#2e7d32"></span>MVP — build first</div>
+  <div class="l-item"><span class="ldot" style="background:#6a4c93"></span>AI-powered</div>
+  <div class="l-item"><span class="ldot" style="background:#b8860b"></span>New 2026</div>
+  <div class="l-item"><span class="ldot" style="background:#c62828"></span>Critical</div>
+</div>
+
+<div class="filters" id="filters"></div>
+
+<div class="search-wrap">
+  <span class="sico">🔍</span>
+  <input id="si" type="text" placeholder="Search all 168 features…" oninput="search(this.value)">
+</div>
+
+<div class="modules" id="mods"></div>
+
+<div class="foot">
+  <span>GAkinz · gakinz.com · GAkinzOS v1.0 · Private studio platform</span>
+  <span>2026 Edition · Confidential</span>
+</div>
+
+</div>
+
+<script>
+const C = { mvp:'#2e7d32', ai:'#6a4c93', new:'#b8860b', crit:'#c62828', std:'#9c8579' };
+
+const MODULES = [
+{
+  id:'dashboard', name:'Studio Dashboard', tags:['mvp','admin'],
+  desc:'One live view — pipeline, active projects, hours, cash, what needs attention today',
+  icon:'◆', ibg:'rgba(46,125,50,.1)', ai:5, new:3, mvp:6,
+  sections:[
+    { lbl:'The view that opens every morning', feats:[
+      {t:'Pipeline value board',tip:'Open leads and their total value',dot:C.mvp,mvp:true},
+      {t:'Active projects status',tip:'Every live build and its stage',dot:C.mvp,mvp:true},
+      {t:'Money owed counter',tip:'Unpaid invoices at a glance',dot:C.mvp,mvp:true},
+      {t:'Hours this week',tip:'Billable vs non-billable so far',dot:C.mvp,mvp:true},
+      {t:'Deadlines this week',tip:'Milestones and tasks due soon',dot:C.mvp,mvp:true},
+      {t:'Needs attention list',tip:'Overdue tasks, stale leads, late payers',dot:C.mvp,mvp:true},
+    ]},
+    { lbl:'AI intelligence', feats:[
+      {t:'AI morning briefing',tip:'Top priorities for today, written out',dot:C.ai,ai:true,isNew:true},
+      {t:'AI revenue forecast',tip:'90-day projection from pipeline',dot:C.ai,ai:true},
+      {t:'AI capacity warning',tip:'Flags when the team is over-booked',dot:C.ai,ai:true,isNew:true},
+      {t:'AI at-risk project flag',tip:'Spots projects slipping behind',dot:C.ai,ai:true},
+      {t:'AI cash-flow alert',tip:'Warns of a thin month ahead',dot:C.ai,ai:true},
+    ]},
+  ]
+},
+{
+  id:'leads', name:'Leads & Enquiries', tags:['mvp','sales'],
+  desc:'Every enquiry from the website, captured, scored and chased to won or lost',
+  icon:'◈', ibg:'rgba(46,125,50,.1)', ai:6, new:4, mvp:7,
+  sections:[
+    { lbl:'Core pipeline (your ask #1)', feats:[
+      {t:'Website enquiry capture',tip:'Contact form lands straight in the pipeline',dot:C.crit,mvp:true},
+      {t:'Visual pipeline board',tip:'New, contacted, proposal, won, lost',dot:C.mvp,mvp:true},
+      {t:'Lead profile',tip:'Source, budget, project type, notes',dot:C.mvp,mvp:true},
+      {t:'Source tracking',tip:'Referral, search, social, repeat client',dot:C.mvp,mvp:true},
+      {t:'Follow-up reminders',tip:'Never let a hot lead go cold',dot:C.mvp,mvp:true},
+      {t:'Lead-to-client conversion',tip:'Won lead becomes a client in one click',dot:C.mvp,mvp:true},
+      {t:'Activity timeline',tip:'Every email, call and note logged',dot:C.mvp,mvp:true},
+    ]},
+    { lbl:'New & AI', feats:[
+      {t:'Discovery call booker',tip:'Lead picks a slot from your calendar',dot:C.new,isNew:true},
+      {t:'Intake questionnaire',tip:'Scope questions answered before the call',dot:C.new,isNew:true},
+      {t:'Lead value estimator',tip:'Rough project value from intake answers',dot:C.new,isNew:true},
+      {t:'Referral source report',tip:'Which channels bring the best work',dot:C.new,isNew:true},
+      {t:'AI lead scoring',tip:'Ranks leads by fit and likelihood',dot:C.ai,ai:true,isNew:true},
+      {t:'AI enquiry responder',tip:'Drafts a tailored first reply',dot:C.ai,ai:true},
+      {t:'AI project brief from chat',tip:'Turns an enquiry into a clear brief',dot:C.ai,ai:true,isNew:true},
+      {t:'AI follow-up writer',tip:'Drafts the next nudge automatically',dot:C.ai,ai:true},
+      {t:'AI spam / tyre-kicker filter',tip:'Flags low-quality enquiries',dot:C.ai,ai:true},
+      {t:'AI budget detector',tip:'Reads budget hints from the message',dot:C.ai,ai:true},
+    ]},
+  ]
+},
+{
+  id:'clients', name:'Clients (CRM)', tags:['mvp','clients'],
+  desc:'Every client, their projects, contacts, files and history in one record',
+  icon:'❖', ibg:'rgba(46,125,50,.1)', ai:4, new:4, mvp:7,
+  sections:[
+    { lbl:'Core CRM (your ask #2)', feats:[
+      {t:'Client profile',tip:'Company, contacts, billing, brand notes',dot:C.crit,mvp:true},
+      {t:'Multiple contacts per client',tip:'Decision-maker, day-to-day, billing',dot:C.mvp,mvp:true},
+      {t:'Project history',tip:'Every project ever done for them',dot:C.mvp,mvp:true},
+      {t:'Communication log',tip:'Emails, calls, meetings recorded',dot:C.mvp,mvp:true},
+      {t:'Client files & brand assets',tip:'Logos, copy, photos in one place',dot:C.mvp,mvp:true},
+      {t:'Client tags',tip:'Retainer, one-off, VIP, dormant',dot:C.mvp,mvp:true},
+      {t:'Quick links to portal',tip:'Jump to what the client sees',dot:C.mvp,mvp:true},
+    ]},
+    { lbl:'New & AI', feats:[
+      {t:'Retainer tracking',tip:'Monthly care plans and hours used',dot:C.new,isNew:true},
+      {t:'Renewal & check-in reminders',tip:'Stay in touch with past clients',dot:C.new,isNew:true},
+      {t:'Client health score',tip:'Happy, quiet, or at-risk',dot:C.new,isNew:true},
+      {t:'Birthday / milestone nudges',tip:'Reach out at the right moment',dot:C.new,isNew:true},
+      {t:'AI upsell suggester',tip:'Spots clients ready for more work',dot:C.ai,ai:true},
+      {t:'AI re-engagement drafts',tip:'Writes a warm "still here" email',dot:C.ai,ai:true},
+      {t:'AI client summary',tip:'One-paragraph recap before a call',dot:C.ai,ai:true,isNew:true},
+      {t:'AI churn risk',tip:'Flags clients going quiet',dot:C.ai,ai:true},
+    ]},
+  ]
+},
+{
+  id:'projects', name:'Projects & Tasks', tags:['mvp','projects','ops'],
+  desc:'Milestones, assignees, deadlines — every build tracked from kickoff to launch',
+  icon:'▣', ibg:'rgba(46,125,50,.1)', ai:6, new:5, mvp:8,
+  sections:[
+    { lbl:'Core delivery (your ask #3)', feats:[
+      {t:'Project workspace',tip:'One home per client build',dot:C.crit,mvp:true},
+      {t:'Milestones',tip:'Discovery, design, build, launch',dot:C.mvp,mvp:true},
+      {t:'Task lists with assignees',tip:'Who owns what, by when',dot:C.crit,mvp:true},
+      {t:'Deadlines & due dates',tip:'Every task and milestone dated',dot:C.mvp,mvp:true},
+      {t:'Kanban board',tip:'To do, doing, review, done',dot:C.mvp,mvp:true},
+      {t:'Project status',tip:'On track, at risk, blocked, launched',dot:C.mvp,mvp:true},
+      {t:'File attachments per task',tip:'Designs and assets where the work is',dot:C.mvp,mvp:true},
+      {t:'Project templates',tip:'Reuse your standard build process',dot:C.mvp,mvp:true},
+    ]},
+    { lbl:'New & AI', feats:[
+      {t:'Gantt timeline view',tip:'See the whole build on a calendar',dot:C.new,isNew:true},
+      {t:'Design-to-dev handoff checklist',tip:'Nothing lost between stages',dot:C.new,isNew:true},
+      {t:'Dependencies',tip:'Build cannot start before design sign-off',dot:C.new,isNew:true},
+      {t:'Launch checklist',tip:'Pre-go-live QA, every time',dot:C.new,isNew:true},
+      {t:'Recurring tasks',tip:'For retainer and maintenance work',dot:C.new,isNew:true},
+      {t:'AI task breakdown',tip:'Turns a milestone into a task list',dot:C.ai,ai:true,isNew:true},
+      {t:'AI deadline predictor',tip:'Realistic dates from past projects',dot:C.ai,ai:true},
+      {t:'AI scope-creep alert',tip:'Flags work beyond the agreed brief',dot:C.ai,ai:true,isNew:true},
+      {t:'AI status update writer',tip:'Drafts the weekly client update',dot:C.ai,ai:true},
+      {t:'AI workload balancer',tip:'Suggests who has room for a task',dot:C.ai,ai:true},
+      {t:'AI standup summary',tip:'What moved yesterday, what is next',dot:C.ai,ai:true},
+    ]},
+  ]
+},
+{
+  id:'proposals', name:'Proposals & Quotes', tags:['mvp','sales','money'],
+  desc:'Branded proposals, line-item quotes, e-sign sign-off, auto-convert to project',
+  icon:'◭', ibg:'rgba(46,125,50,.1)', ai:5, new:4, mvp:6,
+  sections:[
+    { lbl:'Core (your ask #4)', feats:[
+      {t:'Branded proposal builder',tip:'Your look, not a generic template',dot:C.crit,mvp:true},
+      {t:'Line-item quotes',tip:'Pages, features, scope, price',dot:C.mvp,mvp:true},
+      {t:'E-signature sign-off',tip:'Client accepts online, dated',dot:C.crit,mvp:true},
+      {t:'Sign-off tracking',tip:'Sent, viewed, signed, declined',dot:C.mvp,mvp:true},
+      {t:'Auto-convert to project',tip:'Signed proposal starts the build',dot:C.mvp,mvp:true},
+      {t:'Proposal templates',tip:'Reuse for common project types',dot:C.mvp,mvp:true},
+    ]},
+    { lbl:'New & AI', feats:[
+      {t:'Tiered packages',tip:'Good / better / best options',dot:C.new,isNew:true},
+      {t:'Optional add-ons',tip:'Client ticks extras, price updates',dot:C.new,isNew:true},
+      {t:'Expiry & follow-up',tip:'Chase before the quote lapses',dot:C.new,isNew:true},
+      {t:'Deposit on sign-off',tip:'Collect upfront before work starts',dot:C.new,isNew:true},
+      {t:'AI proposal drafter',tip:'First draft from the project brief',dot:C.ai,ai:true,isNew:true},
+      {t:'AI scope writer',tip:'Turns notes into clear deliverables',dot:C.ai,ai:true},
+      {t:'AI pricing helper',tip:'Suggests price from past projects',dot:C.ai,ai:true},
+      {t:'AI win-rate predictor',tip:'Chance this proposal closes',dot:C.ai,ai:true},
+      {t:'AI objection responder',tip:'Drafts replies to client pushback',dot:C.ai,ai:true,isNew:true},
+    ]},
+  ]
+},
+{
+  id:'invoicing', name:'Invoicing & Payments', tags:['mvp','money'],
+  desc:'Auto-invoice, branded PDF, online payment, reminders, accounting sync',
+  icon:'◧', ibg:'rgba(46,125,50,.1)', ai:4, new:5, mvp:7,
+  sections:[
+    { lbl:'Core (your ask #5)', feats:[
+      {t:'Auto-invoice',tip:'On milestone or project completion',dot:C.crit,mvp:true},
+      {t:'Branded invoice PDF',tip:'Your logo and details, every time',dot:C.mvp,mvp:true},
+      {t:'Online payment link',tip:'Card payment from the invoice',dot:C.crit,mvp:true},
+      {t:'Payment reminders',tip:'Auto chase day 7, 14, 21',dot:C.mvp,mvp:true},
+      {t:'Invoice status tracking',tip:'Sent, viewed, paid',dot:C.mvp,mvp:true},
+      {t:'Aged debt report',tip:'Who owes what, how long',dot:C.mvp,mvp:true},
+      {t:'Accounting sync',tip:'Xero / QuickBooks, no double entry',dot:C.mvp,mvp:true},
+    ]},
+    { lbl:'New & AI', feats:[
+      {t:'Milestone billing',tip:'Bill in stages across a build',dot:C.new,isNew:true},
+      {t:'Recurring retainer invoices',tip:'Monthly care plans auto-billed',dot:C.new,isNew:true},
+      {t:'Deposit & instalments',tip:'Split big projects into payments',dot:C.new,isNew:true},
+      {t:'Multi-currency',tip:'Bill overseas clients in their currency',dot:C.new,isNew:true},
+      {t:'Late-payment fees',tip:'Auto-apply per your terms',dot:C.new,isNew:true},
+      {t:'AI payment predictor',tip:'Flags who will pay late',dot:C.ai,ai:true},
+      {t:'AI cash-flow forecast',tip:'Balance 30/60/90 days out',dot:C.ai,ai:true},
+      {t:'AI reminder tone tuner',tip:'Polite first, firmer later',dot:C.ai,ai:true,isNew:true},
+      {t:'AI time-to-invoice',tip:'Turns logged hours into a draft bill',dot:C.ai,ai:true,isNew:true},
+    ]},
+  ]
+},
+{
+  id:'portal', name:'Client Portal', tags:['mvp','clients'],
+  desc:'Clients track progress, approve work, view invoices and files in one branded space',
+  icon:'◰', ibg:'rgba(46,125,50,.1)', ai:4, new:5, mvp:6,
+  sections:[
+    { lbl:'Core (your ask #6)', feats:[
+      {t:'Project progress view',tip:'Client sees the live stage and timeline',dot:C.crit,mvp:true},
+      {t:'Approval workflow',tip:'Client approves designs and milestones',dot:C.crit,mvp:true},
+      {t:'Invoice & payment view',tip:'See and pay invoices in the portal',dot:C.mvp,mvp:true},
+      {t:'File sharing',tip:'Deliverables and assets both ways',dot:C.mvp,mvp:true},
+      {t:'Feedback & comments',tip:'Client notes pinned to the work',dot:C.mvp,mvp:true},
+      {t:'Branded portal',tip:'GAkinz look, not a generic login',dot:C.mvp,mvp:true},
+    ]},
+    { lbl:'New & AI', feats:[
+      {t:'Design review with markup',tip:'Client points at exactly what to change',dot:C.new,isNew:true},
+      {t:'Approval reminders',tip:'Nudge clients who are holding things up',dot:C.new,isNew:true},
+      {t:'Shared project timeline',tip:'Client sees what is next and when',dot:C.new,isNew:true},
+      {t:'Document e-sign',tip:'Sign contracts inside the portal',dot:C.new,isNew:true},
+      {t:'Asset request checklist',tip:'Chase logos and copy from the client',dot:C.new,isNew:true},
+      {t:'AI feedback summariser',tip:'Turns scattered comments into a task list',dot:C.ai,ai:true,isNew:true},
+      {t:'AI approval chaser',tip:'Drafts the polite "any update?" note',dot:C.ai,ai:true},
+      {t:'AI client FAQ assistant',tip:'Answers common questions in-portal',dot:C.ai,ai:true,isNew:true},
+      {t:'AI update digest',tip:'Weekly progress note to the client',dot:C.ai,ai:true},
+    ]},
+  ]
+},
+{
+  id:'time', name:'Time Tracking', tags:['mvp','ops','money'],
+  desc:'Billable hours against projects — know what each build really costs and earns',
+  icon:'◷', ibg:'rgba(46,125,50,.1)', ai:4, new:4, mvp:6,
+  sections:[
+    { lbl:'Core (your ask #7)', feats:[
+      {t:'Timer & manual entry',tip:'Track time live or log it after',dot:C.crit,mvp:true},
+      {t:'Time against project & task',tip:'Every hour tied to real work',dot:C.mvp,mvp:true},
+      {t:'Billable vs non-billable',tip:'Know what you can actually charge',dot:C.crit,mvp:true},
+      {t:'Per-person timesheets',tip:'Hours by team member, by week',dot:C.mvp,mvp:true},
+      {t:'Rate cards',tip:'Different rates per role or client',dot:C.mvp,mvp:true},
+      {t:'Time-to-invoice link',tip:'Billable hours flow into invoices',dot:C.mvp,mvp:true},
+    ]},
+    { lbl:'New & AI', feats:[
+      {t:'Budget vs actual hours',tip:'Are you over the quoted time?',dot:C.new,isNew:true},
+      {t:'Project profitability',tip:'Revenue minus real hours cost',dot:C.new,isNew:true},
+      {t:'Weekly time reminders',tip:'Nudge the team to fill timesheets',dot:C.new,isNew:true},
+      {t:'Utilisation report',tip:'How much of the week is billable',dot:C.new,isNew:true},
+      {t:'AI auto-time suggestions',tip:'Proposes entries from your activity',dot:C.ai,ai:true,isNew:true},
+      {t:'AI timesheet cleaner',tip:'Catches gaps and odd entries',dot:C.ai,ai:true},
+      {t:'AI estimate accuracy',tip:'Learns how off your quotes run',dot:C.ai,ai:true},
+      {t:'AI profitability insight',tip:'Which project types pay best',dot:C.ai,ai:true},
+    ]},
+  ]
+},
+{
+  id:'support', name:'Support Tickets', tags:['mvp','clients','ops'],
+  desc:'Clients raise issues, you resolve and track them — post-launch care without the chaos',
+  icon:'◑', ibg:'rgba(46,125,50,.1)', ai:5, new:4, mvp:6,
+  sections:[
+    { lbl:'Core (your ask #8)', feats:[
+      {t:'Client ticket raising',tip:'From the portal or by email',dot:C.crit,mvp:true},
+      {t:'Ticket status pipeline',tip:'Open, in progress, resolved',dot:C.mvp,mvp:true},
+      {t:'Priority levels',tip:'Urgent, high, normal, low',dot:C.mvp,mvp:true},
+      {t:'Assign to team member',tip:'Right person picks it up',dot:C.mvp,mvp:true},
+      {t:'Ticket history',tip:'Every issue per client, kept',dot:C.mvp,mvp:true},
+      {t:'Resolution notes',tip:'What was done, for the record',dot:C.mvp,mvp:true},
+    ]},
+    { lbl:'New & AI', feats:[
+      {t:'SLA timers',tip:'Respond within the promised window',dot:C.new,isNew:true},
+      {t:'Billable ticket flag',tip:'Out-of-scope fixes become chargeable',dot:C.new,isNew:true},
+      {t:'Maintenance plan link',tip:'Tickets draw down retainer hours',dot:C.new,isNew:true},
+      {t:'Knowledge base',tip:'Common fixes clients can self-serve',dot:C.new,isNew:true},
+      {t:'AI ticket triage',tip:'Sorts and prioritises new tickets',dot:C.ai,ai:true,isNew:true},
+      {t:'AI reply drafting',tip:'Suggests a fix and a response',dot:C.ai,ai:true},
+      {t:'AI duplicate detection',tip:'Links repeat issues together',dot:C.ai,ai:true},
+      {t:'AI sentiment flag',tip:'Surfaces frustrated clients fast',dot:C.ai,ai:true},
+      {t:'AI knowledge article writer',tip:'Turns a fix into a help doc',dot:C.ai,ai:true,isNew:true},
+    ]},
+  ]
+},
+{
+  id:'comms', name:'Communication Hub', tags:['ops','clients'],
+  desc:'Email, client messages, internal notes — every conversation tied to its project',
+  icon:'◐', ibg:'rgba(46,125,50,.1)', ai:4, new:4, mvp:4,
+  sections:[
+    { lbl:'Keep every conversation in context', feats:[
+      {t:'Project-linked messaging',tip:'Chat lives with the work',dot:C.mvp,mvp:true},
+      {t:'Email integration',tip:'Client emails land on the project',dot:C.mvp,mvp:true},
+      {t:'Internal team notes',tip:'Private notes clients never see',dot:C.mvp,mvp:true},
+      {t:'Notifications',tip:'New message, approval, ticket',dot:C.mvp,mvp:true},
+    ]},
+    { lbl:'New & AI', feats:[
+      {t:'Email templates',tip:'Kickoff, handover, launch, invoice',dot:C.new,isNew:true},
+      {t:'Mentions & assignments',tip:'Pull a teammate into a thread',dot:C.new,isNew:true},
+      {t:'Scheduled send',tip:'Write now, send in office hours',dot:C.new,isNew:true},
+      {t:'Communication log',tip:'Searchable record per client',dot:C.new,isNew:true},
+      {t:'AI reply drafting',tip:'Writes the next message for you',dot:C.ai,ai:true},
+      {t:'AI thread summary',tip:'Catch up on a long thread fast',dot:C.ai,ai:true,isNew:true},
+      {t:'AI tone check',tip:'Keeps client replies on-brand',dot:C.ai,ai:true},
+      {t:'AI meeting notes',tip:'Summary and actions from a call',dot:C.ai,ai:true,isNew:true},
+    ]},
+  ]
+},
+{
+  id:'analytics', name:'Analytics & Reporting', tags:['admin','money','ops'],
+  desc:'Revenue, pipeline, project profitability, utilisation — the numbers behind the studio',
+  icon:'▦', ibg:'rgba(46,125,50,.1)', ai:5, new:4, mvp:4,
+  sections:[
+    { lbl:'See the studio clearly', feats:[
+      {t:'Revenue by month',tip:'Actual vs target',dot:C.mvp,mvp:true},
+      {t:'Pipeline report',tip:'Value by stage and source',dot:C.mvp,mvp:true},
+      {t:'Project profitability',tip:'Which projects actually paid',dot:C.mvp,mvp:true},
+      {t:'Team utilisation',tip:'Billable share of hours',dot:C.mvp,mvp:true},
+    ]},
+    { lbl:'New & AI', feats:[
+      {t:'Proposal win rate',tip:'Sent vs won, by type',dot:C.new,isNew:true},
+      {t:'Client lifetime value',tip:'Total earned per client',dot:C.new,isNew:true},
+      {t:'Lead source ROI',tip:'Which channels are worth it',dot:C.new,isNew:true},
+      {t:'Custom report builder',tip:'Build and schedule reports',dot:C.new,isNew:true},
+      {t:'AI weekly insight',tip:'Plain-English performance recap',dot:C.ai,ai:true},
+      {t:'AI growth suggestions',tip:'Where to focus next quarter',dot:C.ai,ai:true},
+      {t:'AI pricing insight',tip:'Where you are under-charging',dot:C.ai,ai:true,isNew:true},
+      {t:'AI bottleneck finder',tip:'Where projects keep stalling',dot:C.ai,ai:true,isNew:true},
+      {t:'AI forecast',tip:'Revenue and capacity ahead',dot:C.ai,ai:true},
+    ]},
+  ]
+},
+{
+  id:'platform', name:'Platform & Settings', tags:['mvp','admin'],
+  desc:'Team roles, brand kit, integrations, automations, audit trail',
+  icon:'⚙', ibg:'rgba(46,125,50,.1)', ai:3, new:5, mvp:5,
+  sections:[
+    { lbl:'Run it your way', feats:[
+      {t:'Team & roles',tip:'Owner, designer, developer, finance',dot:C.crit,mvp:true},
+      {t:'Brand kit',tip:'Logo, colours, fonts for all documents',dot:C.mvp,mvp:true},
+      {t:'Email & PDF branding',tip:'One GAkinz look everywhere',dot:C.mvp,mvp:true},
+      {t:'Audit trail',tip:'Who did what, when',dot:C.mvp,mvp:true},
+      {t:'Role-based access',tip:'People see only what they need',dot:C.crit,mvp:true},
+    ]},
+    { lbl:'New & AI', feats:[
+      {t:'Calendar integration',tip:'Google / Outlook two-way sync',dot:C.new,isNew:true},
+      {t:'Accounting integration',tip:'Xero, QuickBooks',dot:C.new,isNew:true},
+      {t:'Stripe / GoCardless setup',tip:'Take card and direct debit',dot:C.new,isNew:true},
+      {t:'Zapier / Make automations',tip:'Wire up the rest of your stack',dot:C.new,isNew:true},
+      {t:'Webhooks & API',tip:'Connect future tools',dot:C.new,isNew:true},
+      {t:'AI setup assistant',tip:'Guides first-time configuration',dot:C.ai,ai:true},
+      {t:'AI automation suggester',tip:'Spots repetitive work to automate',dot:C.ai,ai:true,isNew:true},
+      {t:'AI process improver',tip:'Weekly tips to save studio time',dot:C.ai,ai:true},
+    ]},
+  ]
+},
+];
+
+function fc(m){ return m.sections.reduce((a,s)=>a+s.feats.length,0); }
+function tag(f){
+  if(f.ai&&f.isNew) return '<span class="ftag t-ai">AI 2026</span>';
+  if(f.ai) return '<span class="ftag t-ai">AI</span>';
+  if(f.isNew) return '<span class="ftag t-new">New</span>';
+  if(f.mvp) return '<span class="ftag t-mvp">MVP</span>';
+  if(f.dot===C.crit) return '<span class="ftag t-crit">Critical</span>';
+  return '';
+}
+function build(m){
+  const d=document.createElement('div'); d.className='mod';
+  d.dataset.tags=m.tags.join(' '); d.dataset.id=m.id;
+  const total=fc(m);
+  d.innerHTML=`
+<div class="m-head" id="head-${m.id}" onclick="tog('${m.id}')">
+  <div class="m-icon" style="background:${m.ibg}">${m.icon}</div>
+  <div class="m-info"><div class="m-name">${m.name}</div><div class="m-desc">${m.desc}</div></div>
+  <div class="m-right">
+    ${m.ai>0?`<span class="mpill mp-ai">${m.ai} AI</span>`:''}
+    ${m.new>0?`<span class="mpill mp-new">${m.new} new</span>`:''}
+    ${m.mvp>0?`<span class="mpill mp-mvp">${m.mvp} MVP</span>`:''}
+    <span class="mpill mp-cnt">${total}</span>
+    <span class="chev" id="ch-${m.id}">▼</span>
+  </div>
+</div>
+<div class="m-body" id="bd-${m.id}">
+  ${m.sections.map(s=>`<div class="sec-lbl">${s.lbl}</div>
+  <div class="f-grid">${s.feats.map(f=>`
+    <div class="feat" data-text="${(f.t+' '+(f.tip||'')).toLowerCase()}">
+      <span class="fdot" style="background:${f.dot}"></span>
+      <div class="ftext">${f.t}${f.tip?`<span class="ftip">${f.tip}</span>`:''}</div>
+      ${tag(f)}
+    </div>`).join('')}</div>`).join('')}
+</div>`;
+  return d;
+}
+function tog(id){
+  const b=document.getElementById('bd-'+id),c=document.getElementById('ch-'+id),h=document.getElementById('head-'+id);
+  const o=b.classList.contains('open');
+  b.classList.toggle('open',!o); c.classList.toggle('open',!o); h.classList.toggle('open-head',!o);
+}
+function buildFilters(){
+  const labels={all:'All modules',mvp:'MVP first',ai:'AI features',sales:'Sales',clients:'Clients',
+    projects:'Projects',money:'Finance',ops:'Operations',admin:'Admin'};
+  const tags=['all','mvp','ai','sales','clients','projects','money','ops','admin'];
+  const row=document.getElementById('filters');
+  tags.forEach(t=>{
+    const b=document.createElement('button');
+    b.className='fb'+(t==='all'?' on':''); b.textContent=labels[t]||t;
+    b.onclick=()=>filt(t,b); row.appendChild(b);
+  });
+}
+function filt(tag,btn){
+  document.querySelectorAll('.fb').forEach(b=>b.classList.remove('on')); btn.classList.add('on');
+  document.querySelectorAll('.mod').forEach(m=>{
+    if(tag==='all'){m.classList.remove('hide');return;}
+    if(tag==='mvp'){m.classList.toggle('hide',m.querySelectorAll('.t-mvp').length===0);return;}
+    if(tag==='ai'){m.classList.toggle('hide',m.querySelectorAll('.t-ai').length===0);return;}
+    m.classList.toggle('hide',!m.dataset.tags.includes(tag));
+  });
+}
+function search(q){
+  const v=q.toLowerCase().trim();
+  document.querySelectorAll('.mod').forEach(m=>{
+    if(!v){m.classList.remove('hide');return;}
+    const nm=m.querySelector('.m-name').textContent.toLowerCase().includes(v);
+    const dm=m.querySelector('.m-desc').textContent.toLowerCase().includes(v);
+    const fm=[...m.querySelectorAll('.feat')].some(f=>f.dataset.text&&f.dataset.text.includes(v));
+    m.classList.toggle('hide',!(nm||dm||fm));
+    if((nm||dm||fm)&&v.length>2){const b=m.querySelector('.m-body'),c=m.querySelector('.chev');
+      if(!b.classList.contains('open')){b.classList.add('open');c.classList.add('open');}}
+  });
+}
+const g=document.getElementById('mods');
+MODULES.forEach(m=>g.appendChild(build(m)));
+buildFilters();
+MODULES.slice(0,2).forEach(m=>{
+  const b=document.getElementById('bd-'+m.id),c=document.getElementById('ch-'+m.id),h=document.getElementById('head-'+m.id);
+  if(b){b.classList.add('open');c.classList.add('open');h.classList.add('open-head');}
+});
+</script>
+</body>
+</html>

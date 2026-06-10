@@ -1,0 +1,22 @@
+# GAkinz — Apache config for the document root.
+# SPA routing: serve real files/PHP directly; send everything else to index.html
+# so React Router handles client-side routes (e.g. /about, /services/web-design).
+
+RewriteEngine On
+RewriteBase /
+
+# Let real files and directories through (assets, *.php, etc.)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Don't rewrite the PHP API endpoints
+RewriteRule ^(api|contact|ai|verify)\.php$ - [L]
+
+# Everything else → the SPA shell
+RewriteRule ^ index.html [L]
+
+# Basic hardening
+<FilesMatch "^(config|_bootstrap)\.php$">
+  Require all denied
+</FilesMatch>

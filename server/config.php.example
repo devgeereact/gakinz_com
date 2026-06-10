@@ -1,0 +1,38 @@
+<?php
+/**
+ * GAkinz — server configuration.
+ *
+ * COPY this file to `config.php` on the server and fill in real values.
+ * NEVER commit config.php. It is gitignored and lives only on the server.
+ *
+ * Provides $conn (mysqli) plus app constants used by the other PHP files.
+ */
+
+// ── Database (cPanel / MySQL) ───────────────────────────────────────────────
+define('DB_HOST', 'localhost');
+define('DB_NAME', 'REPLACE_db_name');
+define('DB_USER', 'REPLACE_db_user');
+define('DB_PASS', 'REPLACE_db_password');
+
+// ── OpenRouter (server-side AI, never exposed to the browser) ────────────────
+define('OPENROUTER_KEY', 'REPLACE_openrouter_key');
+define('OR_MODEL', 'anthropic/claude-sonnet-4-6'); // pick a current model from openrouter.ai/models
+define('OR_SITE', 'https://gakinz.com');           // sent as HTTP-Referer for OpenRouter
+
+// ── CORS ─────────────────────────────────────────────────────────────────────
+// In dev, the Vite app runs on localhost:5173 and calls the live API.
+define('ALLOWED_ORIGINS', [
+  'https://gakinz.com',
+  'https://www.gakinz.com',
+  'http://localhost:5173',
+]);
+
+// ── Connection ────────────────────────────────────────────────────────────────
+$conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+if ($conn->connect_errno) {
+  http_response_code(500);
+  header('Content-Type: application/json');
+  echo json_encode(['error' => 'Database connection failed']);
+  exit;
+}
+$conn->set_charset('utf8mb4');
