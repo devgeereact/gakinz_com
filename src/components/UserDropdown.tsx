@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
 import {
   User,
@@ -21,7 +21,44 @@ import {
   LogOut,
 } from "lucide-react"
 
+import { useNavigate } from "react-router-dom"
+import { useAuth } from "@/store/auth.store"
+import { auth as authApi } from "@/lib/api"
+
+const ROLE_LABELS: Record<string, string> = {
+  super_admin: "Super admin",
+  admin: "Admin",
+  manager: "Manager",
+  trainer: "Trainer",
+  editor: "Editor",
+  employee: "Employee",
+  client: "Client",
+}
+
+function initials(name: string): string {
+  return name
+    .split(" ")
+    .map((p) => p[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase()
+}
+
 export function UserDropdown() {
+  const user = useAuth((s) => s.user)
+  const clear = useAuth((s) => s.clear)
+  const navigate = useNavigate()
+
+  const name = user?.name ?? "Member"
+  const role = user ? ROLE_LABELS[user.role] ?? user.role : ""
+
+  const logout = async () => {
+    await authApi.logout()
+    clear()
+    navigate("/login", { replace: true })
+  }
+
   return (
     <DropdownMenu>
       {/* Trigger */}
@@ -31,8 +68,7 @@ export function UserDropdown() {
           className="rounded-full h-10 w-10 p-0 overflow-hidden ml-2"
         >
           <Avatar className="h-10 w-10 border-border rounded-full">
-            <AvatarImage src="https://untitledui.com/images/avatars/madeleine-pitts" />
-            <AvatarFallback>AM</AvatarFallback>
+            <AvatarFallback>{initials(name)}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
@@ -44,12 +80,11 @@ export function UserDropdown() {
         <DropdownMenuLabel className="rounded-xl mb-3 bg-muted/50 border border-border">
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10">
-              <AvatarImage src="https://untitledui.com/images/avatars/madeleine-pitts" />
-              <AvatarFallback>AM</AvatarFallback>
+              <AvatarFallback>{initials(name)}</AvatarFallback>
             </Avatar>
             <div>
-              <p className="text-sm font-medium">Alex Martin</p>
-              <p className="text-xs text-muted-foreground">Manager</p>
+              <p className="text-sm font-medium">{name}</p>
+              <p className="text-xs text-muted-foreground">{role}</p>
             </div>
           </div>
         </DropdownMenuLabel>
@@ -86,7 +121,8 @@ export function UserDropdown() {
 
         {/* Logout */}
         <div className="mt-3">
-          <Button 
+          <Button
+           onClick={logout}
            variant={"default"}
            className="w-full h-8 justify-center gap-2">
             <LogOut className="size-4" />

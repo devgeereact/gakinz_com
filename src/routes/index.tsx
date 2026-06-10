@@ -18,6 +18,8 @@ import SmokeTest from "@/marketing/pages/SmokeTest"
 import PublicNotFound from "@/marketing/pages/NotFound"
 
 // 🔐 AUTH — eager (login is the entry to the CMS; no heavy deps)
+import RequireAuth from "@/app/RequireAuth"
+import Login from "@/app/Login"
 import AuthLayout from "@/layouts/AuthLayout"
 import LoginPage from "@/auth/basic/LoginPage"
 import RegisterPage from "@/auth/basic/RegisterPage"
@@ -46,6 +48,9 @@ const lz = (factory: () => Promise<{ default: ComponentType }>) => async () => (
 })
 
 export const router = createBrowserRouter([
+  // 🔐 Member login (standalone, full-screen)
+  { path: "login", element: <Login /> },
+
   // 🌐 PUBLIC CORPORATE SITE (gakinz.com)
   {
     element: <PublicLayout />,
@@ -74,7 +79,6 @@ export const router = createBrowserRouter([
     element: <AuthLayout />,
     errorElement: <ErrorPage />,
     children: [
-      { path: "login", element: <LoginPage /> },
       { path: "auth/basic/login", element: <LoginPage /> },
       { path: "auth/basic/register", element: <RegisterPage /> },
       { path: "auth/basic/forgot-password", element: <ForgotPasswordPage /> },
@@ -95,12 +99,15 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // 📊 APP ROUTES (CMS, behind login) — mounted under /app, all lazy-loaded
+  // 📊 APP ROUTES (CMS) — guarded by RequireAuth, mounted under /app, all lazy
   {
-    path: "app",
-    lazy: lz(() => import("@/layouts/AppLayout")),
-    errorElement: <ErrorPage />,
+    element: <RequireAuth />,
     children: [
+      {
+        path: "app",
+        lazy: lz(() => import("@/layouts/AppLayout")),
+        errorElement: <ErrorPage />,
+        children: [
       { index: true, lazy: lz(() => import("@/pages/dashboard/analytics/AnalyticsDashboard")) },
       { path: "dashboard/analytics", lazy: lz(() => import("@/pages/dashboard/analytics/AnalyticsDashboard")) },
       { path: "dashboard/crm", lazy: lz(() => import("@/pages/dashboard/crm/CrmDashboard")) },
@@ -178,7 +185,9 @@ export const router = createBrowserRouter([
       { path: "forms/form-repeat", lazy: lz(() => import("@/pages/forms/FormRepeater")) },
 
       // ✅ 404 HANDLER
-      { path: "*", lazy: lz(() => import("@/pages/NotFound")) },
+          { path: "*", lazy: lz(() => import("@/pages/NotFound")) },
+        ],
+      },
     ],
   },
 ])

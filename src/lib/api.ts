@@ -1,20 +1,27 @@
 // Central API helper.
 // Dev → hit the live API on the domain (api.php enables CORS).
 // Production (same domain) → relative path.
+import { getStoredToken, type AuthUser } from "@/store/auth.store"
+
 export const API_BASE = import.meta.env.DEV ? "https://gakinz.com" : ""
 
-export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: string }
+export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: string; status?: number }
 
 async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
   try {
+    const token = getStoredToken()
     const res = await fetch(`${API_BASE}${path}`, {
-      headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(init?.headers || {}),
+      },
       ...init,
     })
     const text = await res.text()
     const body = text ? JSON.parse(text) : null
     if (!res.ok) {
-      return { ok: false, error: (body && body.error) || `Request failed (${res.status})` }
+      return { ok: false, error: (body && body.error) || `Request failed (${res.status})`, status: res.status }
     }
     return { ok: true, data: body as T }
   } catch (e) {
@@ -46,4 +53,16 @@ export type EnquiryPayload = {
 }
 export const contact = {
   send: (payload: EnquiryPayload) => api.post<{ id: number }>("/contact.php", payload),
+}
+
+// Auth (§6.1). Token + user persisted in the auth store; api attaches the bearer.
+export type LoginResponse = { token: string; expires: string; user: AuthUser }
+export const auth = {
+  login: (email: string, password: string) =>
+    api.post<LoginResponse>("/auth.php?action=login", { email, password }),
+  me: () => api.get<{ user: AuthUser }>("/auth.php?action=me"),
+  logout: () => api.post<{ ok: boolean }>("/auth.php?action=logout", {}),
+  forgot: (email: string) => api.post<{ ok: boolean }>("/auth.php?action=forgot", { email }),
+  reset: (token: string, password: string) =>
+    api.post<{ ok: boolean }>("/auth.php?action=reset", { token, password }),
 }
