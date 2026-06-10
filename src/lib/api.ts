@@ -55,6 +55,26 @@ export const contact = {
   send: (payload: EnquiryPayload) => api.post<{ id: number }>("/contact.php", payload),
 }
 
+// Leads (§6 Leads). Enquiries captured by the public form, managed in the CMS.
+export type LeadStage = "new" | "contacted" | "proposal" | "won" | "lost"
+export type Lead = {
+  id: number
+  name: string
+  email: string
+  company: string | null
+  budget: string | null
+  project_type: string | null
+  message: string
+  status: LeadStage
+  source: string
+  created_at: string
+}
+export const leads = {
+  list: () => api.get<Lead[]>("/leads.php"),
+  setStatus: (id: number, status: LeadStage) =>
+    api.post<{ ok: boolean }>("/leads.php?action=status", { id, status }),
+}
+
 // Auth (§6.1). Token + user persisted in the auth store; api attaches the bearer.
 export type LoginResponse = { token: string; expires: string; user: AuthUser }
 export const auth = {

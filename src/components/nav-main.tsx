@@ -61,7 +61,7 @@ export function NavMain({ items }: { items: MenuItem[] }) {
     tooltip={item.title}
     isActive={isActiveRoute(item.url)}
   >
-    <Link to={item.url}>
+    <Link to={`/${item.url}`}>
       {item.icon && <item.icon className="h-4 w-4" />}
       <span>{item.title}</span>
     </Link>
@@ -114,7 +114,7 @@ export function NavMain({ items }: { items: MenuItem[] }) {
                                   asChild
                                   isActive={isActiveRoute(child.url)}
                                 >
-                                  <Link to={child.url}>
+                                  <Link to={`/${child.url}`}>
                                     <span>{child.title}</span>
                                   </Link>
                                 </SidebarMenuSubButton>
@@ -130,7 +130,7 @@ export function NavMain({ items }: { items: MenuItem[] }) {
                         asChild
                         isActive={isActiveRoute(subItem.url)}
                       >
-                        <Link to={subItem.url}>
+                        <Link to={`/${subItem.url}`}>
                           <span>{subItem.title}</span>
                         </Link>
                       </SidebarMenuSubButton>

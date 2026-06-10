@@ -20,6 +20,7 @@ import PublicNotFound from "@/marketing/pages/NotFound"
 // 🔐 AUTH — eager (login is the entry to the CMS; no heavy deps)
 import RequireAuth from "@/app/RequireAuth"
 import Login from "@/app/Login"
+import ModuleStub from "@/app/modules/ModuleStub"
 import AuthLayout from "@/layouts/AuthLayout"
 import LoginPage from "@/auth/basic/LoginPage"
 import RegisterPage from "@/auth/basic/RegisterPage"
@@ -109,6 +110,20 @@ export const router = createBrowserRouter([
         errorElement: <ErrorPage />,
         children: [
       { index: true, lazy: lz(() => import("@/pages/dashboard/analytics/AnalyticsDashboard")) },
+
+      // ── GAkinzOS modules ────────────────────────────────────────────────
+      { path: "leads", lazy: lz(() => import("@/app/modules/Leads")) },
+      { path: "clients", element: <ModuleStub title="Clients" blurb="Every client, their projects, contacts, files and history in one record." /> },
+      { path: "projects", element: <ModuleStub title="Projects & Tasks" blurb="Milestones, assignees, deadlines — every build tracked from kickoff to launch." /> },
+      { path: "proposals", element: <ModuleStub title="Proposals & Quotes" blurb="Branded proposals, line-item quotes, e-sign sign-off, auto-convert to project." /> },
+      { path: "invoicing", element: <ModuleStub title="Invoicing & Payments" blurb="Auto-invoice, branded PDF, online payment, reminders." /> },
+      { path: "portal", element: <ModuleStub title="Client Portal" blurb="Clients track progress, approve work, view invoices and files." /> },
+      { path: "time", element: <ModuleStub title="Time Tracking" blurb="Billable hours against projects — what each build really costs and earns." /> },
+      { path: "support", element: <ModuleStub title="Support Tickets" blurb="Clients raise issues, you resolve and track them. Post-launch care." /> },
+      { path: "comms", element: <ModuleStub title="Communication Hub" blurb="Email, client messages, internal notes — every conversation tied to its project." /> },
+      { path: "analytics", element: <ModuleStub title="Analytics & Reporting" blurb="Revenue, pipeline, project profitability, utilisation." /> },
+      { path: "platform", element: <ModuleStub title="Platform & Settings" blurb="Team roles, brand kit, integrations, automations, audit trail." /> },
+
       { path: "dashboard/analytics", lazy: lz(() => import("@/pages/dashboard/analytics/AnalyticsDashboard")) },
       { path: "dashboard/crm", lazy: lz(() => import("@/pages/dashboard/crm/CrmDashboard")) },
       { path: "dashboard/eCommerce", lazy: lz(() => import("@/pages/dashboard/eCommerce/EcommerceDashboard")) },
