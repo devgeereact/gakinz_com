@@ -113,7 +113,7 @@ export const router = createBrowserRouter([
 
       // ── GAkinzOS modules ────────────────────────────────────────────────
       { path: "leads", lazy: lz(() => import("@/app/modules/Leads")) },
-      { path: "clients", element: <ModuleStub title="Clients" blurb="Every client, their projects, contacts, files and history in one record." /> },
+      { path: "clients", lazy: lz(() => import("@/app/modules/Clients")) },
       { path: "projects", element: <ModuleStub title="Projects & Tasks" blurb="Milestones, assignees, deadlines — every build tracked from kickoff to launch." /> },
       { path: "proposals", element: <ModuleStub title="Proposals & Quotes" blurb="Branded proposals, line-item quotes, e-sign sign-off, auto-convert to project." /> },
       { path: "invoicing", element: <ModuleStub title="Invoicing & Payments" blurb="Auto-invoice, branded PDF, online payment, reminders." /> },

@@ -75,6 +75,36 @@ export const leads = {
     api.post<{ ok: boolean }>("/leads.php?action=status", { id, status }),
 }
 
+// Clients / CRM (§6 Clients).
+export type ClientTag = "retainer" | "one-off" | "vip" | "dormant"
+export type Client = {
+  id: number
+  company: string
+  contact_name: string | null
+  email: string | null
+  phone: string | null
+  tag: ClientTag
+  notes: string | null
+  source_lead_id: number | null
+  created_at: string
+}
+export type ClientInput = {
+  company: string
+  contact_name?: string
+  email?: string
+  phone?: string
+  tag?: ClientTag
+  notes?: string
+}
+export const clients = {
+  list: () => api.get<Client[]>("/clients.php"),
+  create: (payload: ClientInput) => api.post<{ id: number }>("/clients.php?action=create", payload),
+  update: (id: number, payload: ClientInput) =>
+    api.post<{ ok: boolean }>("/clients.php?action=update", { id, ...payload }),
+  convertLead: (leadId: number) =>
+    api.post<{ id: number; existing?: boolean }>("/clients.php?action=convert", { lead_id: leadId }),
+}
+
 // Auth (§6.1). Token + user persisted in the auth store; api attaches the bearer.
 export type LoginResponse = { token: string; expires: string; user: AuthUser }
 export const auth = {

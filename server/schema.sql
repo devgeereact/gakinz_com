@@ -72,6 +72,22 @@ CREATE TABLE IF NOT EXISTS audit_log (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Clients / CRM (§6 Clients). A won lead converts into a client record.
+CREATE TABLE IF NOT EXISTS clients (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  company        VARCHAR(200) NOT NULL,
+  contact_name   VARCHAR(200) DEFAULT NULL,
+  email          VARCHAR(200) DEFAULT NULL,
+  phone          VARCHAR(60)  DEFAULT NULL,
+  tag            VARCHAR(30)  NOT NULL DEFAULT 'one-off',  -- retainer | one-off | vip | dormant
+  notes          TEXT DEFAULT NULL,
+  source_lead_id INT NULL,
+  created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at     TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT fk_client_lead FOREIGN KEY (source_lead_id) REFERENCES enquiries(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Certificates with public verification (§6.8)
 CREATE TABLE IF NOT EXISTS certificates (
   id         INT AUTO_INCREMENT PRIMARY KEY,
