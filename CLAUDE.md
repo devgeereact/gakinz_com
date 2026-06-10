@@ -13,11 +13,11 @@
 | Project / repo | `devgeereact/gakinz_com` |
 | Domain | `gakinz.com` |
 | Document root | `/home/<cpanel_user>/gakinz.com` |
-| Database name | created (lives only in server `config.php`) |
-| Database user | created (lives only in server `config.php`) |
+| Database name | `gakinz_com` (password lives only in server `config.php`) |
+| Database user | `gakinz_com` (password lives only in server `config.php`) |
 | Database host | `localhost` |
 | Deploy branch | `main` |
-| FTP username | `<ftp_user>@gakinz.com` (in GitHub repo Secrets) |
+| FTP username | `gakinz_com@gakinz.com` (FTP account scoped to the gakinz folder; in GitHub repo Secrets) |
 
 ---
 

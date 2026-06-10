@@ -1,6 +1,7 @@
+import type { ComponentType } from "react"
 import { createBrowserRouter } from "react-router-dom"
 
-// 🌐 PUBLIC CORPORATE SITE
+// 🌐 PUBLIC CORPORATE SITE — eager (first paint, light bundle)
 import PublicLayout from "@/marketing/PublicLayout"
 import Home from "@/marketing/pages/Home"
 import About from "@/marketing/pages/About"
@@ -16,25 +17,11 @@ import Verify from "@/marketing/pages/Verify"
 import SmokeTest from "@/marketing/pages/SmokeTest"
 import PublicNotFound from "@/marketing/pages/NotFound"
 
-import AppLayout from "@/layouts/AppLayout"
+// 🔐 AUTH — eager (login is the entry to the CMS; no heavy deps)
 import AuthLayout from "@/layouts/AuthLayout"
-
-import AnalyticsDashboard from "@/pages/dashboard/analytics/AnalyticsDashboard"
-import EcommerceDashboard from "@/pages/dashboard/eCommerce/EcommerceDashboard"
-import CrmDashboard from "@/pages/dashboard/crm/CrmDashboard"
-
-import ChartsPage from "@/pages/charts/recharts/ReChartsPage"
-
-import DataWidgetsPage from "@/pages/widgets/data/DataWidgetsPage"
-import StatisticsWidgetsPage from "@/pages/widgets/statistics/StatisticsWidgetsPage"
-
 import LoginPage from "@/auth/basic/LoginPage"
 import RegisterPage from "@/auth/basic/RegisterPage"
 import ForgotPasswordPage from "@/auth/basic/ForgotPasswordPage"
-
-import NotFound from "@/pages/NotFound"
-import ErrorPage from "@/pages/ErrorPage"
-import Documentation from "@/pages/Documentation"
 import { ResetPasswordForm } from "@/auth/basic/ResetPasswordForm"
 import { VerifyEmailForm } from "@/auth/basic/VerifyEmailForm"
 import { PasswordResetSuccess } from "@/auth/basic/PasswordResetSuccess"
@@ -44,198 +31,154 @@ import CoverRegisterPage from "@/auth/cover/CoverRegisterPage"
 import CoverResetPasswordPage from "@/auth/cover/CoverResetPasswordPage"
 import CoverVerifyEmailPage from "@/auth/cover/CoverVerifyEmailPage"
 import CoverPasswordResetSuccessPage from "@/auth/cover/CoverPasswordResetSuccessPage"
-import ProductList from "@/pages/eCommerce/ProductList"
-import ProductGrid from "@/pages/eCommerce/ProductGrid"
-import AddProduct from "@/pages/eCommerce/AddProduct"
-import CategoryList from "@/pages/eCommerce/CategoryList"
-import OrderList from "@/pages/eCommerce/OrderList"
-import OrderDetails from "@/pages/eCommerce/OrderDetails"
-import InvoicePage from "@/pages/eCommerce/Invoice"
-import InvoiceCard from "@/pages/eCommerce/InvoiceCard"
-import CustomerList from "@/pages/eCommerce/CustomerList"
-import CustomerDetails from "@/pages/eCommerce/CustomerDetails"
-import ChatBox from "@/pages/apps/Chatbox"
-import CalendarPage from "@/pages/apps/CalendarPage"
-import FileManagerPage from "@/pages/apps/FileManager"
-import AlertsPage from "@/pages/alerts/AlertsPage"
-import AccordionPage from "@/pages/accordion/AccordionPage"
-import SoonerPage from "@/pages/sooner/SoonerPage"
-import BadgesPage from "@/pages/badges/BadgesPage"
-import ButtonsPage from "@/pages/buttons/ButtonsPage"
-import CardsPage from "@/pages/cards/CardsPage"
-import ListGroupPage from "@/pages/listgroups/ListGroupPage"
-import CarouselPage from "@/pages/carousels/CarouselPage"
-import AvatarShowcase from "@/pages/mediaobject/AvatarShowcase"
-import NavbarsPage from "@/pages/navbars/NavbarsPage"
-import ProgressPage from "@/pages/progressbars/ProgressPage"
-import SpinnerExamples from "@/pages/spinners/SpinnerExamples"
-import Boxicons from "@/pages/icons/Boxicons"
-import IconBootstrap from "@/pages/icons/Bootstrap"
-import LucideIconsPage from "@/pages/icons/LucideIconsPage"
-import PricingPage from "@/pages/pricing/PricingPage"
-import FAQPage from "@/pages/FAQPage"
 import Error404 from "@/pages/error/Error404"
 import Error500 from "@/pages/error/Error500"
 import ComingSoon from "@/pages/error/ComingSoon"
-import ReChartsPage from "@/pages/charts/recharts/ReChartsPage"
-import ApexChartsPage from "@/pages/charts/apexcharts/ApexChartsPage"
-import UserProfile from "@/pages/account/UserProfile"
-import EditProfile from "@/pages/account/EditProfile"
-import PasswordSettings from "@/pages/account/PasswordSettings"
-import NotificationSettings from "@/pages/account/NotificationSettings"
-import BasicTables from "@/pages/tables/BasicTables"
-import AdvanceTablesPage from "@/pages/tables/advance-tables/AdvanceTable"
-import DataTablePage from "@/pages/tables/DataTablePage"
-import BasicInput from "@/pages/forms/BasicInputs"
-import FormInputGroup from "@/pages/forms/FormInputGroup"
-import ChecksAndRadios from "@/pages/forms/ChecksAndRadios"
-import FormLayouts from "@/pages/forms/FormLayouts"
-import WizardPage from "@/pages/forms/wizard/WizardPage"
-import FormTextEditor from "@/pages/forms/FormTextEditor"
-import FileUpload01 from "@/pages/forms/fileupload/FileUpload01"
-import DatePickerPage from "@/pages/forms/datepicker/DatePickerPage"
-import SelectExamplesPage from "@/pages/forms/select/SelectExamplesPage"
-import FormRepeater from "@/pages/forms/FormRepeater"
-import LandingPage from "@/pages/dashboard/analytics/LandingPage"
 
-export const router = createBrowserRouter (
-  [
-    // 🌐 PUBLIC CORPORATE SITE (gakinz.com)
-    {
-      element: <PublicLayout />,
-      errorElement: <ErrorPage />,
-      children: [
-        { index: true, element: <Home /> },
-        { path: "about", element: <About /> },
-        { path: "services", element: <ServicesPage /> },
-        { path: "services/:slug", element: <ServiceDetail /> },
-        { path: "sectors", element: <Sectors /> },
-        { path: "work", element: <Work /> },
-        { path: "resources", element: <Resources /> },
-        { path: "resources/:slug", element: <ResourceDetail /> },
-        { path: "contact", element: <Contact /> },
-        { path: "privacy", element: <Privacy /> },
-        { path: "terms", element: <Terms /> },
-        { path: "cookies", element: <Cookies /> },
-        { path: "verify/:id", element: <Verify /> },
-        { path: "smoke", element: <SmokeTest /> },
-        { path: "*", element: <PublicNotFound /> },
-      ],
-    },
+import ErrorPage from "@/pages/ErrorPage"
 
-    // 🔐 AUTH ROUTES
-    {
-      element: <AuthLayout />,
-      errorElement: <ErrorPage />,
-      children: [
-        {path: "login", element: <LoginPage /> },
-        {path: "auth/basic/login", element: <LoginPage /> },
-        {path: "auth/basic/register", element: <RegisterPage /> },
-        {path: "auth/basic/forgot-password", element: <ForgotPasswordPage /> },
-        {path: "auth/basic/reset-password", element: <ResetPasswordForm /> },
-        {path: "auth/basic/verify-email", element: <VerifyEmailForm /> },
-        {path: "auth/basic/password-reset-success", element: <PasswordResetSuccess /> },
+// 📊 CMS (/app/*) — lazy. The whole admin tree (charts, calendar, tiptap, pdf,
+// xlsx) is loaded only when a /app route is visited, so the public marketing
+// site never downloads it. `lz` turns a default-export dynamic import into a
+// React Router lazy route module.
+const lz = (factory: () => Promise<{ default: ComponentType }>) => async () => ({
+  Component: (await factory()).default,
+})
 
-        {path: "auth/cover/login", element: <CoverLoginPage /> },
-        {path: "auth/cover/register", element: <CoverRegisterPage /> },
-        {path: "auth/cover/forgot-password", element: <CoverForgotPasswordPage /> },
-        {path: "auth/cover/new-password", element: <CoverResetPasswordPage /> },
-        {path: "auth/cover/password-reset-success", element: <CoverPasswordResetSuccessPage /> },
-        {path: "auth/cover/verify-email", element: <CoverVerifyEmailPage /> },
+export const router = createBrowserRouter([
+  // 🌐 PUBLIC CORPORATE SITE (gakinz.com)
+  {
+    element: <PublicLayout />,
+    errorElement: <ErrorPage />,
+    children: [
+      { index: true, element: <Home /> },
+      { path: "about", element: <About /> },
+      { path: "services", element: <ServicesPage /> },
+      { path: "services/:slug", element: <ServiceDetail /> },
+      { path: "sectors", element: <Sectors /> },
+      { path: "work", element: <Work /> },
+      { path: "resources", element: <Resources /> },
+      { path: "resources/:slug", element: <ResourceDetail /> },
+      { path: "contact", element: <Contact /> },
+      { path: "privacy", element: <Privacy /> },
+      { path: "terms", element: <Terms /> },
+      { path: "cookies", element: <Cookies /> },
+      { path: "verify/:id", element: <Verify /> },
+      { path: "smoke", element: <SmokeTest /> },
+      { path: "*", element: <PublicNotFound /> },
+    ],
+  },
 
-        {path: "error/error-404", element: <Error404 /> },
-        {path: "error/error-500", element: <Error500 /> },
-        {path: "error/coming-soon", element: <ComingSoon /> },
+  // 🔐 AUTH ROUTES
+  {
+    element: <AuthLayout />,
+    errorElement: <ErrorPage />,
+    children: [
+      { path: "login", element: <LoginPage /> },
+      { path: "auth/basic/login", element: <LoginPage /> },
+      { path: "auth/basic/register", element: <RegisterPage /> },
+      { path: "auth/basic/forgot-password", element: <ForgotPasswordPage /> },
+      { path: "auth/basic/reset-password", element: <ResetPasswordForm /> },
+      { path: "auth/basic/verify-email", element: <VerifyEmailForm /> },
+      { path: "auth/basic/password-reset-success", element: <PasswordResetSuccess /> },
 
-      ],
-    },
+      { path: "auth/cover/login", element: <CoverLoginPage /> },
+      { path: "auth/cover/register", element: <CoverRegisterPage /> },
+      { path: "auth/cover/forgot-password", element: <CoverForgotPasswordPage /> },
+      { path: "auth/cover/new-password", element: <CoverResetPasswordPage /> },
+      { path: "auth/cover/password-reset-success", element: <CoverPasswordResetSuccessPage /> },
+      { path: "auth/cover/verify-email", element: <CoverVerifyEmailPage /> },
 
-    // 📊 APP ROUTES (CMS, behind login) — mounted under /app
-    {
-      path: "app",
-      element: <AppLayout />,
-      errorElement: <ErrorPage />,
-      children: [
-        {index: true, element: <AnalyticsDashboard /> },
-        {path: "dashboard/analytics", element: <AnalyticsDashboard /> },
-        {path: "dashboard/crm", element: <CrmDashboard /> },
-        {path: "dashboard/eCommerce", element: <EcommerceDashboard /> },
-        {path: "dashboard/landing-page", element: <LandingPage /> },
-        
-        {path: "dashboard/charts", element: <ChartsPage /> },
-        {path: "widgets/data", element: <DataWidgetsPage /> },
-        {path: "widgets/statistics", element: <StatisticsWidgetsPage /> },
-        {path: "docs", element: <Documentation /> },
+      { path: "error/error-404", element: <Error404 /> },
+      { path: "error/error-500", element: <Error500 /> },
+      { path: "error/coming-soon", element: <ComingSoon /> },
+    ],
+  },
 
-        // 🛍️ E-COMMERCE
-        {path: "eCommerce/product-list", element: <ProductList /> },
-        {path: "eCommerce/product-grid", element: <ProductGrid /> },
-        {path: "eCommerce/add-product", element: <AddProduct /> },
-        {path: "eCommerce/categories", element: <CategoryList /> },
-        {path: "eCommerce/order-list", element: <OrderList /> },
-        {path: "eCommerce/order-details", element: <OrderDetails /> },
-        {path: "eCommerce/customer-list", element: <CustomerList /> },
-        {path: "eCommerce/customer-details", element: <CustomerDetails /> },
-        {path: "eCommerce/invoice", element: <InvoicePage /> },
+  // 📊 APP ROUTES (CMS, behind login) — mounted under /app, all lazy-loaded
+  {
+    path: "app",
+    lazy: lz(() => import("@/layouts/AppLayout")),
+    errorElement: <ErrorPage />,
+    children: [
+      { index: true, lazy: lz(() => import("@/pages/dashboard/analytics/AnalyticsDashboard")) },
+      { path: "dashboard/analytics", lazy: lz(() => import("@/pages/dashboard/analytics/AnalyticsDashboard")) },
+      { path: "dashboard/crm", lazy: lz(() => import("@/pages/dashboard/crm/CrmDashboard")) },
+      { path: "dashboard/eCommerce", lazy: lz(() => import("@/pages/dashboard/eCommerce/EcommerceDashboard")) },
+      { path: "dashboard/landing-page", lazy: lz(() => import("@/pages/dashboard/analytics/LandingPage")) },
 
-        // application routes
-        {path: "app/chatbox", element: <ChatBox /> },
-        {path: "app/invoice-card", element: <InvoiceCard/> },
-        {path: "app/calendar", element: <CalendarPage /> },
-        {path: "app/file-manager", element: <FileManagerPage /> },
+      { path: "dashboard/charts", lazy: lz(() => import("@/pages/charts/recharts/ReChartsPage")) },
+      { path: "widgets/data", lazy: lz(() => import("@/pages/widgets/data/DataWidgetsPage")) },
+      { path: "widgets/statistics", lazy: lz(() => import("@/pages/widgets/statistics/StatisticsWidgetsPage")) },
+      { path: "docs", lazy: lz(() => import("@/pages/Documentation")) },
 
-        // component 
-        {path: "components/alerts", element: <AlertsPage /> },
-        {path: "components/accordion", element: <AccordionPage/>},
-        {path: "components/sooner", element: <SoonerPage/>},
-        {path: "components/badges", element: <BadgesPage/>},
-        {path: "components/buttons", element: <ButtonsPage/>},
-        {path: "components/cards", element: <CardsPage/>},
-        {path: "components/list-groups", element: <ListGroupPage/>},
-        {path: "components/carousels", element: <CarouselPage/>},
-        {path: "components/media-object", element: <AvatarShowcase/>},
-        {path: "components/navbars", element: <NavbarsPage/>},
-        {path: "components/progress", element: <ProgressPage/>},
-        {path: "components/spinners", element: <SpinnerExamples/>},
+      // 🛍️ E-COMMERCE
+      { path: "eCommerce/product-list", lazy: lz(() => import("@/pages/eCommerce/ProductList")) },
+      { path: "eCommerce/product-grid", lazy: lz(() => import("@/pages/eCommerce/ProductGrid")) },
+      { path: "eCommerce/add-product", lazy: lz(() => import("@/pages/eCommerce/AddProduct")) },
+      { path: "eCommerce/categories", lazy: lz(() => import("@/pages/eCommerce/CategoryList")) },
+      { path: "eCommerce/order-list", lazy: lz(() => import("@/pages/eCommerce/OrderList")) },
+      { path: "eCommerce/order-details", lazy: lz(() => import("@/pages/eCommerce/OrderDetails")) },
+      { path: "eCommerce/customer-list", lazy: lz(() => import("@/pages/eCommerce/CustomerList")) },
+      { path: "eCommerce/customer-details", lazy: lz(() => import("@/pages/eCommerce/CustomerDetails")) },
+      { path: "eCommerce/invoice", lazy: lz(() => import("@/pages/eCommerce/Invoice")) },
 
-         // boxicons
-        {path: "icons/boxicons", element: <Boxicons/>},
-        {path: "icons/bootstrap", element: <IconBootstrap/>},
-        {path: "icons/lucide", element: <LucideIconsPage/>},
-        {path: "pricing/pricing-tables", element: <PricingPage/>},
-        {path: "faq", element: <FAQPage/>},
+      // application routes
+      { path: "app/chatbox", lazy: lz(() => import("@/pages/apps/Chatbox")) },
+      { path: "app/invoice-card", lazy: lz(() => import("@/pages/eCommerce/InvoiceCard")) },
+      { path: "app/calendar", lazy: lz(() => import("@/pages/apps/CalendarPage")) },
+      { path: "app/file-manager", lazy: lz(() => import("@/pages/apps/FileManager")) },
 
-        // charts
-        {path: "charts/recharts", element: <ReChartsPage/>},
-        {path: "charts/apex-charts", element: <ApexChartsPage/>},
+      // components
+      { path: "components/alerts", lazy: lz(() => import("@/pages/alerts/AlertsPage")) },
+      { path: "components/accordion", lazy: lz(() => import("@/pages/accordion/AccordionPage")) },
+      { path: "components/sooner", lazy: lz(() => import("@/pages/sooner/SoonerPage")) },
+      { path: "components/badges", lazy: lz(() => import("@/pages/badges/BadgesPage")) },
+      { path: "components/buttons", lazy: lz(() => import("@/pages/buttons/ButtonsPage")) },
+      { path: "components/cards", lazy: lz(() => import("@/pages/cards/CardsPage")) },
+      { path: "components/list-groups", lazy: lz(() => import("@/pages/listgroups/ListGroupPage")) },
+      { path: "components/carousels", lazy: lz(() => import("@/pages/carousels/CarouselPage")) },
+      { path: "components/media-object", lazy: lz(() => import("@/pages/mediaobject/AvatarShowcase")) },
+      { path: "components/navbars", lazy: lz(() => import("@/pages/navbars/NavbarsPage")) },
+      { path: "components/progress", lazy: lz(() => import("@/pages/progressbars/ProgressPage")) },
+      { path: "components/spinners", lazy: lz(() => import("@/pages/spinners/SpinnerExamples")) },
 
-        // account
-        {path: "account/profile", element: <UserProfile/>},
-        {path: "account/edit-profile", element: <EditProfile/>},
-        {path: "account/password-setting", element: <PasswordSettings/>},
-        {path: "account/notifications", element: <NotificationSettings/>},
+      // icons
+      { path: "icons/boxicons", lazy: lz(() => import("@/pages/icons/Boxicons")) },
+      { path: "icons/bootstrap", lazy: lz(() => import("@/pages/icons/Bootstrap")) },
+      { path: "icons/lucide", lazy: lz(() => import("@/pages/icons/LucideIconsPage")) },
+      { path: "pricing/pricing-tables", lazy: lz(() => import("@/pages/pricing/PricingPage")) },
+      { path: "faq", lazy: lz(() => import("@/pages/FAQPage")) },
 
-        // Tables
-        {path: "tables/basic-tables", element: <BasicTables/>},
-        {path: "tables/advanced-tables", element: <AdvanceTablesPage/>},
-        {path: "tables/data-tables", element: <DataTablePage/>},
+      // charts
+      { path: "charts/recharts", lazy: lz(() => import("@/pages/charts/recharts/ReChartsPage")) },
+      { path: "charts/apex-charts", lazy: lz(() => import("@/pages/charts/apexcharts/ApexChartsPage")) },
 
-        // Forms
-        {path: "forms/basic-inputs", element: <BasicInput/>},
-        {path: "forms/input-groups", element: <FormInputGroup/>},
-        {path: "forms/radio-checkboxes", element: <ChecksAndRadios/>},
-        {path: "forms/form-layouts", element: <FormLayouts/>},
-        {path: "forms/form-wizard", element: <WizardPage/>},
-        {path: "forms/text-editor", element: <FormTextEditor/>},
-        {path: "forms/file-upload", element: <FileUpload01/>},
-        {path: "forms/date-pickers", element: <DatePickerPage/>},
-        {path: "forms/select", element: <SelectExamplesPage/>},
-        {path: "forms/form-repeat", element: <FormRepeater/>},
-        
-        
-        // ✅ 404 HANDLER
-        { path: "*", element: <NotFound /> },
-      ],
-    },
-  ]
-)
+      // account
+      { path: "account/profile", lazy: lz(() => import("@/pages/account/UserProfile")) },
+      { path: "account/edit-profile", lazy: lz(() => import("@/pages/account/EditProfile")) },
+      { path: "account/password-setting", lazy: lz(() => import("@/pages/account/PasswordSettings")) },
+      { path: "account/notifications", lazy: lz(() => import("@/pages/account/NotificationSettings")) },
+
+      // tables
+      { path: "tables/basic-tables", lazy: lz(() => import("@/pages/tables/BasicTables")) },
+      { path: "tables/advanced-tables", lazy: lz(() => import("@/pages/tables/advance-tables/AdvanceTable")) },
+      { path: "tables/data-tables", lazy: lz(() => import("@/pages/tables/DataTablePage")) },
+
+      // forms
+      { path: "forms/basic-inputs", lazy: lz(() => import("@/pages/forms/BasicInputs")) },
+      { path: "forms/input-groups", lazy: lz(() => import("@/pages/forms/FormInputGroup")) },
+      { path: "forms/radio-checkboxes", lazy: lz(() => import("@/pages/forms/ChecksAndRadios")) },
+      { path: "forms/form-layouts", lazy: lz(() => import("@/pages/forms/FormLayouts")) },
+      { path: "forms/form-wizard", lazy: lz(() => import("@/pages/forms/wizard/WizardPage")) },
+      { path: "forms/text-editor", lazy: lz(() => import("@/pages/forms/FormTextEditor")) },
+      { path: "forms/file-upload", lazy: lz(() => import("@/pages/forms/fileupload/FileUpload01")) },
+      { path: "forms/date-pickers", lazy: lz(() => import("@/pages/forms/datepicker/DatePickerPage")) },
+      { path: "forms/select", lazy: lz(() => import("@/pages/forms/select/SelectExamplesPage")) },
+      { path: "forms/form-repeat", lazy: lz(() => import("@/pages/forms/FormRepeater")) },
+
+      // ✅ 404 HANDLER
+      { path: "*", lazy: lz(() => import("@/pages/NotFound")) },
+    ],
+  },
+])
