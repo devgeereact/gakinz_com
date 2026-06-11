@@ -26,3 +26,8 @@ RewriteRule ^ index.html [L]
 <FilesMatch "^(config|_bootstrap)\.php$">
   Require all denied
 </FilesMatch>
+
+# Never serve docs, SQL, logs, or deploy state from the doc root
+<FilesMatch "\.(md|sql|log)$|^(error_log|\.ftp-deploy-sync-state\.json|\.ftpquota)$">
+  Require all denied
+</FilesMatch>
