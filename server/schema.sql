@@ -183,6 +183,32 @@ CREATE TABLE IF NOT EXISTS time_entries (
   CONSTRAINT fk_time_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Support tickets (§6 Support). Post-launch care without the chaos.
+CREATE TABLE IF NOT EXISTS tickets (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  client_id   INT NULL,
+  subject     VARCHAR(200) NOT NULL,
+  body        TEXT DEFAULT NULL,
+  status      VARCHAR(20) NOT NULL DEFAULT 'open',     -- open | in_progress | resolved
+  priority    VARCHAR(10) NOT NULL DEFAULT 'normal',   -- urgent | high | normal | low
+  assignee_id INT NULL,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at  TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT fk_ticket_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL,
+  CONSTRAINT fk_ticket_assignee FOREIGN KEY (assignee_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS ticket_replies (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  ticket_id  INT NOT NULL,
+  user_id    INT NULL,
+  body       TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_reply_ticket FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
+  CONSTRAINT fk_reply_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Certificates with public verification (§6.8)
 CREATE TABLE IF NOT EXISTS certificates (
   id         INT AUTO_INCREMENT PRIMARY KEY,

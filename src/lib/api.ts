@@ -234,6 +234,34 @@ export const time = {
   remove: (id: number) => api.post<{ ok: boolean }>("/time.php?action=delete", { id }),
 }
 
+// Support tickets (§6 Support).
+export type TicketStatus = "open" | "in_progress" | "resolved"
+export type TicketPriority = "urgent" | "high" | "normal" | "low"
+export type Ticket = {
+  id: number
+  subject: string
+  status: TicketStatus
+  priority: TicketPriority
+  client_id: number | null
+  assignee_id: number | null
+  client_company: string | null
+  assignee_name: string | null
+  created_at: string
+}
+export type TicketReply = { id: number; body: string; created_at: string; author: string | null }
+export type TicketDetail = Ticket & { body: string | null; replies: TicketReply[] }
+export const support = {
+  list: () => api.get<Ticket[]>("/support.php"),
+  get: (id: number) => api.get<TicketDetail>(`/support.php?id=${id}`),
+  create: (payload: { subject: string; body?: string; client_id?: number | null; priority?: TicketPriority }) =>
+    api.post<{ id: number }>("/support.php?action=create", payload),
+  setStatus: (id: number, status: TicketStatus) =>
+    api.post<{ ok: boolean }>("/support.php?action=status", { id, status }),
+  setPriority: (id: number, priority: TicketPriority) =>
+    api.post<{ ok: boolean }>("/support.php?action=priority", { id, priority }),
+  reply: (id: number, body: string) => api.post<{ id: number }>("/support.php?action=reply", { id, body }),
+}
+
 // Users & roles (§6.11 Platform). Admin only.
 export type UserStatus = "active" | "suspended"
 export type ManagedUser = {
