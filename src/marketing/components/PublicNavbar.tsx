@@ -8,6 +8,7 @@ import BrandMark from "./BrandMark"
 
 const primary = [
   { to: "/about", label: "About" },
+  { to: "/pricing", label: "Pricing" },
   { to: "/work", label: "Work" },
   { to: "/sectors", label: "Sectors" },
   { to: "/resources", label: "Resources" },

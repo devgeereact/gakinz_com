@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom"
 import { ArrowRight, PenTool, Code2, ShoppingCart, LifeBuoy, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { services, sectors, work } from "@/marketing/data/site"
+import { services, sectors, work, packages } from "@/marketing/data/site"
 import FadeIn from "../components/FadeIn"
 import { Section, SectionHeading, Eyebrow } from "../components/primitives"
 
@@ -187,6 +187,39 @@ export default function Home() {
                 <p className="mt-2 text-sm text-muted-foreground">{w.summary}</p>
                 <p className="mt-3 text-sm font-medium text-foreground">{w.result}</p>
               </div>
+            </FadeIn>
+          ))}
+        </div>
+      </Section>
+
+      {/* Pricing teaser */}
+      <Section muted>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <SectionHeading
+            eyebrow="Pricing"
+            title="Clear packages, no surprises"
+            intro="Starting points, not final quotes. After a short discovery call we send a fixed price, so you know the number before any work begins."
+          />
+          <Button asChild variant="ghost" className="hidden sm:inline-flex">
+            <Link to="/pricing">
+              See full pricing <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+        <div className="mt-10 grid gap-5 sm:grid-cols-3">
+          {packages.slice(0, 3).map((p, i) => (
+            <FadeIn key={p.name} delay={i * 0.05}>
+              <Link
+                to="/pricing"
+                className="group block h-full rounded-xl border border-border bg-background p-6 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <h3 className="text-base font-semibold">{p.name}</h3>
+                <p className="mt-1 text-sm text-muted-foreground">{p.best}</p>
+                <div className="mt-4">
+                  <span className="text-sm text-muted-foreground">from </span>
+                  <span className="font-serif text-2xl font-bold text-primary">{p.price}</span>
+                </div>
+              </Link>
             </FadeIn>
           ))}
         </div>

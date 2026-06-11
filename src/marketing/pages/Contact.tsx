@@ -12,9 +12,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { company } from "@/marketing/data/site"
+import { company, contactSteps } from "@/marketing/data/site"
 import { contact, type EnquiryPayload } from "@/lib/api"
-import { PageHero, Section } from "../components/primitives"
+import { PageHero, Section, SectionHeading } from "../components/primitives"
+import FadeIn from "../components/FadeIn"
 
 const projectTypes = ["New website", "Redesign", "Ecommerce", "Care & support", "Something else"]
 const budgets = ["Under £5k", "£5k – £10k", "£10k – £25k", "£25k+", "Not sure yet"]
@@ -176,7 +177,31 @@ export default function Contact() {
               {sending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {sending ? "Sending…" : "Send enquiry"}
             </Button>
+            <p className="mt-4 text-xs text-muted-foreground">
+              No pushy follow-ups. Just a real reply from the team who'd do the work.
+            </p>
           </form>
+        </div>
+      </Section>
+
+      {/* What happens next */}
+      <Section muted>
+        <SectionHeading
+          eyebrow="What happens next"
+          title="From message to fixed price"
+          intro="No black box. Here's exactly what follows once you hit send."
+          center
+        />
+        <div className="mx-auto mt-10 grid max-w-4xl gap-5 sm:grid-cols-3">
+          {contactSteps.map((step, i) => (
+            <FadeIn key={step.title} delay={i * 0.05}>
+              <div className="h-full rounded-xl border border-border bg-background p-6">
+                <span className="font-serif text-3xl font-bold text-primary/30">{`0${i + 1}`}</span>
+                <h3 className="mt-2 text-base font-semibold">{step.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{step.detail}</p>
+              </div>
+            </FadeIn>
+          ))}
         </div>
       </Section>
     </>

@@ -1,8 +1,16 @@
 import { Link } from "react-router-dom"
+import { ArrowRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { work } from "@/marketing/data/site"
+import { work, processStages } from "@/marketing/data/site"
 import FadeIn from "../components/FadeIn"
-import { PageHero, Section } from "../components/primitives"
+import { PageHero, Section, SectionHeading } from "../components/primitives"
+
+const stats = [
+  { v: "One team", k: "Design + build" },
+  { v: "WCAG 2.1 AA", k: "Accessibility" },
+  { v: "Real devices", k: "Tested on" },
+  { v: "Fixed price", k: "Before work starts" },
+]
 
 export default function Work() {
   return (
@@ -10,31 +18,113 @@ export default function Work() {
       <PageHero
         eyebrow="Our work"
         title="Sites we have designed and built"
-        intro="A selection of projects. Each was designed and built by the same team, from first sketch to launch."
+        intro="A selection of projects. Each was designed and built by the same team, from first sketch to launch — and each is a site the client can run, not one that needs us forever."
       />
+
+      {/* Stats strip */}
       <Section>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {stats.map((s, i) => (
+            <FadeIn key={s.k} delay={i * 0.05}>
+              <div className="rounded-xl border border-border bg-card p-6">
+                <div className="font-serif text-2xl font-bold text-primary">{s.v}</div>
+                <div className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {s.k}
+                </div>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
+      </Section>
+
+      {/* Case studies */}
+      <Section muted>
+        <SectionHeading eyebrow="Selected work" title="The challenge, the approach, the result" />
+        <div className="mt-10 space-y-6">
           {work.map((w, i) => (
             <FadeIn key={w.title} delay={i * 0.05}>
-              <article className="flex h-full flex-col rounded-xl border border-border bg-card p-6">
-                <div className="mb-4 aspect-[4/3] w-full rounded-lg bg-gradient-to-br from-primary/15 to-primary/5" />
-                <span className="text-xs font-semibold uppercase tracking-wide text-primary">
-                  {w.sector}
-                </span>
-                <h2 className="mt-2 text-lg font-semibold">{w.title}</h2>
-                <p className="mt-2 text-sm text-muted-foreground">{w.summary}</p>
-                <p className="mt-3 text-sm font-medium text-foreground">{w.result}</p>
+              <article className="grid gap-6 overflow-hidden rounded-2xl border border-border bg-background p-6 sm:p-8 lg:grid-cols-[1fr_1.6fr]">
+                {/* Left — title + visual */}
+                <div>
+                  <span className="text-xs font-semibold uppercase tracking-wide text-primary">
+                    {w.sector}
+                  </span>
+                  <h3 className="mt-2 font-serif text-xl font-bold">{w.title}</h3>
+                  <p className="mt-2 text-sm text-muted-foreground">{w.summary}</p>
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {w.services.map((s) => (
+                      <span
+                        key={s}
+                        className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="mt-5 aspect-[4/3] w-full rounded-lg bg-gradient-to-br from-primary/15 to-primary/5" />
+                </div>
+                {/* Right — challenge / approach / result */}
+                <dl className="grid gap-5 sm:grid-cols-3 lg:gap-6">
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Challenge</dt>
+                    <dd className="mt-2 text-sm text-foreground">{w.challenge}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Approach</dt>
+                    <dd className="mt-2 text-sm text-foreground">{w.approach}</dd>
+                  </div>
+                  <div className="rounded-lg bg-primary/5 p-4 sm:bg-transparent sm:p-0">
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-primary">Result</dt>
+                    <dd className="mt-2 text-sm font-medium text-foreground">{w.result}</dd>
+                  </div>
+                </dl>
               </article>
             </FadeIn>
           ))}
         </div>
-        <div className="mt-12 text-center">
-          <p className="text-muted-foreground">Want to see more, or talk through a project like yours?</p>
-          <Button asChild size="lg" className="mt-4">
-            <Link to="/contact">Get in touch</Link>
-          </Button>
+      </Section>
+
+      {/* Process recap */}
+      <Section>
+        <SectionHeading
+          eyebrow="How every project runs"
+          title="A clear path, every time"
+          intro="Whatever we build, the route is the same — and you always know what stage you're at."
+        />
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+          {processStages.map((stage, i) => (
+            <FadeIn key={stage.n} delay={i * 0.05}>
+              <div className="h-full rounded-xl border border-border bg-card p-6">
+                <span className="font-serif text-3xl font-bold text-primary/30">{stage.n}</span>
+                <h3 className="mt-2 text-base font-semibold">{stage.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{stage.what}</p>
+              </div>
+            </FadeIn>
+          ))}
         </div>
       </Section>
+
+      {/* CTA */}
+      <section className="bg-primary text-primary-foreground">
+        <div className="mx-auto max-w-6xl px-4 py-16 text-center sm:px-6 sm:py-20">
+          <FadeIn>
+            <h2 className="font-serif text-3xl font-bold sm:text-4xl">
+              Want a project like one of these?
+            </h2>
+            <p className="mx-auto mt-4 max-w-xl text-primary-foreground/85">
+              Tell us about your business and where you want it to go. We'll show you what a site built
+              by one team can do.
+            </p>
+            <div className="mt-8">
+              <Button asChild size="lg" variant="secondary">
+                <Link to="/contact">
+                  Get in touch <ArrowRight className="ml-1 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
     </>
   )
 }

@@ -33,6 +33,7 @@ export default function PublicFooter() {
             <h2 className="text-sm font-semibold text-foreground">Studio</h2>
             <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
               <li><Link className="hover:text-foreground" to="/about">About</Link></li>
+              <li><Link className="hover:text-foreground" to="/pricing">Pricing</Link></li>
               <li><Link className="hover:text-foreground" to="/work">Work</Link></li>
               <li><Link className="hover:text-foreground" to="/sectors">Sectors</Link></li>
               <li><Link className="hover:text-foreground" to="/contact">Contact</Link></li>

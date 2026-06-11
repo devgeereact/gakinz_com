@@ -7,6 +7,7 @@ import Home from "@/marketing/pages/Home"
 import About from "@/marketing/pages/About"
 import ServicesPage from "@/marketing/pages/Services"
 import ServiceDetail from "@/marketing/pages/ServiceDetail"
+import Pricing from "@/marketing/pages/Pricing"
 import Sectors from "@/marketing/pages/Sectors"
 import Work from "@/marketing/pages/Work"
 import Resources from "@/marketing/pages/Resources"
@@ -61,6 +62,7 @@ export const router = createBrowserRouter([
       { path: "about", element: <About /> },
       { path: "services", element: <ServicesPage /> },
       { path: "services/:slug", element: <ServiceDetail /> },
+      { path: "pricing", element: <Pricing /> },
       { path: "sectors", element: <Sectors /> },
       { path: "work", element: <Work /> },
       { path: "resources", element: <Resources /> },

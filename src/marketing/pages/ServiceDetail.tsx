@@ -1,9 +1,9 @@
 import { Link, useParams } from "react-router-dom"
 import { ArrowLeft, ArrowRight, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { services } from "@/marketing/data/site"
+import { services, processStages, alwaysIncluded } from "@/marketing/data/site"
 import FadeIn from "../components/FadeIn"
-import { PageHero, Section } from "../components/primitives"
+import { PageHero, Section, SectionHeading } from "../components/primitives"
 import NotFound from "./NotFound"
 
 export default function ServiceDetail() {
@@ -62,6 +62,62 @@ export default function ServiceDetail() {
                 ))}
               </ul>
             </div>
+
+            <div className="mt-5 rounded-xl border border-border bg-card p-6">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Pricing
+              </h3>
+              <p className="mt-3 text-sm text-muted-foreground">
+                Every project is fixed-price after a short discovery call, so you know the number before
+                any work begins.
+              </p>
+              <Button asChild variant="outline" className="mt-4 w-full">
+                <Link to="/pricing">
+                  See packages <ArrowRight className="ml-1 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          </FadeIn>
+        </div>
+      </Section>
+
+      {/* How we work */}
+      <Section muted>
+        <SectionHeading
+          eyebrow="How we work"
+          title="A simple path from first call to a live site"
+          intro="Five clear stages. You always know what stage you're at and what happens next."
+        />
+        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+          {processStages.map((stage, i) => (
+            <FadeIn key={stage.n} delay={i * 0.05}>
+              <div className="h-full rounded-xl border border-border bg-background p-6">
+                <span className="font-serif text-3xl font-bold text-primary/30">{stage.n}</span>
+                <h3 className="mt-2 text-base font-semibold">{stage.title}</h3>
+                <p className="mt-2 text-sm text-muted-foreground">{stage.what}</p>
+              </div>
+            </FadeIn>
+          ))}
+        </div>
+      </Section>
+
+      {/* Always included */}
+      <Section>
+        <div className="grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:items-start">
+          <FadeIn>
+            <SectionHeading eyebrow="Every project" title="What's always included" />
+          </FadeIn>
+          <FadeIn delay={0.1}>
+            <ul className="grid gap-4 sm:grid-cols-2">
+              {alwaysIncluded.map((item) => (
+                <li key={item} className="flex items-start gap-3">
+                  <span className="mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                    <Check className="h-3.5 w-3.5" />
+                  </span>
+                  <span className="text-sm text-foreground">{item}</span>
+                </li>
+              ))}
+            </ul>
           </FadeIn>
         </div>
       </Section>

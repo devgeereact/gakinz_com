@@ -2,8 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
-/* GAkinz brand fonts — Inter (sans), JetBrains Mono (mono), Georgia (serif, system) */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+/* GAkinz brand fonts — Inter (sans, CMS), JetBrains Mono. Public site overrides
+   to Roboto (sans), Playfair Display (serif), Fira Code (mono) — see .gk-public. */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&family=Roboto:wght@300;400;500;700;900&family=Playfair+Display:wght@500;600;700;800;900&family=Fira+Code:wght@400;500&display=swap');
 
 @layer base {
   /* GAkinz brand theme — violet (#6e56cf) / lavender-white. Hex from the brand
@@ -54,27 +55,43 @@
   /* Public corporate site always renders in the designed light brand theme,
      regardless of the visitor's OS dark-mode preference. Re-declaring the
      tokens on the wrapper overrides any inherited .dark values for its subtree. */
+  /* Public corporate site palette — violet (#8b5cf6) primary, indigo-ink
+     (#312e81) text on white. Hex converted to shadcn HSL triplets (kit uses
+     hsl(var(--token))). Scoped to the wrapper so the CMS theme is untouched. */
   .gk-public {
-    --background: 240 100% 98%;
-    --foreground: 240 27% 23%;
-    --card: 0 0% 100%;
-    --card-foreground: 240 27% 23%;
+    --background: 0 0% 100%;          /* #ffffff */
+    --foreground: 242 47% 34%;        /* #312e81 */
+    --card: 0 0% 100%;               /* #ffffff */
+    --card-foreground: 242 47% 34%;
     --popover: 0 0% 100%;
-    --popover-foreground: 240 27% 23%;
-    --primary: 252 56% 57%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 249 100% 94%;
-    --secondary-foreground: 249 33% 38%;
-    --muted: 240 50% 96%;
-    --muted-foreground: 240 12% 48%;
-    --accent: 218 100% 92%;
-    --accent-foreground: 240 27% 23%;
-    --destructive: 350 100% 66%;
+    --popover-foreground: 242 47% 34%;
+    --primary: 258 90% 66%;          /* #8b5cf6 */
+    --primary-foreground: 0 0% 100%; /* #ffffff */
+    --secondary: 252 100% 97%;       /* #f3f0ff */
+    --secondary-foreground: 245 58% 51%; /* #4338ca */
+    --muted: 250 100% 98%;           /* #f5f3ff */
+    --muted-foreground: 262 83% 58%; /* #7c3aed */
+    --accent: 214 95% 93%;           /* #dbeafe */
+    --accent-foreground: 226 71% 40%;/* #1e40af */
+    --destructive: 0 84% 60%;        /* #ef4444 */
     --destructive-foreground: 0 0% 100%;
-    --border: 240 35% 91%;
-    --input: 240 35% 91%;
-    --ring: 252 56% 57%;
+    --border: 226 100% 94%;          /* #e0e7ff */
+    --input: 226 100% 94%;
+    --ring: 258 90% 66%;             /* #8b5cf6 */
+    --radius: 0.625rem;
+    /* Brand fonts — public only. Roboto body, Playfair Display headings. */
+    font-family: 'Roboto', ui-sans-serif, system-ui, sans-serif;
     color-scheme: light;
+  }
+
+  /* Map the marketing `font-serif` headings to Playfair Display and `font-mono`
+     to Fira Code, without touching the global Tailwind font config (CMS keeps
+     Inter / JetBrains Mono). */
+  .gk-public :is(.font-serif, h1, h2, h3) {
+    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+  }
+  .gk-public .font-mono {
+    font-family: 'Fira Code', ui-monospace, monospace;
   }
 
   .dark {
