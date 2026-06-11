@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { leads, clients, type Lead, type LeadStage } from "@/lib/api"
+import AiAssist from "@/app/components/AiAssist"
 
 const STAGES: { key: LeadStage; label: string }[] = [
   { key: "new", label: "New" },
@@ -163,6 +164,15 @@ export default function Leads() {
                         </div>
                       )}
                       <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{lead.message}</p>
+                      <div className="mt-2">
+                        <AiAssist
+                          task="lead_reply"
+                          title={`Reply to ${lead.name}`}
+                          label="AI reply"
+                          variant="ghost"
+                          input={`New enquiry from ${lead.name}${lead.company ? ` at ${lead.company}` : ""} (${lead.email}).${lead.project_type ? `\nProject type: ${lead.project_type}.` : ""}${lead.budget ? `\nBudget: ${lead.budget}.` : ""}\n\nTheir message:\n"${lead.message}"\n\nDraft GAkinz's first reply email: thank them, show we understood the project, ask one or two sharp scoping questions, and propose a short call. Sign off as the GAkinz studio team.`}
+                        />
+                      </div>
                       <div className="mt-2 flex items-center gap-1.5">
                         <Select value={lead.status} onValueChange={(v) => move(lead, v as LeadStage)}>
                           <SelectTrigger className="h-8 flex-1 text-xs">

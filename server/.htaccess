@@ -5,6 +5,12 @@
 RewriteEngine On
 RewriteBase /
 
+# Pass the Authorization header through to PHP (cPanel/LiteSpeed strips it
+# under CGI/FastCGI, which would make every bearer-token check fail with 401).
+RewriteCond %{HTTP:Authorization} .
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
+
 # Let real files and directories through (assets, *.php, etc.)
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d

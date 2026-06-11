@@ -273,6 +273,13 @@ export const portal = {
   get: (clientId: number) => api.get<PortalData>(`/portal.php?client_id=${clientId}`),
 }
 
+// AI (§6.7). Every call routes server-side through ai.php; the key never
+// reaches the browser. Returns generated text for the given task/input.
+export const ai = {
+  run: (task: string, input: string, system?: string) =>
+    api.post<{ text: string }>("/ai.php", { task, input, system }),
+}
+
 // Users & roles (§6.11 Platform). Admin only.
 export type UserStatus = "active" | "suspended"
 export type ManagedUser = {

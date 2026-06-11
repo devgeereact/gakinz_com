@@ -38,6 +38,7 @@ import {
   type Client,
 } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import AiAssist from "@/app/components/AiAssist"
 
 const statusClass: Record<ProposalStatus, string> = {
   draft: "bg-muted text-muted-foreground",
@@ -246,7 +247,17 @@ export default function Proposals() {
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="pnotes">Notes</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="pnotes">Notes / scope</Label>
+                    <AiAssist
+                      task="proposal_scope"
+                      title="Draft the scope"
+                      label="AI scope"
+                      variant="ghost"
+                      input={`Proposal title: ${title || "(untitled)"}.\nLine items:\n${lines.filter((l) => l.description.trim()).map((l) => `- ${l.description} (qty ${l.qty || 1}, £${l.unit_price || 0})`).join("\n") || "(none yet)"}\n\nWrite a short, plain-English scope paragraph for this proposal: what GAkinz will deliver, what is included, and one line on what is out of scope. UK English, no marketing filler.`}
+                      onUse={(text) => setNotes(text)}
+                    />
+                  </div>
                   <Textarea id="pnotes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1.5" />
                 </div>
               </div>

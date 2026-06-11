@@ -30,6 +30,7 @@ import {
   type Client,
 } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import AiAssist from "@/app/components/AiAssist"
 
 const STATUSES: { key: TicketStatus; label: string }[] = [
   { key: "open", label: "Open" },
@@ -341,6 +342,13 @@ function TicketPanel({ id, onChanged }: { id: number; onChanged: () => void }) {
       </div>
 
       <div className="flex gap-2 border-t border-border pt-4">
+        <AiAssist
+          task="ticket_reply"
+          title="Draft a reply"
+          label="AI"
+          input={`Support ticket: ${ticket.subject}\n\nDetails: ${ticket.body || "(none)"}\n\nThread so far:\n${ticket.replies.map((r) => `${r.author || "Staff"}: ${r.body}`).join("\n") || "(no replies yet)"}\n\nDraft the next staff reply to the client: acknowledge the issue, state what we will do or have done, and give a clear next step.`}
+          onUse={(text) => setReply(text)}
+        />
         <Input
           value={reply}
           onChange={(e) => setReply(e.target.value)}
