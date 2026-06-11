@@ -9,6 +9,16 @@
  *   $conn (mysqli) + DB_*, OPENROUTER_*, OR_*, ALLOWED_ORIGINS constants.
  */
 
+// ── Error display ─────────────────────────────────────────────────────────────
+// Flip to true ONLY while debugging on the server. When true, PHP warnings and
+// stack traces print into responses — never leave this on in production, it
+// leaks file paths / SQL and corrupts JSON output. Errors are always logged.
+define('GK_DEBUG', false);
+ini_set('display_errors', GK_DEBUG ? '1' : '0');
+ini_set('display_startup_errors', GK_DEBUG ? '1' : '0');
+ini_set('log_errors', '1');
+error_reporting(E_ALL);
+
 // ── Database (cPanel / MySQL) ───────────────────────────────────────────────
 // Host stays "localhost" on Namecheap. cPanel prefixes the account name, so
 // the database and its user are both devgeereact_gakinz_com.
