@@ -33,6 +33,7 @@ define('OR_SITE', 'https://gakinz.com');            // sent as HTTP-Referer to O
 define('ALLOWED_ORIGINS', [
   'https://gakinz.com',
   'https://www.gakinz.com',
+  'http://localhost:5174',  // gakinz dev port (5173 belongs to another project)
   'http://localhost:5173',
 ]);
 
