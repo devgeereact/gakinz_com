@@ -1,0 +1,80 @@
+<?php
+/**
+ * Client portal (GAkinzOS §6 Client Portal). Protected.
+ * Aggregates everything a single client sees: their projects (with progress),
+ * invoices, and support tickets. Reuses the existing module tables.
+ *
+ *   GET /portal.php?client_id=N → { client, projects[], invoices[], tickets[] }
+ *
+ * Phase 2: a `client`-role user is linked to a client and only sees their own;
+ * for now staff pass the client_id to preview the portal.
+ */
+require __DIR__ . '/_bootstrap.php';
+
+if ($_SERVER['REQUEST_METHOD'] !== 'GET') fail('Method not allowed.', 405);
+require_auth($conn);
+
+$clientId = (int)($_GET['client_id'] ?? 0);
+if ($clientId <= 0) fail('A client_id is required.');
+
+$stmt = $conn->prepare('SELECT id, company, contact_name, email FROM clients WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+$stmt->bind_param('i', $clientId);
+$stmt->execute();
+$client = $stmt->get_result()->fetch_assoc();
+if (!$client) fail('Client not found.', 404);
+$client['id'] = (int)$client['id'];
+
+// Projects with task progress
+$projects = [];
+$stmt = $conn->prepare(
+  'SELECT p.id, p.name, p.status, p.due_date,
+          (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL) AS task_count,
+          (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL AND t.status = "done") AS done_count
+   FROM projects p WHERE p.client_id = ? AND p.deleted_at IS NULL ORDER BY p.id DESC'
+);
+$stmt->bind_param('i', $clientId);
+$stmt->execute();
+$res = $stmt->get_result();
+while ($r = $res->fetch_assoc()) {
+  $r['id'] = (int)$r['id'];
+  $r['task_count'] = (int)$r['task_count'];
+  $r['done_count'] = (int)$r['done_count'];
+  $projects[] = $r;
+}
+
+// Invoices with totals
+$invoices = [];
+$stmt = $conn->prepare(
+  'SELECT i.id, i.number, i.status, i.issued_at, i.due_at,
+          (SELECT COALESCE(SUM(qty * unit_price), 0) FROM invoice_items it WHERE it.invoice_id = i.id) AS total
+   FROM invoices i WHERE i.client_id = ? AND i.deleted_at IS NULL ORDER BY i.id DESC'
+);
+$stmt->bind_param('i', $clientId);
+$stmt->execute();
+$res = $stmt->get_result();
+while ($r = $res->fetch_assoc()) {
+  $r['id'] = (int)$r['id'];
+  $r['total'] = (float)$r['total'];
+  $invoices[] = $r;
+}
+
+// Tickets
+$tickets = [];
+$stmt = $conn->prepare(
+  'SELECT id, subject, status, priority, created_at FROM tickets
+   WHERE client_id = ? AND deleted_at IS NULL ORDER BY id DESC'
+);
+$stmt->bind_param('i', $clientId);
+$stmt->execute();
+$res = $stmt->get_result();
+while ($r = $res->fetch_assoc()) {
+  $r['id'] = (int)$r['id'];
+  $tickets[] = $r;
+}
+
+ok([
+  'client'   => $client,
+  'projects' => $projects,
+  'invoices' => $invoices,
+  'tickets'  => $tickets,
+]);

@@ -117,7 +117,7 @@ export const router = createBrowserRouter([
       { path: "projects", lazy: lz(() => import("@/app/modules/Projects")) },
       { path: "proposals", lazy: lz(() => import("@/app/modules/Proposals")) },
       { path: "invoicing", lazy: lz(() => import("@/app/modules/Invoicing")) },
-      { path: "portal", element: <ModuleStub title="Client Portal" blurb="Clients track progress, approve work, view invoices and files." /> },
+      { path: "portal", lazy: lz(() => import("@/app/modules/Portal")) },
       { path: "time", lazy: lz(() => import("@/app/modules/Time")) },
       { path: "support", lazy: lz(() => import("@/app/modules/Support")) },
       { path: "comms", element: <ModuleStub title="Communication Hub" blurb="Email, client messages, internal notes — every conversation tied to its project." /> },

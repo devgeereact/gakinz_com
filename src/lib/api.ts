@@ -262,6 +262,17 @@ export const support = {
   reply: (id: number, body: string) => api.post<{ id: number }>("/support.php?action=reply", { id, body }),
 }
 
+// Client portal (§6 Client Portal). Aggregated client-facing view.
+export type PortalData = {
+  client: { id: number; company: string; contact_name: string | null; email: string | null }
+  projects: { id: number; name: string; status: string; due_date: string | null; task_count: number; done_count: number }[]
+  invoices: { id: number; number: string | null; status: string; issued_at: string; due_at: string | null; total: number }[]
+  tickets: { id: number; subject: string; status: string; priority: string; created_at: string }[]
+}
+export const portal = {
+  get: (clientId: number) => api.get<PortalData>(`/portal.php?client_id=${clientId}`),
+}
+
 // Users & roles (§6.11 Platform). Admin only.
 export type UserStatus = "active" | "suspended"
 export type ManagedUser = {
