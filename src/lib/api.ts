@@ -144,6 +144,36 @@ export const tasks = {
     api.post<{ ok: boolean }>("/tasks.php?action=status", { id, status }),
 }
 
+// Proposals & quotes (§6 Proposals).
+export type ProposalStatus = "draft" | "sent" | "accepted" | "declined"
+export type ProposalItemInput = { description: string; qty: number; unit_price: number }
+export type Proposal = {
+  id: number
+  title: string
+  status: ProposalStatus
+  currency: string
+  valid_until: string | null
+  client_id: number | null
+  project_id: number | null
+  client_company: string | null
+  total: number
+  created_at: string
+}
+export const proposals = {
+  list: () => api.get<Proposal[]>("/proposals.php"),
+  create: (payload: {
+    title: string
+    client_id?: number | null
+    valid_until?: string
+    notes?: string
+    items: ProposalItemInput[]
+  }) => api.post<{ id: number }>("/proposals.php?action=create", payload),
+  setStatus: (id: number, status: "draft" | "sent" | "declined") =>
+    api.post<{ ok: boolean }>("/proposals.php?action=status", { id, status }),
+  accept: (id: number) =>
+    api.post<{ ok: boolean; project_id: number; existing?: boolean }>("/proposals.php?action=accept", { id }),
+}
+
 // Users & roles (§6.11 Platform). Admin only.
 export type UserStatus = "active" | "suspended"
 export type ManagedUser = {

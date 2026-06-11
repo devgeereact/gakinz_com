@@ -115,6 +115,31 @@ CREATE TABLE IF NOT EXISTS tasks (
   CONSTRAINT fk_task_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Proposals & quotes (§6 Proposals). Accepting one auto-creates a project.
+CREATE TABLE IF NOT EXISTS proposals (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  client_id   INT NULL,
+  title       VARCHAR(200) NOT NULL,
+  status      VARCHAR(20) NOT NULL DEFAULT 'draft', -- draft | sent | accepted | declined
+  currency    VARCHAR(3)  NOT NULL DEFAULT 'GBP',
+  notes       TEXT DEFAULT NULL,
+  valid_until DATE NULL DEFAULT NULL,
+  project_id  INT NULL,                              -- set when accepted
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at  TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT fk_proposal_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS proposal_items (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  proposal_id INT NOT NULL,
+  description VARCHAR(300) NOT NULL,
+  qty         DECIMAL(10,2) NOT NULL DEFAULT 1,
+  unit_price  DECIMAL(10,2) NOT NULL DEFAULT 0,
+  CONSTRAINT fk_item_proposal FOREIGN KEY (proposal_id) REFERENCES proposals(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Certificates with public verification (§6.8)
 CREATE TABLE IF NOT EXISTS certificates (
   id         INT AUTO_INCREMENT PRIMARY KEY,
