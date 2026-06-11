@@ -1,31 +1,44 @@
 <?php
 /**
- * GAkinz — server configuration.
+ * GAkinz — server configuration (gakinz.com).
  *
- * COPY this file to `config.php` on the server and fill in real values.
+ * COPY this file to `config.php` on the server and fill in the real values.
  * NEVER commit config.php. It is gitignored and lives only on the server.
  *
- * Provides $conn (mysqli) plus app constants used by the other PHP files.
+ * Used by every endpoint via _bootstrap.php. Provides:
+ *   $conn (mysqli) + DB_*, OPENROUTER_*, OR_*, ALLOWED_ORIGINS constants.
  */
 
 // ── Database (cPanel / MySQL) ───────────────────────────────────────────────
+// Host stays "localhost" on Namecheap. cPanel prefixes the account name, so
+// the database and its user are both devgeereact_gakinz_com.
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'gakinz_com');
-define('DB_USER', 'gakinz_com');
+define('DB_NAME', 'devgeereact_gakinz_com');
+define('DB_USER', 'devgeereact_gakinz_com');
 define('DB_PASS', 'REPLACE_db_password');
 
-// ── OpenRouter (server-side AI, never exposed to the browser) ────────────────
-define('OPENROUTER_KEY', 'REPLACE_openrouter_key');
-define('OR_MODEL', 'anthropic/claude-sonnet-4-6'); // pick a current model from openrouter.ai/models
-define('OR_SITE', 'https://gakinz.com');           // sent as HTTP-Referer for OpenRouter
+// ── OpenRouter (server-side AI — read only by ai.php; never sent to the browser)
+define('OPENROUTER_KEY', 'REPLACE_openrouter_key'); // sk-or-v1-…  ('' disables AI cleanly)
+define('OR_MODEL', 'openai/gpt-oss-120b:free');     // model ai.php sends
+define('OR_SITE', 'https://gakinz.com');            // sent as HTTP-Referer to OpenRouter
+
+// Alternative models, swap into OR_MODEL as needed (openrouter.ai/models):
+//   'google/gemma-4-31b-it:free'
+//   'qwen/qwen3-next-80b-a3b-instruct:free'
+//   'anthropic/claude-sonnet-4.6'
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
-// In dev, the Vite app runs on localhost:5173 and calls the live API.
+// In dev the Vite app runs on localhost:5173 and calls this live API.
+// _bootstrap.php fatals without this constant — keep it defined.
 define('ALLOWED_ORIGINS', [
   'https://gakinz.com',
   'https://www.gakinz.com',
   'http://localhost:5173',
 ]);
+
+// ── Optional integrations (unused until their endpoints exist) ───────────────
+define('OPENWEATHER_API_KEY', '');   // read by weather.php if you ever add one
+define('OPENWEATHER_UNITS', 'metric');
 
 // ── Connection ────────────────────────────────────────────────────────────────
 $conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
@@ -35,4 +48,10 @@ if ($conn->connect_errno) {
   echo json_encode(['error' => 'Database connection failed']);
   exit;
 }
-$conn->set_charset('utf8mb4');
+$conn->set_charset('utf8mb4'); // UTF-8 so accents and emojis store correctly
+
+// ── Legacy variable aliases ───────────────────────────────────────────────────
+// Older endpoints on the server referenced these as variables; keep them in
+// sync with the constants so both styles work.
+$OR_API_KEY = OPENROUTER_KEY;
+$OR_MODEL   = OR_MODEL;
