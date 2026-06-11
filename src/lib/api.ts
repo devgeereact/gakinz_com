@@ -174,6 +174,42 @@ export const proposals = {
     api.post<{ ok: boolean; project_id: number; existing?: boolean }>("/proposals.php?action=accept", { id }),
 }
 
+// Invoicing (§6 Invoicing & Payments). Manual mark-as-paid.
+export type InvoiceStatus = "draft" | "sent" | "paid"
+export type Invoice = {
+  id: number
+  number: string | null
+  status: InvoiceStatus
+  currency: string
+  issued_at: string
+  due_at: string | null
+  paid_at: string | null
+  client_id: number | null
+  client_company: string | null
+  total: number
+  overdue: boolean
+}
+export type InvoiceLine = { id: number; description: string; qty: number; unit_price: number }
+export type InvoiceDetail = Invoice & {
+  notes: string | null
+  client_email: string | null
+  project_id: number | null
+  items: InvoiceLine[]
+}
+export const invoices = {
+  list: () => api.get<Invoice[]>("/invoices.php"),
+  get: (id: number) => api.get<InvoiceDetail>(`/invoices.php?id=${id}`),
+  create: (payload: {
+    client_id?: number | null
+    project_id?: number | null
+    due_at?: string
+    notes?: string
+    items: ProposalItemInput[]
+  }) => api.post<{ id: number; number: string }>("/invoices.php?action=create", payload),
+  setStatus: (id: number, status: InvoiceStatus) =>
+    api.post<{ ok: boolean }>("/invoices.php?action=status", { id, status }),
+}
+
 // Users & roles (§6.11 Platform). Admin only.
 export type UserStatus = "active" | "suspended"
 export type ManagedUser = {

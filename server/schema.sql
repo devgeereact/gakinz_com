@@ -140,6 +140,34 @@ CREATE TABLE IF NOT EXISTS proposal_items (
   CONSTRAINT fk_item_proposal FOREIGN KEY (proposal_id) REFERENCES proposals(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Invoicing (§6 Invoicing & Payments). Manual mark-as-paid (Stripe is Phase 2).
+CREATE TABLE IF NOT EXISTS invoices (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  number      VARCHAR(20) DEFAULT NULL,             -- e.g. GK-INV-0007, set after insert
+  client_id   INT NULL,
+  project_id  INT NULL,
+  status      VARCHAR(20) NOT NULL DEFAULT 'draft', -- draft | sent | paid
+  currency    VARCHAR(3)  NOT NULL DEFAULT 'GBP',
+  notes       TEXT DEFAULT NULL,
+  issued_at   DATE NOT NULL,                        -- set by PHP on create
+  due_at      DATE NULL DEFAULT NULL,
+  paid_at     TIMESTAMP NULL DEFAULT NULL,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at  TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT fk_invoice_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL,
+  CONSTRAINT fk_invoice_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS invoice_items (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  invoice_id  INT NOT NULL,
+  description VARCHAR(300) NOT NULL,
+  qty         DECIMAL(10,2) NOT NULL DEFAULT 1,
+  unit_price  DECIMAL(10,2) NOT NULL DEFAULT 0,
+  CONSTRAINT fk_invitem_invoice FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Certificates with public verification (§6.8)
 CREATE TABLE IF NOT EXISTS certificates (
   id         INT AUTO_INCREMENT PRIMARY KEY,
