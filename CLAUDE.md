@@ -199,11 +199,22 @@ only. Add keys to server `config.php` to enable more later.
 nav, full footer; `/login` + `/app` mounted; PHP API + smoke test; clean `tsc`+`vite` build;
 verified in browser.
 
+**Public site remodel (done):** rebuilt every public page from the official company docs
+(Website Copy, Brand Guidelines, Services & Pricing, Capabilities Overview). New brand palette
+scoped to `.gk-public` — violet `#8b5cf6` primary, indigo-ink `#312e81` text, white bg — with
+Roboto (body) / Playfair Display (headings) / Fira Code (mono); the CMS keeps its own theme.
+Added a full `/pricing` page (packages, add-ons, included, payment terms, FAQs); enriched
+About, Services, Sectors, Work, Contact, Resources, ServiceDetail. Content lives in
+`src/marketing/data/site.ts`.
+
 **Next (CMS phase), in order:**
-1. **Code-split** — `/app` (whole CMS) is currently in the public bundle (~3.4 MB one chunk).
-   Lazy-load the admin route subtree so the marketing site stays light. Do this first.
-2. Auth + 7 roles enforced server-side (token table; `Authorization` header validated in PHP).
-3. Rebrand the admin shell (sidebar still says "Pulse UI") and replace demo dashboards with the
-   GAkinzOS modules from `GAkinzOS.html`: Leads, Clients, Projects, Proposals, Invoicing, Portal,
-   Time, Support, Comms, Analytics, Platform.
+1. ~~**Code-split**~~ — DONE. The whole `/app` CMS tree is lazy (`lz()` in `src/routes/index.tsx`);
+   the auth + error subtree is lazy too. Marketing entry chunk is ~539 kB (169 kB gzip); charts,
+   calendar, tables, pdf each load on demand.
+2. **Auth + 7 roles enforced server-side** (token table; `Authorization` header validated in PHP).
+   ⚠️ Needs the live server + DB — build the client + PHP, then deploy to test; do NOT fake locally.
+   This is the real next rock.
+3. Replace demo dashboards with the GAkinzOS modules from `GAkinzOS.html` (Leads…Platform). The
+   admin shell is already GAkinz-branded (sidebar = "GAkinzOS", BrandMark); only a few stray demo
+   pages (Documentation, JobCards, LandingPage, SpinnerExamples) still mention "Pulse" — low priority.
 4. AI features via `ai.php`; payments manual; settings/admin/audit.
