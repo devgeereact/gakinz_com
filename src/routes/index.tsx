@@ -18,40 +18,29 @@ import Verify from "@/marketing/pages/Verify"
 import SmokeTest from "@/marketing/pages/SmokeTest"
 import PublicNotFound from "@/marketing/pages/NotFound"
 
-// 🔐 AUTH — eager (login is the entry to the CMS; no heavy deps)
+// 🔐 AUTH — eager only for the route guard + error boundary (both tiny). The
+// login/register/cover/error PAGES are lazy (see below) so a marketing visitor
+// never downloads the auth bundle on first paint.
 import RequireAuth from "@/app/RequireAuth"
-import Login from "@/app/Login"
 import ModuleStub from "@/app/modules/ModuleStub"
-import AuthLayout from "@/layouts/AuthLayout"
-import LoginPage from "@/auth/basic/LoginPage"
-import RegisterPage from "@/auth/basic/RegisterPage"
-import ForgotPasswordPage from "@/auth/basic/ForgotPasswordPage"
-import { ResetPasswordForm } from "@/auth/basic/ResetPasswordForm"
-import { VerifyEmailForm } from "@/auth/basic/VerifyEmailForm"
-import { PasswordResetSuccess } from "@/auth/basic/PasswordResetSuccess"
-import CoverLoginPage from "@/auth/cover/CoverLoginPage"
-import CoverForgotPasswordPage from "@/auth/cover/CoverForgotPasswordPage"
-import CoverRegisterPage from "@/auth/cover/CoverRegisterPage"
-import CoverResetPasswordPage from "@/auth/cover/CoverResetPasswordPage"
-import CoverVerifyEmailPage from "@/auth/cover/CoverVerifyEmailPage"
-import CoverPasswordResetSuccessPage from "@/auth/cover/CoverPasswordResetSuccessPage"
-import Error404 from "@/pages/error/Error404"
-import Error500 from "@/pages/error/Error500"
-import ComingSoon from "@/pages/error/ComingSoon"
-
 import ErrorPage from "@/pages/ErrorPage"
 
-// 📊 CMS (/app/*) — lazy. The whole admin tree (charts, calendar, tiptap, pdf,
-// xlsx) is loaded only when a /app route is visited, so the public marketing
-// site never downloads it. `lz` turns a default-export dynamic import into a
-// React Router lazy route module.
+// 📊 CMS (/app/*) + 🔐 auth pages — lazy. The whole admin tree (charts, calendar,
+// tiptap, pdf, xlsx) and the auth pages load only when their route is visited,
+// so the public marketing site never downloads them. `lz` turns a default-export
+// dynamic import into a React Router lazy route module; `lzNamed` does the same
+// for a named export.
 const lz = (factory: () => Promise<{ default: ComponentType }>) => async () => ({
   Component: (await factory()).default,
 })
+const lzNamed =
+  (factory: () => Promise<Record<string, ComponentType>>, name: string) => async () => ({
+    Component: (await factory())[name],
+  })
 
 export const router = createBrowserRouter([
-  // 🔐 Member login (standalone, full-screen)
-  { path: "login", element: <Login /> },
+  // 🔐 Member login (standalone, full-screen) — lazy
+  { path: "login", lazy: lz(() => import("@/app/Login")) },
 
   // 🌐 PUBLIC CORPORATE SITE (gakinz.com)
   {
@@ -77,28 +66,28 @@ export const router = createBrowserRouter([
     ],
   },
 
-  // 🔐 AUTH ROUTES
+  // 🔐 AUTH ROUTES — layout + pages all lazy (off the marketing critical path)
   {
-    element: <AuthLayout />,
+    lazy: lz(() => import("@/layouts/AuthLayout")),
     errorElement: <ErrorPage />,
     children: [
-      { path: "auth/basic/login", element: <LoginPage /> },
-      { path: "auth/basic/register", element: <RegisterPage /> },
-      { path: "auth/basic/forgot-password", element: <ForgotPasswordPage /> },
-      { path: "auth/basic/reset-password", element: <ResetPasswordForm /> },
-      { path: "auth/basic/verify-email", element: <VerifyEmailForm /> },
-      { path: "auth/basic/password-reset-success", element: <PasswordResetSuccess /> },
+      { path: "auth/basic/login", lazy: lz(() => import("@/auth/basic/LoginPage")) },
+      { path: "auth/basic/register", lazy: lz(() => import("@/auth/basic/RegisterPage")) },
+      { path: "auth/basic/forgot-password", lazy: lz(() => import("@/auth/basic/ForgotPasswordPage")) },
+      { path: "auth/basic/reset-password", lazy: lzNamed(() => import("@/auth/basic/ResetPasswordForm"), "ResetPasswordForm") },
+      { path: "auth/basic/verify-email", lazy: lzNamed(() => import("@/auth/basic/VerifyEmailForm"), "VerifyEmailForm") },
+      { path: "auth/basic/password-reset-success", lazy: lzNamed(() => import("@/auth/basic/PasswordResetSuccess"), "PasswordResetSuccess") },
 
-      { path: "auth/cover/login", element: <CoverLoginPage /> },
-      { path: "auth/cover/register", element: <CoverRegisterPage /> },
-      { path: "auth/cover/forgot-password", element: <CoverForgotPasswordPage /> },
-      { path: "auth/cover/new-password", element: <CoverResetPasswordPage /> },
-      { path: "auth/cover/password-reset-success", element: <CoverPasswordResetSuccessPage /> },
-      { path: "auth/cover/verify-email", element: <CoverVerifyEmailPage /> },
+      { path: "auth/cover/login", lazy: lz(() => import("@/auth/cover/CoverLoginPage")) },
+      { path: "auth/cover/register", lazy: lz(() => import("@/auth/cover/CoverRegisterPage")) },
+      { path: "auth/cover/forgot-password", lazy: lz(() => import("@/auth/cover/CoverForgotPasswordPage")) },
+      { path: "auth/cover/new-password", lazy: lz(() => import("@/auth/cover/CoverResetPasswordPage")) },
+      { path: "auth/cover/password-reset-success", lazy: lz(() => import("@/auth/cover/CoverPasswordResetSuccessPage")) },
+      { path: "auth/cover/verify-email", lazy: lz(() => import("@/auth/cover/CoverVerifyEmailPage")) },
 
-      { path: "error/error-404", element: <Error404 /> },
-      { path: "error/error-500", element: <Error500 /> },
-      { path: "error/coming-soon", element: <ComingSoon /> },
+      { path: "error/error-404", lazy: lz(() => import("@/pages/error/Error404")) },
+      { path: "error/error-500", lazy: lz(() => import("@/pages/error/Error500")) },
+      { path: "error/coming-soon", lazy: lz(() => import("@/pages/error/ComingSoon")) },
     ],
   },
 
