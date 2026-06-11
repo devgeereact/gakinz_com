@@ -210,6 +210,30 @@ export const invoices = {
     api.post<{ ok: boolean }>("/invoices.php?action=status", { id, status }),
 }
 
+// Time tracking (§6 Time).
+export type TimeEntry = {
+  id: number
+  project_id: number
+  project_name: string
+  description: string | null
+  minutes: number
+  billable: boolean
+  entry_date: string
+  user_name: string | null
+  user_id: number | null
+}
+export const time = {
+  list: () => api.get<TimeEntry[]>("/time.php"),
+  create: (payload: {
+    project_id: number
+    minutes: number
+    description?: string
+    billable?: boolean
+    entry_date?: string
+  }) => api.post<{ id: number }>("/time.php?action=create", payload),
+  remove: (id: number) => api.post<{ ok: boolean }>("/time.php?action=delete", { id }),
+}
+
 // Users & roles (§6.11 Platform). Admin only.
 export type UserStatus = "active" | "suspended"
 export type ManagedUser = {

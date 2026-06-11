@@ -168,6 +168,21 @@ CREATE TABLE IF NOT EXISTS invoice_items (
   CONSTRAINT fk_invitem_invoice FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Time tracking (§6 Time). Billable hours against projects → feed invoices.
+CREATE TABLE IF NOT EXISTS time_entries (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  project_id  INT NOT NULL,
+  user_id     INT NULL,
+  description VARCHAR(300) DEFAULT NULL,
+  minutes     INT NOT NULL DEFAULT 0,
+  billable    TINYINT(1) NOT NULL DEFAULT 1,
+  entry_date  DATE NOT NULL,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  deleted_at  TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT fk_time_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  CONSTRAINT fk_time_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- Certificates with public verification (§6.8)
 CREATE TABLE IF NOT EXISTS certificates (
   id         INT AUTO_INCREMENT PRIMARY KEY,
