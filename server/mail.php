@@ -49,9 +49,10 @@ function imap_connect_or_fail(): array {
   if ($host === '') fail('Inbox is not configured.', 503);
   if (!function_exists('imap_open')) fail('The server is missing the PHP imap extension.', 503);
   $mailbox = preg_replace('/[^A-Za-z0-9_.\/\- ]/', '', $_GET['mailbox'] ?? 'INBOX') ?: 'INBOX';
+  $mailbox = str_replace('..', '', $mailbox); // no namespace traversal
   $ref = imap_mailbox_ref($host, $port, $mailbox);
   $imap = @imap_open($ref, $user, $pass, 0, 1);
-  if (!$imap) fail('Could not reach the inbox: ' . imap_last_error(), 502);
+  if (!$imap) { error_log('GAkinz mail IMAP open: ' . imap_last_error()); fail('Could not reach the inbox.', 502); }
   return [$imap, $host, $port, $mailbox];
 }
 
@@ -123,7 +124,8 @@ if ($method === 'GET' && $action === 'inbox') {
   $search = trim((string)($_GET['search'] ?? ''));
 
   if ($search !== '') {
-    $crit = 'TEXT "' . str_replace('"', '', $search) . '"';
+    $safe = preg_replace('/[\r\n"\\\\]/', '', $search); // no IMAP-criteria injection
+    $crit = 'TEXT "' . $safe . '"';
     $nums = imap_search($imap, $crit, SE_UID) ?: [];
   } else {
     // newest first by arrival
@@ -172,6 +174,7 @@ if ($method === 'GET' && $action === 'message') {
   if (!$ovs || !isset($ovs[0])) { imap_close($imap); fail('Message not found.', 404); }
   $o = $ovs[0];
   $structure = imap_fetchstructure($imap, $uid, FT_UID);
+  if (!$structure) { imap_close($imap); fail('Could not read this message.', 502); }
   [$plain, $html] = fetch_text_parts($imap, $uid, $structure);
   // Defensive: strip any leftover quoted-printable soft line breaks (a literal
   // '=' at end of line) that a transfer-encoding misreport left undecoded.
@@ -233,9 +236,13 @@ function smtp_send(array $cfg, string $to, string $rawMessage, array $rcpts): ar
 
   $read = function () use ($fp): string {
     $data = '';
-    while ($line = fgets($fp, 515)) {
+    while (($line = fgets($fp, 4096)) !== false) {
       $data .= $line;
-      if (isset($line[3]) && $line[3] === ' ') break; // last line of a reply
+      // Terminal line of a multi-line SMTP reply is "NNN " (code + space);
+      // continuation lines are "NNN-". Real EHLO replies can exceed 512 bytes,
+      // so read big and match the start of the line, not a fixed offset.
+      if (preg_match('/^\d{3} /', $line)) break;
+      if (feof($fp)) break;
     }
     return $data;
   };
@@ -299,8 +306,10 @@ if ($method === 'POST' && $action === 'send') {
   $subject = str_field($in, 'subject', 300);
   $bodyTxt = str_field($in, 'body', 50000);
   $cc      = trim((string)($in['cc'] ?? ''));
-  $inReplyTo  = trim((string)($in['in_reply_to'] ?? ''));
-  $references = trim((string)($in['references'] ?? ''));
+  // Strip CR/LF — these go verbatim into headers; without this a caller could
+  // inject extra headers (Bcc, a second body, etc.) — classic mail injection.
+  $inReplyTo  = preg_replace('/[\r\n]+/', '', trim((string)($in['in_reply_to'] ?? '')));
+  $references = preg_replace('/[\r\n]+/', '', trim((string)($in['references'] ?? '')));
 
   $toList = array_filter(array_map('trim', preg_split('/[,;]+/', $to)));
   $ccList = array_filter(array_map('trim', preg_split('/[,;]+/', $cc)));
@@ -355,7 +364,7 @@ if ($method === 'POST' && $action === 'send') {
     if (!$sent) $err = 'PHP mail() failed (no SMTP configured).';
   }
 
-  if (!$sent) fail('Could not send: ' . $err, 502);
+  if (!$sent) { error_log('GAkinz mail SMTP send: ' . $err); fail('Could not send the message. Please try again.', 502); }
   audit($conn, $user['id'], 'mail_send', 'to ' . implode(',', $toList) . ' — ' . $subject);
   ok(['ok' => true, 'message_id' => $msgId], 201);
 }
