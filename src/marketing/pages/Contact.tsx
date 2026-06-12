@@ -133,7 +133,7 @@ export default function Contact() {
               <div>
                 <Label>Project type</Label>
                 <Select value={form.projectType} onValueChange={(v) => set("projectType", v)}>
-                  <SelectTrigger className="mt-1.5">
+                  <SelectTrigger className="mt-1.5" aria-label="Project type">
                     <SelectValue placeholder="Select one" />
                   </SelectTrigger>
                   <SelectContent>
@@ -148,7 +148,7 @@ export default function Contact() {
               <div>
                 <Label>Budget</Label>
                 <Select value={form.budget} onValueChange={(v) => set("budget", v)}>
-                  <SelectTrigger className="mt-1.5">
+                  <SelectTrigger className="mt-1.5" aria-label="Budget">
                     <SelectValue placeholder="Select a range" />
                   </SelectTrigger>
                   <SelectContent>

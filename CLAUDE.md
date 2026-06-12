@@ -278,8 +278,27 @@ About, Services, Sectors, Work, Contact, Resources, ServiceDetail. Content lives
   Stripe webhook endpoint at `/payments.php?action=webhook`. Manual "mark paid" retained as fallback.
 - No external integration is testable locally (no Twilio/Stripe keys); all degrade with clear 503s.
 
-**Server files awaiting (re)deploy from this session:** `server/_smtp.php` (NEW), `server/_sms.php` (NEW),
-`server/payments.php` (NEW), `server/mail.php`, `server/comms.php`, `server/ai.php`. **No schema changes.**
-New config keys (see `config.php.example`): `$TWILIO_SID/_TOKEN/_FROM`, `$STRIPE_SECRET/_WEBHOOK_SECRET/
-_SUCCESS_URL/_CANCEL_URL`. Client changes (Pulse→GAkinz rebrand, ModuleStub delete, Comms send + SMS,
-Invoicing/Portal pay buttons) ship via the normal `dist/` deploy on push.
+**Client-role portal auth (DONE this session):** a `client`-role login sees ONLY its own portal.
+`users.client_id` binds the login to a client; `require_auth` (in `_bootstrap.php`) carries it;
+`auth.php` login+me expose it; **`portal.php` derives the client_id from the token and ignores any
+`?client_id` param for client-role callers** (the isolation guarantee — staff keep the preview param).
+`users.php` provisions client accounts (create requires+validates `client_id`; role-change can't promote
+into `client`). Client UI: Platform "Client" role reveals a required client picker; Portal auto-loads the
+client's own data (no picker); `RequireAuth` bounces a client off staff modules to `/app/portal`.
+
+**Tests (NEW):** Vitest added (`npm test` → `vitest run`). `src/lib/access.test.ts` covers the role-gating
+logic (canAccess / moduleKeyForPath / defaultPathForRole) — 11 tests, the client-isolation rules asserted
+explicitly. Build unaffected (`.test.ts` not bundled).
+
+**A11y pass (DONE):** ran axe-core (wcag2a/2aa/21a/21aa) over the public site. Fixed: `.gk-pill` eyebrow
+text contrast (was ~3.9:1 → darkened to `#6d28d9`, site-wide in `index.css`); Contact form select triggers
+missing accessible names (added `aria-label`). 0 violations on home/contact/pricing. Perf: heavy chunks
+(ApexCharts, calendar, pdf) already lazy-loaded — no critical perf issue.
+
+**Server files awaiting (re)deploy from this session:** `_smtp.php` (NEW), `_sms.php` (NEW),
+`payments.php` (NEW), `mail.php`, `comms.php`, `ai.php`, `auth.php`, `users.php`, `portal.php`,
+`_bootstrap.php`. **ONE schema migration:** `ALTER TABLE users ADD COLUMN client_id INT NULL DEFAULT NULL
+AFTER role;` (for client-role auth). New config keys (see `config.php.example`): `$TWILIO_SID/_TOKEN/_FROM`,
+`$STRIPE_SECRET/_WEBHOOK_SECRET/_SUCCESS_URL/_CANCEL_URL`. Client changes ship via the normal `dist/`
+deploy on push. Local checkpoints committed (not pushed) per [[commit-no-push]]: `205d93a` (Comms/Stripe/
+AI), `4571280` (client auth), + tests/a11y.

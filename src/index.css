@@ -750,7 +750,9 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: hsl(var(--gk-violet));
+  /* Darker than --gk-violet so the small eyebrow text clears WCAG AA (4.5:1)
+     on the tinted pill background — the brand violet alone was ~3.9:1. */
+  color: #6d28d9;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
