@@ -173,6 +173,9 @@ if ($method === 'GET' && $action === 'message') {
   $o = $ovs[0];
   $structure = imap_fetchstructure($imap, $uid, FT_UID);
   [$plain, $html] = fetch_text_parts($imap, $uid, $structure);
+  // Defensive: strip any leftover quoted-printable soft line breaks (a literal
+  // '=' at end of line) that a transfer-encoding misreport left undecoded.
+  $plain = preg_replace('/=\r?\n/', '', $plain);
   if ($plain === '' && $html !== '') {
     $plain = trim(html_entity_decode(strip_tags(preg_replace('/<(br|\/p|\/div)[^>]*>/i', "\n", $html)), ENT_QUOTES, 'UTF-8'));
   }
