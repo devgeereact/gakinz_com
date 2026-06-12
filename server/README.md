@@ -22,6 +22,7 @@ the document root on cPanel and are uploaded once by hand, then left alone by de
 | `api.php` | Smoke test: GET list / POST insert `items`. |
 | `contact.php` | Public enquiry form → `enquiries`. |
 | `ai.php` | OpenRouter proxy for all AI features. Key stays server-side. |
+| `weather.php` | OpenWeather proxy for the CMS header widget (auth-gated, 10-min cache). Key stays server-side. |
 | `verify.php` | Public certificate verification. |
 | `schema.sql` | Foundation tables: `items`, `enquiries`, `certificates`. |
 | `.htaccess` | SPA routing + blocks direct access to config/bootstrap. |

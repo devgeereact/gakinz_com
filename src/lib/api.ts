@@ -324,3 +324,20 @@ export const auth = {
   reset: (token: string, password: string) =>
     api.post<{ ok: boolean }>("/auth.php?action=reset", { token, password }),
 }
+
+// Weather (CMS dashboard widget). Server proxies OpenWeather; key stays server-side.
+export type Weather = {
+  city: string
+  country: string
+  temp: number | null
+  feels_like: number | null
+  description: string
+  icon: string
+  humidity: number | null
+  wind: number | null
+  units: string
+  updated: string
+}
+export const weather = {
+  current: (city = "London") => api.get<Weather>(`/weather.php?city=${encodeURIComponent(city)}`),
+}

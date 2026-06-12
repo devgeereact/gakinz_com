@@ -47,9 +47,9 @@ define('ALLOWED_ORIGINS', [
   'http://localhost:5173',
 ]);
 
-// ── Optional integrations (unused until their endpoints exist) ───────────────
-define('OPENWEATHER_API_KEY', '');   // read by weather.php if you ever add one
-define('OPENWEATHER_UNITS', 'metric');
+// ── Optional integrations ────────────────────────────────────────────────────
+define('OPENWEATHER_API_KEY', '');   // read by weather.php (CMS header widget); '' hides the widget
+define('OPENWEATHER_UNITS', 'metric'); // 'metric' (°C) or 'imperial' (°F)
 
 // ── Connection ────────────────────────────────────────────────────────────────
 $conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);

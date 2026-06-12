@@ -29,6 +29,7 @@ import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 import { LanguageDropdown } from "@/components/language-dropdown"
 import { UserDropdown } from "@/components/UserDropdown"
+import WeatherPill from "@/app/components/WeatherPill"
 
 export default function AppLayout() {
   const [scrolled, setScrolled] = useState(false)
@@ -97,6 +98,7 @@ export default function AppLayout() {
 
                 <div className="ml-auto">
                     <div className="flex items-center gap-1">
+                        <WeatherPill />
                         <GlobalSearch />
                         <ThemeToggle />
                         <LanguageDropdown />
