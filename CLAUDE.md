@@ -215,9 +215,18 @@ About, Services, Sectors, Work, Contact, Resources, ServiceDetail. Content lives
    super-admin), `_bootstrap.php` `require_auth($conn, $roles)` (token + role, 401/403, audit),
    each endpoint defines its own `STAFF`/`ADMINS` list. Client: `src/lib/access.ts` mirrors
    those lists; `RequireAuth` role-gates routes; sidebar filters by role; logout wired.
-   Matrix verified 13/13 vs server, `tsc -b` clean. ⚠️ STILL NEEDS DEPLOY: upload `server/*.php`
-   + run `schema.sql` on the live DB, then test real login (seed `dev@gakinz.com` / `Testing123!`).
-3. Replace demo dashboards with the GAkinzOS modules from `GAkinzOS.html` (Leads…Platform). The
-   admin shell is already GAkinz-branded (sidebar = "GAkinzOS", BrandMark); only a few stray demo
-   pages (Documentation, JobCards, LandingPage, SpinnerExamples) still mention "Pulse" — low priority.
-4. AI features via `ai.php`; payments manual; settings/admin/audit.
+   Matrix verified 13/13 vs server, `tsc -b` clean. ✅ DEPLOYED & LIVE — `server/*.php` + `schema.sql`
+   are on the live DB; real login confirmed (`dev@gakinz.com` / `Testing123!` → super_admin token,
+   `auth.me`/`leads.php`/etc. all 200). The DB is near-empty (1 lead, no clients/projects/invoices yet).
+3. **GAkinzOS modules** — DONE. All 10 operational modules (Leads, Clients, Projects, Proposals,
+   Invoicing, Portal, Time, Support, Analytics, Platform) are built in `src/app/modules/*` and wired
+   to the live API via `src/lib/api.ts` (no mock data). Demo Pulse `AnalyticsDashboard` retired as the
+   `/app` home: the index route + sidebar "Dashboard" now point at `src/app/modules/Dashboard.tsx` —
+   a live GAkinzOS overview (KPI cards, lead pipeline, paid-revenue area chart, recent leads, studio
+   snapshot, AI morning brief via `ai.php`). `analytics` route promoted from stub to
+   `src/app/modules/Analytics.tsx` (revenue paid-vs-outstanding, win rate, avg invoice, project mix,
+   billable utilisation by week). Both verified in-browser against the live API; `tsc -b` + `vite build` clean.
+   Remaining stub: `comms` (Communication Hub) — needs an email/messaging provider, deferred.
+   Stray demo pages (Documentation, JobCards, LandingPage, SpinnerExamples) still say "Pulse" — low priority.
+4. AI features via `ai.php` (wired in Dashboard brief + Leads/Proposals/Support AiAssist); payments manual;
+   settings/admin/audit live in Platform module.

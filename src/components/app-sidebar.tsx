@@ -34,7 +34,7 @@ import { canAccess } from "@/lib/access"
 // item to its role gate in src/lib/access.ts so the nav only shows modules the
 // signed-in role can actually open (server enforces the same lists).
 const navMain = [
-  { key: "dashboard", title: "Dashboard", url: "app/dashboard/analytics", icon: LayoutDashboard },
+  { key: "dashboard", title: "Dashboard", url: "app", icon: LayoutDashboard },
   { key: "leads", title: "Leads", url: "app/leads", icon: Inbox },
   { key: "clients", title: "Clients", url: "app/clients", icon: Users },
   { key: "projects", title: "Projects", url: "app/projects", icon: FolderKanban },

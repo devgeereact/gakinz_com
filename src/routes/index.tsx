@@ -100,7 +100,7 @@ export const router = createBrowserRouter([
         lazy: lz(() => import("@/layouts/AppLayout")),
         errorElement: <ErrorPage />,
         children: [
-      { index: true, lazy: lz(() => import("@/pages/dashboard/analytics/AnalyticsDashboard")) },
+      { index: true, lazy: lz(() => import("@/app/modules/Dashboard")) },
 
       // ── GAkinzOS modules ────────────────────────────────────────────────
       { path: "leads", lazy: lz(() => import("@/app/modules/Leads")) },
@@ -112,7 +112,7 @@ export const router = createBrowserRouter([
       { path: "time", lazy: lz(() => import("@/app/modules/Time")) },
       { path: "support", lazy: lz(() => import("@/app/modules/Support")) },
       { path: "comms", element: <ModuleStub title="Communication Hub" blurb="Email, client messages, internal notes — every conversation tied to its project." /> },
-      { path: "analytics", element: <ModuleStub title="Analytics & Reporting" blurb="Revenue, pipeline, project profitability, utilisation." /> },
+      { path: "analytics", lazy: lz(() => import("@/app/modules/Analytics")) },
       { path: "platform", lazy: lz(() => import("@/app/modules/Platform")) },
 
       { path: "dashboard/analytics", lazy: lz(() => import("@/pages/dashboard/analytics/AnalyticsDashboard")) },
