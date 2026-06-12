@@ -33,8 +33,10 @@ export default function Login() {
   }
 
   return (
-    <div className="gk-public flex min-h-screen items-center justify-center bg-background px-4 py-12">
-      <div className="w-full max-w-sm">
+    <div className="gk-public relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-12">
+      <div className="gk-aurora" aria-hidden />
+      <div className="absolute inset-0 gk-grid" aria-hidden />
+      <div className="relative w-full max-w-sm">
         <Link to="/" className="mb-8 flex items-center justify-center gap-2" aria-label="GAkinz home">
           <BrandMark className="h-9 w-9" />
           <span className="text-xl font-extrabold tracking-tight">
@@ -42,9 +44,11 @@ export default function Login() {
           </span>
         </Link>
 
-        <div className="rounded-xl border border-border bg-card p-6 shadow-sm sm:p-8">
-          <h1 className="text-xl font-semibold">Member sign in</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Access the GAkinz platform.</p>
+        <div className="gk-ring p-6 shadow-xl shadow-primary/10 sm:p-8">
+          <h1 className="font-serif text-2xl font-bold tracking-tight">
+            Member <span className="gk-grad-text">sign in</span>
+          </h1>
+          <p className="mt-1.5 text-sm text-muted-foreground">Access the GAkinz platform.</p>
 
           <form onSubmit={onSubmit} noValidate className="mt-6 space-y-4">
             <div>
@@ -83,7 +87,7 @@ export default function Login() {
               </div>
             )}
 
-            <Button type="submit" className="w-full" disabled={busy}>
+            <Button type="submit" className="gk-shine w-full shadow-md shadow-primary/20" disabled={busy}>
               {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {busy ? "Signing in…" : "Sign in"}
             </Button>

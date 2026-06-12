@@ -75,24 +75,30 @@ type KpiProps = {
 function Kpi({ label, value, hint, icon: Icon, to, accent }: KpiProps) {
   const navigate = useNavigate()
   return (
-    <Card
+    <div
       role="button"
       tabIndex={0}
       onClick={() => navigate(to)}
       onKeyDown={(e) => e.key === "Enter" && navigate(to)}
-      className="cursor-pointer transition-colors hover:border-primary/40"
+      className="gk-app-card cursor-pointer"
     >
-      <CardContent className="flex items-start justify-between gap-3 p-5">
+      <div className="flex items-start justify-between gap-3 p-5">
         <div className="min-w-0">
           <p className="text-sm text-muted-foreground">{label}</p>
           <p className="mt-1 truncate text-2xl font-semibold tracking-tight">{value}</p>
           {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
         </div>
-        <span className={`rounded-lg p-2 ${accent ?? "bg-primary/10 text-primary"}`}>
+        <span
+          className={
+            accent
+              ? `inline-flex h-10 w-10 items-center justify-center rounded-lg ${accent}`
+              : "gk-app-chip h-10 w-10"
+          }
+        >
           <Icon className="h-5 w-5" />
         </span>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -253,7 +259,9 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Overview</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            <span className="gk-app-grad">Overview</span>
+          </h1>
           <p className="text-sm text-muted-foreground">
             The whole studio at a glance — live from GAkinzOS.
           </p>
@@ -262,7 +270,7 @@ export default function Dashboard() {
           <Button variant="outline" size="sm" onClick={load}>
             <RefreshCw className="mr-2 h-4 w-4" /> Refresh
           </Button>
-          <Button size="sm" onClick={generateBrief} disabled={briefing}>
+          <Button size="sm" onClick={generateBrief} disabled={briefing} className="gk-shine shadow-md shadow-primary/20">
             {briefing ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -284,12 +292,14 @@ export default function Dashboard() {
       )}
 
       {brief && (
-        <Card className="border-primary/30 bg-primary/5">
-          <CardContent className="flex gap-3 p-5">
-            <Sparkles className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+        <div className="gk-app-ring gk-app-accent p-5">
+          <div className="flex gap-3">
+            <span className="gk-app-chip mt-0.5 h-8 w-8 shrink-0">
+              <Sparkles className="h-4 w-4" />
+            </span>
             <p className="text-sm leading-relaxed">{brief}</p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* KPI row */}
@@ -346,7 +356,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-12 gap-6">
         {/* Revenue trend */}
-        <Card className="col-span-12 xl:col-span-7">
+        <Card className="gk-app-accent col-span-12 overflow-hidden xl:col-span-7">
           <CardHeader>
             <CardTitle className="text-base">Revenue (paid)</CardTitle>
           </CardHeader>
@@ -494,7 +504,7 @@ function Snapshot({ label, value, to }: { label: string; value: string; to: stri
   return (
     <button
       onClick={() => navigate(to)}
-      className="rounded-lg border bg-card p-4 text-left transition-colors hover:border-primary/40"
+      className="gk-app-card p-4 text-left"
     >
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-xl font-semibold">{value}</p>

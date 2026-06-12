@@ -76,7 +76,7 @@ export function AppSidebar({ onHoverChange, ...props }: AppSidebarProps) {
                 <BrandMark className="size-8" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">GAkinzOS</span>
+                <span className="gk-app-grad truncate font-bold">GAkinzOS</span>
                 <span className="truncate text-xs text-muted-foreground">Studio platform</span>
               </div>
             </Link>
