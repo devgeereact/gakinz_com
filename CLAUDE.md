@@ -211,9 +211,12 @@ About, Services, Sectors, Work, Contact, Resources, ServiceDetail. Content lives
 1. ~~**Code-split**~~ — DONE. The whole `/app` CMS tree is lazy (`lz()` in `src/routes/index.tsx`);
    the auth + error subtree is lazy too. Marketing entry chunk is ~539 kB (169 kB gzip); charts,
    calendar, tables, pdf each load on demand.
-2. **Auth + 7 roles enforced server-side** (token table; `Authorization` header validated in PHP).
-   ⚠️ Needs the live server + DB — build the client + PHP, then deploy to test; do NOT fake locally.
-   This is the real next rock.
+2. **Auth + 7 roles** — built. Server: `auth.php` (login/me/logout/forgot/reset, seed
+   super-admin), `_bootstrap.php` `require_auth($conn, $roles)` (token + role, 401/403, audit),
+   each endpoint defines its own `STAFF`/`ADMINS` list. Client: `src/lib/access.ts` mirrors
+   those lists; `RequireAuth` role-gates routes; sidebar filters by role; logout wired.
+   Matrix verified 13/13 vs server, `tsc -b` clean. ⚠️ STILL NEEDS DEPLOY: upload `server/*.php`
+   + run `schema.sql` on the live DB, then test real login (seed `dev@gakinz.com` / `Testing123!`).
 3. Replace demo dashboards with the GAkinzOS modules from `GAkinzOS.html` (Leads…Platform). The
    admin shell is already GAkinz-branded (sidebar = "GAkinzOS", BrandMark); only a few stray demo
    pages (Documentation, JobCards, LandingPage, SpinnerExamples) still mention "Pulse" — low priority.
