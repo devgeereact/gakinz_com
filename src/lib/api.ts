@@ -273,6 +273,50 @@ export const portal = {
   get: (clientId: number) => api.get<PortalData>(`/portal.php?client_id=${clientId}`),
 }
 
+// Communication Hub (§6 Comms). Threads tie every conversation to a client /
+// project. No external provider yet — messages are recorded, not delivered.
+export type CommChannel = "email" | "call" | "meeting" | "client" | "internal"
+export type CommDirection = "out" | "in" | "note"
+export type CommThread = {
+  id: number
+  subject: string
+  channel: CommChannel
+  status: "open" | "archived"
+  client_id: number | null
+  project_id: number | null
+  client_company: string | null
+  project_name: string | null
+  created_at: string
+  last_message_at: string | null
+  message_count: number
+  preview: string | null
+}
+export type CommMessage = {
+  id: number
+  direction: CommDirection
+  body: string
+  created_at: string
+  author: string | null
+}
+export type CommThreadDetail = Omit<CommThread, "message_count" | "preview"> & {
+  messages: CommMessage[]
+}
+export const comms = {
+  list: () => api.get<CommThread[]>("/comms.php"),
+  get: (id: number) => api.get<CommThreadDetail>(`/comms.php?id=${id}`),
+  create: (payload: {
+    subject: string
+    client_id?: number | null
+    project_id?: number | null
+    channel?: CommChannel
+    body?: string
+  }) => api.post<{ id: number }>("/comms.php?action=create", payload),
+  post: (thread_id: number, body: string, direction: CommDirection = "note") =>
+    api.post<{ id: number }>("/comms.php?action=post", { thread_id, body, direction }),
+  setStatus: (id: number, status: "open" | "archived") =>
+    api.post<{ ok: boolean }>("/comms.php?action=status", { id, status }),
+}
+
 // AI (§6.7). Every call routes server-side through ai.php; the key never
 // reaches the browser. Returns generated text for the given task/input.
 export const ai = {

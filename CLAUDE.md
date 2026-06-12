@@ -226,7 +226,14 @@ About, Services, Sectors, Work, Contact, Resources, ServiceDetail. Content lives
    snapshot, AI morning brief via `ai.php`). `analytics` route promoted from stub to
    `src/app/modules/Analytics.tsx` (revenue paid-vs-outstanding, win rate, avg invoice, project mix,
    billable utilisation by week). Both verified in-browser against the live API; `tsc -b` + `vite build` clean.
-   Remaining stub: `comms` (Communication Hub) — needs an email/messaging provider, deferred.
+   `comms` (Communication Hub) — BUILT (`src/app/modules/Comms.tsx` + `server/comms.php` +
+   `comm_threads`/`comm_messages` in `schema.sql`). Internal conversation log: threads tied to a
+   client/project, messages tagged by channel (email/call/meeting/client/internal) and direction
+   (out/in/note), AI reply draft via `ai.php`. No external provider — messages are RECORDED, not
+   sent (a real email/SMS send is the only thing still deferred). ⚠️ NEEDS DEPLOY: upload
+   `server/comms.php` and run the two new `CREATE TABLE` statements on the live DB; until then the
+   module shows a graceful "comms.php not uploaded" banner. UI + graceful-degradation verified
+   in-browser; `tsc -b` + `vite build` clean. `ModuleStub.tsx` is now unused (all modules live).
    Stray demo pages (Documentation, JobCards, LandingPage, SpinnerExamples) still say "Pulse" — low priority.
 4. AI features via `ai.php` (wired in Dashboard brief + Leads/Proposals/Support AiAssist); payments manual;
    settings/admin/audit live in Platform module.

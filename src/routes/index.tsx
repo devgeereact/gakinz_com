@@ -22,7 +22,6 @@ import PublicNotFound from "@/marketing/pages/NotFound"
 // login/register/cover/error PAGES are lazy (see below) so a marketing visitor
 // never downloads the auth bundle on first paint.
 import RequireAuth from "@/app/RequireAuth"
-import ModuleStub from "@/app/modules/ModuleStub"
 import ErrorPage from "@/pages/ErrorPage"
 
 // 📊 CMS (/app/*) + 🔐 auth pages — lazy. The whole admin tree (charts, calendar,
@@ -111,7 +110,7 @@ export const router = createBrowserRouter([
       { path: "portal", lazy: lz(() => import("@/app/modules/Portal")) },
       { path: "time", lazy: lz(() => import("@/app/modules/Time")) },
       { path: "support", lazy: lz(() => import("@/app/modules/Support")) },
-      { path: "comms", element: <ModuleStub title="Communication Hub" blurb="Email, client messages, internal notes — every conversation tied to its project." /> },
+      { path: "comms", lazy: lz(() => import("@/app/modules/Comms")) },
       { path: "analytics", lazy: lz(() => import("@/app/modules/Analytics")) },
       { path: "platform", lazy: lz(() => import("@/app/modules/Platform")) },
 

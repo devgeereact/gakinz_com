@@ -219,3 +219,35 @@ CREATE TABLE IF NOT EXISTS certificates (
   revoked_at TIMESTAMP NULL DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Communication Hub (§6 Comms). Every conversation — email logged by hand,
+-- a call recap, a client message, an internal note — kept as a thread tied to
+-- a client and/or project. No external provider yet: messages are recorded,
+-- not sent. `channel` tags the medium; `direction` tags who spoke.
+CREATE TABLE IF NOT EXISTS comm_threads (
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  subject         VARCHAR(200) NOT NULL,
+  client_id       INT NULL,
+  project_id      INT NULL,
+  channel         VARCHAR(20) NOT NULL DEFAULT 'internal', -- email | call | meeting | client | internal
+  status          VARCHAR(20) NOT NULL DEFAULT 'open',     -- open | archived
+  created_by      INT NULL,
+  last_message_at TIMESTAMP NULL DEFAULT NULL,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at      TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT fk_thread_client  FOREIGN KEY (client_id)  REFERENCES clients(id)  ON DELETE SET NULL,
+  CONSTRAINT fk_thread_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
+  CONSTRAINT fk_thread_user    FOREIGN KEY (created_by) REFERENCES users(id)    ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS comm_messages (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  thread_id  INT NOT NULL,
+  user_id    INT NULL,
+  direction  VARCHAR(10) NOT NULL DEFAULT 'note',  -- out (we sent) | in (they sent) | note (internal)
+  body       TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_msg_thread FOREIGN KEY (thread_id) REFERENCES comm_threads(id) ON DELETE CASCADE,
+  CONSTRAINT fk_msg_user   FOREIGN KEY (user_id)   REFERENCES users(id)        ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
