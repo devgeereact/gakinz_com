@@ -385,3 +385,46 @@ export type Weather = {
 export const weather = {
   current: (city = "London") => api.get<Weather>(`/weather.php?city=${encodeURIComponent(city)}`),
 }
+
+// Mailbox (GAkinzOS). SMTP send + IMAP inbox via mail.php. Senior staff only.
+export type MailStatus = { smtp: boolean; imap: boolean; imap_ext: boolean }
+export type MailSummary = {
+  uid: number
+  subject: string
+  from_name: string
+  from_email: string
+  date: string | null
+  seen: boolean
+  answered: boolean
+  message_id: string
+  size: number
+}
+export type MailMessage = {
+  uid: number
+  subject: string
+  from_name: string
+  from_email: string
+  to: string
+  date: string | null
+  message_id: string
+  text: string
+  html: string
+}
+export type SendMailPayload = {
+  to: string
+  subject: string
+  body: string
+  cc?: string
+  in_reply_to?: string
+  references?: string
+}
+export const mail = {
+  status: () => api.get<MailStatus>("/mail.php?action=status"),
+  inbox: (limit = 30, search = "") =>
+    api.get<MailSummary[]>(
+      `/mail.php?action=inbox&limit=${limit}${search ? `&search=${encodeURIComponent(search)}` : ""}`,
+    ),
+  message: (uid: number) => api.get<MailMessage>(`/mail.php?action=message&uid=${uid}`),
+  send: (payload: SendMailPayload) => api.post<{ ok: boolean; message_id: string }>("/mail.php?action=send", payload),
+  setSeen: (uid: number, seen = true) => api.post<{ ok: boolean }>("/mail.php?action=seen", { uid, seen }),
+}

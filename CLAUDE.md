@@ -235,5 +235,21 @@ About, Services, Sectors, Work, Contact, Resources, ServiceDetail. Content lives
    module shows a graceful "comms.php not uploaded" banner. UI + graceful-degradation verified
    in-browser; `tsc -b` + `vite build` clean. `ModuleStub.tsx` is now unused (all modules live).
    Stray demo pages (Documentation, JobCards, LandingPage, SpinnerExamples) still say "Pulse" — low priority.
-4. AI features via `ai.php` (wired in Dashboard brief + Leads/Proposals/Support AiAssist); payments manual;
-   settings/admin/audit live in Platform module.
+   `mailbox` (Mailbox) — BUILT (`src/app/modules/Mailbox.tsx` + `server/mail.php`). REAL email now:
+   SMTP send (tiny built-in PHP SMTP client — no Composer; SSL 465 / STARTTLS 587, AUTH LOGIN) +
+   IMAP inbox (PHP `imap` ext) so senior staff (super_admin/admin/manager — `MAIL_ROLES`, mirrored in
+   `access.ts`) read and reply to hello@gakinz.com in-app. Two-pane: inbox list + reading/compose pane,
+   AI reply draft via `ai.php`. Config in `config.php` as `$SMTP_*`/`$IMAP_*` (host
+   premium152.web-hosting.com, port 465 ssl / 993 ssl; password server-only). Degrades gracefully:
+   banners when SMTP/IMAP/imap-ext missing. ⚠️ NEEDS DEPLOY: upload `server/mail.php`, set the mail
+   vars in live `config.php`, ensure the PHP `imap` extension is enabled (cPanel → Select PHP Version →
+   Extensions). UI + graceful-degradation verified in-browser; `tsc -b` + `vite build` clean.
+
+   **Premium UI redesign (DONE):** whole product re-skinned to one cohesive design language. Public site
+   (`.gk-public` layer in `src/index.css`): aurora/grid backdrops, gradient text, `gk-card`/`gk-ring`/
+   `gk-glass`/`gk-shine`, trust marquee, `CtaBand` — applied across all marketing pages + Login. CMS
+   (theme-aware layer, light+dark): `gk-app-grad` titles, `gk-app-card` (lift), `gk-app-chip` (gradient
+   icon), `gk-app-ring`, `gk-app-accent` — applied to Dashboard, Analytics, Mailbox + gradient page
+   titles on every module.
+4. AI features via `ai.php` (wired in Dashboard brief + Leads/Proposals/Support AiAssist + Mailbox draft);
+   payments manual; settings/admin/audit live in Platform module.

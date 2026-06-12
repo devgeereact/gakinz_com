@@ -51,6 +51,24 @@ define('ALLOWED_ORIGINS', [
 define('OPENWEATHER_API_KEY', '');   // read by weather.php (CMS header widget); '' hides the widget
 define('OPENWEATHER_UNITS', 'metric'); // 'metric' (°C) or 'imperial' (°F)
 
+// ── Outgoing mail (SMTP) ── read by mail.php ──────────────────────────────────
+// Leave $SMTP_HOST blank to fall back to PHP mail(). On cPanel use the mail
+// server (often the domain or localhost) with a real mailbox + password.
+$SMTP_HOST      = 'premium152.web-hosting.com';  // e.g. 'mail.gakinz.com' or 'localhost'
+$SMTP_PORT      = 465;                   // 465 = SSL, 587 = STARTTLS
+$SMTP_SECURE    = 'ssl';                 // 'ssl' | 'tls' | ''  (must match the port)
+$SMTP_USER      = 'hello@gakinz.com';
+$SMTP_PASS      = 'REPLACE_mailbox_password'; // mailbox password (secret; never commit)
+$SMTP_FROM      = 'hello@gakinz.com';
+$SMTP_FROM_NAME = 'GAKINZ LTD';
+
+// ── Incoming mail (IMAP) for the in-app inbox ── read by mail.php ─────────────
+// Requires the PHP imap extension. Leave $IMAP_HOST blank to disable the inbox.
+$IMAP_HOST = 'premium152.web-hosting.com';       // e.g. 'mail.gakinz.com' or 'localhost'
+$IMAP_PORT = 993;                        // 993 = IMAP over SSL
+$IMAP_USER = 'hello@gakinz.com';
+$IMAP_PASS = 'REPLACE_mailbox_password';
+
 // ── Connection ────────────────────────────────────────────────────────────────
 $conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 if ($conn->connect_errno) {

@@ -111,6 +111,7 @@ export const router = createBrowserRouter([
       { path: "time", lazy: lz(() => import("@/app/modules/Time")) },
       { path: "support", lazy: lz(() => import("@/app/modules/Support")) },
       { path: "comms", lazy: lz(() => import("@/app/modules/Comms")) },
+      { path: "mailbox", lazy: lz(() => import("@/app/modules/Mailbox")) },
       { path: "analytics", lazy: lz(() => import("@/app/modules/Analytics")) },
       { path: "platform", lazy: lz(() => import("@/app/modules/Platform")) },
 

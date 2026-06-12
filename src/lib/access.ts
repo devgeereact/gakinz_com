@@ -27,6 +27,8 @@ export const MODULE_ROLES: Record<string, Role[]> = {
   // support.php STAFF (+ client gets their own ticket view)
   support: ["super_admin", "admin", "manager", "editor", "employee"],
   comms: ["super_admin", "admin", "manager", "editor", "employee"],
+  // mail.php MAIL_ROLES — real correspondence, senior staff only
+  mailbox: ["super_admin", "admin", "manager"],
   // time.php STAFF (includes trainer)
   time: ["super_admin", "admin", "manager", "editor", "employee", "trainer"],
   // analytics/reporting — management view
@@ -55,6 +57,7 @@ export function moduleKeyForPath(pathname: string): string | null {
     time: "time",
     support: "support",
     comms: "comms",
+    mailbox: "mailbox",
     analytics: "analytics",
     platform: "platform",
   }

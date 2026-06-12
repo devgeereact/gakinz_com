@@ -11,6 +11,7 @@ import {
   Clock,
   LifeBuoy,
   MessagesSquare,
+  Mail,
   BarChart3,
   Settings,
 } from "lucide-react"
@@ -44,6 +45,7 @@ const navMain = [
   { key: "time", title: "Time", url: "app/time", icon: Clock },
   { key: "support", title: "Support", url: "app/support", icon: LifeBuoy },
   { key: "comms", title: "Comms", url: "app/comms", icon: MessagesSquare },
+  { key: "mailbox", title: "Mailbox", url: "app/mailbox", icon: Mail },
   { key: "analytics", title: "Analytics", url: "app/analytics", icon: BarChart3 },
   { key: "platform", title: "Platform", url: "app/platform", icon: Settings },
 ]
