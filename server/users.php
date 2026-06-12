@@ -20,10 +20,14 @@ $action = $_GET['action'] ?? '';
 if ($method === 'GET') {
   require_auth($conn, ADMINS);
   $rows = [];
-  $sql = 'SELECT id, name, email, role, status, created_at FROM users WHERE deleted_at IS NULL ORDER BY id ASC';
+  $sql = 'SELECT u.id, u.name, u.email, u.role, u.client_id, u.status, u.created_at,
+                 c.company AS client_company
+          FROM users u LEFT JOIN clients c ON c.id = u.client_id
+          WHERE u.deleted_at IS NULL ORDER BY u.id ASC';
   if ($res = $conn->query($sql)) {
     while ($r = $res->fetch_assoc()) {
       $r['id'] = (int)$r['id'];
+      $r['client_id'] = $r['client_id'] !== null ? (int)$r['client_id'] : null;
       $rows[] = $r;
     }
   }
@@ -44,14 +48,26 @@ if ($method === 'POST' && $action === 'create') {
   // Only a super_admin may create another super_admin.
   if ($role === 'super_admin' && $admin['role'] !== 'super_admin') fail('Only a super admin can create a super admin.', 403);
 
+  // A `client`-role login MUST be bound to a real client; any other role never
+  // carries a client_id. This binding is what portal.php trusts for isolation.
+  $clientId = null;
+  if ($role === 'client') {
+    $clientId = isset($in['client_id']) ? (int)$in['client_id'] : 0;
+    if ($clientId <= 0) fail('A client account must be linked to a client.');
+    $chk = $conn->prepare('SELECT id FROM clients WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+    $chk->bind_param('i', $clientId);
+    $chk->execute();
+    if (!$chk->get_result()->fetch_assoc()) fail('That client does not exist.', 404);
+  }
+
   $chk = $conn->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
   $chk->bind_param('s', $email);
   $chk->execute();
   if ($chk->get_result()->fetch_assoc()) fail('A user with that email already exists.', 409);
 
   $hash = password_hash($pass, PASSWORD_BCRYPT);
-  $stmt = $conn->prepare('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)');
-  $stmt->bind_param('ssss', $name, $email, $hash, $role);
+  $stmt = $conn->prepare('INSERT INTO users (name, email, password_hash, role, client_id) VALUES (?, ?, ?, ?, ?)');
+  $stmt->bind_param('ssssi', $name, $email, $hash, $role, $clientId);
   if (!$stmt->execute()) fail('Could not create the user.', 500);
   audit($conn, $admin['id'], 'user_create', "$email ($role)");
   ok(['id' => $conn->insert_id], 201);
@@ -66,8 +82,12 @@ if ($method === 'POST' && $action === 'role') {
   if (!in_array($role, VALID_ROLES, true)) fail('Invalid role.');
   if ($id === $admin['id']) fail('You cannot change your own role.', 403);
   if ($role === 'super_admin' && $admin['role'] !== 'super_admin') fail('Only a super admin can grant super admin.', 403);
+  // A client binding is set at creation. You can't promote an account INTO
+  // `client` here (no client_id to attach); switching a client account to a
+  // staff role clears the binding so it can't keep portal access by accident.
+  if ($role === 'client') fail('Create a client account from the client record instead.');
 
-  $stmt = $conn->prepare('UPDATE users SET role = ? WHERE id = ? AND deleted_at IS NULL');
+  $stmt = $conn->prepare('UPDATE users SET role = ?, client_id = NULL WHERE id = ? AND deleted_at IS NULL');
   $stmt->bind_param('si', $role, $id);
   $stmt->execute();
   if ($stmt->affected_rows < 1) fail('User not found.', 404);

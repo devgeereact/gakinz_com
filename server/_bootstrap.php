@@ -69,7 +69,7 @@ function require_auth(mysqli $conn, array $roles = []): array {
   if ($token === '') fail('Not authenticated.', 401);
 
   $stmt = $conn->prepare(
-    'SELECT u.id, u.name, u.email, u.role, u.status
+    'SELECT u.id, u.name, u.email, u.role, u.client_id, u.status
      FROM auth_tokens t JOIN users u ON u.id = t.user_id
      WHERE t.token = ? AND t.expires_at > NOW() AND u.deleted_at IS NULL LIMIT 1'
   );
@@ -82,6 +82,7 @@ function require_auth(mysqli $conn, array $roles = []): array {
   if ($roles && !in_array($user['role'], $roles, true)) fail('Not allowed.', 403);
 
   $user['id'] = (int)$user['id'];
+  $user['client_id'] = $user['client_id'] !== null ? (int)$user['client_id'] : null;
   return $user;
 }
 

@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { portal, invoices, clients as clientsApi, type PortalData, type Client } from "@/lib/api"
+import { useAuth } from "@/store/auth.store"
 import { cn } from "@/lib/utils"
 
 const gbp = (n: number) =>
@@ -22,6 +23,11 @@ function fmt(d: string | null) {
 }
 
 export default function Portal() {
+  // A `client`-role login sees only its OWN portal — no picker, server derives
+  // the client from the token. Staff get the picker to preview any client.
+  const user = useAuth((s) => s.user)
+  const isClient = user?.role === "client"
+
   const [clientList, setClientList] = useState<Client[]>([])
   const [clientId, setClientId] = useState("")
   const [data, setData] = useState<PortalData | null>(null)
@@ -46,11 +52,16 @@ export default function Portal() {
     : 0
 
   useEffect(() => {
+    if (isClient) {
+      // Load own portal; the server ignores the param and derives from the token.
+      if (user?.client_id != null) setClientId(String(user.client_id))
+      return
+    }
     clientsApi.list().then((r) => {
       if (r.ok) setClientList(r.data)
       else setError(r.error)
     })
-  }, [])
+  }, [isClient, user?.client_id])
 
   useEffect(() => {
     if (!clientId) {
@@ -73,27 +84,33 @@ export default function Portal() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Client Portal</h1>
+        <h1 className="gk-app-grad text-2xl font-bold tracking-tight">
+          {isClient ? "Your Portal" : "Client Portal"}
+        </h1>
         <p className="text-sm text-muted-foreground">
-          What a client sees: their projects, invoices and tickets. Pick a client to preview.
+          {isClient
+            ? "Your projects, invoices and support in one place."
+            : "What a client sees: their projects, invoices and tickets. Pick a client to preview."}
         </p>
       </div>
 
-      <div className="max-w-xs">
-        <Label>Client</Label>
-        <Select value={clientId} onValueChange={setClientId}>
-          <SelectTrigger className="mt-1.5">
-            <SelectValue placeholder="Choose a client" />
-          </SelectTrigger>
-          <SelectContent>
-            {clientList.map((c) => (
-              <SelectItem key={c.id} value={String(c.id)}>
-                {c.company}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      {!isClient && (
+        <div className="max-w-xs">
+          <Label>Client</Label>
+          <Select value={clientId} onValueChange={setClientId}>
+            <SelectTrigger className="mt-1.5">
+              <SelectValue placeholder="Choose a client" />
+            </SelectTrigger>
+            <SelectContent>
+              {clientList.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.company}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       {error && (
         <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
@@ -107,9 +124,15 @@ export default function Portal() {
         </div>
       )}
 
-      {!clientId && !error && (
+      {!isClient && !clientId && !error && (
         <div className="rounded-xl border border-dashed border-border bg-muted/20 p-12 text-center text-sm text-muted-foreground">
           Choose a client above to preview their portal.
+        </div>
+      )}
+
+      {isClient && user?.client_id == null && !error && (
+        <div className="rounded-xl border border-dashed border-border bg-muted/20 p-12 text-center text-sm text-muted-foreground">
+          Your account isn’t linked to a client yet. Please contact GAkinz.
         </div>
       )}
 

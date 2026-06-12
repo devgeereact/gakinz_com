@@ -12,10 +12,19 @@
 require __DIR__ . '/_bootstrap.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') fail('Method not allowed.', 405);
-require_auth($conn);
+$user = require_auth($conn);
 
-$clientId = (int)($_GET['client_id'] ?? 0);
-if ($clientId <= 0) fail('A client_id is required.');
+// Isolation guarantee: a `client`-role user can ONLY ever see their own portal.
+// We derive the client_id from their account and IGNORE any query param, so one
+// client can never read another's projects/invoices/tickets by changing the URL.
+// Staff (any other role) may pass ?client_id to preview a given client's portal.
+if ($user['role'] === 'client') {
+  $clientId = (int)($user['client_id'] ?? 0);
+  if ($clientId <= 0) fail('Your account is not linked to a client.', 403);
+} else {
+  $clientId = (int)($_GET['client_id'] ?? 0);
+  if ($clientId <= 0) fail('A client_id is required.');
+}
 
 $stmt = $conn->prepare('SELECT id, company, contact_name, email FROM clients WHERE id = ? AND deleted_at IS NULL LIMIT 1');
 $stmt->bind_param('i', $clientId);

@@ -342,13 +342,20 @@ export type ManagedUser = {
   name: string
   email: string
   role: Role
+  client_id: number | null
+  client_company: string | null
   status: UserStatus
   created_at: string
 }
 export const users = {
   list: () => api.get<ManagedUser[]>("/users.php"),
-  create: (payload: { name: string; email: string; password: string; role: Role }) =>
-    api.post<{ id: number }>("/users.php?action=create", payload),
+  create: (payload: {
+    name: string
+    email: string
+    password: string
+    role: Role
+    client_id?: number | null
+  }) => api.post<{ id: number }>("/users.php?action=create", payload),
   setRole: (id: number, role: Role) => api.post<{ ok: boolean }>("/users.php?action=role", { id, role }),
   setStatus: (id: number, status: UserStatus) =>
     api.post<{ ok: boolean }>("/users.php?action=status", { id, status }),

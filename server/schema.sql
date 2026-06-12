@@ -35,11 +35,17 @@ CREATE TABLE IF NOT EXISTS users (
   email         VARCHAR(200) NOT NULL UNIQUE,
   password_hash VARCHAR(255) NOT NULL,
   role          VARCHAR(30)  NOT NULL DEFAULT 'employee',
+  client_id     INT NULL DEFAULT NULL,                   -- set ONLY for role='client': the client they portal into
   status        VARCHAR(20)  NOT NULL DEFAULT 'active',  -- active | suspended
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted_at    TIMESTAMP NULL DEFAULT NULL
+  -- No inline FK to clients: this table is created before clients in this file.
+  -- The link is enforced in application code (users.php validates client_id).
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- MIGRATION for an existing live DB (users table already exists without the column):
+--   ALTER TABLE users ADD COLUMN client_id INT NULL DEFAULT NULL AFTER role;
 
 -- Session tokens (opaque random; React sends as Authorization: Bearer)
 CREATE TABLE IF NOT EXISTS auth_tokens (

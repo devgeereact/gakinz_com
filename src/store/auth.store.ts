@@ -15,6 +15,8 @@ export type AuthUser = {
   name: string
   email: string
   role: Role
+  // Set only for the `client` role — the client record this login portals into.
+  client_id?: number | null
 }
 
 type AuthState = {

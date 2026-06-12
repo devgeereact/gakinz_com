@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { users, audit, type ManagedUser, type AuditEntry } from "@/lib/api"
+import { users, audit, clients as clientsApi, type ManagedUser, type AuditEntry, type Client } from "@/lib/api"
 import { useAuth, type Role } from "@/store/auth.store"
 import { cn } from "@/lib/utils"
 
@@ -81,7 +81,8 @@ function TeamTab() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "employee" as Role })
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "employee" as Role, client_id: "" })
+  const [clientList, setClientList] = useState<Client[]>([])
   const [saving, setSaving] = useState(false)
 
   const load = async () => {
@@ -98,6 +99,8 @@ function TeamTab() {
 
   useEffect(() => {
     load()
+    // Needed to bind a `client`-role login to its client record.
+    clientsApi.list().then((r) => r.ok && setClientList(r.data))
   }, [])
 
   const createUser = async () => {
@@ -105,12 +108,22 @@ function TeamTab() {
       toast.error("Name, email and an 8+ character password are required.")
       return
     }
+    if (form.role === "client" && !form.client_id) {
+      toast.error("Pick the client this account belongs to.")
+      return
+    }
     setSaving(true)
-    const res = await users.create(form)
+    const res = await users.create({
+      name: form.name,
+      email: form.email,
+      password: form.password,
+      role: form.role,
+      client_id: form.role === "client" ? Number(form.client_id) : null,
+    })
     setSaving(false)
     if (res.ok) {
       toast.success("User created.")
-      setForm({ name: "", email: "", password: "", role: "employee" })
+      setForm({ name: "", email: "", password: "", role: "employee", client_id: "" })
       setOpen(false)
       load()
     } else {
@@ -181,6 +194,26 @@ function TeamTab() {
                   </SelectContent>
                 </Select>
               </div>
+              {form.role === "client" && (
+                <div>
+                  <Label>Client</Label>
+                  <Select value={form.client_id} onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}>
+                    <SelectTrigger className="mt-1.5">
+                      <SelectValue placeholder="Which client?" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {clientList.map((c) => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.company}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    This account will only see this client’s portal.
+                  </p>
+                </div>
+              )}
             </div>
             <DialogFooter>
               <Button onClick={createUser} disabled={saving}>

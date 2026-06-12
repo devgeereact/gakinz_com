@@ -39,7 +39,7 @@ function login(mysqli $conn): void {
   $pass  = (string)($in['password'] ?? '');
   if ($email === '' || $pass === '') fail('Email and password are required.');
 
-  $stmt = $conn->prepare('SELECT id, name, email, role, status, password_hash FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1');
+  $stmt = $conn->prepare('SELECT id, name, email, role, client_id, status, password_hash FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1');
   $stmt->bind_param('s', $email);
   $stmt->execute();
   $u = $stmt->get_result()->fetch_assoc();
@@ -61,7 +61,13 @@ function login(mysqli $conn): void {
   ok([
     'token'   => $token,
     'expires' => $exp,
-    'user'    => ['id' => $uid, 'name' => $u['name'], 'email' => $u['email'], 'role' => $u['role']],
+    'user'    => [
+      'id'    => $uid,
+      'name'  => $u['name'],
+      'email' => $u['email'],
+      'role'  => $u['role'],
+      'client_id' => $u['client_id'] !== null ? (int)$u['client_id'] : null,
+    ],
   ]);
 }
 
