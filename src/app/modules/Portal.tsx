@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
-import { Loader2, FolderKanban, Receipt, LifeBuoy } from "lucide-react"
+import { Loader2, FolderKanban, Receipt, LifeBuoy, CreditCard } from "lucide-react"
+import { toast } from "sonner"
 import {
   Select,
   SelectContent,
@@ -7,8 +8,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { portal, clients as clientsApi, type PortalData, type Client } from "@/lib/api"
+import { portal, invoices, clients as clientsApi, type PortalData, type Client } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 const gbp = (n: number) =>
@@ -25,6 +27,23 @@ export default function Portal() {
   const [data, setData] = useState<PortalData | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [payId, setPayId] = useState<number | null>(null)
+
+  // Open a Stripe Checkout link for an outstanding invoice (webhook settles it).
+  const payNow = async (invoiceId: number) => {
+    setPayId(invoiceId)
+    const res = await invoices.payLink(invoiceId)
+    setPayId(null)
+    if (res.ok) {
+      window.open(res.data.url, "_blank", "noopener")
+    } else {
+      toast.error(res.error || "Could not open the payment page.")
+    }
+  }
+
+  const outstanding = data
+    ? data.invoices.filter((i) => i.status !== "paid").reduce((s, i) => s + i.total, 0)
+    : 0
 
   useEffect(() => {
     clientsApi.list().then((r) => {
@@ -134,8 +153,15 @@ export default function Portal() {
 
           {/* Invoices */}
           <section>
-            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold">
-              <Receipt className="h-4 w-4 text-primary" /> Invoices
+            <h3 className="mb-3 flex items-center justify-between gap-2 text-sm font-semibold">
+              <span className="flex items-center gap-2">
+                <Receipt className="h-4 w-4 text-primary" /> Invoices
+              </span>
+              {outstanding > 0 && (
+                <span className="text-xs font-normal text-muted-foreground">
+                  Outstanding: <span className="font-semibold text-foreground">{gbp(outstanding)}</span>
+                </span>
+              )}
             </h3>
             {data.invoices.length === 0 ? (
               <p className="text-sm text-muted-foreground">No invoices.</p>
@@ -158,6 +184,23 @@ export default function Portal() {
                           </span>
                         </td>
                         <td className="px-4 py-2 text-right font-medium">{gbp(inv.total)}</td>
+                        <td className="px-2 py-2 text-right">
+                          {inv.status !== "paid" && inv.total > 0 && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={payId === inv.id}
+                              onClick={() => payNow(inv.id)}
+                            >
+                              {payId === inv.id ? (
+                                <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <CreditCard className="mr-1 h-3.5 w-3.5" />
+                              )}
+                              Pay
+                            </Button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

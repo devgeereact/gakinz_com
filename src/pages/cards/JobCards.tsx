@@ -19,7 +19,7 @@ export function JobCards() {
                   Senior UI/UX Designer
                 </h3>
                 <p className="text-muted-foreground text-sm">
-                  Pulse Technologies
+                  GAkinz Studio
                 </p>
               </div>
               <span className="px-3 py-1 text-xs rounded-full bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400">

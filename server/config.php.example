@@ -69,6 +69,22 @@ $IMAP_PORT = 993;                        // 993 = IMAP over SSL
 $IMAP_USER = 'hello@gakinz.com';
 $IMAP_PASS = 'REPLACE_mailbox_password';
 
+// ── Outbound SMS (Twilio) ── read by _sms.php / comms.php ─────────────────────
+// Powers the "Send SMS" button on SMS conversations in Comms. Leave any blank
+// to disable SMS cleanly (the button shows a "not configured" error).
+$TWILIO_SID   = '';   // ACxxxxxxxx… (account SID)
+$TWILIO_TOKEN = '';   // auth token (secret; never commit)
+$TWILIO_FROM  = '';   // a Twilio number in E.164, e.g. '+447700900123'
+
+// ── Stripe payments ── read by payments.php ──────────────────────────────────
+// Powers invoice "Pay link" / portal "Pay". Leave $STRIPE_SECRET blank to keep
+// invoicing on manual mark-as-paid. The webhook secret is from the Stripe
+// dashboard endpoint you point at /payments.php?action=webhook.
+$STRIPE_SECRET         = '';  // sk_live_… or sk_test_…
+$STRIPE_WEBHOOK_SECRET = '';  // whsec_…
+$STRIPE_SUCCESS_URL    = 'https://gakinz.com/app/invoicing?paid=1';
+$STRIPE_CANCEL_URL     = 'https://gakinz.com/app/invoicing';
+
 // ── Connection ────────────────────────────────────────────────────────────────
 $conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 if ($conn->connect_errno) {

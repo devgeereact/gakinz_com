@@ -8,7 +8,7 @@ export default function Documentation() {
       <div>
         <h1 className="text-2xl font-bold">Documentation</h1>
         <p className="text-muted-foreground">
-          PulseUI official documentation
+          GAkinzOS internal documentation
         </p>
       </div>
 
@@ -16,18 +16,18 @@ export default function Documentation() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            PulseUI Docs
+            GAkinzOS Docs
           </CardTitle>
         </CardHeader>
 
         <CardContent>
           <p className="text-sm text-muted-foreground mb-4">
-            View the complete setup and usage guide for PulseUI.
+            View the complete setup and usage guide for GAkinzOS.
           </p>
 
           <Button asChild>
             <a
-              href="https://codervent.com/pulse-ui/documentation.pdf"
+              href="https://gakinz.com"
               target="_blank"
               rel="noopener noreferrer"
             >

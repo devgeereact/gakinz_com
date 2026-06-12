@@ -7,6 +7,7 @@ import {
   Archive,
   ArchiveRestore,
   Mail,
+  MessageSquare,
   Phone,
   Users2,
   StickyNote,
@@ -49,6 +50,7 @@ import AiAssist from "@/app/components/AiAssist"
 
 const CHANNELS: { key: CommChannel; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "email", label: "Email", icon: Mail },
+  { key: "sms", label: "SMS", icon: MessageSquare },
   { key: "call", label: "Call", icon: Phone },
   { key: "meeting", label: "Meeting", icon: CalendarDays },
   { key: "client", label: "Client", icon: Users2 },
@@ -62,7 +64,7 @@ const DIRECTIONS: { key: CommDirection; label: string }[] = [
 ]
 
 function channelMeta(c: CommChannel) {
-  return CHANNELS.find((x) => x.key === c) ?? CHANNELS[4]
+  return CHANNELS.find((x) => x.key === c) ?? CHANNELS.find((x) => x.key === "internal")!
 }
 
 function timeAgo(iso: string | null) {
@@ -92,6 +94,7 @@ export default function Comms() {
   const [composer, setComposer] = useState("")
   const [direction, setDirection] = useState<CommDirection>("note")
   const [posting, setPosting] = useState(false)
+  const [sending, setSending] = useState(false)
 
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({
@@ -180,6 +183,28 @@ export default function Comms() {
       toast.error(res.error || "Could not post the message.")
     }
   }
+
+  // Email/SMS threads with a linked client can actually deliver: this sends a
+  // real email or text to the client AND records it as an outbound message.
+  const sendMessage = async () => {
+    if (!detail || !composer.trim()) return
+    setSending(true)
+    const res = await comms.send(detail.id, composer)
+    setSending(false)
+    if (res.ok) {
+      toast.success(`${res.data.channel === "sms" ? "Text" : "Email"} sent to ${res.data.sent_to}.`)
+      setComposer("")
+      await loadDetail(detail.id)
+      loadThreads()
+    } else {
+      toast.error(res.error || "Could not send the message.")
+    }
+  }
+
+  // An email or SMS conversation tied to a client can be delivered, not just logged.
+  const canSend =
+    !!detail && (detail.channel === "email" || detail.channel === "sms") && detail.client_id != null
+  const sendLabel = detail?.channel === "sms" ? "Send SMS" : "Send email"
 
   const toggleArchive = async () => {
     if (!detail) return
@@ -484,7 +509,29 @@ export default function Comms() {
                     }}
                     className="resize-none"
                   />
-                  <Button onClick={post} disabled={posting || !composer.trim()} size="icon">
+                  {canSend && (
+                    <Button
+                      onClick={sendMessage}
+                      disabled={sending || posting || !composer.trim()}
+                      title="Deliver this to the client and record it"
+                    >
+                      {sending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : detail?.channel === "sms" ? (
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                      ) : (
+                        <Mail className="mr-2 h-4 w-4" />
+                      )}
+                      {sendLabel}
+                    </Button>
+                  )}
+                  <Button
+                    onClick={post}
+                    disabled={posting || sending || !composer.trim()}
+                    size="icon"
+                    variant={canSend ? "outline" : "default"}
+                    title="Record as a message or note (nothing sent)"
+                  >
                     {posting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                   </Button>
                 </div>

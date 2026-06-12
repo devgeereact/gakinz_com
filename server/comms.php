@@ -6,19 +6,24 @@
  *   GET  /comms.php?id=N            → thread with its messages
  *   POST /comms.php?action=create     {subject, client_id?, project_id?, channel?, body?}
  *   POST /comms.php?action=post       {thread_id, body, direction?}
+ *   POST /comms.php?action=send       {thread_id, body}   (email threads only)
  *   POST /comms.php?action=status     {id, status}   status: open | archived
  *
  * Channel: email | call | meeting | client | internal.
  * Direction: out (we sent) | in (they sent) | note (internal).
  *
- * No external provider is wired: messages are RECORDED, not delivered. This is
- * the studio's conversation log — one place every email recap, call note, and
- * client message lives, tied to its client/project.
+ * Most messages are RECORDED, not delivered — the studio's conversation log,
+ * one place every call note, meeting recap and client message lives, tied to
+ * its client/project. The exception is `action=send`: on an email thread it
+ * delivers a real email to the linked client (via the shared SMTP transport)
+ * and records it as an `out` message.
  */
 require __DIR__ . '/_bootstrap.php';
+require __DIR__ . '/_smtp.php';
+require __DIR__ . '/_sms.php';
 
 const STAFF = ['super_admin', 'admin', 'manager', 'editor', 'employee'];
-const CHANNELS = ['email', 'call', 'meeting', 'client', 'internal'];
+const CHANNELS = ['email', 'sms', 'call', 'meeting', 'client', 'internal'];
 const DIRECTIONS = ['out', 'in', 'note'];
 const STATUSES = ['open', 'archived'];
 
@@ -145,6 +150,67 @@ if ($method === 'POST' && $action === 'post') {
   // Touch the thread so it sorts to the top and reopens if archived.
   $conn->query("UPDATE comm_threads SET last_message_at = NOW(), status = 'open' WHERE id = " . (int)$threadId);
   ok(['id' => $conn->insert_id], 201);
+}
+
+// ── Deliver a message on a thread (records AND sends) ───────────────────────
+// Email threads send via SMTP to the client's email; SMS threads via Twilio to
+// the client's phone. Either way it's recorded as an `out` message.
+if ($method === 'POST' && $action === 'send') {
+  $user = require_auth($conn, STAFF);
+  $in = body();
+  $threadId = (int)($in['thread_id'] ?? 0);
+  $bodyText = str_field($in, 'body', 50000);
+  if ($threadId <= 0 || $bodyText === '') fail('A thread id and message text are required.');
+
+  // Load the thread + its client contact details.
+  $stmt = $conn->prepare(
+    'SELECT t.subject, t.channel, c.email AS client_email, c.phone AS client_phone
+     FROM comm_threads t LEFT JOIN clients c ON c.id = t.client_id
+     WHERE t.id = ? AND t.deleted_at IS NULL LIMIT 1'
+  );
+  $stmt->bind_param('i', $threadId);
+  $stmt->execute();
+  $t = $stmt->get_result()->fetch_assoc();
+  if (!$t) fail('Thread not found.', 404);
+
+  $channel = $t['channel'];
+  $sentTo = '';
+
+  if ($channel === 'email') {
+    if (($GLOBALS['SMTP_HOST'] ?? '') === '') fail('Email sending is not configured on the server.', 503);
+    $clientEmail = trim((string)($t['client_email'] ?? ''));
+    if ($clientEmail === '' || !filter_var($clientEmail, FILTER_VALIDATE_EMAIL))
+      fail('This conversation has no client email address to send to.');
+    $subject = $t['subject'];
+    if (stripos($subject, 're:') !== 0) $subject = 'Re: ' . $subject; // avoid stacking "Re:"
+    $res = gk_send_email(['to' => $clientEmail, 'subject' => $subject, 'body' => $bodyText]);
+    if (!$res['ok']) { error_log('GAkinz comms send (email): ' . $res['error']); fail('Could not send the email. Please try again.', 502); }
+    $sentTo = $clientEmail;
+
+  } elseif ($channel === 'sms') {
+    if (!gk_sms_configured()) fail('SMS sending is not configured on the server.', 503);
+    $clientPhone = trim((string)($t['client_phone'] ?? ''));
+    // Loose E.164-ish check: optional +, 7–15 digits (after stripping spaces).
+    $normalized = preg_replace('/[\s\-().]/', '', $clientPhone);
+    if ($normalized === '' || !preg_match('/^\+?[0-9]{7,15}$/', $normalized))
+      fail('This conversation has no valid client phone number to text.');
+    $res = gk_send_sms($normalized, $bodyText);
+    if (!$res['ok']) { error_log('GAkinz comms send (sms): ' . $res['error']); fail('Could not send the SMS. Please try again.', 502); }
+    $sentTo = $normalized;
+
+  } else {
+    fail('Only email or SMS conversations can be sent.');
+  }
+
+  // Record the delivered message as an outbound entry on the thread.
+  $uid = $user['id'];
+  $dir = 'out';
+  $stmt = $conn->prepare('INSERT INTO comm_messages (thread_id, user_id, direction, body) VALUES (?, ?, ?, ?)');
+  $stmt->bind_param('iiss', $threadId, $uid, $dir, $bodyText);
+  if (!$stmt->execute()) fail('Message sent, but could not record it.', 500);
+  $conn->query("UPDATE comm_threads SET last_message_at = NOW(), status = 'open' WHERE id = " . (int)$threadId);
+  audit($conn, $user['id'], 'comm_send', "#$threadId ($channel) → $sentTo");
+  ok(['id' => $conn->insert_id, 'sent_to' => $sentTo, 'channel' => $channel], 201);
 }
 
 // ── Archive / reopen a thread ───────────────────────────────────────────────

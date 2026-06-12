@@ -229,21 +229,28 @@ About, Services, Sectors, Work, Contact, Resources, ServiceDetail. Content lives
    `comms` (Communication Hub) — BUILT (`src/app/modules/Comms.tsx` + `server/comms.php` +
    `comm_threads`/`comm_messages` in `schema.sql`). Internal conversation log: threads tied to a
    client/project, messages tagged by channel (email/call/meeting/client/internal) and direction
-   (out/in/note), AI reply draft via `ai.php`. No external provider — messages are RECORDED, not
-   sent (a real email/SMS send is the only thing still deferred). ⚠️ NEEDS DEPLOY: upload
-   `server/comms.php` and run the two new `CREATE TABLE` statements on the live DB; until then the
-   module shows a graceful "comms.php not uploaded" banner. UI + graceful-degradation verified
-   in-browser; `tsc -b` + `vite build` clean. `ModuleStub.tsx` is now unused (all modules live).
-   Stray demo pages (Documentation, JobCards, LandingPage, SpinnerExamples) still say "Pulse" — low priority.
+   (out/in/note), AI reply draft via `ai.php`. Most messages are RECORDED, not sent (the studio
+   conversation log). EXCEPTION — real send is now wired: `comms.php?action=send` delivers a real
+   email to the linked client on an email thread (via shared `server/_smtp.php`) and records it as
+   an `out` message; the UI shows a "Send email" button on email threads that have a client with an
+   address (`comms.sendEmail` in `api.ts`). SMS is still the only deferred channel. ✅ DEPLOYED &
+   LIVE — `comms.php` + `comm_threads`/`comm_messages` are on the live DB; module verified
+   in-browser against the live API (loads, no banner). ⚠️ NEEDS RE-DEPLOY for the send feature:
+   upload the new `server/_smtp.php` + updated `server/comms.php`. `tsc -b` + `vite build` clean.
+   `ModuleStub.tsx` deleted (all modules live). Stray Pulse demo pages rebranded to GAkinz
+   (Documentation, JobCards, LandingPage); they remain orphan URL-only routes (not in sidebar).
    `mailbox` (Mailbox) — BUILT (`src/app/modules/Mailbox.tsx` + `server/mail.php`). REAL email now:
    SMTP send (tiny built-in PHP SMTP client — no Composer; SSL 465 / STARTTLS 587, AUTH LOGIN) +
    IMAP inbox (PHP `imap` ext) so senior staff (super_admin/admin/manager — `MAIL_ROLES`, mirrored in
    `access.ts`) read and reply to hello@gakinz.com in-app. Two-pane: inbox list + reading/compose pane,
    AI reply draft via `ai.php`. Config in `config.php` as `$SMTP_*`/`$IMAP_*` (host
    premium152.web-hosting.com, port 465 ssl / 993 ssl; password server-only). Degrades gracefully:
-   banners when SMTP/IMAP/imap-ext missing. ⚠️ NEEDS DEPLOY: upload `server/mail.php`, set the mail
-   vars in live `config.php`, ensure the PHP `imap` extension is enabled (cPanel → Select PHP Version →
-   Extensions). UI + graceful-degradation verified in-browser; `tsc -b` + `vite build` clean.
+   banners when SMTP/IMAP/imap-ext missing. ✅ DEPLOYED & LIVE — `mail.php` uploaded, mail vars set,
+   PHP `imap` ext enabled; verified end-to-end in-browser against the live mailbox (real IMAP inbox
+   lists, message read marks seen, reply composer works). The SMTP transport has been refactored out
+   into shared `server/_smtp.php` (so Comms can reuse it) — `mail.php` now calls `gk_send_email()`;
+   behaviour is byte-identical. ⚠️ NEEDS RE-DEPLOY: upload new `server/_smtp.php` + updated
+   `server/mail.php`. `tsc -b` + `vite build` clean.
 
    **Premium UI redesign (DONE):** whole product re-skinned to one cohesive design language. Public site
    (`.gk-public` layer in `src/index.css`): aurora/grid backdrops, gradient text, `gk-card`/`gk-ring`/
@@ -252,4 +259,27 @@ About, Services, Sectors, Work, Contact, Resources, ServiceDetail. Content lives
    icon), `gk-app-ring`, `gk-app-accent` — applied to Dashboard, Analytics, Mailbox + gradient page
    titles on every module.
 4. AI features via `ai.php` (wired in Dashboard brief + Leads/Proposals/Support AiAssist + Mailbox draft);
-   payments manual; settings/admin/audit live in Platform module.
+   settings/admin/audit live in Platform module. SECURITY + LIMITS: `ai.php` is now `require_auth`-gated
+   (was a public, unauthenticated OpenRouter proxy — anyone could burn the key) AND per-role daily-capped
+   (super_admin/admin 1000, manager 400, editor 250, employee 150, else 50 — counted from `audit_log`
+   `ai_call` rows since CURDATE(), 429 when exceeded). Every AI call already carries the Bearer token via
+   the `api` wrapper, so gating is transparent.
+
+**Phase-4 capabilities (DONE this session, gracefully degrade until keys/deploy):**
+- **Comms real send** — `comms.php?action=send` delivers a real **email** (SMTP) or **SMS** (Twilio) to
+  the linked client and records it as `out`. New `sms` channel added (client+server). UI: "Send email"/
+  "Send SMS" button on email/sms threads with a client. Shared transports: `server/_smtp.php`,
+  `server/_sms.php`. SMS needs `$TWILIO_*` in config.php.
+- **Stripe payments** — `server/payments.php`: `action=link` (staff) creates a Checkout Session for an
+  invoice total → hosted pay URL; `action=webhook` (public, HMAC-verified via `$STRIPE_WEBHOOK_SECRET`,
+  5-min replay guard) marks the invoice paid on `checkout.session.completed`/`payment_intent.succeeded`
+  (invoice id in session metadata — no schema change). UI: "Pay link" button in Invoicing + "Pay" button
+  on outstanding portal invoices + outstanding-balance summary. Needs `$STRIPE_*` in config.php; point a
+  Stripe webhook endpoint at `/payments.php?action=webhook`. Manual "mark paid" retained as fallback.
+- No external integration is testable locally (no Twilio/Stripe keys); all degrade with clear 503s.
+
+**Server files awaiting (re)deploy from this session:** `server/_smtp.php` (NEW), `server/_sms.php` (NEW),
+`server/payments.php` (NEW), `server/mail.php`, `server/comms.php`, `server/ai.php`. **No schema changes.**
+New config keys (see `config.php.example`): `$TWILIO_SID/_TOKEN/_FROM`, `$STRIPE_SECRET/_WEBHOOK_SECRET/
+_SUCCESS_URL/_CANCEL_URL`. Client changes (Pulse→GAkinz rebrand, ModuleStub delete, Comms send + SMS,
+Invoicing/Portal pay buttons) ship via the normal `dist/` deploy on push.

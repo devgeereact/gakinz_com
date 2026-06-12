@@ -14,6 +14,7 @@
  * SMTP uses a tiny built-in client (no Composer). IMAP needs the PHP imap ext.
  */
 require __DIR__ . '/_bootstrap.php';
+require __DIR__ . '/_smtp.php';
 
 // Mail is sensitive (real correspondence) — keep it tight to senior staff.
 const MAIL_ROLES = ['super_admin', 'admin', 'manager'];
@@ -220,96 +221,13 @@ if ($method === 'POST' && $action === 'seen') {
 }
 
 // ── SMTP send ────────────────────────────────────────────────────────────────
-/**
- * Minimal SMTP client. Returns [bool ok, string error].
- * Supports implicit SSL (port 465) and STARTTLS (port 587) with AUTH LOGIN.
- */
-function smtp_send(array $cfg, string $to, string $rawMessage, array $rcpts): array {
-  $host = $cfg['host']; $port = (int)$cfg['port']; $secure = $cfg['secure'];
-  $user = $cfg['user']; $pass = $cfg['pass']; $from = $cfg['from'];
-
-  $transport = ($secure === 'ssl') ? "ssl://$host" : "tcp://$host";
-  $ctx = stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
-  $fp = @stream_socket_client("$transport:$port", $errno, $errstr, 20, STREAM_CLIENT_CONNECT, $ctx);
-  if (!$fp) return [false, "Connect failed: $errstr ($errno)"];
-  stream_set_timeout($fp, 20);
-
-  $read = function () use ($fp): string {
-    $data = '';
-    while (($line = fgets($fp, 4096)) !== false) {
-      $data .= $line;
-      // Terminal line of a multi-line SMTP reply is "NNN " (code + space);
-      // continuation lines are "NNN-". Real EHLO replies can exceed 512 bytes,
-      // so read big and match the start of the line, not a fixed offset.
-      if (preg_match('/^\d{3} /', $line)) break;
-      if (feof($fp)) break;
-    }
-    return $data;
-  };
-  $cmd = function (string $c) use ($fp, $read): string {
-    fwrite($fp, $c . "\r\n");
-    return $read();
-  };
-  $expect = function (string $resp, string $code) use ($fp): ?string {
-    if (strncmp($resp, $code, 3) !== 0) { fclose($fp); return "SMTP error: " . trim($resp); }
-    return null;
-  };
-
-  $greet = $read();
-  if ($e = $expect($greet, '220')) return [false, $e];
-
-  $ehloName = $_SERVER['SERVER_NAME'] ?? 'gakinz.com';
-  $resp = $cmd("EHLO $ehloName");
-  if ($e = $expect($resp, '250')) return [false, $e];
-
-  if ($secure === 'tls') {
-    $resp = $cmd('STARTTLS');
-    if ($e = $expect($resp, '220')) return [false, $e];
-    if (!stream_socket_enable_crypto($fp, true, STREAM_CRYPTO_METHOD_TLS_CLIENT)) {
-      fclose($fp); return [false, 'STARTTLS negotiation failed'];
-    }
-    $resp = $cmd("EHLO $ehloName");
-    if ($e = $expect($resp, '250')) return [false, $e];
-  }
-
-  $resp = $cmd('AUTH LOGIN');
-  if ($e = $expect($resp, '334')) return [false, $e];
-  $resp = $cmd(base64_encode($user));
-  if ($e = $expect($resp, '334')) return [false, $e];
-  $resp = $cmd(base64_encode($pass));
-  if ($e = $expect($resp, '235')) return [false, 'Authentication failed'];
-
-  $resp = $cmd("MAIL FROM:<$from>");
-  if ($e = $expect($resp, '250')) return [false, $e];
-  foreach ($rcpts as $r) {
-    $resp = $cmd("RCPT TO:<$r>");
-    if (strncmp($resp, '25', 2) !== 0) { fclose($fp); return [false, "Recipient rejected: " . trim($resp)]; }
-  }
-  $resp = $cmd('DATA');
-  if ($e = $expect($resp, '354')) return [false, $e];
-
-  // Dot-stuff and terminate.
-  $body = preg_replace('/^\./m', '..', $rawMessage);
-  fwrite($fp, $body . "\r\n.\r\n");
-  $resp = $read();
-  if ($e = $expect($resp, '250')) return [false, $e];
-  $cmd('QUIT');
-  fclose($fp);
-  return [true, ''];
-}
-
 if ($method === 'POST' && $action === 'send') {
   $user = require_auth($conn, MAIL_ROLES);
-  $host = $GLOBALS['SMTP_HOST'] ?? '';
   $in = body();
   $to      = trim((string)($in['to'] ?? ''));
   $subject = str_field($in, 'subject', 300);
   $bodyTxt = str_field($in, 'body', 50000);
   $cc      = trim((string)($in['cc'] ?? ''));
-  // Strip CR/LF — these go verbatim into headers; without this a caller could
-  // inject extra headers (Bcc, a second body, etc.) — classic mail injection.
-  $inReplyTo  = preg_replace('/[\r\n]+/', '', trim((string)($in['in_reply_to'] ?? '')));
-  $references = preg_replace('/[\r\n]+/', '', trim((string)($in['references'] ?? '')));
 
   $toList = array_filter(array_map('trim', preg_split('/[,;]+/', $to)));
   $ccList = array_filter(array_map('trim', preg_split('/[,;]+/', $cc)));
@@ -320,53 +238,20 @@ if ($method === 'POST' && $action === 'send') {
   if ($subject === '') fail('A subject is required.');
   if ($bodyTxt === '') fail('The message body is empty.');
 
-  $fromEmail = $GLOBALS['SMTP_FROM'] ?? ($GLOBALS['SMTP_USER'] ?? '');
-  $fromName  = $GLOBALS['SMTP_FROM_NAME'] ?? 'GAkinz';
-  $rcpts = array_merge($toList, $ccList);
+  // Build + dispatch through the shared transport (header construction and
+  // mail-injection guards live in _smtp.php).
+  $res = gk_send_email([
+    'to'          => array_values($toList),
+    'cc'          => array_values($ccList),
+    'subject'     => $subject,
+    'body'        => $bodyTxt,
+    'in_reply_to' => $in['in_reply_to'] ?? '',
+    'references'  => $in['references'] ?? '',
+  ]);
 
-  // Build the RFC 822 message (UTF-8, plain text).
-  $encSubject = '=?UTF-8?B?' . base64_encode($subject) . '?=';
-  $encFromName = '=?UTF-8?B?' . base64_encode($fromName) . '?=';
-  $date = date('r');
-  $msgId = '<' . bin2hex(random_bytes(16)) . '@' . preg_replace('/^.*@/', '', $fromEmail) . '>';
-  $headers = [
-    "Date: $date",
-    "From: $encFromName <$fromEmail>",
-    'To: ' . implode(', ', $toList),
-  ];
-  if ($ccList) $headers[] = 'Cc: ' . implode(', ', $ccList);
-  $headers[] = "Subject: $encSubject";
-  $headers[] = "Message-ID: $msgId";
-  if ($inReplyTo)  $headers[] = "In-Reply-To: $inReplyTo";
-  if ($references) $headers[] = "References: $references";
-  $headers[] = 'MIME-Version: 1.0';
-  $headers[] = 'Content-Type: text/plain; charset=UTF-8';
-  $headers[] = 'Content-Transfer-Encoding: 8bit';
-  $raw = implode("\r\n", $headers) . "\r\n\r\n" . str_replace("\n", "\r\n", str_replace("\r\n", "\n", $bodyTxt));
-
-  $sent = false; $err = '';
-  if ($host !== '') {
-    [$sent, $err] = smtp_send([
-      'host'   => $host,
-      'port'   => $GLOBALS['SMTP_PORT'] ?? 465,
-      'secure' => $GLOBALS['SMTP_SECURE'] ?? 'ssl',
-      'user'   => $GLOBALS['SMTP_USER'] ?? '',
-      'pass'   => $GLOBALS['SMTP_PASS'] ?? '',
-      'from'   => $fromEmail,
-    ], $to, $raw, $rcpts);
-  } else {
-    // Fallback to PHP mail()
-    $mailHeaders = "From: $encFromName <$fromEmail>\r\n";
-    if ($ccList) $mailHeaders .= 'Cc: ' . implode(', ', $ccList) . "\r\n";
-    if ($inReplyTo)  $mailHeaders .= "In-Reply-To: $inReplyTo\r\n";
-    $mailHeaders .= "MIME-Version: 1.0\r\nContent-Type: text/plain; charset=UTF-8\r\n";
-    $sent = @mail(implode(', ', $toList), $subject, $bodyTxt, $mailHeaders);
-    if (!$sent) $err = 'PHP mail() failed (no SMTP configured).';
-  }
-
-  if (!$sent) { error_log('GAkinz mail SMTP send: ' . $err); fail('Could not send the message. Please try again.', 502); }
+  if (!$res['ok']) { error_log('GAkinz mail SMTP send: ' . $res['error']); fail('Could not send the message. Please try again.', 502); }
   audit($conn, $user['id'], 'mail_send', 'to ' . implode(',', $toList) . ' — ' . $subject);
-  ok(['ok' => true, 'message_id' => $msgId], 201);
+  ok(['ok' => true, 'message_id' => $res['message_id']], 201);
 }
 
 fail('Unknown action.', 400);

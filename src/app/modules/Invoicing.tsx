@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Loader2, Plus, RefreshCw, Trash2, Send, BadgePoundSterling, FileDown, Download } from "lucide-react"
+import { Loader2, Plus, RefreshCw, Trash2, Send, BadgePoundSterling, FileDown, Download, CreditCard } from "lucide-react"
 import { saveAs } from "file-saver"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -131,6 +131,20 @@ export default function Invoicing() {
       setItems((xs) => xs.map((x) => (x.id === inv.id ? { ...x, status, overdue: status === "paid" ? false : x.overdue } : x)))
     } else {
       toast.error(res.error || "Could not update the invoice.")
+    }
+  }
+
+  // Stripe Checkout: open a hosted payment link in a new tab. The webhook marks
+  // the invoice paid once Stripe confirms — no manual "mark paid" needed.
+  const createPayLink = async (inv: Invoice) => {
+    setBusyId(inv.id)
+    const res = await invoices.payLink(inv.id)
+    setBusyId(null)
+    if (res.ok) {
+      window.open(res.data.url, "_blank", "noopener")
+      toast.success("Stripe checkout opened — the invoice marks paid automatically once settled.")
+    } else {
+      toast.error(res.error || "Could not create a payment link.")
     }
   }
 
@@ -285,7 +299,12 @@ export default function Invoicing() {
                         </Button>
                       )}
                       {inv.status !== "paid" && (
-                        <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => setStatus(inv, "paid")}>
+                        <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => createPayLink(inv)} title="Create a Stripe payment link">
+                          <CreditCard className="mr-1 h-3.5 w-3.5" /> Pay link
+                        </Button>
+                      )}
+                      {inv.status !== "paid" && (
+                        <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => setStatus(inv, "paid")} title="Mark paid manually (no Stripe)">
                           <BadgePoundSterling className="mr-1 h-3.5 w-3.5" /> Mark paid
                         </Button>
                       )}

@@ -208,6 +208,10 @@ export const invoices = {
   }) => api.post<{ id: number; number: string }>("/invoices.php?action=create", payload),
   setStatus: (id: number, status: InvoiceStatus) =>
     api.post<{ ok: boolean }>("/invoices.php?action=status", { id, status }),
+  // Stripe: create a hosted Checkout payment link for an invoice. The webhook
+  // (payments.php?action=webhook) marks it paid once Stripe confirms.
+  payLink: (invoice_id: number) =>
+    api.post<{ url: string; session_id: string }>("/payments.php?action=link", { invoice_id }),
 }
 
 // Time tracking (§6 Time).
@@ -275,7 +279,7 @@ export const portal = {
 
 // Communication Hub (§6 Comms). Threads tie every conversation to a client /
 // project. No external provider yet — messages are recorded, not delivered.
-export type CommChannel = "email" | "call" | "meeting" | "client" | "internal"
+export type CommChannel = "email" | "sms" | "call" | "meeting" | "client" | "internal"
 export type CommDirection = "out" | "in" | "note"
 export type CommThread = {
   id: number
@@ -313,6 +317,13 @@ export const comms = {
   }) => api.post<{ id: number }>("/comms.php?action=create", payload),
   post: (thread_id: number, body: string, direction: CommDirection = "note") =>
     api.post<{ id: number }>("/comms.php?action=post", { thread_id, body, direction }),
+  // Email/SMS threads: delivers a real email or text to the linked client AND
+  // records it as an outbound message.
+  send: (thread_id: number, body: string) =>
+    api.post<{ id: number; sent_to: string; channel: CommChannel }>("/comms.php?action=send", {
+      thread_id,
+      body,
+    }),
   setStatus: (id: number, status: "open" | "archived") =>
     api.post<{ ok: boolean }>("/comms.php?action=status", { id, status }),
 }

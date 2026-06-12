@@ -24,7 +24,7 @@ export default function LandingPage() {
         </Badge>
 
         <h1 className="text-4xl md:text-6xl font-bold tracking-tight max-w-4xl mx-auto">
-          Pulse UI – Modern ShadCN eCommerce Admin Template
+          GAkinz – Modern ShadCN eCommerce Admin Template
         </h1>
 
         <p className="mt-6 text-lg text-muted-foreground max-w-2xl mx-auto">
@@ -44,7 +44,7 @@ export default function LandingPage() {
       {/* ================= FEATURES ================= */}
       <section className="py-20 px-6 lg:px-20">
         <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold">Why Choose Pulse UI?</h2>
+          <h2 className="text-3xl font-bold">Why Choose GAkinz?</h2>
           <p className="text-muted-foreground mt-4">
             Designed for developers who want clean architecture and scalability.
           </p>
@@ -143,7 +143,7 @@ export default function LandingPage() {
           Build Your Next SaaS Dashboard 5x Faster
         </h2>
         <p className="mt-6 text-muted-foreground max-w-2xl mx-auto">
-          Stop designing dashboards from scratch. Pulse UI gives you a
+          Stop designing dashboards from scratch. GAkinz gives you a
           scalable, modern ShadCN foundation ready for production.
         </p>
 
