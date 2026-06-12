@@ -56,7 +56,7 @@ export default function Platform() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Platform</h1>
+        <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Platform</h1>
         <p className="text-sm text-muted-foreground">Team, roles and the audit trail.</p>
       </div>
       <Tabs defaultValue="team">

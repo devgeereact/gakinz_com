@@ -109,7 +109,7 @@ export default function Support() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Support</h1>
+          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Support</h1>
           <p className="text-sm text-muted-foreground">Client issues, tracked to resolution.</p>
         </div>
         <div className="flex gap-2">

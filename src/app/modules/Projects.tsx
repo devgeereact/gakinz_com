@@ -119,7 +119,7 @@ export default function Projects() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Projects</h1>
+          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Projects</h1>
           <p className="text-sm text-muted-foreground">
             Every build tracked from kickoff to launch.
           </p>

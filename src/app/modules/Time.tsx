@@ -129,7 +129,7 @@ export default function Time() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Time</h1>
+          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Time</h1>
           <p className="text-sm text-muted-foreground">Billable hours against projects.</p>
         </div>
         <Button variant="outline" size="sm" onClick={load}>
@@ -144,7 +144,7 @@ export default function Time() {
           { label: "Non-billable", value: hm(weekNon) },
           { label: "Utilisation", value: `${utilisation}%` },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl border border-border bg-card p-5">
+          <div key={s.label} className="gk-app-card p-5">
             <div className="text-2xl font-semibold text-primary">{s.value}</div>
             <div className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{s.label}</div>
           </div>

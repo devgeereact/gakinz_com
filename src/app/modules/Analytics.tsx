@@ -71,18 +71,18 @@ function Stat({
   icon: React.ComponentType<{ className?: string }>
 }) {
   return (
-    <Card>
-      <CardContent className="flex items-start justify-between gap-3 p-5">
+    <div className="gk-app-card">
+      <div className="flex items-start justify-between gap-3 p-5">
         <div className="min-w-0">
           <p className="text-sm text-muted-foreground">{label}</p>
           <p className="mt-1 truncate text-2xl font-semibold tracking-tight">{value}</p>
           {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
         </div>
-        <span className="rounded-lg bg-primary/10 p-2 text-primary">
+        <span className="gk-app-chip h-10 w-10">
           <Icon className="h-5 w-5" />
         </span>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -206,7 +206,7 @@ export default function Analytics() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Analytics &amp; Reporting</h1>
+          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Analytics &amp; Reporting</h1>
           <p className="text-sm text-muted-foreground">
             Revenue, pipeline conversion, delivery mix and utilisation.
           </p>

@@ -54,7 +54,7 @@ export default function Portal() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Client Portal</h1>
+        <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Client Portal</h1>
         <p className="text-sm text-muted-foreground">
           What a client sees: their projects, invoices and tickets. Pick a client to preview.
         </p>

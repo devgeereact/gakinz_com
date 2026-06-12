@@ -7,7 +7,7 @@ export default function ModuleStub({ title, blurb }: { title: string; blurb: str
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+        <h1 className="gk-app-grad text-2xl font-bold tracking-tight">{title}</h1>
         <p className="text-sm text-muted-foreground">{blurb}</p>
       </div>
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-muted/20 p-12 text-center">
