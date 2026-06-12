@@ -28,10 +28,10 @@ export default function ResourceDetail() {
             </p>
           ))}
         </article>
-        <div className="mt-10 max-w-2xl rounded-xl border border-border bg-card p-6">
+        <div className="gk-card mt-12 max-w-2xl p-6">
           <h2 className="font-serif text-xl font-bold">Working on something similar?</h2>
           <p className="mt-2 text-muted-foreground">We would be glad to talk it through.</p>
-          <Button asChild className="mt-4">
+          <Button asChild className="gk-shine mt-4 shadow-md shadow-primary/20">
             <Link to="/contact">Start a project</Link>
           </Button>
         </div>

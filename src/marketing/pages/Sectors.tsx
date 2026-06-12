@@ -1,9 +1,7 @@
-import { Link } from "react-router-dom"
 import { Briefcase, HeartPulse, ShoppingBag, Rocket, HandHeart, Store, Check } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { sectors, whyOneTeam } from "@/marketing/data/site"
 import FadeIn from "../components/FadeIn"
-import { PageHero, Section, SectionHeading } from "../components/primitives"
+import { PageHero, Section, SectionHeading, CtaBand } from "../components/primitives"
 
 const sectorIcons = [Briefcase, HeartPulse, ShoppingBag, Rocket, HandHeart, Store]
 
@@ -23,8 +21,8 @@ export default function Sectors() {
             const Icon = sectorIcons[i % sectorIcons.length]
             return (
               <FadeIn key={s.title} delay={i * 0.04}>
-                <div className="flex h-full flex-col rounded-xl border border-border bg-card p-6">
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <div className="gk-card flex h-full flex-col p-6">
+                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 text-primary ring-1 ring-primary/10">
                     <Icon className="h-5 w-5" />
                   </span>
                   <h2 className="mt-4 text-base font-semibold">{s.title}</h2>
@@ -54,7 +52,7 @@ export default function Sectors() {
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {whyOneTeam.map((r, i) => (
             <FadeIn key={r.title} delay={i * 0.05}>
-              <div className="h-full rounded-xl border border-border bg-background p-6">
+              <div className="gk-card h-full p-6">
                 <h3 className="text-base font-semibold">{r.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{r.detail}</p>
               </div>
@@ -63,18 +61,11 @@ export default function Sectors() {
         </div>
       </Section>
 
-      {/* CTA */}
-      <Section>
-        <div className="rounded-2xl border border-border bg-card p-8 text-center sm:p-12">
-          <h2 className="font-serif text-2xl font-bold sm:text-3xl">Not sure if we are a fit?</h2>
-          <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-            Tell us about the project. If we are not the right studio for it, we will say so.
-          </p>
-          <Button asChild size="lg" className="mt-6">
-            <Link to="/contact">Start a conversation</Link>
-          </Button>
-        </div>
-      </Section>
+      <CtaBand
+        title="Not sure if we are a fit?"
+        intro="Tell us about the project. If we are not the right studio for it, we will say so."
+        cta="Start a conversation"
+      />
     </>
   )
 }

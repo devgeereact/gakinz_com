@@ -571,3 +571,182 @@
 .gradient-cyan {
   background-image: linear-gradient(310deg, #2af598, #009efd);
 }
+/* ─────────────────────────────────────────────────────────────────────────
+   GAkinz marketing — premium design layer (scoped to .gk-public)
+   Cinematic gradients, glass, glow, grid, marquee, refined motion.
+   ──────────────────────────────────────────────────────────────────────── */
+.gk-public {
+  --gk-violet: 258 90% 66%;   /* #8b5cf6 */
+  --gk-indigo: 242 47% 34%;   /* #312e81 */
+  --gk-sky:    214 95% 60%;   /* bright sky for gradient accents */
+}
+
+/* Display headings: tighter tracking, fluid scale */
+.gk-public h1,
+.gk-public .gk-display {
+  letter-spacing: -0.02em;
+}
+
+/* Animated gradient text */
+.gk-grad-text {
+  background-image: linear-gradient(110deg,
+    hsl(var(--gk-indigo)) 0%,
+    hsl(var(--gk-violet)) 45%,
+    hsl(var(--gk-sky)) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.gk-grad-text-soft {
+  background-image: linear-gradient(110deg,
+    hsl(var(--gk-violet)) 0%,
+    hsl(var(--gk-sky)) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Aurora mesh backdrop — layered radial blobs */
+.gk-aurora {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+.gk-aurora::before,
+.gk-aurora::after {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(72px);
+  opacity: 0.55;
+}
+.gk-aurora::before {
+  width: 42rem; height: 42rem;
+  top: -14rem; right: -10rem;
+  background: radial-gradient(circle at center, hsl(var(--gk-violet) / 0.55), transparent 70%);
+}
+.gk-aurora::after {
+  width: 36rem; height: 36rem;
+  bottom: -16rem; left: -8rem;
+  background: radial-gradient(circle at center, hsl(var(--gk-sky) / 0.40), transparent 70%);
+}
+
+/* Dotted / grid pattern overlay */
+.gk-grid {
+  background-image:
+    linear-gradient(to right, hsl(var(--gk-indigo) / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, hsl(var(--gk-indigo) / 0.06) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+}
+.gk-dots {
+  background-image: radial-gradient(hsl(var(--gk-indigo) / 0.10) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+/* Glass card */
+.gk-glass {
+  background: hsl(0 0% 100% / 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid hsl(var(--gk-indigo) / 0.08);
+}
+
+/* Gradient hairline border via padding box */
+.gk-ring {
+  position: relative;
+  border-radius: 1rem;
+  background:
+    linear-gradient(hsl(0 0% 100%), hsl(0 0% 100%)) padding-box,
+    linear-gradient(135deg, hsl(var(--gk-violet) / 0.5), hsl(var(--gk-sky) / 0.3)) border-box;
+  border: 1px solid transparent;
+}
+
+/* Soft elevated card with violet-tinted shadow + lift on hover */
+.gk-card {
+  background: hsl(0 0% 100%);
+  border: 1px solid hsl(var(--gk-indigo) / 0.08);
+  border-radius: 1rem;
+  box-shadow: 0 1px 2px hsl(var(--gk-indigo) / 0.04);
+  transition: transform .25s cubic-bezier(.2,.7,.3,1), box-shadow .25s, border-color .25s;
+}
+.gk-card:hover {
+  transform: translateY(-4px);
+  border-color: hsl(var(--gk-violet) / 0.35);
+  box-shadow: 0 18px 40px -16px hsl(var(--gk-violet) / 0.35);
+}
+
+/* Glow ring behind featured elements */
+.gk-glow { position: relative; }
+.gk-glow::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, hsl(var(--gk-violet) / 0.6), hsl(var(--gk-sky) / 0.4));
+  filter: blur(20px);
+  opacity: 0.35;
+  z-index: -1;
+}
+
+/* Shine sweep on hover (for primary CTAs / cards) */
+.gk-shine { position: relative; overflow: hidden; }
+.gk-shine::before {
+  content: "";
+  position: absolute;
+  top: 0; left: -150%;
+  width: 75%; height: 100%;
+  background: linear-gradient(115deg, transparent, hsl(0 0% 100% / 0.35), transparent);
+  transition: left .6s ease;
+}
+.gk-shine:hover::before { left: 150%; }
+
+/* Logo / trust marquee */
+@keyframes gk-marquee {
+  from { transform: translateX(0); }
+  to   { transform: translateX(-50%); }
+}
+.gk-marquee {
+  display: flex;
+  width: max-content;
+  animation: gk-marquee 28s linear infinite;
+}
+.gk-marquee-mask {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
+}
+@media (prefers-reduced-motion: reduce) {
+  .gk-marquee { animation: none; }
+}
+
+/* Slow float for hero ornaments */
+@keyframes gk-float {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-10px); }
+}
+.gk-float { animation: gk-float 6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .gk-float { animation: none; }
+}
+
+/* Browser frame chrome dots */
+.gk-browser-dot { width: 11px; height: 11px; border-radius: 9999px; }
+
+/* Section eyebrow pill */
+.gk-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border-radius: 9999px;
+  border: 1px solid hsl(var(--gk-violet) / 0.25);
+  background: hsl(var(--gk-violet) / 0.07);
+  padding: 0.3rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: hsl(var(--gk-violet));
+}

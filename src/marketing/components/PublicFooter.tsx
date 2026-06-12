@@ -1,12 +1,32 @@
 import { Link } from "react-router-dom"
-import { ArrowUp, Github, Linkedin, Twitter } from "lucide-react"
+import { ArrowUp, ArrowRight, Github, Linkedin, Twitter } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { company, services } from "@/marketing/data/site"
 import BrandMark from "./BrandMark"
 
 export default function PublicFooter() {
   const year = 2026
   return (
-    <footer className="border-t border-border bg-card">
+    <footer className="relative overflow-hidden border-t border-border bg-muted/40">
+      {/* CTA band */}
+      <div className="border-b border-border/60">
+        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 px-4 py-12 sm:px-6 md:flex-row md:items-center">
+          <div>
+            <h2 className="font-serif text-2xl font-bold tracking-tight sm:text-3xl">
+              Let&rsquo;s build something worth visiting.
+            </h2>
+            <p className="mt-2 max-w-md text-sm text-muted-foreground">
+              One short call, a fixed price, then a site that looks right and works right.
+            </p>
+          </div>
+          <Button asChild size="lg" className="gk-shine shadow-md shadow-primary/20">
+            <Link to="/contact">
+              Start a project <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      </div>
+
       <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
           {/* Col 1 — brand + contact */}

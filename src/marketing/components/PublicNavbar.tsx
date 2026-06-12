@@ -39,14 +39,18 @@ export default function PublicNavbar() {
     cn(
       "rounded-md px-3 py-2 text-sm font-medium transition-colors",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-      isActive ? "text-primary" : "text-foreground/70 hover:text-foreground",
+      isActive
+        ? "bg-primary/8 text-primary"
+        : "text-foreground/70 hover:bg-muted hover:text-foreground",
     )
 
   return (
     <header
       className={cn(
-        "sticky top-0 z-50 w-full border-b transition-all",
-        scrolled ? "border-border bg-background/85 backdrop-blur" : "border-transparent bg-background",
+        "sticky top-0 z-50 w-full transition-all",
+        scrolled
+          ? "border-b border-border bg-background/80 shadow-sm shadow-primary/5 backdrop-blur-xl"
+          : "border-b border-transparent bg-background/60 backdrop-blur",
       )}
     >
       <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6" aria-label="Primary">
@@ -118,7 +122,7 @@ export default function PublicNavbar() {
           <Button asChild variant="ghost" size="sm">
             <Link to="/login">Login</Link>
           </Button>
-          <Button asChild size="sm">
+          <Button asChild size="sm" className="gk-shine shadow-md shadow-primary/20">
             <Link to="/contact">Start a project</Link>
           </Button>
         </div>

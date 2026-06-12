@@ -1,8 +1,6 @@
-import { Link } from "react-router-dom"
 import { Layers, Eye, Sprout, Gem } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import FadeIn from "../components/FadeIn"
-import { PageHero, Section, SectionHeading } from "../components/primitives"
+import { PageHero, Section, SectionHeading, CtaBand } from "../components/primitives"
 
 const beliefs = [
   { t: "Craft is in the details", d: "The polish a visitor can't name is the part they feel." },
@@ -57,8 +55,8 @@ export default function About() {
             const Icon = p.icon
             return (
               <FadeIn key={p.t} delay={i * 0.05}>
-                <div className="flex h-full gap-4 rounded-xl border border-border bg-background p-6">
-                  <span className="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <div className="gk-card flex h-full gap-4 p-6">
+                  <span className="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 text-primary ring-1 ring-primary/10">
                     <Icon className="h-5 w-5" />
                   </span>
                   <div>
@@ -98,7 +96,7 @@ export default function About() {
         <div className="mt-10 grid gap-5 sm:grid-cols-3">
           {beliefs.map((b, i) => (
             <FadeIn key={b.t} delay={i * 0.05}>
-              <div className="h-full rounded-xl border border-border bg-background p-6">
+              <div className="gk-card h-full p-6">
                 <h3 className="text-base font-semibold">{b.t}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{b.d}</p>
               </div>
@@ -107,18 +105,10 @@ export default function About() {
         </div>
       </Section>
 
-      {/* CTA */}
-      <Section>
-        <div className="rounded-2xl border border-border bg-card p-8 text-center sm:p-12">
-          <h2 className="font-serif text-2xl font-bold sm:text-3xl">Want to work with us?</h2>
-          <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
-            We take on a handful of projects at a time so each gets proper attention. Tell us about yours.
-          </p>
-          <Button asChild size="lg" className="mt-6">
-            <Link to="/contact">Start a project</Link>
-          </Button>
-        </div>
-      </Section>
+      <CtaBand
+        title="Want to work with us?"
+        intro="We take on a handful of projects at a time so each gets proper attention. Tell us about yours."
+      />
     </>
   )
 }

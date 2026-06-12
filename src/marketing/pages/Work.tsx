@@ -1,9 +1,6 @@
-import { Link } from "react-router-dom"
-import { ArrowRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { work, processStages } from "@/marketing/data/site"
 import FadeIn from "../components/FadeIn"
-import { PageHero, Section, SectionHeading } from "../components/primitives"
+import { PageHero, Section, SectionHeading, Stat, CtaBand } from "../components/primitives"
 
 const stats = [
   { v: "One team", k: "Design + build" },
@@ -26,12 +23,7 @@ export default function Work() {
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {stats.map((s, i) => (
             <FadeIn key={s.k} delay={i * 0.05}>
-              <div className="rounded-xl border border-border bg-card p-6">
-                <div className="font-serif text-2xl font-bold text-primary">{s.v}</div>
-                <div className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {s.k}
-                </div>
-              </div>
+              <Stat value={s.v} label={s.k} />
             </FadeIn>
           ))}
         </div>
@@ -43,7 +35,7 @@ export default function Work() {
         <div className="mt-10 space-y-6">
           {work.map((w, i) => (
             <FadeIn key={w.title} delay={i * 0.05}>
-              <article className="grid gap-6 overflow-hidden rounded-2xl border border-border bg-background p-6 sm:p-8 lg:grid-cols-[1fr_1.6fr]">
+              <article className="gk-card grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_1.6fr]">
                 {/* Left — title + visual */}
                 <div>
                   <span className="text-xs font-semibold uppercase tracking-wide text-primary">
@@ -61,7 +53,9 @@ export default function Work() {
                       </span>
                     ))}
                   </div>
-                  <div className="mt-5 aspect-[4/3] w-full rounded-lg bg-gradient-to-br from-primary/15 to-primary/5" />
+                  <div className="relative mt-5 aspect-[4/3] w-full overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-primary/8 to-transparent ring-1 ring-primary/10">
+                    <div className="absolute inset-0 gk-dots" aria-hidden />
+                  </div>
                 </div>
                 {/* Right — challenge / approach / result */}
                 <dl className="grid gap-5 sm:grid-cols-3 lg:gap-6">
@@ -94,7 +88,7 @@ export default function Work() {
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
           {processStages.map((stage, i) => (
             <FadeIn key={stage.n} delay={i * 0.05}>
-              <div className="h-full rounded-xl border border-border bg-card p-6">
+              <div className="gk-card h-full p-6">
                 <span className="font-serif text-3xl font-bold text-primary/30">{stage.n}</span>
                 <h3 className="mt-2 text-base font-semibold">{stage.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{stage.what}</p>
@@ -104,27 +98,11 @@ export default function Work() {
         </div>
       </Section>
 
-      {/* CTA */}
-      <section className="bg-primary text-primary-foreground">
-        <div className="mx-auto max-w-6xl px-4 py-16 text-center sm:px-6 sm:py-20">
-          <FadeIn>
-            <h2 className="font-serif text-3xl font-bold sm:text-4xl">
-              Want a project like one of these?
-            </h2>
-            <p className="mx-auto mt-4 max-w-xl text-primary-foreground/85">
-              Tell us about your business and where you want it to go. We'll show you what a site built
-              by one team can do.
-            </p>
-            <div className="mt-8">
-              <Button asChild size="lg" variant="secondary">
-                <Link to="/contact">
-                  Get in touch <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </FadeIn>
-        </div>
-      </section>
+      <CtaBand
+        title="Want a project like one of these?"
+        intro="Tell us about your business and where you want it to go. We'll show you what a site built by one team can do."
+        cta="Get in touch"
+      />
     </>
   )
 }

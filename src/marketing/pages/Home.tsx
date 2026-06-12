@@ -1,9 +1,18 @@
 import { Link } from "react-router-dom"
-import { ArrowRight, PenTool, Code2, ShoppingCart, LifeBuoy, Check } from "lucide-react"
+import {
+  ArrowRight,
+  PenTool,
+  Code2,
+  ShoppingCart,
+  LifeBuoy,
+  Check,
+  Sparkles,
+  Star,
+} from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { services, sectors, work, packages } from "@/marketing/data/site"
 import FadeIn from "../components/FadeIn"
-import { Section, SectionHeading, Eyebrow } from "../components/primitives"
+import { Section, SectionHeading, Eyebrow, GradientText, Stat, BrowserFrame } from "../components/primitives"
 
 const serviceIcons: Record<string, typeof PenTool> = {
   "web-design": PenTool,
@@ -19,62 +28,140 @@ const steps = [
   { n: "04", t: "Launch & care", d: "We go live, then keep the site healthy, secure and improving." },
 ]
 
+const trusted = [
+  "Professional services",
+  "Healthcare",
+  "Retail & ecommerce",
+  "Startups",
+  "Charities",
+  "Hospitality",
+]
+
 export default function Home() {
   return (
     <>
-      {/* Hero */}
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="relative overflow-hidden border-b border-border">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -right-24 -top-24 h-96 w-96 rounded-full bg-primary/10 blur-3xl"
-        />
-        <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
-          <FadeIn>
-            <Eyebrow>Web design &amp; development studio</Eyebrow>
-            <h1 className="mt-3 max-w-3xl font-serif text-4xl font-bold leading-tight tracking-tight sm:text-6xl">
-              One team that draws the vision and{" "}
-              <span className="text-primary">builds it properly.</span>
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg text-muted-foreground sm:text-xl">
-              GAkinz sits at the crossroads of design and development. You get one studio that designs
-              your site and builds it, so it looks right, works right, and never falls through the gap
-              between the two.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild size="lg">
-                <Link to="/contact">
-                  Start a project <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link to="/work">See our work</Link>
-              </Button>
+        <div className="gk-aurora" aria-hidden />
+        <div className="absolute inset-0 gk-grid" aria-hidden />
+        <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-20 sm:px-6 sm:pb-16 sm:pt-28">
+          <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
+            <FadeIn>
+              <span className="gk-pill">
+                <Sparkles className="h-3.5 w-3.5" /> Web design &amp; development studio
+              </span>
+              <h1 className="mt-6 max-w-2xl font-serif text-[2.75rem] font-bold leading-[1.04] tracking-tight sm:text-6xl">
+                One team that draws the vision and{" "}
+                <GradientText>builds it properly.</GradientText>
+              </h1>
+              <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground sm:text-xl">
+                GAkinz sits at the crossroads of design and development. One studio designs your site
+                and builds it — so it looks right, works right, and never falls through the gap
+                between the two.
+              </p>
+              <div className="mt-9 flex flex-wrap gap-3">
+                <Button asChild size="lg" className="gk-shine shadow-lg shadow-primary/25">
+                  <Link to="/contact">
+                    Start a project <ArrowRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </Button>
+                <Button asChild size="lg" variant="outline">
+                  <Link to="/work">See our work</Link>
+                </Button>
+              </div>
+              <div className="mt-8 flex items-center gap-3 text-sm text-muted-foreground">
+                <div className="flex text-amber-400">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <Star key={i} className="h-4 w-4 fill-current" />
+                  ))}
+                </div>
+                <span>Trusted by studios, shops, clinics and causes</span>
+              </div>
+            </FadeIn>
+
+            {/* Hero visual — browser frame previewing the brand */}
+            <FadeIn delay={0.12}>
+              <div className="gk-float relative">
+                <BrowserFrame>
+                  <div className="relative overflow-hidden p-7">
+                    <div className="gk-aurora" aria-hidden />
+                    <div className="relative">
+                      <div className="h-2.5 w-24 rounded-full bg-primary/30" />
+                      <div className="mt-5 h-7 w-3/4 rounded-md bg-foreground/10" />
+                      <div className="mt-2.5 h-7 w-1/2 rounded-md bg-primary/25" />
+                      <div className="mt-5 space-y-2">
+                        <div className="h-2.5 w-full rounded-full bg-foreground/8" />
+                        <div className="h-2.5 w-5/6 rounded-full bg-foreground/8" />
+                      </div>
+                      <div className="mt-6 grid grid-cols-3 gap-3">
+                        {[0, 1, 2].map((i) => (
+                          <div key={i} className="gk-card p-3">
+                            <div className="h-7 w-7 rounded-lg bg-primary/15" />
+                            <div className="mt-3 h-2 w-full rounded-full bg-foreground/10" />
+                            <div className="mt-1.5 h-2 w-2/3 rounded-full bg-foreground/8" />
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-6 flex gap-2">
+                        <div className="h-8 w-28 rounded-lg bg-primary" />
+                        <div className="h-8 w-20 rounded-lg border border-border" />
+                      </div>
+                    </div>
+                  </div>
+                </BrowserFrame>
+                {/* floating accent card */}
+                <div className="gk-glass absolute -bottom-5 -left-5 hidden rounded-xl p-3 shadow-xl sm:flex sm:items-center sm:gap-2.5">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-600">
+                    <Check className="h-4 w-4" />
+                  </span>
+                  <div className="text-xs leading-tight">
+                    <div className="font-semibold text-foreground">WCAG 2.1 AA</div>
+                    <div className="text-muted-foreground">Accessible by default</div>
+                  </div>
+                </div>
+              </div>
+            </FadeIn>
+          </div>
+        </div>
+
+        {/* Trust marquee */}
+        <div className="relative border-t border-border/60 bg-muted/30 py-6">
+          <div className="gk-marquee-mask mx-auto max-w-6xl px-4 sm:px-6">
+            <div className="gk-marquee gap-12">
+              {[...trusted, ...trusted].map((t, i) => (
+                <span
+                  key={i}
+                  className="whitespace-nowrap text-sm font-semibold uppercase tracking-wider text-muted-foreground/70"
+                >
+                  {t}
+                </span>
+              ))}
             </div>
-          </FadeIn>
+          </div>
         </div>
       </section>
 
-      {/* Services */}
+      {/* ── Services ─────────────────────────────────────────────────────── */}
       <Section>
         <SectionHeading
           eyebrow="What we do"
-          title="Design and build, under one roof"
+          title={<>Design and build, <GradientText soft>under one roof</GradientText></>}
           intro="Four ways we help. Every one starts with the same team and ends with a site you can actually run."
         />
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {services.map((s, i) => {
             const Icon = serviceIcons[s.slug] ?? Code2
             return (
               <FadeIn key={s.slug} delay={i * 0.05}>
                 <Link
                   to={`/services/${s.slug}`}
-                  className="group block h-full rounded-xl border border-border bg-card p-6 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="gk-card group block h-full p-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
-                  <span className="inline-flex h-11 w-11 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                  <span className="inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/15 to-primary/5 text-primary ring-1 ring-primary/10">
                     <Icon className="h-5 w-5" />
                   </span>
-                  <h3 className="mt-4 text-base font-semibold">{s.title}</h3>
-                  <p className="mt-2 text-sm text-muted-foreground">{s.summary}</p>
+                  <h3 className="mt-5 text-base font-semibold">{s.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{s.summary}</p>
                   <span className="mt-4 inline-flex items-center text-sm font-medium text-primary">
                     Learn more
                     <ArrowRight className="ml-1 h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -86,16 +173,16 @@ export default function Home() {
         </div>
       </Section>
 
-      {/* Why one team */}
+      {/* ── Why one team ─────────────────────────────────────────────────── */}
       <Section muted>
         <div className="grid gap-12 lg:grid-cols-2 lg:items-center">
           <FadeIn>
             <SectionHeading
               eyebrow="Why GAkinz"
-              title="No handoff, no gaps"
+              title={<>No handoff. <GradientText soft>No gaps.</GradientText></>}
               intro="Most web projects lose time and quality in the gap between the designer and the developer. We do both, so decisions made in the design carry straight into the code."
             />
-            <ul className="mt-6 space-y-3">
+            <ul className="mt-8 space-y-3.5">
               {[
                 "One team accountable from sketch to launch",
                 "Hard-to-build ideas caught while they are still cheap to change",
@@ -103,70 +190,61 @@ export default function Home() {
                 "A site you can update yourself after we hand it over",
               ].map((point) => (
                 <li key={point} className="flex items-start gap-3">
-                  <span className="mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <span className="mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/12 text-primary">
                     <Check className="h-3.5 w-3.5" />
                   </span>
-                  <span className="text-sm text-foreground">{point}</span>
+                  <span className="text-[0.95rem] text-foreground">{point}</span>
                 </li>
               ))}
             </ul>
           </FadeIn>
           <FadeIn delay={0.1}>
             <div className="grid grid-cols-2 gap-4">
-              {[
-                { k: "Design + build", v: "One team" },
-                { k: "Accessibility", v: "WCAG 2.1 AA" },
-                { k: "Tested on", v: "Real devices" },
-                { k: "After launch", v: "Care plans" },
-              ].map((stat) => (
-                <div key={stat.k} className="rounded-xl border border-border bg-background p-6">
-                  <div className="font-serif text-2xl font-bold text-primary">{stat.v}</div>
-                  <div className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {stat.k}
-                  </div>
-                </div>
-              ))}
+              <Stat value="One team" label="Design + build" />
+              <Stat value="WCAG 2.1 AA" label="Accessibility" />
+              <Stat value="Real devices" label="Tested on" />
+              <Stat value="Care plans" label="After launch" />
             </div>
           </FadeIn>
         </div>
       </Section>
 
-      {/* Process */}
+      {/* ── Process ──────────────────────────────────────────────────────── */}
       <Section>
         <SectionHeading eyebrow="How we work" title="A clear path from first call to launch" />
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((step, i) => (
             <FadeIn key={step.n} delay={i * 0.05}>
-              <div className="h-full rounded-xl border border-border bg-card p-6">
-                <span className="font-serif text-3xl font-bold text-primary/30">{step.n}</span>
-                <h3 className="mt-2 text-base font-semibold">{step.t}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{step.d}</p>
+              <div className="gk-card h-full p-6">
+                <span className="font-serif text-4xl font-bold text-primary/25">{step.n}</span>
+                <h3 className="mt-3 text-base font-semibold">{step.t}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.d}</p>
               </div>
             </FadeIn>
           ))}
         </div>
       </Section>
 
-      {/* Sectors */}
+      {/* ── Sectors ──────────────────────────────────────────────────────── */}
       <Section muted>
         <SectionHeading
           eyebrow="Who we serve"
           title="Studios, shops, clinics and causes"
           intro="We work across sectors, but the through-line is the same: businesses that care how their site looks and behaves."
         />
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sectors.slice(0, 6).map((sec, i) => (
             <FadeIn key={sec.title} delay={i * 0.04}>
-              <div className="h-full rounded-xl border border-border bg-background p-6">
+              <div className="gk-card h-full p-6">
                 <h3 className="text-base font-semibold">{sec.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{sec.blurb}</p>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{sec.blurb}</p>
               </div>
             </FadeIn>
           ))}
         </div>
       </Section>
 
-      {/* Work preview */}
+      {/* ── Work preview ─────────────────────────────────────────────────── */}
       <Section>
         <div className="flex items-end justify-between gap-4">
           <SectionHeading eyebrow="Selected work" title="A look at what we have built" />
@@ -176,23 +254,30 @@ export default function Home() {
             </Link>
           </Button>
         </div>
-        <div className="mt-10 grid gap-5 lg:grid-cols-3">
+        <div className="mt-12 grid gap-5 lg:grid-cols-3">
           {work.map((w, i) => (
             <FadeIn key={w.title} delay={i * 0.05}>
-              <div className="h-full rounded-xl border border-border bg-card p-6">
-                <span className="text-xs font-semibold uppercase tracking-wide text-primary">
-                  {w.sector}
-                </span>
-                <h3 className="mt-2 text-base font-semibold">{w.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{w.summary}</p>
-                <p className="mt-3 text-sm font-medium text-foreground">{w.result}</p>
+              <div className="gk-card group h-full overflow-hidden">
+                <div className="relative h-40 overflow-hidden bg-gradient-to-br from-primary/15 via-primary/5 to-transparent">
+                  <div className="absolute inset-0 gk-dots" aria-hidden />
+                  <span className="absolute left-5 top-5 rounded-full bg-background/80 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary backdrop-blur">
+                    {w.sector}
+                  </span>
+                </div>
+                <div className="p-6">
+                  <h3 className="text-base font-semibold">{w.title}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{w.summary}</p>
+                  <p className="mt-3 flex items-center gap-1.5 text-sm font-medium text-foreground">
+                    <Check className="h-4 w-4 text-emerald-500" /> {w.result}
+                  </p>
+                </div>
               </div>
             </FadeIn>
           ))}
         </div>
       </Section>
 
-      {/* Pricing teaser */}
+      {/* ── Pricing teaser ───────────────────────────────────────────────── */}
       <Section muted>
         <div className="flex flex-wrap items-end justify-between gap-4">
           <SectionHeading
@@ -206,18 +291,20 @@ export default function Home() {
             </Link>
           </Button>
         </div>
-        <div className="mt-10 grid gap-5 sm:grid-cols-3">
+        <div className="mt-12 grid gap-5 sm:grid-cols-3">
           {packages.slice(0, 3).map((p, i) => (
             <FadeIn key={p.name} delay={i * 0.05}>
               <Link
                 to="/pricing"
-                className="group block h-full rounded-xl border border-border bg-background p-6 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="gk-card group block h-full p-6 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <h3 className="text-base font-semibold">{p.name}</h3>
                 <p className="mt-1 text-sm text-muted-foreground">{p.best}</p>
-                <div className="mt-4">
+                <div className="mt-5">
                   <span className="text-sm text-muted-foreground">from </span>
-                  <span className="font-serif text-2xl font-bold text-primary">{p.price}</span>
+                  <span className="font-serif text-3xl font-bold">
+                    <GradientText>{p.price}</GradientText>
+                  </span>
                 </div>
               </Link>
             </FadeIn>
@@ -225,22 +312,25 @@ export default function Home() {
         </div>
       </Section>
 
-      {/* CTA */}
-      <section className="bg-primary text-primary-foreground">
-        <div className="mx-auto max-w-6xl px-4 py-16 text-center sm:px-6 sm:py-20">
-          <FadeIn>
-            <h2 className="font-serif text-3xl font-bold sm:text-4xl">Have a project in mind?</h2>
-            <p className="mx-auto mt-4 max-w-xl text-primary-foreground/85">
-              Tell us what you are building. We will come back with a clear next step, not a hard sell.
-            </p>
-            <div className="mt-8">
-              <Button asChild size="lg" variant="secondary">
-                <Link to="/contact">
-                  Start a project <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </FadeIn>
+      {/* ── CTA ──────────────────────────────────────────────────────────── */}
+      <section className="relative overflow-hidden">
+        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+          <div className="gk-glow relative overflow-hidden rounded-3xl bg-gradient-to-br from-[hsl(242_47%_34%)] via-primary to-[hsl(258_90%_66%)] px-6 py-16 text-center text-primary-foreground sm:py-20">
+            <div className="absolute inset-0 gk-dots opacity-30" aria-hidden />
+            <FadeIn>
+              <h2 className="relative font-serif text-3xl font-bold sm:text-5xl">Have a project in mind?</h2>
+              <p className="relative mx-auto mt-5 max-w-xl text-lg text-primary-foreground/85">
+                Tell us what you are building. We will come back with a clear next step, not a hard sell.
+              </p>
+              <div className="relative mt-9">
+                <Button asChild size="lg" variant="secondary" className="gk-shine shadow-xl">
+                  <Link to="/contact">
+                    Start a project <ArrowRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
+            </FadeIn>
+          </div>
         </div>
       </section>
     </>

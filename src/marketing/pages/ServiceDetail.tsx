@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { services, processStages, alwaysIncluded } from "@/marketing/data/site"
 import FadeIn from "../components/FadeIn"
-import { PageHero, Section, SectionHeading } from "../components/primitives"
+import { PageHero, Section, SectionHeading, CtaBand } from "../components/primitives"
 import NotFound from "./NotFound"
 
 export default function ServiceDetail() {
@@ -37,14 +37,14 @@ export default function ServiceDetail() {
                 </li>
               ))}
             </ul>
-            <Button asChild className="mt-8">
+            <Button asChild className="gk-shine mt-8 shadow-md shadow-primary/20">
               <Link to="/contact">
                 Talk to us about {service.title.toLowerCase()} <ArrowRight className="ml-1 h-4 w-4" />
               </Link>
             </Button>
           </FadeIn>
           <FadeIn delay={0.1}>
-            <div className="rounded-xl border border-border bg-card p-6">
+            <div className="gk-card p-6">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Other services
               </h3>
@@ -63,7 +63,7 @@ export default function ServiceDetail() {
               </ul>
             </div>
 
-            <div className="mt-5 rounded-xl border border-border bg-card p-6">
+            <div className="gk-card mt-5 p-6">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                 Pricing
               </h3>
@@ -91,7 +91,7 @@ export default function ServiceDetail() {
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
           {processStages.map((stage, i) => (
             <FadeIn key={stage.n} delay={i * 0.05}>
-              <div className="h-full rounded-xl border border-border bg-background p-6">
+              <div className="gk-card h-full p-6">
                 <span className="font-serif text-3xl font-bold text-primary/30">{stage.n}</span>
                 <h3 className="mt-2 text-base font-semibold">{stage.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{stage.what}</p>
@@ -121,6 +121,11 @@ export default function ServiceDetail() {
           </FadeIn>
         </div>
       </Section>
+
+      <CtaBand
+        title={`Ready to talk ${service.title.toLowerCase()}?`}
+        intro="Tell us what you are building. We will come back with a clear next step and a fixed price."
+      />
     </>
   )
 }

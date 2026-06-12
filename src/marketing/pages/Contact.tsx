@@ -96,7 +96,7 @@ export default function Contact() {
           </div>
 
           {/* Form */}
-          <form onSubmit={onSubmit} noValidate className="rounded-xl border border-border bg-card p-6 sm:p-8">
+          <form onSubmit={onSubmit} noValidate className="gk-ring p-6 shadow-xl shadow-primary/5 sm:p-8">
             <div className="grid gap-5 sm:grid-cols-2">
               <div className="sm:col-span-1">
                 <Label htmlFor="name">Name</Label>
@@ -173,7 +173,7 @@ export default function Contact() {
                 {errors.message && <p className="mt-1 text-xs text-destructive">{errors.message}</p>}
               </div>
             </div>
-            <Button type="submit" size="lg" className="mt-6 w-full sm:w-auto" disabled={sending}>
+            <Button type="submit" size="lg" className="gk-shine mt-6 w-full shadow-md shadow-primary/20 sm:w-auto" disabled={sending}>
               {sending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {sending ? "Sending…" : "Send enquiry"}
             </Button>
@@ -195,7 +195,7 @@ export default function Contact() {
         <div className="mx-auto mt-10 grid max-w-4xl gap-5 sm:grid-cols-3">
           {contactSteps.map((step, i) => (
             <FadeIn key={step.title} delay={i * 0.05}>
-              <div className="h-full rounded-xl border border-border bg-background p-6">
+              <div className="gk-card h-full p-6">
                 <span className="font-serif text-3xl font-bold text-primary/30">{`0${i + 1}`}</span>
                 <h3 className="mt-2 text-base font-semibold">{step.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{step.detail}</p>

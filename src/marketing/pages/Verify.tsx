@@ -37,7 +37,7 @@ export default function Verify() {
     <>
       <PageHero eyebrow="Verification" title="Certificate check" intro={`Verifying certificate ${id}.`} />
       <Section>
-        <div className="mx-auto max-w-md rounded-xl border border-border bg-card p-8 text-center">
+        <div className="gk-ring mx-auto max-w-md p-8 text-center shadow-xl shadow-primary/5">
           {state === "loading" && (
             <>
               <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />

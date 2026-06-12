@@ -1,10 +1,10 @@
 import { Link } from "react-router-dom"
-import { ArrowRight, Check, Star } from "lucide-react"
+import { Check, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { packages, addOns, alwaysIncluded, paymentTerms, faqs } from "@/marketing/data/site"
 import FadeIn from "../components/FadeIn"
-import { PageHero, Section, SectionHeading } from "../components/primitives"
+import { PageHero, Section, SectionHeading, GradientText, CtaBand } from "../components/primitives"
 
 export default function Pricing() {
   return (
@@ -22,13 +22,13 @@ export default function Pricing() {
             <FadeIn key={p.name} delay={i * 0.05} className="h-full">
               <div
                 className={cn(
-                  "flex h-full flex-col rounded-2xl border bg-card p-6",
-                  p.featured ? "border-primary shadow-lg ring-1 ring-primary/30" : "border-border",
+                  "gk-card relative flex h-full flex-col p-6",
+                  p.featured && "gk-glow border-primary/40 ring-1 ring-primary/30",
                 )}
               >
                 {p.featured && (
-                  <span className="mb-3 inline-flex w-fit items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-                    <Star className="h-3 w-3" /> Most popular
+                  <span className="mb-3 inline-flex w-fit items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/30">
+                    <Star className="h-3 w-3 fill-current" /> Most popular
                   </span>
                 )}
                 <h2 className="text-lg font-semibold">{p.name}</h2>
@@ -37,7 +37,9 @@ export default function Pricing() {
                   {p.price !== "Quoted" && (
                     <span className="text-sm font-medium text-muted-foreground">from</span>
                   )}
-                  <span className="font-serif text-3xl font-bold text-foreground">{p.price}</span>
+                  <span className="font-serif text-3xl font-bold">
+                    <GradientText>{p.price}</GradientText>
+                  </span>
                 </div>
                 <ul className="mt-5 flex-1 space-y-2.5">
                   {p.features.map((f) => (
@@ -49,7 +51,7 @@ export default function Pricing() {
                 </ul>
                 <Button
                   asChild
-                  className="mt-6 w-full"
+                  className={cn("mt-6 w-full", p.featured && "gk-shine shadow-md shadow-primary/20")}
                   variant={p.featured ? "default" : "outline"}
                 >
                   <Link to="/contact">{p.price === "Quoted" ? "Request a quote" : "Start a project"}</Link>
@@ -92,7 +94,7 @@ export default function Pricing() {
           title="Extend a package when you need to"
           intro="Optional extras you can bolt onto any project, priced the same plain way as everything else."
         />
-        <div className="mt-10 overflow-hidden rounded-xl border border-border">
+        <div className="mt-10 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
           <table className="w-full text-left text-sm">
             <thead className="bg-muted/60 text-muted-foreground">
               <tr>
@@ -133,8 +135,10 @@ export default function Pricing() {
           <FadeIn delay={0.1}>
             <ol className="space-y-4">
               {paymentTerms.map((t, i) => (
-                <li key={t} className="flex items-start gap-4 rounded-xl border border-border bg-background p-4">
-                  <span className="font-serif text-xl font-bold text-primary/40">{i + 1}</span>
+                <li key={t} className="gk-card flex items-start gap-4 p-5">
+                  <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 font-serif text-lg font-bold text-primary">
+                    {i + 1}
+                  </span>
                   <span className="text-sm text-foreground">{t}</span>
                 </li>
               ))}
@@ -146,38 +150,25 @@ export default function Pricing() {
       {/* FAQs */}
       <Section>
         <SectionHeading eyebrow="Questions" title="Common questions" center />
-        <div className="mx-auto mt-10 max-w-3xl divide-y divide-border">
+        <div className="mx-auto mt-10 max-w-3xl space-y-3">
           {faqs.map((f) => (
-            <details key={f.q} className="group py-5">
+            <details key={f.q} className="group gk-card px-5 py-4">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-semibold text-foreground">
                 {f.q}
-                <span className="text-primary transition-transform group-open:rotate-45">+</span>
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg text-primary transition-transform group-open:rotate-45">
+                  +
+                </span>
               </summary>
-              <p className="mt-3 text-sm text-muted-foreground">{f.a}</p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{f.a}</p>
             </details>
           ))}
         </div>
       </Section>
 
-      {/* CTA */}
-      <section className="bg-primary text-primary-foreground">
-        <div className="mx-auto max-w-6xl px-4 py-16 text-center sm:px-6 sm:py-20">
-          <FadeIn>
-            <h2 className="font-serif text-3xl font-bold sm:text-4xl">Not sure which package fits?</h2>
-            <p className="mx-auto mt-4 max-w-xl text-primary-foreground/85">
-              Book a short discovery call. We will point you the right way and send a fixed price — no
-              pushy follow-ups.
-            </p>
-            <div className="mt-8">
-              <Button asChild size="lg" variant="secondary">
-                <Link to="/contact">
-                  Start a project <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </FadeIn>
-        </div>
-      </section>
+      <CtaBand
+        title="Not sure which package fits?"
+        intro="Book a short discovery call. We will point you the right way and send a fixed price — no pushy follow-ups."
+      />
     </>
   )
 }

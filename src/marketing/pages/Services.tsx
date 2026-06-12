@@ -3,7 +3,7 @@ import { ArrowRight, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { services, processStages, alwaysIncluded } from "@/marketing/data/site"
 import FadeIn from "../components/FadeIn"
-import { PageHero, Section, SectionHeading } from "../components/primitives"
+import { PageHero, Section, SectionHeading, CtaBand } from "../components/primitives"
 
 export default function Services() {
   return (
@@ -19,7 +19,7 @@ export default function Services() {
         <div className="grid gap-6 md:grid-cols-2">
           {services.map((s, i) => (
             <FadeIn key={s.slug} delay={i * 0.05}>
-              <div className="flex h-full flex-col rounded-xl border border-border bg-card p-7">
+              <div className="gk-card flex h-full flex-col p-7">
                 <h2 className="text-xl font-semibold">{s.title}</h2>
                 <p className="mt-2 text-muted-foreground">{s.detail}</p>
                 <ul className="mt-4 space-y-1.5 text-sm text-muted-foreground">
@@ -52,7 +52,7 @@ export default function Services() {
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
           {processStages.map((stage, i) => (
             <FadeIn key={stage.n} delay={i * 0.05}>
-              <div className="h-full rounded-xl border border-border bg-background p-6">
+              <div className="gk-card h-full p-6">
                 <span className="font-serif text-3xl font-bold text-primary/30">{stage.n}</span>
                 <h3 className="mt-2 text-base font-semibold">{stage.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{stage.what}</p>
@@ -95,24 +95,10 @@ export default function Services() {
         </div>
       </Section>
 
-      {/* CTA */}
-      <section className="bg-primary text-primary-foreground">
-        <div className="mx-auto max-w-6xl px-4 py-16 text-center sm:px-6 sm:py-20">
-          <FadeIn>
-            <h2 className="font-serif text-3xl font-bold sm:text-4xl">Not sure which you need?</h2>
-            <p className="mx-auto mt-4 max-w-xl text-primary-foreground/85">
-              Book a short call and we'll point you the right way.
-            </p>
-            <div className="mt-8">
-              <Button asChild size="lg" variant="secondary">
-                <Link to="/contact">
-                  Start a project <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
-            </div>
-          </FadeIn>
-        </div>
-      </section>
+      <CtaBand
+        title="Not sure which you need?"
+        intro="Book a short call and we'll point you the right way."
+      />
     </>
   )
 }
