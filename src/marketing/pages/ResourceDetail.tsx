@@ -21,7 +21,7 @@ export default function ResourceDetail() {
         <Link to="/resources" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="mr-1 h-4 w-4" /> All insights
         </Link>
-        <article className="prose-gakinz mt-6 max-w-2xl space-y-5">
+        <article className="mt-6 max-w-2xl space-y-5">
           {post.body.map((para, i) => (
             <p key={i} className="text-lg leading-relaxed text-muted-foreground">
               {para}

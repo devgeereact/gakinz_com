@@ -94,7 +94,7 @@ export default function Pricing() {
           title="Extend a package when you need to"
           intro="Optional extras you can bolt onto any project, priced the same plain way as everything else."
         />
-        <div className="mt-10 overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
+        <div className="gk-ring mt-10 overflow-hidden shadow-sm">
           <table className="w-full text-left text-sm">
             <thead className="bg-muted/60 text-muted-foreground">
               <tr>

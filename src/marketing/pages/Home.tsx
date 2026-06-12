@@ -12,7 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { services, sectors, work, packages } from "@/marketing/data/site"
 import FadeIn from "../components/FadeIn"
-import { Section, SectionHeading, Eyebrow, GradientText, Stat, BrowserFrame } from "../components/primitives"
+import { Section, SectionHeading, GradientText, Stat, BrowserFrame, CtaBand } from "../components/primitives"
 
 const serviceIcons: Record<string, typeof PenTool> = {
   "web-design": PenTool,
@@ -70,7 +70,7 @@ export default function Home() {
                 </Button>
               </div>
               <div className="mt-8 flex items-center gap-3 text-sm text-muted-foreground">
-                <div className="flex text-amber-400">
+                <div className="flex text-amber-400" aria-hidden>
                   {[0, 1, 2, 3, 4].map((i) => (
                     <Star key={i} className="h-4 w-4 fill-current" />
                   ))}
@@ -313,26 +313,10 @@ export default function Home() {
       </Section>
 
       {/* ── CTA ──────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden">
-        <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
-          <div className="gk-glow relative overflow-hidden rounded-3xl bg-gradient-to-br from-[hsl(242_47%_34%)] via-primary to-[hsl(258_90%_66%)] px-6 py-16 text-center text-primary-foreground sm:py-20">
-            <div className="absolute inset-0 gk-dots opacity-30" aria-hidden />
-            <FadeIn>
-              <h2 className="relative font-serif text-3xl font-bold sm:text-5xl">Have a project in mind?</h2>
-              <p className="relative mx-auto mt-5 max-w-xl text-lg text-primary-foreground/85">
-                Tell us what you are building. We will come back with a clear next step, not a hard sell.
-              </p>
-              <div className="relative mt-9">
-                <Button asChild size="lg" variant="secondary" className="gk-shine shadow-xl">
-                  <Link to="/contact">
-                    Start a project <ArrowRight className="ml-1 h-4 w-4" />
-                  </Link>
-                </Button>
-              </div>
-            </FadeIn>
-          </div>
-        </div>
-      </section>
+      <CtaBand
+        title="Have a project in mind?"
+        intro="Tell us what you are building. We will come back with a clear next step, not a hard sell."
+      />
     </>
   )
 }

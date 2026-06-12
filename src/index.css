@@ -598,8 +598,10 @@
   color: transparent;
 }
 .gk-grad-text-soft {
+  /* Start at a darker stop so large headings clear the AA contrast bar on white. */
   background-image: linear-gradient(110deg,
-    hsl(var(--gk-violet)) 0%,
+    hsl(var(--gk-indigo)) 0%,
+    hsl(var(--gk-violet)) 55%,
     hsl(var(--gk-sky)) 100%);
   -webkit-background-clip: text;
   background-clip: text;
