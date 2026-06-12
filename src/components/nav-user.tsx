@@ -20,7 +20,11 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { ChevronsUpDownIcon, ShieldPlus, BadgeCheckIcon, CreditCardIcon, BellIcon, LogOutIcon } from "lucide-react"
+import { ChevronsUpDownIcon, BadgeCheckIcon, BellIcon, LogOutIcon } from "lucide-react"
+import { Link, useNavigate } from "react-router-dom"
+import { auth } from "@/lib/api"
+import { useAuth, type Role } from "@/store/auth.store"
+import { ROLE_LABEL } from "@/lib/access"
 
 export function NavUser({
   user,
@@ -29,9 +33,18 @@ export function NavUser({
     name: string
     email: string
     avatar: string
+    role?: Role
   }
 }) {
  const { isMobile, state } = useSidebar()
+ const navigate = useNavigate()
+ const clear = useAuth((s) => s.clear)
+
+ const onLogout = async () => {
+   await auth.logout() // best-effort: server deletes the token
+   clear() // drop the local session regardless
+   navigate("/login", { replace: true })
+ }
 
 const collapsed = state === "collapsed"
 
@@ -96,38 +109,31 @@ const collapsed = state === "collapsed"
                   <span className="truncate font-medium">{user.name}</span>
                   <span className="truncate text-xs">{user.email}</span>
                 </div>
+                {user.role && (
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                    {ROLE_LABEL[user.role]}
+                  </span>
+                )}
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator className="my-2"/>
             <DropdownMenuGroup>
-              <DropdownMenuItem className="gap-2 h-9">
-                <ShieldPlus className="!size-5" 
-                />
-                Upgrade to Pro
+              <DropdownMenuItem asChild className="gap-2 h-9">
+                <Link to="/app/account/profile">
+                  <BadgeCheckIcon className="!size-5" />
+                  Account
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild className="gap-2 h-9">
+                <Link to="/app/account/notifications">
+                  <BellIcon className="!size-5" />
+                  Notifications
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator className="my-2"/>
-            <DropdownMenuGroup>
-              <DropdownMenuItem className="gap-2 h-9">
-                <BadgeCheckIcon className="!size-5" 
-                />
-                Account
-              </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2 h-9">
-                <CreditCardIcon className="!size-5" 
-                />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem className="gap-2 h-9">
-                <BellIcon className="!size-5" 
-                />
-                Notifications
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-            <DropdownMenuSeparator className="my-2"/>
-            <DropdownMenuItem className="gap-2 h-9">
-              <LogOutIcon className="!size-5" 
-              />
+            <DropdownMenuItem className="gap-2 h-9" onSelect={onLogout}>
+              <LogOutIcon className="!size-5" />
               Log out
             </DropdownMenuItem>
           </DropdownMenuContent>

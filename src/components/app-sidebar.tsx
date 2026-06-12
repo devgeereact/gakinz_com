@@ -28,22 +28,24 @@ import {
 } from "@/components/ui/sidebar"
 import BrandMark from "@/marketing/components/BrandMark"
 import { useAuth } from "@/store/auth.store"
+import { canAccess } from "@/lib/access"
 
-// GAkinzOS modules (GAkinzOS.html). Each maps to a /app/* route. Leads is live;
-// the rest render a module stub until their phase is built.
+// GAkinzOS modules (GAkinzOS.html). Each maps to a /app/* route. `key` ties the
+// item to its role gate in src/lib/access.ts so the nav only shows modules the
+// signed-in role can actually open (server enforces the same lists).
 const navMain = [
-  { title: "Dashboard", url: "app/dashboard/analytics", icon: LayoutDashboard },
-  { title: "Leads", url: "app/leads", icon: Inbox },
-  { title: "Clients", url: "app/clients", icon: Users },
-  { title: "Projects", url: "app/projects", icon: FolderKanban },
-  { title: "Proposals", url: "app/proposals", icon: FileText },
-  { title: "Invoicing", url: "app/invoicing", icon: Receipt },
-  { title: "Client Portal", url: "app/portal", icon: PanelsTopLeft },
-  { title: "Time", url: "app/time", icon: Clock },
-  { title: "Support", url: "app/support", icon: LifeBuoy },
-  { title: "Comms", url: "app/comms", icon: MessagesSquare },
-  { title: "Analytics", url: "app/analytics", icon: BarChart3 },
-  { title: "Platform", url: "app/platform", icon: Settings },
+  { key: "dashboard", title: "Dashboard", url: "app/dashboard/analytics", icon: LayoutDashboard },
+  { key: "leads", title: "Leads", url: "app/leads", icon: Inbox },
+  { key: "clients", title: "Clients", url: "app/clients", icon: Users },
+  { key: "projects", title: "Projects", url: "app/projects", icon: FolderKanban },
+  { key: "proposals", title: "Proposals", url: "app/proposals", icon: FileText },
+  { key: "invoicing", title: "Invoicing", url: "app/invoicing", icon: Receipt },
+  { key: "portal", title: "Client Portal", url: "app/portal", icon: PanelsTopLeft },
+  { key: "time", title: "Time", url: "app/time", icon: Clock },
+  { key: "support", title: "Support", url: "app/support", icon: LifeBuoy },
+  { key: "comms", title: "Comms", url: "app/comms", icon: MessagesSquare },
+  { key: "analytics", title: "Analytics", url: "app/analytics", icon: BarChart3 },
+  { key: "platform", title: "Platform", url: "app/platform", icon: Settings },
 ]
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
@@ -56,7 +58,10 @@ export function AppSidebar({ onHoverChange, ...props }: AppSidebarProps) {
     name: user?.name ?? "Member",
     email: user?.email ?? "",
     avatar: "",
+    role: user?.role,
   }
+  // Only show modules the signed-in role can open (server enforces the same).
+  const visibleNav = navMain.filter((item) => canAccess(user?.role, item.key))
 
   return (
     <div
@@ -79,7 +84,7 @@ export function AppSidebar({ onHoverChange, ...props }: AppSidebarProps) {
         </SidebarHeader>
 
         <SidebarContent>
-          <NavMain items={navMain} />
+          <NavMain items={visibleNav} />
         </SidebarContent>
 
         <SidebarFooter className="border-t h-16 justify-center">
