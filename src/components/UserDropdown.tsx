@@ -12,14 +12,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 
-import {
-  User,
-  Settings,
-  LayoutDashboard,
-  Download,
-  DollarSign,
-  LogOut,
-} from "lucide-react"
+import { LayoutDashboard, LogOut } from "lucide-react"
 
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "@/store/auth.store"
@@ -90,31 +83,9 @@ export function UserDropdown() {
         </DropdownMenuLabel>
 
         {/* Items */}
-        <DropdownMenuItem className="gap-2 h-9">
-          <User className="!size-5" />
-          Profile
-        </DropdownMenuItem>
-
-        <DropdownMenuItem className="gap-2 h-9">
-          <Settings className="!size-5" />
-          Settings
-        </DropdownMenuItem>
-
-        <DropdownMenuItem className="gap-2 h-9">
+        <DropdownMenuItem className="gap-2 h-9 cursor-pointer" onClick={() => navigate("/app")}>
           <LayoutDashboard className="!size-5" />
           Dashboard
-        </DropdownMenuItem>
-
-        <DropdownMenuSeparator className="border-1 my-2"/>
-
-        <DropdownMenuItem className="gap-2 h-9">
-          <Download className="!size-5" />
-          Downloads
-        </DropdownMenuItem>
-
-        <DropdownMenuItem className="gap-2 h-9">
-          <DollarSign className="!size-5" />
-          Earnings
         </DropdownMenuItem>
 
         <DropdownMenuSeparator className="border-1 my-2" />

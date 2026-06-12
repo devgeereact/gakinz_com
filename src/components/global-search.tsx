@@ -11,25 +11,56 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-  CommandSeparator,
 } from "@/components/ui/command"
 
 import {
   Search,
   LayoutDashboard,
+  Inbox,
+  Users,
+  FolderKanban,
+  FileText,
+  Receipt,
+  PanelsTopLeft,
+  Clock,
+  LifeBuoy,
+  MessagesSquare,
+  Mail,
   BarChart3,
-  BriefcaseBusiness,
-  User,
-  CreditCard,
   Settings,
   ChevronRight,
+  type LucideIcon,
 } from "lucide-react"
+import { useAuth } from "@/store/auth.store"
+import { canAccess } from "@/lib/access"
+
+// The real GAkinzOS modules (same set + role keys as the sidebar). Cmd/Ctrl+K
+// jumps to any module the signed-in role can open — no dead or demo links.
+type Cmd = { key: string; label: string; path: string; icon: LucideIcon }
+const COMMANDS: Cmd[] = [
+  { key: "dashboard", label: "Dashboard", path: "/app", icon: LayoutDashboard },
+  { key: "leads", label: "Leads", path: "/app/leads", icon: Inbox },
+  { key: "clients", label: "Clients", path: "/app/clients", icon: Users },
+  { key: "projects", label: "Projects", path: "/app/projects", icon: FolderKanban },
+  { key: "proposals", label: "Proposals", path: "/app/proposals", icon: FileText },
+  { key: "invoicing", label: "Invoicing", path: "/app/invoicing", icon: Receipt },
+  { key: "portal", label: "Client Portal", path: "/app/portal", icon: PanelsTopLeft },
+  { key: "time", label: "Time", path: "/app/time", icon: Clock },
+  { key: "support", label: "Support", path: "/app/support", icon: LifeBuoy },
+  { key: "comms", label: "Comms", path: "/app/comms", icon: MessagesSquare },
+  { key: "mailbox", label: "Mailbox", path: "/app/mailbox", icon: Mail },
+  { key: "analytics", label: "Analytics", path: "/app/analytics", icon: BarChart3 },
+  { key: "platform", label: "Platform", path: "/app/platform", icon: Settings },
+]
 
 export function GlobalSearch() {
   const [open, setOpen] = React.useState(false)
   const navigate = useNavigate()
+  const role = useAuth((s) => s.user?.role)
 
-  // Keyboard Shortcut (Ctrl + K / Cmd + K)
+  const items = React.useMemo(() => COMMANDS.filter((c) => canAccess(role, c.key)), [role])
+
+  // Keyboard shortcut (Ctrl + K / Cmd + K)
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
@@ -37,108 +68,53 @@ export function GlobalSearch() {
         setOpen((prev) => !prev)
       }
     }
-
     document.addEventListener("keydown", down)
-
-    return () => {
-      document.removeEventListener("keydown", down)
-    }
+    return () => document.removeEventListener("keydown", down)
   }, [])
 
-  const runCommand = (callback: () => void) => {
+  const go = (path: string) => {
     setOpen(false)
-    callback()
+    navigate(path)
   }
 
   return (
     <>
-      {/* Icon Search Button */}
       <Button
         variant="ghost"
         size="icon"
         onClick={() => setOpen(true)}
-        className="rounded-full [&_svg]:size-5 h-10 w-10 p-0
-        "
+        className="rounded-full [&_svg]:size-5 h-10 w-10 p-0"
+        aria-label="Search"
       >
-        <Search/>
+        <Search />
       </Button>
 
-      {/* Command Dialog */}
       <CommandDialog open={open} onOpenChange={setOpen}>
         <div className="border-b">
-          <CommandInput
-            placeholder="Search pages, apps, settings..."
-            className="h-12"
-          />
+          <CommandInput placeholder="Jump to a module…" className="h-12" />
         </div>
 
         <CommandList className="max-h-[420px] overflow-y-auto">
           <CommandEmpty>
-            <div className="py-10 text-center text-sm text-muted-foreground">
-              No results found.
-            </div>
+            <div className="py-10 text-center text-sm text-muted-foreground">No results found.</div>
           </CommandEmpty>
 
-          {/* Dashboard */}
-          <CommandGroup heading="Dashboard">
-            <CommandItem
-              onSelect={() => runCommand(() => navigate("/"))}
-              className="group cursor-pointer"
-            >
-              <LayoutDashboard className="mr-3 h-4 w-4 text-sky-500" />
-              <span>Dashboard</span>
-              <ChevronRight className="ml-auto h-4 w-4 opacity-0 transition-opacity group-data-[selected=true]:opacity-100" />
-            </CommandItem>
-
-            <CommandItem
-              onSelect={() => runCommand(() => navigate("/analytics"))}
-              className="group cursor-pointer"
-            >
-              <BarChart3 className="mr-3 h-4 w-4 text-violet-500" />
-              <span>Analytics</span>
-              <ChevronRight className="ml-auto h-4 w-4 opacity-0 transition-opacity group-data-[selected=true]:opacity-100" />
-            </CommandItem>
-
-            <CommandItem
-              onSelect={() => runCommand(() => navigate("/crm"))}
-              className="group cursor-pointer"
-            >
-              <BriefcaseBusiness className="mr-3 h-4 w-4 text-emerald-500" />
-              <span>CRM</span>
-              <ChevronRight className="ml-auto h-4 w-4 opacity-0 transition-opacity group-data-[selected=true]:opacity-100" />
-            </CommandItem>
-          </CommandGroup>
-
-          <CommandSeparator />
-
-          {/* Account */}
-          <CommandGroup heading="Account">
-            <CommandItem
-              onSelect={() => runCommand(() => navigate("/profile"))}
-              className="group cursor-pointer"
-            >
-              <User className="mr-3 h-4 w-4 text-orange-500" />
-              <span>Profile</span>
-              <ChevronRight className="ml-auto h-4 w-4 opacity-0 transition-opacity group-data-[selected=true]:opacity-100" />
-            </CommandItem>
-
-            <CommandItem
-              onSelect={() => runCommand(() => navigate("/billing"))}
-              className="group cursor-pointer"
-            >
-              <CreditCard className="mr-3 h-4 w-4 text-pink-500" />
-              <span>Billing</span>
-              <ChevronRight className="ml-auto h-4 w-4 opacity-0 transition-opacity group-data-[selected=true]:opacity-100" />
-            </CommandItem>
-
-            <CommandItem
-              onSelect={() => runCommand(() => navigate("/settings"))}
-              className="group cursor-pointer"
-            >
-              <Settings className="mr-3 h-4 w-4 text-gray-500" />
-              <span>Settings</span>
-              <ChevronRight className="ml-auto h-4 w-4 opacity-0 transition-opacity group-data-[selected=true]:opacity-100" />
-            </CommandItem>
+          <CommandGroup heading="Modules">
+            {items.map((c) => {
+              const Icon = c.icon
+              return (
+                <CommandItem
+                  key={c.key}
+                  value={c.label}
+                  onSelect={() => go(c.path)}
+                  className="group cursor-pointer"
+                >
+                  <Icon className="mr-3 h-4 w-4 text-primary" />
+                  <span>{c.label}</span>
+                  <ChevronRight className="ml-auto h-4 w-4 opacity-0 transition-opacity group-data-[selected=true]:opacity-100" />
+                </CommandItem>
+              )
+            })}
           </CommandGroup>
         </CommandList>
       </CommandDialog>

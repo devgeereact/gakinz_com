@@ -1,18 +1,6 @@
 import { Outlet } from "react-router-dom"
 import { AppSidebar } from "@/components/app-sidebar"
-import { NotificationDropdown } from "@/components/notification-dropdown"
-import { AppLauncherDropdown } from "@/components/appLauncher-dropdown"
-import { Button } from "@/components/ui/button"
 
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
   SidebarProvider,
@@ -23,13 +11,11 @@ import { GlobalSearch } from "@/components/global-search"
 
 import Footer from "@/layouts/Footer"
 
-import ThemeCustomizer from "@/components/theme-customizer"
-
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
-import { LanguageDropdown } from "@/components/language-dropdown"
 import { UserDropdown } from "@/components/UserDropdown"
 import WeatherPill from "@/app/components/WeatherPill"
+import ClockPill from "@/app/components/ClockPill"
 
 export default function AppLayout() {
   const [scrolled, setScrolled] = useState(false)
@@ -80,20 +66,7 @@ export default function AppLayout() {
                 <SidebarTrigger
                   className="-ml-1 rounded-full h-10 w-10 [&_svg]:!size-5 hover:bg-muted/60 transition-colors"
                 />
-                <div className="header-quick-link hidden md:flex items-center gap-1">
-                   <Button variant="ghost" className="font-medium text-sm h-8 px-3 py-0 rounded-lg">
-                    Pricing
-                  </Button>
-                    <Button variant="ghost" className="font-medium text-sm h-8 px-3 py-0 rounded-lg">
-                      Docs
-                    </Button>
-                    <Button variant="ghost" className="font-medium text-sm h-8 px-3 py-0 rounded-lg">
-                      Reports
-                    </Button>
-                    <Button variant="ghost" className="font-medium text-sm h-8 px-3 py-0 rounded-lg">
-                      Support
-                    </Button>
-                </div>
+                <ClockPill />
               </div>
 
                 <div className="ml-auto">
@@ -101,15 +74,7 @@ export default function AppLayout() {
                         <WeatherPill />
                         <GlobalSearch />
                         <ThemeToggle />
-                        <LanguageDropdown />
-                        <AppLauncherDropdown />
-                        <div className="relative hidden md:inline-flex">
-                            <NotificationDropdown />
-                            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] font-medium text-white">
-                                5
-                            </span>
-                        </div>
-                         <UserDropdown />
+                        <UserDropdown />
                     </div>
                 </div>
               </header>
@@ -120,7 +85,6 @@ export default function AppLayout() {
         </main>
 
         <Footer />
-        <ThemeCustomizer />
       </SidebarInset>
     </SidebarProvider>
   )

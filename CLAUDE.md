@@ -302,3 +302,24 @@ AFTER role;` (for client-role auth). New config keys (see `config.php.example`):
 `$STRIPE_SECRET/_WEBHOOK_SECRET/_SUCCESS_URL/_CANCEL_URL`. Client changes ship via the normal `dist/`
 deploy on push. Local checkpoints committed (not pushed) per [[commit-no-push]]: `205d93a` (Comms/Stripe/
 AI), `4571280` (client auth), + tests/a11y.
+
+**CEO cleanup + header fix (DONE this session):** stripped the entire leftover Pulse demo surface so only
+the real product ships. Removed all demo routes from `src/routes/index.tsx` (eCommerce, components, icons,
+charts, tables, forms, account, widgets, dashboard variants, docs, faq, calendar, chatbox, file-manager,
+the auth/basic + auth/cover demo pages, error/* demo pages, and the public `/smoke` route). Deleted the
+backing files: all `src/pages/*` demo subdirectories (kept only `ErrorPage.tsx` + `NotFound.tsx`), `src/auth/`,
+`src/layouts/AuthLayout.tsx`, `src/marketing/pages/SmokeTest.tsx`, and unused demo components
+(`appLauncher-dropdown`, `notification-dropdown`, `language-dropdown`, `theme-customizer`, `team-switcher`,
+`nav-projects`). The CMS header (`AppLayout.tsx`) lost its dead quick-links (Pricing/Docs/Reports/Support),
+the fake "5" notification badge, the demo app-launcher/notifications/language/theme-customizer. Sidebar nav
+(`app-sidebar.tsx`) was already clean (13 role-gated GAkinzOS modules). `GlobalSearch` (Cmd/Ctrl+K) rewritten
+to jump to the real role-gated modules (was navigating to dead `/crm`,`/billing`,… paths). `UserDropdown`
+trimmed to Dashboard + Logout (Profile/Settings/Downloads/Earnings were dead). Removed demo routes now 404
+correctly; build dropped ~40% (fewer chunks). Verified in-browser.
+
+**Live weather + time (DONE):** added `ClockPill` (`src/app/components/ClockPill.tsx`) — a live ticking
+local date/time in the header (client-side, always works). Weather: the live `weather.php` was a STALE
+pre-`_bootstrap` version (its GET failed CORS — `net::ERR_FAILED`, OPTIONS 200 instead of 204 while every
+other endpoint does 204). The repo `weather.php` is already correct (routes through `_bootstrap` → proper
+CORS allowlist). FIX = re-upload `server/weather.php` AND set `OPENWEATHER_API_KEY` in live `config.php`
+(WeatherPill stays hidden until both are done — by design).
