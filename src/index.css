@@ -128,6 +128,33 @@
     --sidebar-border: 240 26% 25%;
     --sidebar-ring: 251 100% 78%;
   }
+
+  /* Force the LIGHT brand palette on the public site / login, even when the CMS
+     left `html.dark` on. Higher specificity than `.dark`, and next-themes never
+     touches this class — so the marketing pages never wash out. PublicLayout and
+     Login add `gk-force-light` to <html>. */
+  html.gk-force-light {
+    --background: 0 0% 100%;
+    --foreground: 242 47% 34%;
+    --card: 0 0% 100%;
+    --card-foreground: 242 47% 34%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 242 47% 34%;
+    --primary: 258 90% 66%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 252 100% 97%;
+    --secondary-foreground: 245 58% 51%;
+    --muted: 250 100% 98%;
+    --muted-foreground: 262 83% 58%;
+    --accent: 214 95% 93%;
+    --accent-foreground: 226 71% 40%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 226 100% 94%;
+    --input: 226 100% 94%;
+    --ring: 258 90% 66%;
+    color-scheme: light;
+  }
 }
 
 

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { auth } from "@/lib/api"
 import { useAuth } from "@/store/auth.store"
+import { defaultPathForRole } from "@/lib/access"
 import BrandMark from "@/marketing/components/BrandMark"
 
 export default function Login() {
@@ -14,9 +15,25 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const setAuth = useAuth((s) => s.setAuth)
+  const token = useAuth((s) => s.token)
+  const user = useAuth((s) => s.user)
   const navigate = useNavigate()
   const location = useLocation()
   const from = (location.state as { from?: string } | null)?.from || "/app"
+
+  // Already signed in? Don't show the form — go straight to where this role
+  // belongs. Stops a logged-in user who lands on /login from re-authenticating
+  // and feeling "signed out".
+  useEffect(() => {
+    if (token && user) navigate(defaultPathForRole(user.role), { replace: true })
+  }, [token, user, navigate])
+
+  // Login screen is the light brand theme too — assert it via the same marker
+  // the public layout uses (CSS re-asserts light tokens; next-themes keeps `dark`).
+  useEffect(() => {
+    document.documentElement.classList.add("gk-force-light")
+    return () => document.documentElement.classList.remove("gk-force-light")
+  }, [])
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

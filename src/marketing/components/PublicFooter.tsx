@@ -1,10 +1,15 @@
 import { Link } from "react-router-dom"
 import { ArrowUp, Github, Linkedin, Twitter } from "lucide-react"
 import { company, services } from "@/marketing/data/site"
+import { useAuth } from "@/store/auth.store"
+import { defaultPathForRole } from "@/lib/access"
 import BrandMark from "./BrandMark"
 
 export default function PublicFooter() {
   const year = 2026
+  const user = useAuth((s) => s.user)
+  const token = useAuth((s) => s.token)
+  const authed = !!token && !!user
   return (
     <footer className="relative overflow-hidden border-t border-border bg-muted/40">
       <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
@@ -62,6 +67,11 @@ export default function PublicFooter() {
               <li><Link className="hover:text-foreground" to="/privacy">Privacy</Link></li>
               <li><Link className="hover:text-foreground" to="/terms">Terms</Link></li>
               <li><Link className="hover:text-foreground" to="/cookies">Cookies</Link></li>
+              <li>
+                <Link className="hover:text-foreground" to={authed ? defaultPathForRole(user!.role) : "/login"}>
+                  {authed ? "Dashboard" : "Member login"}
+                </Link>
+              </li>
             </ul>
           </div>
         </div>

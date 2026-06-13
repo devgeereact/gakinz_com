@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react"
 import { Link, NavLink, useLocation } from "react-router-dom"
-import { Menu, X, ChevronDown } from "lucide-react"
+import { Menu, X, ChevronDown, LayoutDashboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { services } from "@/marketing/data/site"
+import { useAuth } from "@/store/auth.store"
+import { defaultPathForRole } from "@/lib/access"
 import BrandMark from "./BrandMark"
 
 const primary = [
@@ -20,6 +22,10 @@ export default function PublicNavbar() {
   const [servicesOpen, setServicesOpen] = useState(false)
   const [mobileServices, setMobileServices] = useState(false)
   const location = useLocation()
+  const user = useAuth((s) => s.user)
+  const token = useAuth((s) => s.token)
+  const authed = !!token && !!user
+  const dashPath = user ? defaultPathForRole(user.role) : "/app"
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8)
@@ -119,9 +125,17 @@ export default function PublicNavbar() {
         </div>
 
         <div className="hidden items-center gap-2 lg:flex">
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/login">Login</Link>
-          </Button>
+          {authed ? (
+            <Button asChild variant="ghost" size="sm">
+              <Link to={dashPath}>
+                <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
+              </Link>
+            </Button>
+          ) : (
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/login">Login</Link>
+            </Button>
+          )}
           <Button asChild size="sm" className="gk-shine shadow-md shadow-primary/20">
             <Link to="/contact">Start a project</Link>
           </Button>
@@ -175,9 +189,17 @@ export default function PublicNavbar() {
               </NavLink>
             ))}
             <div className="flex flex-col gap-2 pt-3">
-              <Button asChild variant="outline">
-                <Link to="/login">Login</Link>
-              </Button>
+              {authed ? (
+                <Button asChild variant="outline">
+                  <Link to={dashPath}>
+                    <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
+                  </Link>
+                </Button>
+              ) : (
+                <Button asChild variant="outline">
+                  <Link to="/login">Login</Link>
+                </Button>
+              )}
               <Button asChild>
                 <Link to="/contact">Start a project</Link>
               </Button>
