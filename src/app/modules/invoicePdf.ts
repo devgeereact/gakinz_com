@@ -72,7 +72,8 @@ export function downloadInvoicePdf(inv: InvoiceDetail) {
   })
 
   // Notes + footer
-  const endY = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 30
+  const lastTable = (doc as unknown as { lastAutoTable?: { finalY: number } }).lastAutoTable
+  const endY = (lastTable?.finalY ?? 200) + 30
   if (inv.notes) {
     doc.setFontSize(9)
     doc.setTextColor(120, 120, 138)

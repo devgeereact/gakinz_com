@@ -24,6 +24,9 @@ function gk_send_sms(string $to, string $body): array {
   if ($sid === '' || $token === '' || $from === '') {
     return ['ok' => false, 'error' => 'SMS is not configured.', 'sid' => ''];
   }
+  // Cap length — Twilio bills per 153-char segment; an unbounded body could send
+  // hundreds of segments per call. 1600 chars ≈ the practical concatenated max.
+  $body = mb_substr($body, 0, 1600);
 
   $url = 'https://api.twilio.com/2010-04-01/Accounts/' . rawurlencode($sid) . '/Messages.json';
   $ch = curl_init($url);

@@ -107,6 +107,7 @@ export default function Comms() {
   const [saving, setSaving] = useState(false)
 
   const feedRef = useRef<HTMLDivElement>(null)
+  const lastReqId = useRef<number | null>(null) // newest thread requested; guards out-of-order loads
 
   const loadThreads = async () => {
     setLoading(true)
@@ -127,9 +128,13 @@ export default function Comms() {
   }, [])
 
   const loadDetail = async (id: number) => {
+    lastReqId.current = id
     setSelectedId(id)
     setDetailLoading(true)
     const res = await comms.get(id)
+    // Drop a stale response: if a newer thread was opened while this was in
+    // flight, ignore it so the feed never shows the wrong thread's messages.
+    if (lastReqId.current !== id) return
     setDetailLoading(false)
     if (res.ok) setDetail(res.data)
     else toast.error(res.error || "Could not open the thread.")

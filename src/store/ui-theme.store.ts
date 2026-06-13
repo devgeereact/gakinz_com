@@ -10,12 +10,9 @@ export const useUIThemeStore = create<UIThemeState>((set) => ({
 
   setTheme: (theme) => {
     localStorage.setItem("ui-theme", theme)
-
-    // force update (important)
-    set({ theme: "" })
-
-    setTimeout(() => {
-      set({ theme })
-    }, 0)
+    // Single synchronous update — the provider effect ([theme] dep) reapplies the
+    // class. The old clear-then-setTimeout double-set caused a one-frame flash to
+    // the default theme on every change.
+    set({ theme })
   },
 }))

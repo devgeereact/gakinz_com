@@ -1,7 +1,7 @@
 // Central API helper.
 // Dev → hit the live API on the domain (api.php enables CORS).
 // Production (same domain) → relative path.
-import { getStoredToken, type AuthUser, type Role } from "@/store/auth.store"
+import { getStoredToken, useAuth, type AuthUser, type Role } from "@/store/auth.store"
 
 export const API_BASE = import.meta.env.DEV ? "https://gakinz.com" : ""
 
@@ -21,6 +21,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T
     const text = await res.text()
     const body = text ? JSON.parse(text) : null
     if (!res.ok) {
+      // Self-healing session expiry: a 401 means the token is gone/expired, so
+      // purge auth — RequireAuth then redirects to /login instead of leaving the
+      // user stuck on a module that keeps erroring. (No-op pre-login.)
+      if (res.status === 401) useAuth.getState().clear()
       return { ok: false, error: (body && body.error) || `Request failed (${res.status})`, status: res.status }
     }
     return { ok: true, data: body as T }
