@@ -317,7 +317,7 @@ function ProjectBoard({
         <Input
           value={newTitle}
           onChange={(e) => setNewTitle(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && addTask()}
+          onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && addTask()}
           placeholder="Add a task and press Enter"
           className="max-w-md"
         />

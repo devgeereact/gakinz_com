@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Loader2, Plus, RefreshCw, Send } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -241,10 +241,13 @@ function TicketPanel({ id, onChanged }: { id: number; onChanged: () => void }) {
   const [loading, setLoading] = useState(true)
   const [reply, setReply] = useState("")
   const [sending, setSending] = useState(false)
+  const reqRef = useRef(0) // newest load; drops out-of-order responses on fast ticket switches
 
   const load = async () => {
+    const my = ++reqRef.current
     setLoading(true)
     const res = await support.get(id)
+    if (reqRef.current !== my) return // a newer ticket was opened — ignore this stale response
     if (res.ok) setTicket(res.data)
     setLoading(false)
   }
@@ -352,7 +355,7 @@ function TicketPanel({ id, onChanged }: { id: number; onChanged: () => void }) {
         <Input
           value={reply}
           onChange={(e) => setReply(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendReply()}
+          onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && sendReply()}
           placeholder="Write a reply…"
         />
         <Button onClick={sendReply} disabled={sending}>

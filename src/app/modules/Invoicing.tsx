@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Loader2, Plus, RefreshCw, Trash2, Send, BadgePoundSterling, FileDown, Download, CreditCard } from "lucide-react"
-import { saveAs } from "file-saver"
+import { downloadCsv } from "@/lib/csv"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -158,11 +158,7 @@ export default function Invoicing() {
 
   const exportCsv = () => {
     const head = ["number", "client_company", "status", "total", "issued_at", "due_at"]
-    const rows = items.map((i) =>
-      head.map((k) => `"${String((i as Record<string, unknown>)[k] ?? "").replace(/"/g, '""')}"`).join(","),
-    )
-    const blob = new Blob([[head.join(","), ...rows].join("\n")], { type: "text/csv;charset=utf-8" })
-    saveAs(blob, "gakinz-invoices.csv")
+    downloadCsv("gakinz-invoices.csv", head, items as unknown as Record<string, unknown>[])
   }
 
   return (

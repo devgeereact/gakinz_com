@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { Loader2, Download, RefreshCw, Mail, Building2, UserPlus } from "lucide-react"
-import { saveAs } from "file-saver"
+import { downloadCsv } from "@/lib/csv"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import {
@@ -82,11 +82,7 @@ export default function Leads() {
 
   const exportCsv = () => {
     const head = ["id", "name", "email", "company", "budget", "project_type", "status", "created_at"]
-    const rows = items.map((l) =>
-      head.map((k) => `"${String((l as Record<string, unknown>)[k] ?? "").replace(/"/g, '""')}"`).join(","),
-    )
-    const blob = new Blob([[head.join(","), ...rows].join("\n")], { type: "text/csv;charset=utf-8" })
-    saveAs(blob, "gakinz-leads.csv")
+    downloadCsv("gakinz-leads.csv", head, items as unknown as Record<string, unknown>[])
   }
 
   return (

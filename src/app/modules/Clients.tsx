@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Loader2, Download, RefreshCw, Plus } from "lucide-react"
-import { saveAs } from "file-saver"
+import { downloadCsv } from "@/lib/csv"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -89,11 +89,7 @@ export default function Clients() {
 
   const exportCsv = () => {
     const head = ["id", "company", "contact_name", "email", "phone", "tag", "created_at"]
-    const rows = items.map((c) =>
-      head.map((k) => `"${String((c as Record<string, unknown>)[k] ?? "").replace(/"/g, '""')}"`).join(","),
-    )
-    const blob = new Blob([[head.join(","), ...rows].join("\n")], { type: "text/csv;charset=utf-8" })
-    saveAs(blob, "gakinz-clients.csv")
+    downloadCsv("gakinz-clients.csv", head, items as unknown as Record<string, unknown>[])
   }
 
   return (

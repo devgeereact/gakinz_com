@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react"
+import { useEffect, useRef, useState, useCallback } from "react"
 import { toast } from "sonner"
 import {
   Mail,
@@ -55,6 +55,7 @@ export default function Mailbox() {
   const [selectedUid, setSelectedUid] = useState<number | null>(null)
   const [message, setMessage] = useState<MailMessage | null>(null)
   const [loadingMsg, setLoadingMsg] = useState(false)
+  const msgReqRef = useRef(0) // newest message opened; drops out-of-order responses
 
   const [draft, setDraft] = useState<Draft | null>(null)
   const [sending, setSending] = useState(false)
@@ -85,11 +86,13 @@ export default function Mailbox() {
   }, [loadInbox])
 
   const openMessage = async (uid: number) => {
+    const my = ++msgReqRef.current
     setSelectedUid(uid)
     setDraft(null)
     setLoadingMsg(true)
     setMessage(null)
     const res = await mail.message(uid)
+    if (msgReqRef.current !== my) return // a newer message was opened — drop this stale response
     setLoadingMsg(false)
     if (res.ok) {
       setMessage(res.data)
