@@ -17,7 +17,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
 if ($method === 'GET') {
-  require_auth($conn);
+  require_auth($conn, STAFF); // staff only
   $projectId = (int)($_GET['project_id'] ?? 0);
   if ($projectId <= 0) fail('A project_id is required.');
   $rows = [];

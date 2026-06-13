@@ -32,7 +32,7 @@ $action = $_GET['action'] ?? '';
 
 // ── Single thread + messages ────────────────────────────────────────────────
 if ($method === 'GET' && isset($_GET['id'])) {
-  require_auth($conn);
+  require_auth($conn, STAFF); // staff only — internal conversation log
   $id = (int)$_GET['id'];
   $stmt = $conn->prepare(
     'SELECT t.id, t.subject, t.channel, t.status, t.client_id, t.project_id,
@@ -70,7 +70,7 @@ if ($method === 'GET' && isset($_GET['id'])) {
 
 // ── Thread list ─────────────────────────────────────────────────────────────
 if ($method === 'GET') {
-  require_auth($conn);
+  require_auth($conn, STAFF); // staff only — internal conversation log
   $rows = [];
   $sql = 'SELECT t.id, t.subject, t.channel, t.status, t.client_id, t.project_id,
                  c.company AS client_company, p.name AS project_name,

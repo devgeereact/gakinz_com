@@ -74,7 +74,10 @@ export function canAccess(role: Role | undefined, moduleKey: string): boolean {
 // Where a role lands when it has no business on the page it tried to open.
 export function defaultPathForRole(role: Role | undefined): string {
   if (role === "client") return "/app/portal"
-  return "/app/dashboard/analytics"
+  // "/app" index → "dashboard" module, allowed for every staff role, so this
+  // never re-triggers the gate. (Must be a real route — there is no
+  // "/app/dashboard/analytics".)
+  return "/app"
 }
 
 // Human-readable role label for the UI.

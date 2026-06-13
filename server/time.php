@@ -15,7 +15,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
 if ($method === 'GET') {
-  require_auth($conn);
+  require_auth($conn, STAFF); // staff only
   $rows = [];
   $sql = 'SELECT t.id, t.project_id, t.description, t.minutes, t.billable, t.entry_date,
                  p.name AS project_name, u.name AS user_name, t.user_id

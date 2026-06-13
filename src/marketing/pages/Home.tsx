@@ -131,7 +131,7 @@ export default function Home() {
               {[...trusted, ...trusted].map((t, i) => (
                 <span
                   key={i}
-                  className="whitespace-nowrap text-sm font-semibold uppercase tracking-wider text-muted-foreground/70"
+                  className="whitespace-nowrap text-sm font-semibold uppercase tracking-wider text-muted-foreground"
                 >
                   {t}
                 </span>

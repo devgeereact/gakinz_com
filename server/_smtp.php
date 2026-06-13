@@ -111,7 +111,9 @@ function gk_send_email(array $opts): array {
   $toList = array_values($toList);
   $ccList = array_values($ccList);
 
-  $subject = (string)($opts['subject'] ?? '');
+  // Strip CR/LF from the subject too — it is base64-wrapped in the SMTP path, but
+  // the mail() fallback (below) passes it raw, where a newline would inject headers.
+  $subject = preg_replace('/[\r\n]+/', ' ', (string)($opts['subject'] ?? ''));
   $bodyTxt = (string)($opts['body'] ?? '');
   // Strip CR/LF from header-bound fields — without this a caller could inject
   // extra headers (Bcc, a second body, etc.) — classic mail header injection.

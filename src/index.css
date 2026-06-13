@@ -581,10 +581,19 @@
   --gk-sky:    214 95% 60%;   /* bright sky for gradient accents */
 }
 
-/* Display headings: tighter tracking, fluid scale */
+/* Display headings: tighter tracking, balanced wrapping, fluid scale */
 .gk-public h1,
 .gk-public .gk-display {
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  text-wrap: balance; /* avoid orphan words in big headings */
+}
+.gk-public h2 {
   letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.gk-public p {
+  text-wrap: pretty; /* avoid ragged single-word last lines */
 }
 
 /* Animated gradient text */
@@ -593,9 +602,18 @@
     hsl(var(--gk-indigo)) 0%,
     hsl(var(--gk-violet)) 45%,
     hsl(var(--gk-sky)) 100%);
+  background-size: 200% auto;
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .gk-grad-text {
+    animation: gk-grad-pan 9s ease-in-out infinite alternate;
+  }
+}
+@keyframes gk-grad-pan {
+  to { background-position: 100% center; }
 }
 .gk-grad-text-soft {
   /* Start at a darker stop so large headings clear the AA contrast bar on white. */
@@ -634,6 +652,13 @@
   bottom: -16rem; left: -8rem;
   background: radial-gradient(circle at center, hsl(var(--gk-sky) / 0.40), transparent 70%);
 }
+/* Slow drift gives the backdrop atmosphere; cheap (transform behind blur). */
+@media (prefers-reduced-motion: no-preference) {
+  .gk-aurora::before { animation: gk-aurora-a 18s ease-in-out infinite alternate; }
+  .gk-aurora::after  { animation: gk-aurora-b 22s ease-in-out infinite alternate; }
+}
+@keyframes gk-aurora-a { to { transform: translate(-3rem, 2rem) scale(1.08); } }
+@keyframes gk-aurora-b { to { transform: translate(2rem, -2rem) scale(1.06); } }
 
 /* Dotted / grid pattern overlay */
 .gk-grid {
@@ -672,7 +697,8 @@
   background: hsl(0 0% 100%);
   border: 1px solid hsl(var(--gk-indigo) / 0.08);
   border-radius: 1rem;
-  box-shadow: 0 1px 2px hsl(var(--gk-indigo) / 0.04);
+  box-shadow: 0 1px 2px hsl(var(--gk-indigo) / 0.05),
+              0 8px 24px -16px hsl(var(--gk-indigo) / 0.12); /* soft resting depth */
   transition: transform .25s cubic-bezier(.2,.7,.3,1), box-shadow .25s, border-color .25s;
 }
 .gk-card:hover {

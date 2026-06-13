@@ -17,7 +17,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
 if ($method === 'GET') {
-  require_auth($conn);
+  require_auth($conn, STAFF); // staff only
   $rows = [];
   $sql = 'SELECT p.id, p.name, p.status, p.due_date, p.client_id, c.company AS client_company,
                  (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL) AS task_count,

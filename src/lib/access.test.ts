@@ -71,9 +71,9 @@ describe("defaultPathForRole", () => {
     expect(defaultPathForRole("client")).toBe("/app/portal")
   })
 
-  it("sends staff to the dashboard", () => {
+  it("sends staff to the dashboard (a real route, not a 404)", () => {
     for (const role of STAFF_ROLES) {
-      expect(defaultPathForRole(role)).toBe("/app/dashboard/analytics")
+      expect(defaultPathForRole(role)).toBe("/app")
     }
   })
 })

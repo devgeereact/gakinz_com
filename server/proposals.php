@@ -18,7 +18,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
 if ($method === 'GET' && isset($_GET['id'])) {
-  require_auth($conn);
+  require_auth($conn, STAFF); // staff only
   $id = (int)$_GET['id'];
   $stmt = $conn->prepare(
     'SELECT p.id, p.title, p.status, p.currency, p.notes, p.valid_until, p.client_id, p.project_id,
@@ -48,7 +48,7 @@ if ($method === 'GET' && isset($_GET['id'])) {
 }
 
 if ($method === 'GET') {
-  require_auth($conn);
+  require_auth($conn, STAFF); // staff only
   $rows = [];
   $sql = 'SELECT p.id, p.title, p.status, p.currency, p.valid_until, p.client_id, p.project_id,
                  c.company AS client_company, p.created_at,

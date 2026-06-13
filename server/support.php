@@ -22,7 +22,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
 if ($method === 'GET' && isset($_GET['id'])) {
-  require_auth($conn);
+  require_auth($conn, STAFF); // staff only — clients see their tickets via portal.php
   $id = (int)$_GET['id'];
   $stmt = $conn->prepare(
     'SELECT t.id, t.subject, t.body, t.status, t.priority, t.client_id, t.assignee_id,
@@ -56,7 +56,7 @@ if ($method === 'GET' && isset($_GET['id'])) {
 }
 
 if ($method === 'GET') {
-  require_auth($conn);
+  require_auth($conn, STAFF); // staff only — clients see their tickets via portal.php
   $rows = [];
   $sql = 'SELECT t.id, t.subject, t.status, t.priority, t.client_id, t.assignee_id,
                  c.company AS client_company, u.name AS assignee_name, t.created_at

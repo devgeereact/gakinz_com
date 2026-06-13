@@ -18,7 +18,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
 if ($method === 'GET') {
-  require_auth($conn);
+  require_auth($conn, STAFF); // staff only — never expose the client list to a client login
   $rows = [];
   $sql = 'SELECT id, company, contact_name, email, phone, tag, notes, source_lead_id, created_at
           FROM clients WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 500';

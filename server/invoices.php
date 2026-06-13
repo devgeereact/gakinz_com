@@ -17,7 +17,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
 if ($method === 'GET' && isset($_GET['id'])) {
-  require_auth($conn);
+  require_auth($conn, STAFF); // staff only — clients see invoices via portal.php (own client_id)
   $id = (int)$_GET['id'];
   $stmt = $conn->prepare(
     'SELECT i.id, i.number, i.status, i.currency, i.notes, i.issued_at, i.due_at, i.paid_at,
@@ -47,7 +47,7 @@ if ($method === 'GET' && isset($_GET['id'])) {
 }
 
 if ($method === 'GET') {
-  require_auth($conn);
+  require_auth($conn, STAFF); // staff only — clients see invoices via portal.php (own client_id)
   $rows = [];
   $sql = 'SELECT i.id, i.number, i.status, i.currency, i.issued_at, i.due_at, i.paid_at,
                  i.client_id, c.company AS client_company,

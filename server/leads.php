@@ -19,7 +19,7 @@ $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
 if ($method === 'GET') {
-  require_auth($conn); // any authenticated user may view
+  require_auth($conn, STAFF); // staff only — a client must never read all leads
   $rows = [];
   $sql = 'SELECT id, name, email, company, budget, project_type, message, status, source, created_at
           FROM enquiries WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 500';
