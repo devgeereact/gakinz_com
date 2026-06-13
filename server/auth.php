@@ -10,8 +10,9 @@
  *   POST /auth.php?action=forgot  {email}                → { ok: true }   (always ok; no enumeration)
  *   POST /auth.php?action=reset   {token, password}      → { ok: true }
  *
- * On an empty users table the seed super-admin is created:
- *   dev@gakinz.com / Testing123! / super_admin
+ * On an empty users table a seed super-admin is created from
+ * $SEED_ADMIN_EMAIL / $SEED_ADMIN_PASSWORD in config.php; if no password is
+ * configured a random one is generated and written to seed_admin_password.txt.
  */
 require __DIR__ . '/_bootstrap.php';
 
@@ -38,6 +39,20 @@ function login(mysqli $conn): void {
   $email = strtolower(str_field($in, 'email', 200));
   $pass  = (string)($in['password'] ?? '');
   if ($email === '' || $pass === '') fail('Email and password are required.');
+
+  // Brute-force throttle: block after too many recent failures for this email
+  // or IP. Reuses audit_log (login_failed rows store the email in `detail`).
+  $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+  $stmt = $conn->prepare(
+    "SELECT COUNT(*) AS c FROM audit_log
+     WHERE action = 'login_failed' AND created_at > (NOW() - INTERVAL 15 MINUTE)
+       AND (detail = ? OR ip = ?)"
+  );
+  $stmt->bind_param('ss', $email, $ip);
+  $stmt->execute();
+  if ((int)($stmt->get_result()->fetch_assoc()['c'] ?? 0) >= 10) {
+    fail('Too many attempts. Please wait a few minutes and try again.', 429);
+  }
 
   $stmt = $conn->prepare('SELECT id, name, email, role, client_id, status, password_hash FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1');
   $stmt->bind_param('s', $email);
@@ -94,9 +109,15 @@ function forgot(mysqli $conn): void {
   $u = $stmt->get_result()->fetch_assoc();
 
   if ($u) {
+    $uid = (int)$u['id'];
+    // Flood guard: cap recent reset requests per user so the table can't be
+    // filled by repeated calls. Silently stop after 3 in 15 minutes.
+    $stmt = $conn->prepare('SELECT COUNT(*) AS c FROM password_resets WHERE user_id = ? AND created_at > (NOW() - INTERVAL 15 MINUTE)');
+    $stmt->bind_param('i', $uid);
+    $stmt->execute();
+    if ((int)($stmt->get_result()->fetch_assoc()['c'] ?? 0) >= 3) { ok(['ok' => true]); }
     $token = new_token();
     $exp = (new DateTime("+" . RESET_TTL_MINUTES . " minutes"))->format('Y-m-d H:i:s');
-    $uid = (int)$u['id'];
     $stmt = $conn->prepare('INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)');
     $stmt->bind_param('iss', $uid, $token, $exp);
     $stmt->execute();
@@ -148,9 +169,19 @@ function ensure_seed(mysqli $conn): void {
   if ((int)$row['c'] > 0) return;
 
   $name = 'GAkinz Admin';
-  $email = 'dev@gakinz.com';
+  $email = $GLOBALS['SEED_ADMIN_EMAIL'] ?? 'dev@gakinz.com';
   $role = 'super_admin';
-  $hash = password_hash('Testing123!', PASSWORD_BCRYPT);
+  // Never ship a known default password. Use the configured one, else generate
+  // a strong random password and write it once to a 0600 file beside config so
+  // the operator can retrieve it and then delete it.
+  $plain = (string)($GLOBALS['SEED_ADMIN_PASSWORD'] ?? '');
+  if ($plain === '') {
+    $plain = bin2hex(random_bytes(12)); // 24 random hex chars
+    $note = "GAkinz seed super-admin\nemail:    $email\npassword: $plain\n\nDelete this file after your first login.\n";
+    @file_put_contents(__DIR__ . '/seed_admin_password.txt', $note);
+    @chmod(__DIR__ . '/seed_admin_password.txt', 0600);
+  }
+  $hash = password_hash($plain, PASSWORD_BCRYPT);
   $stmt = $conn->prepare('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)');
   $stmt->bind_param('ssss', $name, $email, $hash, $role);
   $stmt->execute();

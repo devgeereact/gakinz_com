@@ -51,6 +51,13 @@ define('ALLOWED_ORIGINS', [
 define('OPENWEATHER_API_KEY', '');   // read by weather.php (CMS header widget); '' hides the widget
 define('OPENWEATHER_UNITS', 'metric'); // 'metric' (°C) or 'imperial' (°F)
 
+// ── Seed super-admin ── read by auth.php (only on an EMPTY users table) ───────
+// On a fresh install auth.php creates one super-admin. Set a strong password
+// here; if left blank a random one is generated and written to
+// server/seed_admin_password.txt (delete that file after first login).
+$SEED_ADMIN_EMAIL    = 'dev@gakinz.com';
+$SEED_ADMIN_PASSWORD = '';   // '' → random, written to seed_admin_password.txt
+
 // ── Outgoing mail (SMTP) ── read by mail.php ──────────────────────────────────
 // Leave $SMTP_HOST blank to fall back to PHP mail(). On cPanel use the mail
 // server (often the domain or localhost) with a real mailbox + password.

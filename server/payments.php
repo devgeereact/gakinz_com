@@ -128,10 +128,12 @@ if ($method === 'POST' && $action === 'webhook') {
 
   $paidTypes = ['checkout.session.completed', 'payment_intent.succeeded'];
   if (in_array($type, $paidTypes, true) && $invoiceId > 0) {
-    // checkout.session.completed without payment is possible for async methods;
-    // require a paid payment_status when present.
-    $payStatus = $obj['payment_status'] ?? 'paid';
-    if ($payStatus === 'paid' || $type === 'payment_intent.succeeded') {
+    // Require explicit confirmation — never optimistically assume paid.
+    // checkout.session.completed must carry payment_status=paid (async methods
+    // can complete unpaid); payment_intent must report status=succeeded.
+    $payStatus = $obj['payment_status'] ?? '';
+    $intentOk  = $type === 'payment_intent.succeeded' && ($obj['status'] ?? '') === 'succeeded';
+    if ($payStatus === 'paid' || $intentOk) {
       $stmt = $conn->prepare(
         'UPDATE invoices SET status = "paid", paid_at = NOW()
          WHERE id = ? AND status <> "paid" AND deleted_at IS NULL'

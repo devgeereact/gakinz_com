@@ -50,7 +50,7 @@ function imap_connect_or_fail(): array {
   if ($host === '') fail('Inbox is not configured.', 503);
   if (!function_exists('imap_open')) fail('The server is missing the PHP imap extension.', 503);
   $mailbox = preg_replace('/[^A-Za-z0-9_.\/\- ]/', '', $_GET['mailbox'] ?? 'INBOX') ?: 'INBOX';
-  $mailbox = str_replace('..', '', $mailbox); // no namespace traversal
+  while (strpos($mailbox, '..') !== false) $mailbox = str_replace('..', '', $mailbox); // no traversal (loop: '....' → '')
   $ref = imap_mailbox_ref($host, $port, $mailbox);
   $imap = @imap_open($ref, $user, $pass, 0, 1);
   if (!$imap) { error_log('GAkinz mail IMAP open: ' . imap_last_error()); fail('Could not reach the inbox.', 502); }
