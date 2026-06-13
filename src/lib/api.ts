@@ -440,6 +440,160 @@ export type Session = {
   current: boolean
 }
 
+// Design Workspace — Figma review rounds per project (2-round limit) + sign-off.
+export type DesignStatus = "pending" | "approved" | "changes"
+export type DesignReview = {
+  id: number
+  project_id: number
+  title: string
+  figma_url: string | null
+  round: number
+  status: DesignStatus
+  client_comment: string | null
+  created_at: string
+  project_name: string
+  client_company: string | null
+}
+export const design = {
+  list: (projectId?: number) =>
+    api.get<DesignReview[]>(`/design.php${projectId ? `?project_id=${projectId}` : ""}`),
+  create: (payload: { project_id: number; title: string; figma_url?: string }) =>
+    api.post<{ id: number; round: number }>("/design.php?action=create", payload),
+  setStatus: (id: number, status: DesignStatus, client_comment?: string) =>
+    api.post<{ ok: boolean }>("/design.php?action=status", { id, status, client_comment }),
+  remove: (id: number) => api.post<{ ok: boolean }>("/design.php?action=delete", { id }),
+}
+
+// Development Pipeline — repo/env URLs + JSON checklist + deploy log per project.
+export type DevProjectRow = {
+  id: number
+  name: string
+  status: string
+  client_company: string | null
+  repo_url: string | null
+  staging_url: string | null
+  prod_url: string | null
+  deploy_count: number
+}
+export type DevMeta = {
+  project_id: number
+  repo_url: string | null
+  staging_url: string | null
+  prod_url: string | null
+  checklist: string | null // JSON string {key:bool}
+}
+export type Deploy = {
+  id: number
+  environment: "staging" | "production"
+  status: "success" | "failed" | "rolled_back"
+  url: string | null
+  notes: string | null
+  created_at: string
+  by_name: string | null
+}
+export const dev = {
+  list: () => api.get<DevProjectRow[]>("/dev.php"),
+  get: (projectId: number) => api.get<{ meta: DevMeta | null; deploys: Deploy[] }>(`/dev.php?project_id=${projectId}`),
+  saveMeta: (payload: {
+    project_id: number
+    repo_url?: string
+    staging_url?: string
+    prod_url?: string
+    checklist?: Record<string, boolean>
+  }) => api.post<{ ok: boolean }>("/dev.php?action=meta", payload),
+  deploy: (payload: { project_id: number; environment: "staging" | "production"; status?: string; url?: string; notes?: string }) =>
+    api.post<{ id: number }>("/dev.php?action=deploy", payload),
+}
+
+// Resourcing & Capacity — live capacity from time + leave tracking.
+export type TeamMember = {
+  id: number
+  name: string
+  role: Role
+  logged_minutes: number
+  capacity_minutes: number
+  on_leave: boolean
+}
+export type LeaveEntry = {
+  id: number
+  user_id: number
+  user_name: string
+  start_date: string
+  end_date: string
+  type: "holiday" | "sick" | "other"
+  note: string | null
+}
+export const resourcing = {
+  get: () => api.get<{ team: TeamMember[]; leave: LeaveEntry[] }>("/resourcing.php"),
+  addLeave: (payload: { user_id: number; start_date: string; end_date: string; type?: string; note?: string }) =>
+    api.post<{ id: number }>("/resourcing.php?action=leave", payload),
+  removeLeave: (id: number) => api.post<{ ok: boolean }>("/resourcing.php?action=delete", { id }),
+}
+
+// Contracts & e-Signature — typed-name e-sign with audit trail.
+export type ContractStatus = "draft" | "sent" | "signed" | "void"
+export type ContractKind = "agreement" | "nda"
+export type Contract = {
+  id: number
+  client_id: number | null
+  project_id: number | null
+  kind: ContractKind
+  title: string
+  status: ContractStatus
+  nda_triage: "green" | "yellow" | "red" | null
+  signer_name: string | null
+  signed_at: string | null
+  created_at: string
+  client_company: string | null
+  project_name: string | null
+}
+export type ContractDetail = Contract & {
+  body: string | null
+  signer_email: string | null
+  signed_name: string | null
+  signed_ip: string | null
+}
+export const contracts = {
+  list: () => api.get<Contract[]>("/contracts.php"),
+  get: (id: number) => api.get<ContractDetail>(`/contracts.php?id=${id}`),
+  create: (payload: {
+    title: string
+    client_id?: number | null
+    project_id?: number | null
+    kind?: ContractKind
+    body?: string
+    nda_triage?: string
+    signer_name?: string
+    signer_email?: string
+  }) => api.post<{ id: number }>("/contracts.php?action=create", payload),
+  setStatus: (id: number, status: "draft" | "sent" | "void") =>
+    api.post<{ ok: boolean }>("/contracts.php?action=status", { id, status }),
+  sign: (id: number, signed_name: string) =>
+    api.post<{ ok: boolean }>("/contracts.php?action=sign", { id, signed_name }),
+  remove: (id: number) => api.post<{ ok: boolean }>("/contracts.php?action=delete", { id }),
+}
+
+// Knowledge Base & SOPs — internal wiki / runbooks / client help.
+export type KbSummary = {
+  id: number
+  title: string
+  category: string
+  audience: "internal" | "client"
+  updated_at: string
+  author: string | null
+}
+export type KbArticle = KbSummary & { body: string | null; created_at: string }
+export const knowledge = {
+  list: (q = "", category = "") =>
+    api.get<KbSummary[]>(`/knowledge.php?q=${encodeURIComponent(q)}&category=${encodeURIComponent(category)}`),
+  get: (id: number) => api.get<KbArticle>(`/knowledge.php?id=${id}`),
+  create: (payload: { title: string; category?: string; audience?: string; body?: string }) =>
+    api.post<{ id: number }>("/knowledge.php?action=create", payload),
+  update: (id: number, payload: { title: string; category?: string; audience?: string; body?: string }) =>
+    api.post<{ ok: boolean }>("/knowledge.php?action=update", { id, ...payload }),
+  remove: (id: number) => api.post<{ ok: boolean }>("/knowledge.php?action=delete", { id }),
+}
+
 // Weather (CMS dashboard widget). Server proxies OpenWeather; key stays server-side.
 export type Weather = {
   city: string

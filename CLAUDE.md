@@ -323,3 +323,21 @@ pre-`_bootstrap` version (its GET failed CORS — `net::ERR_FAILED`, OPTIONS 200
 other endpoint does 204). The repo `weather.php` is already correct (routes through `_bootstrap` → proper
 CORS allowlist). FIX = re-upload `server/weather.php` AND set `OPENWEATHER_API_KEY` in live `config.php`
 (WeatherPill stays hidden until both are done — by design).
+
+**Partials closed + 5 MISSING-category modules built (this session):** All CEO-directed partials done
+(VAT ex/inc on invoices+proposals, proposal accept → 40/30/30 invoice schedule, client LTV+history detail,
+project 5-stage Discover/Design/Build/Launch/Support, timesheet draft/approved/rejected approval, XLSX
+export everywhere via `src/lib/csv.ts` `downloadXlsx`, 3 named Analytics reports, Dashboard KPI sparklines,
+session device tracking, full 400/403/404/500/503 ErrorPage). Demo `src/components/file-manager/` deleted.
+Then the 5 MISSING categories shipped as real modules (no mock, graceful-degrade):
+- **Design** (`Design.tsx` + `design.php` + `design_reviews`) — Figma review rounds, 2-round limit, sign-off.
+- **Dev Pipeline** (`DevPipeline.tsx` + `dev.php` + `project_dev`/`deploys`) — repo/env URLs, build checklist, deploy log.
+- **Resourcing** (`Resourcing.tsx` + `resourcing.php` + `leave_entries`) — live weekly capacity from time + leave tracking.
+- **Contracts** (`Contracts.tsx` + `contracts.php` + `contracts`) — template merge, typed-name e-sign + audit (name/ip/at), NDA triage, PDF.
+- **Knowledge** (`Knowledge.tsx` + `knowledge.php` + `kb_articles`) — SOP/wiki, search, categories, audience.
+All wired in `routes/index.tsx`, `app-sidebar.tsx`, `global-search.tsx`, `access.ts` (new module keys
+design/devpipeline/resourcing/contracts/knowledge) + `api.ts`. `tsc -b` + `vite build` + 11/11 tests + `php -l` clean.
+⚠️ DEPLOY: client ships via `dist/` push; server NEEDS hand-upload of NEW `design.php dev.php resourcing.php
+contracts.php knowledge.php` + updated `_bootstrap.php auth.php clients.php invoices.php proposals.php
+projects.php time.php portal.php`, plus ALL migrations at foot of `schema.sql` (VAT, stage, time.status,
+auth_tokens device cols, + 6 new tables). Every endpoint degrades gracefully pre-migration.

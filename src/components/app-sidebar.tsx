@@ -14,6 +14,11 @@ import {
   Mail,
   BarChart3,
   Settings,
+  Palette,
+  GitBranch,
+  CalendarRange,
+  FileSignature,
+  BookOpen,
 } from "lucide-react"
 
 import { Link } from "react-router-dom"
@@ -39,13 +44,18 @@ const navMain = [
   { key: "leads", title: "Leads", url: "app/leads", icon: Inbox },
   { key: "clients", title: "Clients", url: "app/clients", icon: Users },
   { key: "projects", title: "Projects", url: "app/projects", icon: FolderKanban },
+  { key: "design", title: "Design", url: "app/design", icon: Palette },
+  { key: "devpipeline", title: "Dev Pipeline", url: "app/devpipeline", icon: GitBranch },
   { key: "proposals", title: "Proposals", url: "app/proposals", icon: FileText },
+  { key: "contracts", title: "Contracts", url: "app/contracts", icon: FileSignature },
   { key: "invoicing", title: "Invoicing", url: "app/invoicing", icon: Receipt },
   { key: "portal", title: "Client Portal", url: "app/portal", icon: PanelsTopLeft },
   { key: "time", title: "Time", url: "app/time", icon: Clock },
+  { key: "resourcing", title: "Resourcing", url: "app/resourcing", icon: CalendarRange },
   { key: "support", title: "Support", url: "app/support", icon: LifeBuoy },
   { key: "comms", title: "Comms", url: "app/comms", icon: MessagesSquare },
   { key: "mailbox", title: "Mailbox", url: "app/mailbox", icon: Mail },
+  { key: "knowledge", title: "Knowledge", url: "app/knowledge", icon: BookOpen },
   { key: "analytics", title: "Analytics", url: "app/analytics", icon: BarChart3 },
   { key: "platform", title: "Platform", url: "app/platform", icon: Settings },
 ]

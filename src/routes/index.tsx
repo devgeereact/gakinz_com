@@ -82,6 +82,11 @@ export const router = createBrowserRouter([
       { path: "comms", lazy: lz(() => import("@/app/modules/Comms")) },
       { path: "mailbox", lazy: lz(() => import("@/app/modules/Mailbox")) },
       { path: "analytics", lazy: lz(() => import("@/app/modules/Analytics")) },
+      { path: "design", lazy: lz(() => import("@/app/modules/Design")) },
+      { path: "devpipeline", lazy: lz(() => import("@/app/modules/DevPipeline")) },
+      { path: "resourcing", lazy: lz(() => import("@/app/modules/Resourcing")) },
+      { path: "contracts", lazy: lz(() => import("@/app/modules/Contracts")) },
+      { path: "knowledge", lazy: lz(() => import("@/app/modules/Knowledge")) },
       { path: "platform", lazy: lz(() => import("@/app/modules/Platform")) },
 
       // ✅ 404 HANDLER

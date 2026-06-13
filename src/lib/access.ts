@@ -33,6 +33,16 @@ export const MODULE_ROLES: Record<string, Role[]> = {
   time: ["super_admin", "admin", "manager", "editor", "employee", "trainer"],
   // analytics/reporting — management view
   analytics: ["super_admin", "admin", "manager"],
+  // design.php STAFF
+  design: ["super_admin", "admin", "manager", "editor"],
+  // dev.php STAFF (build team)
+  devpipeline: ["super_admin", "admin", "manager", "editor", "employee"],
+  // resourcing.php — management view
+  resourcing: ["super_admin", "admin", "manager"],
+  // contracts.php — management view
+  contracts: ["super_admin", "admin", "manager"],
+  // knowledge.php — all staff
+  knowledge: ALL_STAFF,
   // users.php / audit.php ADMINS
   platform: ["super_admin", "admin"],
   // client portal — the external client's home, plus staff who manage it
@@ -59,6 +69,11 @@ export function moduleKeyForPath(pathname: string): string | null {
     comms: "comms",
     mailbox: "mailbox",
     analytics: "analytics",
+    design: "design",
+    devpipeline: "devpipeline",
+    resourcing: "resourcing",
+    contracts: "contracts",
+    knowledge: "knowledge",
     platform: "platform",
   }
   return map[seg] ?? null

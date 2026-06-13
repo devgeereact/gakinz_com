@@ -283,3 +283,104 @@ CREATE TABLE IF NOT EXISTS comm_messages (
 --   ALTER TABLE auth_tokens ADD COLUMN user_agent VARCHAR(255) DEFAULT NULL AFTER token;
 --   ALTER TABLE auth_tokens ADD COLUMN ip VARCHAR(45) DEFAULT NULL AFTER user_agent;
 --   ALTER TABLE auth_tokens ADD COLUMN last_seen_at TIMESTAMP NULL DEFAULT NULL AFTER ip;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- MISSING-category modules (Design · Dev Pipeline · Resourcing · Contracts · KB).
+-- New tables only — safe to run as-is on the live DB (CREATE TABLE IF NOT EXISTS).
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- Design Workspace: Figma review rounds per project (2-round limit enforced in
+-- design.php), with a client comment + sign-off.
+CREATE TABLE IF NOT EXISTS design_reviews (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  project_id     INT NOT NULL,
+  title          VARCHAR(200) NOT NULL,
+  figma_url      VARCHAR(500) DEFAULT NULL,
+  round          INT NOT NULL DEFAULT 1,
+  status         VARCHAR(20) NOT NULL DEFAULT 'pending', -- pending | approved | changes
+  client_comment TEXT DEFAULT NULL,
+  created_by     INT NULL,
+  created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at     TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT fk_design_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  CONSTRAINT fk_design_user    FOREIGN KEY (created_by) REFERENCES users(id)    ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Development Pipeline: per-project repo + environment URLs + a JSON build
+-- checklist; plus a deploy log.
+CREATE TABLE IF NOT EXISTS project_dev (
+  project_id  INT PRIMARY KEY,
+  repo_url    VARCHAR(500) DEFAULT NULL,
+  staging_url VARCHAR(500) DEFAULT NULL,
+  prod_url    VARCHAR(500) DEFAULT NULL,
+  checklist   TEXT DEFAULT NULL,                        -- JSON: {key:bool} build/QA checklist
+  updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT fk_pdev_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS deploys (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  project_id  INT NOT NULL,
+  environment VARCHAR(20) NOT NULL DEFAULT 'staging',   -- staging | production
+  status      VARCHAR(20) NOT NULL DEFAULT 'success',   -- success | failed | rolled_back
+  url         VARCHAR(500) DEFAULT NULL,
+  notes       VARCHAR(500) DEFAULT NULL,
+  created_by  INT NULL,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_deploy_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  CONSTRAINT fk_deploy_user    FOREIGN KEY (created_by) REFERENCES users(id)    ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Resourcing & Capacity: leave/holiday tracking. Capacity is derived live from
+-- time_entries, so no committed-hours table is needed.
+CREATE TABLE IF NOT EXISTS leave_entries (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  user_id     INT NOT NULL,
+  start_date  DATE NOT NULL,
+  end_date    DATE NOT NULL,
+  type        VARCHAR(20) NOT NULL DEFAULT 'holiday',   -- holiday | sick | other
+  note        VARCHAR(300) DEFAULT NULL,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  deleted_at  TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT fk_leave_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Contracts & e-Signature: simple typed-name e-sign with an audit trail
+-- (signer name, IP, timestamp). NDA triage tag green/yellow/red.
+CREATE TABLE IF NOT EXISTS contracts (
+  id           INT AUTO_INCREMENT PRIMARY KEY,
+  client_id    INT NULL,
+  project_id   INT NULL,
+  kind         VARCHAR(20) NOT NULL DEFAULT 'agreement', -- agreement | nda
+  title        VARCHAR(200) NOT NULL,
+  body         TEXT DEFAULT NULL,
+  status       VARCHAR(20) NOT NULL DEFAULT 'draft',     -- draft | sent | signed | void
+  nda_triage   VARCHAR(10) DEFAULT NULL,                 -- green | yellow | red
+  signer_name  VARCHAR(200) DEFAULT NULL,
+  signer_email VARCHAR(200) DEFAULT NULL,
+  signed_name  VARCHAR(200) DEFAULT NULL,                -- the typed e-signature
+  signed_ip    VARCHAR(45)  DEFAULT NULL,
+  signed_at    TIMESTAMP NULL DEFAULT NULL,
+  created_by   INT NULL,
+  created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at   TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT fk_contract_client  FOREIGN KEY (client_id)  REFERENCES clients(id)  ON DELETE SET NULL,
+  CONSTRAINT fk_contract_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
+  CONSTRAINT fk_contract_user    FOREIGN KEY (created_by) REFERENCES users(id)    ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Knowledge Base & SOPs: internal wiki / runbooks / client-facing help.
+CREATE TABLE IF NOT EXISTS kb_articles (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  title       VARCHAR(200) NOT NULL,
+  category    VARCHAR(60) NOT NULL DEFAULT 'General',
+  audience    VARCHAR(20) NOT NULL DEFAULT 'internal',  -- internal | client
+  body        MEDIUMTEXT DEFAULT NULL,
+  author_id   INT NULL,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at  TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT fk_kb_author FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
