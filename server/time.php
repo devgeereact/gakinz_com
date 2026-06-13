@@ -17,7 +17,7 @@ $action = $_GET['action'] ?? '';
 if ($method === 'GET') {
   require_auth($conn, STAFF); // staff only
   $rows = [];
-  $sql = 'SELECT t.id, t.project_id, t.description, t.minutes, t.billable, t.entry_date,
+  $sql = 'SELECT t.id, t.project_id, t.description, t.minutes, t.billable, t.status, t.entry_date,
                  p.name AS project_name, u.name AS user_name, t.user_id
           FROM time_entries t
           JOIN projects p ON p.id = t.project_id
@@ -51,7 +51,8 @@ if ($method === 'POST' && $action === 'create') {
   $date = $date !== '' ? $date : (new DateTime())->format('Y-m-d');
   $uid = $user['id'];
 
-  $stmt = $conn->prepare('INSERT INTO time_entries (project_id, user_id, description, minutes, billable, entry_date) VALUES (?, ?, ?, ?, ?, ?)');
+  // New entries start as 'draft' (pending a manager's timesheet approval).
+  $stmt = $conn->prepare("INSERT INTO time_entries (project_id, user_id, description, minutes, billable, status, entry_date) VALUES (?, ?, ?, ?, ?, 'draft', ?)");
   $stmt->bind_param('iisiis', $projectId, $uid, $desc, $minutes, $billable, $date);
   if (!$stmt->execute()) fail('Could not log the time.', 500);
   audit($conn, $uid, 'time_log', "project #$projectId · {$minutes}m");
@@ -74,6 +75,21 @@ if ($method === 'POST' && $action === 'delete') {
   }
   $stmt->execute();
   if ($stmt->affected_rows < 1) fail('Entry not found or not yours.', 404);
+  ok(['ok' => true]);
+}
+
+// Timesheet approval — managers and up approve/reject logged time. Only approved
+// entries count as billable downstream (export, utilisation).
+if ($method === 'POST' && ($action === 'approve' || $action === 'reject')) {
+  $user = require_auth($conn, ['super_admin', 'admin', 'manager']);
+  $id = (int)(body()['id'] ?? 0);
+  if ($id <= 0) fail('An entry id is required.');
+  $new = $action === 'approve' ? 'approved' : 'rejected';
+  $stmt = $conn->prepare('UPDATE time_entries SET status = ? WHERE id = ? AND deleted_at IS NULL');
+  $stmt->bind_param('si', $new, $id);
+  $stmt->execute();
+  if ($stmt->affected_rows < 1) fail('Entry not found.', 404);
+  audit($conn, $user['id'], 'time_' . $action, "#$id");
   ok(['ok' => true]);
 }
 

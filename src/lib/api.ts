@@ -100,8 +100,23 @@ export type ClientInput = {
   tag?: ClientTag
   notes?: string
 }
+// Client detail: lifetime value + a merged, newest-first history.
+export type ClientTimelineItem = {
+  type: "proposal" | "project" | "invoice" | "ticket"
+  id: number
+  label: string
+  status: string
+  amount: number | null
+  date: string
+}
+export type ClientDetail = {
+  client: Client
+  stats: { ltv: number; outstanding: number; projects: number; proposals: number; open_tickets: number }
+  timeline: ClientTimelineItem[]
+}
 export const clients = {
   list: () => api.get<Client[]>("/clients.php"),
+  get: (id: number) => api.get<ClientDetail>(`/clients.php?id=${id}`),
   create: (payload: ClientInput) => api.post<{ id: number }>("/clients.php?action=create", payload),
   update: (id: number, payload: ClientInput) =>
     api.post<{ ok: boolean }>("/clients.php?action=update", { id, ...payload }),
@@ -111,10 +126,13 @@ export const clients = {
 
 // Projects & Tasks (§6 Projects & Tasks).
 export type ProjectStatus = "planning" | "in_progress" | "on_hold" | "launched"
+// 5-stage delivery pipeline (Discover · Design · Build · Launch · Support).
+export type ProjectStage = "discover" | "design" | "build" | "launch" | "support"
 export type Project = {
   id: number
   name: string
   status: ProjectStatus
+  stage: ProjectStage
   due_date: string | null
   client_id: number | null
   client_company: string | null
@@ -128,6 +146,8 @@ export const projects = {
     api.post<{ id: number }>("/projects.php?action=create", payload),
   setStatus: (id: number, status: ProjectStatus) =>
     api.post<{ ok: boolean }>("/projects.php?action=status", { id, status }),
+  setStage: (id: number, stage: ProjectStage) =>
+    api.post<{ ok: boolean }>("/projects.php?action=stage", { id, stage }),
 }
 
 export type TaskStatus = "todo" | "doing" | "review" | "done"
@@ -156,13 +176,16 @@ export type Proposal = {
   title: string
   status: ProposalStatus
   currency: string
+  vat_rate: number
   valid_until: string | null
   client_id: number | null
   project_id: number | null
   client_company: string | null
-  total: number
+  total: number // ex VAT (line-item sum)
   created_at: string
 }
+// One leg of the 40/30/30 schedule auto-created when a proposal is accepted.
+export type ScheduledInvoice = { id: number; number: string; label: string; amount: number; due_at: string }
 export const proposals = {
   list: () => api.get<Proposal[]>("/proposals.php"),
   create: (payload: {
@@ -170,12 +193,16 @@ export const proposals = {
     client_id?: number | null
     valid_until?: string
     notes?: string
+    vat_rate?: number
     items: ProposalItemInput[]
   }) => api.post<{ id: number }>("/proposals.php?action=create", payload),
   setStatus: (id: number, status: "draft" | "sent" | "declined") =>
     api.post<{ ok: boolean }>("/proposals.php?action=status", { id, status }),
   accept: (id: number) =>
-    api.post<{ ok: boolean; project_id: number; existing?: boolean }>("/proposals.php?action=accept", { id }),
+    api.post<{ ok: boolean; project_id: number; existing?: boolean; invoices?: ScheduledInvoice[] }>(
+      "/proposals.php?action=accept",
+      { id },
+    ),
 }
 
 // Invoicing (§6 Invoicing & Payments). Manual mark-as-paid.
@@ -185,12 +212,15 @@ export type Invoice = {
   number: string | null
   status: InvoiceStatus
   currency: string
+  vat_rate: number
   issued_at: string
   due_at: string | null
   paid_at: string | null
   client_id: number | null
   client_company: string | null
-  total: number
+  subtotal: number // ex VAT (line-item sum)
+  vat_amount: number
+  total: number // payable, inc VAT (= subtotal when vat_rate is 0)
   overdue: boolean
 }
 export type InvoiceLine = { id: number; description: string; qty: number; unit_price: number }
@@ -208,6 +238,7 @@ export const invoices = {
     project_id?: number | null
     due_at?: string
     notes?: string
+    vat_rate?: number
     items: ProposalItemInput[]
   }) => api.post<{ id: number; number: string }>("/invoices.php?action=create", payload),
   setStatus: (id: number, status: InvoiceStatus) =>
@@ -219,6 +250,7 @@ export const invoices = {
 }
 
 // Time tracking (§6 Time).
+export type TimeStatus = "draft" | "approved" | "rejected"
 export type TimeEntry = {
   id: number
   project_id: number
@@ -226,6 +258,7 @@ export type TimeEntry = {
   description: string | null
   minutes: number
   billable: boolean
+  status: TimeStatus
   entry_date: string
   user_name: string | null
   user_id: number | null
@@ -240,6 +273,9 @@ export const time = {
     entry_date?: string
   }) => api.post<{ id: number }>("/time.php?action=create", payload),
   remove: (id: number) => api.post<{ ok: boolean }>("/time.php?action=delete", { id }),
+  // Timesheet approval (manager+). Only approved entries count as billable.
+  approve: (id: number) => api.post<{ ok: boolean }>("/time.php?action=approve", { id }),
+  reject: (id: number) => api.post<{ ok: boolean }>("/time.php?action=reject", { id }),
 }
 
 // Support tickets (§6 Support).
@@ -274,7 +310,7 @@ export const support = {
 export type PortalData = {
   client: { id: number; company: string; contact_name: string | null; email: string | null }
   projects: { id: number; name: string; status: string; due_date: string | null; task_count: number; done_count: number }[]
-  invoices: { id: number; number: string | null; status: string; issued_at: string; due_at: string | null; total: number }[]
+  invoices: { id: number; number: string | null; status: string; issued_at: string; due_at: string | null; subtotal: number; vat_rate: number; vat_amount: number; total: number }[]
   tickets: { id: number; subject: string; status: string; priority: string; created_at: string }[]
 }
 export const portal = {

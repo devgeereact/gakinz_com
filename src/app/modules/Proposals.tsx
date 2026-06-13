@@ -66,6 +66,7 @@ export default function Proposals() {
   const [clientId, setClientId] = useState("")
   const [validUntil, setValidUntil] = useState("")
   const [notes, setNotes] = useState("")
+  const [vatRate, setVatRate] = useState("20") // carried onto the 40/30/30 invoices
   const [lines, setLines] = useState<DraftItem[]>([{ ...blankItem }])
   const [saving, setSaving] = useState(false)
 
@@ -90,6 +91,8 @@ export default function Proposals() {
     (sum, l) => sum + (parseFloat(l.qty) || 0) * (parseFloat(l.unit_price) || 0),
     0,
   )
+  const vatNum = Math.max(0, Math.min(100, parseFloat(vatRate) || 0))
+  const draftVat = draftTotal * (vatNum / 100)
 
   const setLine = (i: number, k: keyof DraftItem, v: string) =>
     setLines((xs) => xs.map((l, idx) => (idx === i ? { ...l, [k]: v } : l)))
@@ -107,6 +110,7 @@ export default function Proposals() {
       client_id: clientId ? Number(clientId) : null,
       valid_until: validUntil || undefined,
       notes,
+      vat_rate: vatNum,
       items: payloadItems,
     })
     setSaving(false)
@@ -116,6 +120,7 @@ export default function Proposals() {
       setClientId("")
       setValidUntil("")
       setNotes("")
+      setVatRate("20")
       setLines([{ ...blankItem }])
       setOpen(false)
       load()
@@ -147,7 +152,8 @@ export default function Proposals() {
     const res = await proposals.accept(p.id)
     setBusyId(null)
     if (res.ok) {
-      toast.success("Accepted — project created.")
+      const n = res.data.invoices?.length ?? 0
+      toast.success(n > 0 ? `Accepted — project + ${n} invoices (40/30/30) created.` : "Accepted — project created.")
       navigate("/app/projects")
     } else toast.error(res.error || "Could not accept.")
   }
@@ -237,13 +243,21 @@ export default function Proposals() {
                       <Plus className="mr-2 h-4 w-4" /> Add line
                     </Button>
                   </div>
-                  <div className="mt-2 text-right text-sm font-medium">Total: {gbp(draftTotal)}</div>
+                  <div className="mt-2 space-y-0.5 text-right text-sm">
+                    <div className="text-muted-foreground">Subtotal: {gbp(draftTotal)}</div>
+                    {vatNum > 0 && <div className="text-muted-foreground">VAT ({vatNum}%): {gbp(draftVat)}</div>}
+                    <div className="font-medium">Total: {gbp(draftTotal + draftVat)}</div>
+                  </div>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <Label htmlFor="pvalid">Valid until</Label>
                     <Input id="pvalid" type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className="mt-1.5" />
+                  </div>
+                  <div>
+                    <Label htmlFor="pvat">VAT rate (%)</Label>
+                    <Input id="pvat" type="number" min="0" max="100" step="0.5" value={vatRate} onChange={(e) => setVatRate(e.target.value)} className="mt-1.5" />
                   </div>
                 </div>
                 <div>

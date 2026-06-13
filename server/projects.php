@@ -11,6 +11,7 @@
 require __DIR__ . '/_bootstrap.php';
 
 const STATUSES = ['planning', 'in_progress', 'on_hold', 'launched'];
+const STAGES = ['discover', 'design', 'build', 'launch', 'support']; // 5-stage delivery
 const STAFF = ['super_admin', 'admin', 'manager', 'editor', 'employee'];
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -19,7 +20,7 @@ $action = $_GET['action'] ?? '';
 if ($method === 'GET') {
   require_auth($conn, STAFF); // staff only
   $rows = [];
-  $sql = 'SELECT p.id, p.name, p.status, p.due_date, p.client_id, c.company AS client_company,
+  $sql = 'SELECT p.id, p.name, p.status, p.stage, p.due_date, p.client_id, c.company AS client_company,
                  (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL) AS task_count,
                  (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL AND t.status = "done") AS done_count,
                  p.created_at
@@ -66,6 +67,22 @@ if ($method === 'POST' && $action === 'status') {
   $stmt->execute();
   if ($stmt->affected_rows < 1) fail('Project not found.', 404);
   audit($conn, $user['id'], 'project_status', "#$id → $status");
+  ok(['ok' => true]);
+}
+
+if ($method === 'POST' && $action === 'stage') {
+  $user = require_auth($conn, STAFF);
+  $in = body();
+  $id = (int)($in['id'] ?? 0);
+  $stage = str_field($in, 'stage', 20);
+  if ($id <= 0) fail('A project id is required.');
+  if (!in_array($stage, STAGES, true)) fail('Invalid stage.');
+
+  $stmt = $conn->prepare('UPDATE projects SET stage = ? WHERE id = ? AND deleted_at IS NULL');
+  $stmt->bind_param('si', $stage, $id);
+  $stmt->execute();
+  if ($stmt->affected_rows < 1) fail('Project not found.', 404);
+  audit($conn, $user['id'], 'project_stage', "#$id → $stage");
   ok(['ok' => true]);
 }
 

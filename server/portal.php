@@ -54,8 +54,8 @@ while ($r = $res->fetch_assoc()) {
 // Invoices with totals
 $invoices = [];
 $stmt = $conn->prepare(
-  'SELECT i.id, i.number, i.status, i.issued_at, i.due_at,
-          (SELECT COALESCE(SUM(qty * unit_price), 0) FROM invoice_items it WHERE it.invoice_id = i.id) AS total
+  'SELECT i.id, i.number, i.status, i.vat_rate, i.issued_at, i.due_at,
+          (SELECT COALESCE(SUM(qty * unit_price), 0) FROM invoice_items it WHERE it.invoice_id = i.id) AS subtotal
    FROM invoices i WHERE i.client_id = ? AND i.deleted_at IS NULL ORDER BY i.id DESC'
 );
 $stmt->bind_param('i', $clientId);
@@ -63,7 +63,10 @@ $stmt->execute();
 $res = $stmt->get_result();
 while ($r = $res->fetch_assoc()) {
   $r['id'] = (int)$r['id'];
-  $r['total'] = (float)$r['total'];
+  $r['subtotal'] = (float)$r['subtotal'];
+  $r['vat_rate'] = (float)$r['vat_rate'];
+  $r['vat_amount'] = round($r['subtotal'] * $r['vat_rate'] / 100, 2);
+  $r['total'] = round($r['subtotal'] + $r['vat_amount'], 2); // payable, inc VAT
   $invoices[] = $r;
 }
 

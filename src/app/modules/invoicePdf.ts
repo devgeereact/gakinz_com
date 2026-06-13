@@ -52,8 +52,15 @@ export function downloadInvoicePdf(inv: InvoiceDetail) {
   doc.text(inv.due_at || "—", W - M, y + 16, { align: "right" })
   doc.text(inv.status.toUpperCase(), W - M, y + 32, { align: "right" })
 
-  // Items table
-  const total = inv.items.reduce((s, it) => s + it.qty * it.unit_price, 0)
+  // Items table. Prefer server-computed VAT figures; fall back to the line sum
+  // for older invoices that predate the VAT fields.
+  const subtotal = inv.subtotal ?? inv.items.reduce((s, it) => s + it.qty * it.unit_price, 0)
+  const vatRate = inv.vat_rate ?? 0
+  const vatAmount = inv.vat_amount ?? subtotal * (vatRate / 100)
+  const total = inv.total ?? subtotal + vatAmount
+  const foot: string[][] = [["", "", "Subtotal", gbp(subtotal)]]
+  if (vatRate > 0) foot.push(["", "", `VAT (${vatRate}%)`, gbp(vatAmount)])
+  foot.push(["", "", "Total", gbp(total)])
   autoTable(doc, {
     startY: y + 60,
     margin: { left: M, right: M },
@@ -67,7 +74,7 @@ export function downloadInvoicePdf(inv: InvoiceDetail) {
     headStyles: { fillColor: VIOLET, halign: "left" },
     columnStyles: { 1: { halign: "right" }, 2: { halign: "right" }, 3: { halign: "right" } },
     styles: { fontSize: 10, cellPadding: 6 },
-    foot: [["", "", "Total", gbp(total)]],
+    foot,
     footStyles: { fillColor: [240, 240, 250], textColor: INK, fontStyle: "bold", halign: "right" },
   })
 

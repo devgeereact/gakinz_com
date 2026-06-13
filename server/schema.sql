@@ -100,6 +100,7 @@ CREATE TABLE IF NOT EXISTS projects (
   client_id  INT NULL,
   name       VARCHAR(200) NOT NULL,
   status     VARCHAR(30) NOT NULL DEFAULT 'planning', -- planning | in_progress | on_hold | launched
+  stage      VARCHAR(20) NOT NULL DEFAULT 'discover', -- discover | design | build | launch | support (5-stage delivery)
   due_date   DATE NULL DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -128,6 +129,7 @@ CREATE TABLE IF NOT EXISTS proposals (
   title       VARCHAR(200) NOT NULL,
   status      VARCHAR(20) NOT NULL DEFAULT 'draft', -- draft | sent | accepted | declined
   currency    VARCHAR(3)  NOT NULL DEFAULT 'GBP',
+  vat_rate    DECIMAL(5,2) NOT NULL DEFAULT 0,      -- % VAT carried onto the scheduled invoices
   notes       TEXT DEFAULT NULL,
   valid_until DATE NULL DEFAULT NULL,
   project_id  INT NULL,                              -- set when accepted
@@ -154,6 +156,7 @@ CREATE TABLE IF NOT EXISTS invoices (
   project_id  INT NULL,
   status      VARCHAR(20) NOT NULL DEFAULT 'draft', -- draft | sent | paid
   currency    VARCHAR(3)  NOT NULL DEFAULT 'GBP',
+  vat_rate    DECIMAL(5,2) NOT NULL DEFAULT 0,      -- % VAT applied to the line-item subtotal
   notes       TEXT DEFAULT NULL,
   issued_at   DATE NOT NULL,                        -- set by PHP on create
   due_at      DATE NULL DEFAULT NULL,
@@ -182,6 +185,7 @@ CREATE TABLE IF NOT EXISTS time_entries (
   description VARCHAR(300) DEFAULT NULL,
   minutes     INT NOT NULL DEFAULT 0,
   billable    TINYINT(1) NOT NULL DEFAULT 1,
+  status      VARCHAR(10) NOT NULL DEFAULT 'draft',  -- draft | approved | rejected (timesheet approval)
   entry_date  DATE NOT NULL,
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   deleted_at  TIMESTAMP NULL DEFAULT NULL,
@@ -257,3 +261,18 @@ CREATE TABLE IF NOT EXISTS comm_messages (
   CONSTRAINT fk_msg_thread FOREIGN KEY (thread_id) REFERENCES comm_threads(id) ON DELETE CASCADE,
   CONSTRAINT fk_msg_user   FOREIGN KEY (user_id)   REFERENCES users(id)        ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- MIGRATIONS for an existing live DB (partials sprint: VAT, 40/30/30, stages,
+-- timesheet approval). Run these once against the live database; the CREATE
+-- TABLE blocks above already include the columns for a fresh install.
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Invoice + proposal VAT (GBP base, ex/inc VAT):
+--   ALTER TABLE invoices  ADD COLUMN vat_rate DECIMAL(5,2) NOT NULL DEFAULT 0 AFTER currency;
+--   ALTER TABLE proposals ADD COLUMN vat_rate DECIMAL(5,2) NOT NULL DEFAULT 0 AFTER currency;
+-- Project 5-stage delivery (Discover · Design · Build · Launch · Support):
+--   ALTER TABLE projects ADD COLUMN stage VARCHAR(20) NOT NULL DEFAULT 'discover' AFTER status;
+-- Timesheet approval. New column defaults to 'draft'; grandfather existing rows
+-- as 'approved' so historic billable totals are unchanged:
+--   ALTER TABLE time_entries ADD COLUMN status VARCHAR(10) NOT NULL DEFAULT 'draft' AFTER billable;
+--   UPDATE time_entries SET status = 'approved' WHERE deleted_at IS NULL;

@@ -25,6 +25,7 @@ import {
   clients as clientsApi,
   type Project,
   type ProjectStatus,
+  type ProjectStage,
   type Task,
   type TaskStatus,
   type Client,
@@ -43,6 +44,16 @@ const projectStatusClass: Record<ProjectStatus, string> = {
   on_hold: "bg-secondary text-secondary-foreground",
   launched: "bg-accent text-accent-foreground",
 }
+
+// 5-stage delivery pipeline (Discover · Design · Build · Launch · Support).
+const PROJECT_STAGES: { key: ProjectStage; label: string }[] = [
+  { key: "discover", label: "Discover" },
+  { key: "design", label: "Design" },
+  { key: "build", label: "Build" },
+  { key: "launch", label: "Launch" },
+  { key: "support", label: "Support" },
+]
+const stageLabel = (s: ProjectStage) => PROJECT_STAGES.find((x) => x.key === s)?.label ?? s
 
 const TASK_COLS: { key: TaskStatus; label: string }[] = [
   { key: "todo", label: "To do" },
@@ -115,6 +126,22 @@ export default function Projects() {
     }
   }
 
+  const setProjectStage = async (p: Project, stage: ProjectStage) => {
+    setList((xs) => xs.map((x) => (x.id === p.id ? { ...x, stage } : x)))
+    if (selected?.id === p.id) setSelected({ ...selected, stage })
+    const res = await projects.setStage(p.id, stage)
+    if (!res.ok) {
+      loadProjects()
+      toast.error(res.error || "Could not update the stage.")
+    }
+  }
+
+  // Count projects sitting in each delivery stage (the dashboard tally).
+  const stageTally = PROJECT_STAGES.map((s) => ({
+    ...s,
+    count: list.filter((p) => p.stage === s.key).length,
+  }))
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -180,6 +207,17 @@ export default function Projects() {
         </div>
       )}
 
+      {!loading && list.length > 0 && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {stageTally.map((s) => (
+            <div key={s.key} className="rounded-xl border border-border bg-card p-4">
+              <div className="text-2xl font-semibold text-primary">{s.count}</div>
+              <div className="mt-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> Loading projects…
@@ -206,6 +244,11 @@ export default function Projects() {
                 </span>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">{p.client_company || "Internal"}</p>
+              <div className="mt-2">
+                <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs font-medium text-primary">
+                  {stageLabel(p.stage)}
+                </span>
+              </div>
               <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
                 <span>
                   {p.done_count}/{p.task_count} tasks done
@@ -225,7 +268,9 @@ export default function Projects() {
         <ProjectBoard
           project={selected}
           statusOptions={PROJECT_STATUS}
+          stageOptions={PROJECT_STAGES}
           onStatusChange={(s) => setProjectStatus(selected, s)}
+          onStageChange={(s) => setProjectStage(selected, s)}
           onTasksChanged={loadProjects}
         />
       )}
@@ -236,12 +281,16 @@ export default function Projects() {
 function ProjectBoard({
   project,
   statusOptions,
+  stageOptions,
   onStatusChange,
+  onStageChange,
   onTasksChanged,
 }: {
   project: Project
   statusOptions: { key: ProjectStatus; label: string }[]
+  stageOptions: { key: ProjectStage; label: string }[]
   onStatusChange: (s: ProjectStatus) => void
+  onStageChange: (s: ProjectStage) => void
   onTasksChanged: () => void
 }) {
   const [items, setItems] = useState<Task[]>([])
@@ -299,18 +348,32 @@ function ProjectBoard({
           <h2 className="text-lg font-semibold">{project.name}</h2>
           <p className="text-sm text-muted-foreground">{project.client_company || "Internal"} · task board</p>
         </div>
-        <Select value={project.status} onValueChange={(v) => onStatusChange(v as ProjectStatus)}>
-          <SelectTrigger className="h-9 w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {statusOptions.map((s) => (
-              <SelectItem key={s.key} value={s.key}>
-                {s.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="flex items-center gap-2">
+          <Select value={project.stage} onValueChange={(v) => onStageChange(v as ProjectStage)}>
+            <SelectTrigger className="h-9 w-36" aria-label="Delivery stage">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {stageOptions.map((s) => (
+                <SelectItem key={s.key} value={s.key}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={project.status} onValueChange={(v) => onStatusChange(v as ProjectStatus)}>
+            <SelectTrigger className="h-9 w-40" aria-label="Project status">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {statusOptions.map((s) => (
+                <SelectItem key={s.key} value={s.key}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="flex gap-2 py-4">

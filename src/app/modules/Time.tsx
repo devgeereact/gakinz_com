@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react"
-import { Loader2, Play, Square, Plus, Trash2, RefreshCw } from "lucide-react"
+import { Loader2, Play, Square, Plus, Trash2, RefreshCw, Check, X, Download } from "lucide-react"
 import { toast } from "sonner"
+import { downloadCsv } from "@/lib/csv"
+import { useAuth } from "@/store/auth.store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -40,7 +42,11 @@ function isThisWeek(d: string) {
   return date >= monday
 }
 
+const APPROVER_ROLES = ["super_admin", "admin", "manager"]
+
 export default function Time() {
+  const role = useAuth((s) => s.user?.role)
+  const canApprove = !!role && APPROVER_ROLES.includes(role)
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [projectList, setProjectList] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
@@ -119,22 +125,54 @@ export default function Time() {
     else toast.error(res.error || "Could not delete.")
   }
 
-  const weekEntries = entries.filter((e) => isThisWeek(e.entry_date))
+  const setApproval = async (id: number, approve: boolean) => {
+    const res = approve ? await time.approve(id) : await time.reject(id)
+    if (res.ok) {
+      setEntries((xs) => xs.map((x) => (x.id === id ? { ...x, status: approve ? "approved" : "rejected" } : x)))
+    } else {
+      toast.error(res.error || "Could not update the entry.")
+    }
+  }
+
+  const pending = entries.filter((e) => e.status === "draft").length
+
+  // Only APPROVED time counts toward billable totals + utilisation.
+  const weekEntries = entries.filter((e) => isThisWeek(e.entry_date) && e.status === "approved")
   const weekBillable = weekEntries.filter((e) => e.billable).reduce((s, e) => s + e.minutes, 0)
   const weekNon = weekEntries.filter((e) => !e.billable).reduce((s, e) => s + e.minutes, 0)
   const weekTotal = weekBillable + weekNon
   const utilisation = weekTotal > 0 ? Math.round((weekBillable / weekTotal) * 100) : 0
+
+  // Export approved entries only (the billable record of truth).
+  const exportApprovedCsv = () => {
+    const head = ["entry_date", "project_name", "description", "user_name", "billable", "minutes"]
+    const approved = entries.filter((e) => e.status === "approved")
+    if (approved.length === 0) return toast.error("No approved entries to export.")
+    downloadCsv("gakinz-approved-timesheet.csv", head, approved as unknown as Record<string, unknown>[])
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Time</h1>
-          <p className="text-sm text-muted-foreground">Billable hours against projects.</p>
+          <p className="text-sm text-muted-foreground">
+            Approved billable hours against projects.
+            {pending > 0 && (
+              <span className="ml-2 rounded bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                {pending} awaiting approval
+              </span>
+            )}
+          </p>
         </div>
-        <Button variant="outline" size="sm" onClick={load}>
-          <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={exportApprovedCsv} disabled={!entries.length}>
+            <Download className="mr-2 h-4 w-4" /> Approved CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={load}>
+            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Weekly summary */}
@@ -231,6 +269,7 @@ export default function Time() {
                 <TableHead>Description</TableHead>
                 <TableHead>Who</TableHead>
                 <TableHead>Billable</TableHead>
+                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Time</TableHead>
                 <TableHead></TableHead>
               </TableRow>
@@ -249,11 +288,32 @@ export default function Time() {
                       <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">Internal</span>
                     )}
                   </TableCell>
+                  <TableCell>
+                    {e.status === "approved" ? (
+                      <span className="rounded bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">Approved</span>
+                    ) : e.status === "rejected" ? (
+                      <span className="rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">Rejected</span>
+                    ) : (
+                      <span className="rounded bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">Pending</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right font-medium">{hm(e.minutes)}</TableCell>
                   <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(e.id)} aria-label="Delete entry">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <div className="flex justify-end gap-1">
+                      {canApprove && e.status !== "approved" && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600" onClick={() => setApproval(e.id, true)} aria-label="Approve entry" title="Approve">
+                          <Check className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {canApprove && e.status !== "rejected" && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setApproval(e.id, false)} aria-label="Reject entry" title="Reject">
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(e.id)} aria-label="Delete entry">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

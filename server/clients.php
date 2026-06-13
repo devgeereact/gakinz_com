@@ -17,6 +17,89 @@ const STAFF = ['super_admin', 'admin', 'manager', 'editor'];
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
+if ($method === 'GET' && isset($_GET['id'])) {
+  require_auth($conn, STAFF); // staff only
+  $id = (int)$_GET['id'];
+
+  $stmt = $conn->prepare('SELECT id, company, contact_name, email, phone, tag, notes, source_lead_id, created_at
+                          FROM clients WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  $client = $stmt->get_result()->fetch_assoc();
+  if (!$client) fail('Client not found.', 404);
+  $client['id'] = (int)$client['id'];
+  $client['source_lead_id'] = $client['source_lead_id'] !== null ? (int)$client['source_lead_id'] : null;
+
+  $timeline = [];
+  $ltv = 0.0;          // lifetime value: settled invoices, inc VAT
+  $outstanding = 0.0;  // unpaid invoices, inc VAT
+  $projectCount = 0;
+  $proposalCount = 0;
+  $openTickets = 0;
+
+  // Proposals
+  $stmt = $conn->prepare('SELECT id, title, status, created_at FROM proposals WHERE client_id = ? AND deleted_at IS NULL ORDER BY id DESC');
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  $res = $stmt->get_result();
+  while ($r = $res->fetch_assoc()) {
+    $proposalCount++;
+    $timeline[] = ['type' => 'proposal', 'id' => (int)$r['id'], 'label' => $r['title'], 'status' => $r['status'], 'amount' => null, 'date' => $r['created_at']];
+  }
+
+  // Projects
+  $stmt = $conn->prepare('SELECT id, name, status, created_at FROM projects WHERE client_id = ? AND deleted_at IS NULL ORDER BY id DESC');
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  $res = $stmt->get_result();
+  while ($r = $res->fetch_assoc()) {
+    $projectCount++;
+    $timeline[] = ['type' => 'project', 'id' => (int)$r['id'], 'label' => $r['name'], 'status' => $r['status'], 'amount' => null, 'date' => $r['created_at']];
+  }
+
+  // Invoices (inc VAT) → LTV + outstanding
+  $stmt = $conn->prepare(
+    'SELECT i.id, i.number, i.status, i.vat_rate, i.issued_at,
+            (SELECT COALESCE(SUM(qty * unit_price), 0) FROM invoice_items it WHERE it.invoice_id = i.id) AS subtotal
+     FROM invoices i WHERE i.client_id = ? AND i.deleted_at IS NULL ORDER BY i.id DESC'
+  );
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  $res = $stmt->get_result();
+  while ($r = $res->fetch_assoc()) {
+    $sub = (float)$r['subtotal'];
+    $total = round($sub + $sub * (float)$r['vat_rate'] / 100, 2);
+    if ($r['status'] === 'paid') $ltv += $total;
+    else $outstanding += $total;
+    $timeline[] = ['type' => 'invoice', 'id' => (int)$r['id'], 'label' => $r['number'] ?? ('#' . $r['id']), 'status' => $r['status'], 'amount' => $total, 'date' => $r['issued_at']];
+  }
+
+  // Tickets
+  $stmt = $conn->prepare('SELECT id, subject, status, created_at FROM tickets WHERE client_id = ? AND deleted_at IS NULL ORDER BY id DESC');
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  $res = $stmt->get_result();
+  while ($r = $res->fetch_assoc()) {
+    if ($r['status'] !== 'resolved') $openTickets++;
+    $timeline[] = ['type' => 'ticket', 'id' => (int)$r['id'], 'label' => $r['subject'], 'status' => $r['status'], 'amount' => null, 'date' => $r['created_at']];
+  }
+
+  // Newest first across all record types.
+  usort($timeline, fn($a, $b) => strcmp((string)$b['date'], (string)$a['date']));
+
+  ok([
+    'client' => $client,
+    'stats'  => [
+      'ltv'         => round($ltv, 2),
+      'outstanding' => round($outstanding, 2),
+      'projects'    => $projectCount,
+      'proposals'   => $proposalCount,
+      'open_tickets'=> $openTickets,
+    ],
+    'timeline' => $timeline,
+  ]);
+}
+
 if ($method === 'GET') {
   require_auth($conn, STAFF); // staff only — never expose the client list to a client login
   $rows = [];

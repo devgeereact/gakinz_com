@@ -68,6 +68,7 @@ export default function Invoicing() {
   const [clientId, setClientId] = useState("")
   const [dueAt, setDueAt] = useState("")
   const [notes, setNotes] = useState("")
+  const [vatRate, setVatRate] = useState("20") // UK standard rate; 0 = not VAT-registered
   const [lines, setLines] = useState<DraftItem[]>([{ ...blankItem }])
   const [saving, setSaving] = useState(false)
 
@@ -90,10 +91,13 @@ export default function Invoicing() {
 
   const outstanding = items.filter((i) => i.status !== "paid").reduce((s, i) => s + i.total, 0)
 
-  const draftTotal = lines.reduce(
+  const draftSubtotal = lines.reduce(
     (sum, l) => sum + (parseFloat(l.qty) || 0) * (parseFloat(l.unit_price) || 0),
     0,
   )
+  const vatNum = Math.max(0, Math.min(100, parseFloat(vatRate) || 0))
+  const draftVat = draftSubtotal * (vatNum / 100)
+  const draftTotal = draftSubtotal + draftVat
   const setLine = (i: number, k: keyof DraftItem, v: string) =>
     setLines((xs) => xs.map((l, idx) => (idx === i ? { ...l, [k]: v } : l)))
 
@@ -107,6 +111,7 @@ export default function Invoicing() {
       client_id: clientId ? Number(clientId) : null,
       due_at: dueAt || undefined,
       notes,
+      vat_rate: vatNum,
       items: payloadItems,
     })
     setSaving(false)
@@ -115,6 +120,7 @@ export default function Invoicing() {
       setClientId("")
       setDueAt("")
       setNotes("")
+      setVatRate("20")
       setLines([{ ...blankItem }])
       setOpen(false)
       load()
@@ -157,7 +163,7 @@ export default function Invoicing() {
   }
 
   const exportCsv = () => {
-    const head = ["number", "client_company", "status", "total", "issued_at", "due_at"]
+    const head = ["number", "client_company", "status", "subtotal", "vat_rate", "vat_amount", "total", "issued_at", "due_at"]
     downloadCsv("gakinz-invoices.csv", head, items as unknown as Record<string, unknown>[])
   }
 
@@ -208,6 +214,10 @@ export default function Invoicing() {
                     <Label htmlFor="idue">Due date</Label>
                     <Input id="idue" type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} className="mt-1.5" />
                   </div>
+                  <div>
+                    <Label htmlFor="ivat">VAT rate (%)</Label>
+                    <Input id="ivat" type="number" min="0" max="100" step="0.5" value={vatRate} onChange={(e) => setVatRate(e.target.value)} className="mt-1.5" />
+                  </div>
                 </div>
 
                 <div>
@@ -227,7 +237,11 @@ export default function Invoicing() {
                       <Plus className="mr-2 h-4 w-4" /> Add line
                     </Button>
                   </div>
-                  <div className="mt-2 text-right text-sm font-medium">Total: {gbp(draftTotal)}</div>
+                  <div className="mt-2 space-y-0.5 text-right text-sm">
+                    <div className="text-muted-foreground">Subtotal: {gbp(draftSubtotal)}</div>
+                    <div className="text-muted-foreground">VAT ({vatNum}%): {gbp(draftVat)}</div>
+                    <div className="font-medium">Total: {gbp(draftTotal)}</div>
+                  </div>
                 </div>
 
                 <div>
@@ -283,7 +297,10 @@ export default function Invoicing() {
                     {inv.overdue && <span className="ml-1 rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">overdue</span>}
                   </TableCell>
                   <TableCell className="text-muted-foreground">{fmt(inv.due_at)}</TableCell>
-                  <TableCell className="text-right font-medium">{gbp(inv.total)}</TableCell>
+                  <TableCell className="text-right font-medium">
+                    {gbp(inv.total)}
+                    {inv.vat_rate > 0 && <span className="ml-1 text-xs font-normal text-muted-foreground">inc. VAT</span>}
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => downloadPdf(inv)} title="Download PDF">

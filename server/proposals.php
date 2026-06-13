@@ -21,7 +21,7 @@ if ($method === 'GET' && isset($_GET['id'])) {
   require_auth($conn, STAFF); // staff only
   $id = (int)$_GET['id'];
   $stmt = $conn->prepare(
-    'SELECT p.id, p.title, p.status, p.currency, p.notes, p.valid_until, p.client_id, p.project_id,
+    'SELECT p.id, p.title, p.status, p.currency, p.vat_rate, p.notes, p.valid_until, p.client_id, p.project_id,
             c.company AS client_company, p.created_at
      FROM proposals p LEFT JOIN clients c ON c.id = p.client_id
      WHERE p.id = ? AND p.deleted_at IS NULL LIMIT 1'
@@ -31,6 +31,7 @@ if ($method === 'GET' && isset($_GET['id'])) {
   $p = $stmt->get_result()->fetch_assoc();
   if (!$p) fail('Proposal not found.', 404);
   $p['id'] = (int)$p['id'];
+  $p['vat_rate'] = (float)$p['vat_rate'];
 
   $items = [];
   $stmt = $conn->prepare('SELECT id, description, qty, unit_price FROM proposal_items WHERE proposal_id = ? ORDER BY id ASC');
@@ -50,7 +51,7 @@ if ($method === 'GET' && isset($_GET['id'])) {
 if ($method === 'GET') {
   require_auth($conn, STAFF); // staff only
   $rows = [];
-  $sql = 'SELECT p.id, p.title, p.status, p.currency, p.valid_until, p.client_id, p.project_id,
+  $sql = 'SELECT p.id, p.title, p.status, p.currency, p.vat_rate, p.valid_until, p.client_id, p.project_id,
                  c.company AS client_company, p.created_at,
                  (SELECT COALESCE(SUM(qty * unit_price), 0) FROM proposal_items i WHERE i.proposal_id = p.id) AS total
           FROM proposals p LEFT JOIN clients c ON c.id = p.client_id
@@ -60,6 +61,7 @@ if ($method === 'GET') {
       $r['id'] = (int)$r['id'];
       $r['client_id'] = $r['client_id'] !== null ? (int)$r['client_id'] : null;
       $r['project_id'] = $r['project_id'] !== null ? (int)$r['project_id'] : null;
+      $r['vat_rate'] = (float)$r['vat_rate'];
       $r['total'] = (float)$r['total'];
       $rows[] = $r;
     }
@@ -76,13 +78,14 @@ if ($method === 'POST' && $action === 'create') {
   $notes = str_field($in, 'notes', 5000);
   $valid = str_field($in, 'valid_until', 10);
   $valid = $valid !== '' ? $valid : null;
+  $vat = isset($in['vat_rate']) ? max(0, min(100, (float)$in['vat_rate'])) : 0;
   $items = is_array($in['items'] ?? null) ? $in['items'] : [];
   if (count($items) === 0) fail('Add at least one line item.');
 
   $conn->begin_transaction();
   try {
-    $stmt = $conn->prepare('INSERT INTO proposals (client_id, title, notes, valid_until) VALUES (?, ?, ?, ?)');
-    $stmt->bind_param('isss', $clientId, $title, $notes, $valid);
+    $stmt = $conn->prepare('INSERT INTO proposals (client_id, title, notes, vat_rate, valid_until) VALUES (?, ?, ?, ?, ?)');
+    $stmt->bind_param('issds', $clientId, $title, $notes, $vat, $valid);
     $stmt->execute();
     $pid = $conn->insert_id;
 
@@ -124,12 +127,19 @@ if ($method === 'POST' && $action === 'accept') {
   $id = (int)(body()['id'] ?? 0);
   if ($id <= 0) fail('A proposal id is required.');
 
-  $stmt = $conn->prepare('SELECT title, client_id, project_id, status FROM proposals WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+  $stmt = $conn->prepare('SELECT title, client_id, project_id, status, vat_rate FROM proposals WHERE id = ? AND deleted_at IS NULL LIMIT 1');
   $stmt->bind_param('i', $id);
   $stmt->execute();
   $p = $stmt->get_result()->fetch_assoc();
   if (!$p) fail('Proposal not found.', 404);
   if ($p['project_id']) ok(['ok' => true, 'project_id' => (int)$p['project_id'], 'existing' => true]);
+
+  // Proposal subtotal (ex VAT) drives the 40/30/30 payment schedule.
+  $stmt = $conn->prepare('SELECT COALESCE(SUM(qty * unit_price), 0) AS subtotal FROM proposal_items WHERE proposal_id = ?');
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  $subtotal = (float)$stmt->get_result()->fetch_assoc()['subtotal'];
+  $vat = (float)$p['vat_rate'];
 
   $conn->begin_transaction();
   try {
@@ -143,13 +153,45 @@ if ($method === 'POST' && $action === 'accept') {
     $stmt = $conn->prepare('UPDATE proposals SET status = "accepted", project_id = ? WHERE id = ?');
     $stmt->bind_param('ii', $projectId, $id);
     $stmt->execute();
+
+    // 40 / 30 / 30 payment schedule. Deposit due on acceptance, stage +30d,
+    // final +60d. Final portion absorbs rounding so the parts sum to the whole.
+    $deposit = round($subtotal * 0.40, 2);
+    $stage   = round($subtotal * 0.30, 2);
+    $final   = round($subtotal - $deposit - $stage, 2);
+    $today   = new DateTime();
+    $plan = [
+      ['label' => 'Deposit (40%)',      'amount' => $deposit, 'due' => (clone $today)],
+      ['label' => 'Stage payment (30%)','amount' => $stage,   'due' => (clone $today)->modify('+30 days')],
+      ['label' => 'Final payment (30%)','amount' => $final,   'due' => (clone $today)->modify('+60 days')],
+    ];
+    $issued = $today->format('Y-m-d');
+    $schedule = [];
+
+    $insInv  = $conn->prepare('INSERT INTO invoices (client_id, project_id, vat_rate, issued_at, due_at) VALUES (?, ?, ?, ?, ?)');
+    $setNum  = $conn->prepare('UPDATE invoices SET number = ? WHERE id = ?');
+    $insItem = $conn->prepare('INSERT INTO invoice_items (invoice_id, description, qty, unit_price) VALUES (?, ?, 1, ?)');
+    foreach ($plan as $part) {
+      $due = $part['due']->format('Y-m-d');
+      $insInv->bind_param('iidss', $clientId, $projectId, $vat, $issued, $due);
+      $insInv->execute();
+      $iid = $conn->insert_id;
+      $number = sprintf('GK-INV-%04d', $iid);
+      $setNum->bind_param('si', $number, $iid);
+      $setNum->execute();
+      $desc = $part['label'] . ' — ' . $title;
+      $amt  = $part['amount'];
+      $insItem->bind_param('isd', $iid, $desc, $amt);
+      $insItem->execute();
+      $schedule[] = ['id' => $iid, 'number' => $number, 'label' => $part['label'], 'amount' => $amt, 'due_at' => $due];
+    }
     $conn->commit();
   } catch (Throwable $e) {
     $conn->rollback();
     fail('Could not accept the proposal.', 500);
   }
-  audit($conn, $user['id'], 'proposal_accept', "#$id → project #$projectId");
-  ok(['ok' => true, 'project_id' => $projectId]);
+  audit($conn, $user['id'], 'proposal_accept', "#$id → project #$projectId + 3 invoices (40/30/30)");
+  ok(['ok' => true, 'project_id' => $projectId, 'invoices' => $schedule]);
 }
 
 fail('Method not allowed.', 405);

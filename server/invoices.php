@@ -20,7 +20,7 @@ if ($method === 'GET' && isset($_GET['id'])) {
   require_auth($conn, STAFF); // staff only — clients see invoices via portal.php (own client_id)
   $id = (int)$_GET['id'];
   $stmt = $conn->prepare(
-    'SELECT i.id, i.number, i.status, i.currency, i.notes, i.issued_at, i.due_at, i.paid_at,
+    'SELECT i.id, i.number, i.status, i.currency, i.vat_rate, i.notes, i.issued_at, i.due_at, i.paid_at,
             i.client_id, i.project_id, c.company AS client_company, c.email AS client_email
      FROM invoices i LEFT JOIN clients c ON c.id = i.client_id
      WHERE i.id = ? AND i.deleted_at IS NULL LIMIT 1'
@@ -30,8 +30,10 @@ if ($method === 'GET' && isset($_GET['id'])) {
   $inv = $stmt->get_result()->fetch_assoc();
   if (!$inv) fail('Invoice not found.', 404);
   $inv['id'] = (int)$inv['id'];
+  $inv['vat_rate'] = (float)$inv['vat_rate'];
 
   $items = [];
+  $subtotal = 0.0;
   $stmt = $conn->prepare('SELECT id, description, qty, unit_price FROM invoice_items WHERE invoice_id = ? ORDER BY id ASC');
   $stmt->bind_param('i', $id);
   $stmt->execute();
@@ -40,18 +42,22 @@ if ($method === 'GET' && isset($_GET['id'])) {
     $r['id'] = (int)$r['id'];
     $r['qty'] = (float)$r['qty'];
     $r['unit_price'] = (float)$r['unit_price'];
+    $subtotal += $r['qty'] * $r['unit_price'];
     $items[] = $r;
   }
   $inv['items'] = $items;
+  $inv['subtotal'] = round($subtotal, 2);
+  $inv['vat_amount'] = round($subtotal * $inv['vat_rate'] / 100, 2);
+  $inv['total'] = round($inv['subtotal'] + $inv['vat_amount'], 2);
   ok($inv);
 }
 
 if ($method === 'GET') {
   require_auth($conn, STAFF); // staff only — clients see invoices via portal.php (own client_id)
   $rows = [];
-  $sql = 'SELECT i.id, i.number, i.status, i.currency, i.issued_at, i.due_at, i.paid_at,
+  $sql = 'SELECT i.id, i.number, i.status, i.currency, i.vat_rate, i.issued_at, i.due_at, i.paid_at,
                  i.client_id, c.company AS client_company,
-                 (SELECT COALESCE(SUM(qty * unit_price), 0) FROM invoice_items it WHERE it.invoice_id = i.id) AS total,
+                 (SELECT COALESCE(SUM(qty * unit_price), 0) FROM invoice_items it WHERE it.invoice_id = i.id) AS subtotal,
                  (i.status = "sent" AND i.due_at IS NOT NULL AND i.due_at < CURRENT_DATE) AS overdue
           FROM invoices i LEFT JOIN clients c ON c.id = i.client_id
           WHERE i.deleted_at IS NULL ORDER BY i.id DESC LIMIT 500';
@@ -59,7 +65,12 @@ if ($method === 'GET') {
     while ($r = $res->fetch_assoc()) {
       $r['id'] = (int)$r['id'];
       $r['client_id'] = $r['client_id'] !== null ? (int)$r['client_id'] : null;
-      $r['total'] = (float)$r['total'];
+      $r['subtotal'] = (float)$r['subtotal'];
+      $r['vat_rate'] = (float)$r['vat_rate'];
+      $r['vat_amount'] = round($r['subtotal'] * $r['vat_rate'] / 100, 2);
+      // `total` is the payable amount (subtotal + VAT). With vat_rate = 0 this
+      // equals the subtotal, so pre-VAT invoices are unchanged.
+      $r['total'] = round($r['subtotal'] + $r['vat_amount'], 2);
       $r['overdue'] = (bool)$r['overdue'];
       $rows[] = $r;
     }
@@ -75,14 +86,15 @@ if ($method === 'POST' && $action === 'create') {
   $notes = str_field($in, 'notes', 5000);
   $due = str_field($in, 'due_at', 10);
   $due = $due !== '' ? $due : null;
+  $vat = isset($in['vat_rate']) ? max(0, min(100, (float)$in['vat_rate'])) : 0;
   $items = is_array($in['items'] ?? null) ? $in['items'] : [];
   if (count($items) === 0) fail('Add at least one line item.');
   $issued = (new DateTime())->format('Y-m-d');
 
   $conn->begin_transaction();
   try {
-    $stmt = $conn->prepare('INSERT INTO invoices (client_id, project_id, notes, issued_at, due_at) VALUES (?, ?, ?, ?, ?)');
-    $stmt->bind_param('iisss', $clientId, $projectId, $notes, $issued, $due);
+    $stmt = $conn->prepare('INSERT INTO invoices (client_id, project_id, notes, vat_rate, issued_at, due_at) VALUES (?, ?, ?, ?, ?, ?)');
+    $stmt->bind_param('iisdss', $clientId, $projectId, $notes, $vat, $issued, $due);
     $stmt->execute();
     $iid = $conn->insert_id;
 
