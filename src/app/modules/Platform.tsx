@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Loader2, Plus, RefreshCw, ShieldCheck } from "lucide-react"
+import { Loader2, Plus, RefreshCw, ShieldCheck, Monitor, LogOut } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { users, audit, clients as clientsApi, type ManagedUser, type AuditEntry, type Client } from "@/lib/api"
+import { users, audit, auth, clients as clientsApi, type ManagedUser, type AuditEntry, type Client, type Session } from "@/lib/api"
 import { useAuth, type Role } from "@/store/auth.store"
 import { cn } from "@/lib/utils"
 
@@ -62,10 +62,14 @@ export default function Platform() {
       <Tabs defaultValue="team">
         <TabsList>
           <TabsTrigger value="team">Team &amp; roles</TabsTrigger>
+          <TabsTrigger value="sessions">My sessions</TabsTrigger>
           <TabsTrigger value="audit">Audit log</TabsTrigger>
         </TabsList>
         <TabsContent value="team" className="mt-4">
           <TeamTab />
+        </TabsContent>
+        <TabsContent value="sessions" className="mt-4">
+          <SessionsTab />
         </TabsContent>
         <TabsContent value="audit" className="mt-4">
           <AuditTab />
@@ -296,6 +300,106 @@ function TeamTab() {
                   </TableRow>
                 )
               })}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Best-effort, dependency-free user-agent → friendly device label.
+function deviceLabel(ua: string | null): string {
+  if (!ua) return "Unknown device"
+  const browser = /Edg/.test(ua) ? "Edge" : /Chrome/.test(ua) ? "Chrome" : /Firefox/.test(ua) ? "Firefox" : /Safari/.test(ua) ? "Safari" : "Browser"
+  const os = /Windows/.test(ua) ? "Windows" : /Mac OS X|Macintosh/.test(ua) ? "macOS" : /iPhone|iPad|iOS/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Linux/.test(ua) ? "Linux" : ""
+  return os ? `${browser} · ${os}` : browser
+}
+
+function SessionsTab() {
+  const [items, setItems] = useState<Session[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [busyId, setBusyId] = useState<number | null>(null)
+
+  const load = async () => {
+    setLoading(true)
+    const res = await auth.sessions()
+    if (res.ok) {
+      setItems(res.data)
+      setError(null)
+    } else {
+      setError(res.error)
+    }
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    load()
+  }, [])
+
+  const revoke = async (s: Session) => {
+    setBusyId(s.id)
+    const res = await auth.revokeSession(s.id)
+    setBusyId(null)
+    if (res.ok) {
+      setItems((xs) => xs.filter((x) => x.id !== s.id))
+      toast.success("Session signed out.")
+    } else {
+      toast.error(res.error || "Could not revoke the session.")
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Monitor className="h-4 w-4" /> Devices currently signed in to your account.
+        </p>
+        <Button variant="outline" size="sm" onClick={load}>
+          <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+        </Button>
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          {error} — the auth endpoint must be live and migrated for session tracking.
+        </div>
+      )}
+
+      <div className="rounded-xl border border-border bg-card">
+        {loading ? (
+          <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading sessions…
+          </div>
+        ) : items.length === 0 ? (
+          <div className="p-10 text-center text-sm text-muted-foreground">No active sessions.</div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Device</TableHead>
+                <TableHead>IP</TableHead>
+                <TableHead>Last seen</TableHead>
+                <TableHead className="text-right">Action</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((s) => (
+                <TableRow key={s.id}>
+                  <TableCell className="font-medium">
+                    {deviceLabel(s.user_agent)}
+                    {s.current && <span className="ml-2 rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">This device</span>}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">{s.ip || "—"}</TableCell>
+                  <TableCell className="text-muted-foreground">{s.last_seen_at ? fmt(s.last_seen_at) : "—"}</TableCell>
+                  <TableCell className="text-right">
+                    <Button variant="ghost" size="sm" disabled={busyId === s.id || s.current} onClick={() => revoke(s)}>
+                      <LogOut className="mr-1 h-3.5 w-3.5" /> {s.current ? "Current" : "Sign out"}
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
             </TableBody>
           </Table>
         )}

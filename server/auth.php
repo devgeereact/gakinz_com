@@ -30,6 +30,8 @@ switch ($action) {
   case 'logout':  if ($method === 'POST') return logout($conn); break;
   case 'forgot':  if ($method === 'POST') return forgot($conn); break;
   case 'reset':   if ($method === 'POST') return reset_password($conn); break;
+  case 'sessions': if ($method === 'GET')  return sessions($conn); break;
+  case 'revoke':   if ($method === 'POST') return revoke_session($conn); break;
 }
 fail('Unknown auth action.', 404);
 
@@ -68,9 +70,17 @@ function login(mysqli $conn): void {
   $token = new_token();
   $exp = (new DateTime("+" . TOKEN_TTL_DAYS . " days"))->format('Y-m-d H:i:s');
   $uid = (int)$u['id'];
-  $stmt = $conn->prepare('INSERT INTO auth_tokens (user_id, token, expires_at) VALUES (?, ?, ?)');
-  $stmt->bind_param('iss', $uid, $token, $exp);
-  $stmt->execute();
+  $ua = mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255);
+  // Record device + IP for the active-sessions list. Falls back to the original
+  // insert if the DB hasn't been migrated with the session-tracking columns.
+  if ($stmt = @$conn->prepare('INSERT INTO auth_tokens (user_id, token, user_agent, ip, last_seen_at, expires_at) VALUES (?, ?, ?, ?, NOW(), ?)')) {
+    $stmt->bind_param('issss', $uid, $token, $ua, $ip, $exp);
+    $stmt->execute();
+  } else {
+    $stmt = $conn->prepare('INSERT INTO auth_tokens (user_id, token, expires_at) VALUES (?, ?, ?)');
+    $stmt->bind_param('iss', $uid, $token, $exp);
+    $stmt->execute();
+  }
   audit($conn, $uid, 'login', '');
 
   ok([
@@ -159,6 +169,49 @@ function reset_password(mysqli $conn): void {
   $stmt->execute();
 
   audit($conn, $uid, 'password_reset', '');
+  ok(['ok' => true]);
+}
+
+// ── Sessions (device tracking) ─────────────────────────────────────────────────
+// A user sees their own live sessions (device, IP, last seen) and can revoke any
+// one — e.g. a forgotten login on another machine.
+function sessions(mysqli $conn): void {
+  $u = require_auth($conn);
+  $uid = $u['id'];
+  $current = bearer_token();
+  $rows = [];
+  $stmt = $conn->prepare(
+    'SELECT id, token, user_agent, ip, last_seen_at, created_at, expires_at
+     FROM auth_tokens WHERE user_id = ? AND expires_at > NOW() ORDER BY last_seen_at DESC, id DESC'
+  );
+  $stmt->bind_param('i', $uid);
+  $stmt->execute();
+  $res = $stmt->get_result();
+  while ($r = $res->fetch_assoc()) {
+    $rows[] = [
+      'id'           => (int)$r['id'],
+      'user_agent'   => $r['user_agent'],
+      'ip'           => $r['ip'],
+      'last_seen_at' => $r['last_seen_at'],
+      'created_at'   => $r['created_at'],
+      'expires_at'   => $r['expires_at'],
+      'current'      => hash_equals((string)$r['token'], $current),
+    ];
+  }
+  ok($rows);
+}
+
+function revoke_session(mysqli $conn): void {
+  $u = require_auth($conn);
+  $id = (int)(body()['id'] ?? 0);
+  if ($id <= 0) fail('A session id is required.');
+  $uid = $u['id'];
+  // Scope to the caller's own tokens — never let one user revoke another's.
+  $stmt = $conn->prepare('DELETE FROM auth_tokens WHERE id = ? AND user_id = ?');
+  $stmt->bind_param('ii', $id, $uid);
+  $stmt->execute();
+  if ($stmt->affected_rows < 1) fail('Session not found.', 404);
+  audit($conn, $uid, 'session_revoke', "#$id");
   ok(['ok' => true]);
 }
 

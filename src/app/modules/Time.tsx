@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import { Loader2, Play, Square, Plus, Trash2, RefreshCw, Check, X, Download } from "lucide-react"
 import { toast } from "sonner"
-import { downloadCsv } from "@/lib/csv"
+import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { useAuth } from "@/store/auth.store"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -144,11 +144,17 @@ export default function Time() {
   const utilisation = weekTotal > 0 ? Math.round((weekBillable / weekTotal) * 100) : 0
 
   // Export approved entries only (the billable record of truth).
+  const timeHead = ["entry_date", "project_name", "description", "user_name", "billable", "minutes"]
+  const approvedRows = () => entries.filter((e) => e.status === "approved") as unknown as Record<string, unknown>[]
   const exportApprovedCsv = () => {
-    const head = ["entry_date", "project_name", "description", "user_name", "billable", "minutes"]
-    const approved = entries.filter((e) => e.status === "approved")
-    if (approved.length === 0) return toast.error("No approved entries to export.")
-    downloadCsv("gakinz-approved-timesheet.csv", head, approved as unknown as Record<string, unknown>[])
+    const rows = approvedRows()
+    if (rows.length === 0) return toast.error("No approved entries to export.")
+    downloadCsv("gakinz-approved-timesheet.csv", timeHead, rows)
+  }
+  const exportApprovedXlsx = () => {
+    const rows = approvedRows()
+    if (rows.length === 0) return toast.error("No approved entries to export.")
+    downloadXlsx("gakinz-approved-timesheet.xlsx", timeHead, rows, "Timesheet")
   }
 
   return (
@@ -168,6 +174,9 @@ export default function Time() {
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={exportApprovedCsv} disabled={!entries.length}>
             <Download className="mr-2 h-4 w-4" /> Approved CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportApprovedXlsx} disabled={!entries.length}>
+            <Download className="mr-2 h-4 w-4" /> XLSX
           </Button>
           <Button variant="outline" size="sm" onClick={load}>
             <RefreshCw className="mr-2 h-4 w-4" /> Refresh

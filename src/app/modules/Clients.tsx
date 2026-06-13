@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Loader2, Download, RefreshCw, Plus } from "lucide-react"
-import { downloadCsv } from "@/lib/csv"
+import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -112,10 +112,11 @@ export default function Clients() {
     }
   }
 
-  const exportCsv = () => {
-    const head = ["id", "company", "contact_name", "email", "phone", "tag", "created_at"]
-    downloadCsv("gakinz-clients.csv", head, items as unknown as Record<string, unknown>[])
-  }
+  const clientHead = ["id", "company", "contact_name", "email", "phone", "tag", "created_at"]
+  const exportCsv = () =>
+    downloadCsv("gakinz-clients.csv", clientHead, items as unknown as Record<string, unknown>[])
+  const exportXlsx = () =>
+    downloadXlsx("gakinz-clients.xlsx", clientHead, items as unknown as Record<string, unknown>[], "Clients")
 
   return (
     <div className="space-y-6">
@@ -131,7 +132,10 @@ export default function Clients() {
             <RefreshCw className="mr-2 h-4 w-4" /> Refresh
           </Button>
           <Button variant="outline" size="sm" onClick={exportCsv} disabled={!items.length}>
-            <Download className="mr-2 h-4 w-4" /> Export CSV
+            <Download className="mr-2 h-4 w-4" /> CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportXlsx} disabled={!items.length}>
+            <Download className="mr-2 h-4 w-4" /> XLSX
           </Button>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>

@@ -81,6 +81,13 @@ function require_auth(mysqli $conn, array $roles = []): array {
   if ($user['status'] !== 'active') fail('Account is not active.', 403);
   if ($roles && !in_array($user['role'], $roles, true)) fail('Not allowed.', 403);
 
+  // Touch the session so the active-sessions list shows real last-seen times.
+  // Best-effort: silently skip if the column isn't present on an un-migrated DB.
+  if ($s = @$conn->prepare('UPDATE auth_tokens SET last_seen_at = NOW() WHERE token = ?')) {
+    $s->bind_param('s', $token);
+    @$s->execute();
+  }
+
   $user['id'] = (int)$user['id'];
   $user['client_id'] = $user['client_id'] !== null ? (int)$user['client_id'] : null;
   return $user;

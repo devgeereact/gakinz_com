@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Loader2, Plus, RefreshCw, Trash2, Send, BadgePoundSterling, FileDown, Download, CreditCard } from "lucide-react"
-import { downloadCsv } from "@/lib/csv"
+import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -162,10 +162,11 @@ export default function Invoicing() {
     else toast.error(res.error || "Could not load the invoice.")
   }
 
-  const exportCsv = () => {
-    const head = ["number", "client_company", "status", "subtotal", "vat_rate", "vat_amount", "total", "issued_at", "due_at"]
-    downloadCsv("gakinz-invoices.csv", head, items as unknown as Record<string, unknown>[])
-  }
+  const invoiceHead = ["number", "client_company", "status", "subtotal", "vat_rate", "vat_amount", "total", "issued_at", "due_at"]
+  const exportCsv = () =>
+    downloadCsv("gakinz-invoices.csv", invoiceHead, items as unknown as Record<string, unknown>[])
+  const exportXlsx = () =>
+    downloadXlsx("gakinz-invoices.xlsx", invoiceHead, items as unknown as Record<string, unknown>[], "Invoices")
 
   return (
     <div className="space-y-6">
@@ -182,6 +183,9 @@ export default function Invoicing() {
           </Button>
           <Button variant="outline" size="sm" onClick={exportCsv} disabled={!items.length}>
             <Download className="mr-2 h-4 w-4" /> CSV
+          </Button>
+          <Button variant="outline" size="sm" onClick={exportXlsx} disabled={!items.length}>
+            <Download className="mr-2 h-4 w-4" /> XLSX
           </Button>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>

@@ -49,11 +49,14 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- Session tokens (opaque random; React sends as Authorization: Bearer)
 CREATE TABLE IF NOT EXISTS auth_tokens (
-  id         INT AUTO_INCREMENT PRIMARY KEY,
-  user_id    INT NOT NULL,
-  token      CHAR(64) NOT NULL UNIQUE,
-  expires_at TIMESTAMP NOT NULL,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  id           INT AUTO_INCREMENT PRIMARY KEY,
+  user_id      INT NOT NULL,
+  token        CHAR(64) NOT NULL UNIQUE,
+  user_agent   VARCHAR(255) DEFAULT NULL,             -- device/browser at sign-in
+  ip           VARCHAR(45)  DEFAULT NULL,             -- IP at sign-in
+  last_seen_at TIMESTAMP NULL DEFAULT NULL,           -- touched on each authed request
+  expires_at   TIMESTAMP NOT NULL,
+  created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_token_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -276,3 +279,7 @@ CREATE TABLE IF NOT EXISTS comm_messages (
 -- as 'approved' so historic billable totals are unchanged:
 --   ALTER TABLE time_entries ADD COLUMN status VARCHAR(10) NOT NULL DEFAULT 'draft' AFTER billable;
 --   UPDATE time_entries SET status = 'approved' WHERE deleted_at IS NULL;
+-- Session device tracking (active-sessions list + revoke):
+--   ALTER TABLE auth_tokens ADD COLUMN user_agent VARCHAR(255) DEFAULT NULL AFTER token;
+--   ALTER TABLE auth_tokens ADD COLUMN ip VARCHAR(45) DEFAULT NULL AFTER user_agent;
+--   ALTER TABLE auth_tokens ADD COLUMN last_seen_at TIMESTAMP NULL DEFAULT NULL AFTER ip;

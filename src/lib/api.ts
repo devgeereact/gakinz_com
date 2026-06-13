@@ -425,6 +425,19 @@ export const auth = {
   forgot: (email: string) => api.post<{ ok: boolean }>("/auth.php?action=forgot", { email }),
   reset: (token: string, password: string) =>
     api.post<{ ok: boolean }>("/auth.php?action=reset", { token, password }),
+  sessions: () => api.get<Session[]>("/auth.php?action=sessions"),
+  revokeSession: (id: number) => api.post<{ ok: boolean }>("/auth.php?action=revoke", { id }),
+}
+
+// Active login sessions (device tracking) for the signed-in user.
+export type Session = {
+  id: number
+  user_agent: string | null
+  ip: string | null
+  last_seen_at: string | null
+  created_at: string
+  expires_at: string
+  current: boolean
 }
 
 // Weather (CMS dashboard widget). Server proxies OpenWeather; key stays server-side.

@@ -4,6 +4,8 @@ import {
   Area,
   AreaChart,
   CartesianGrid,
+  Line,
+  LineChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -63,6 +65,21 @@ function monthLabel(key: string) {
   })
 }
 
+// Tiny inline trend line for a KPI card. No axes, no tooltip — just the shape.
+function Sparkline({ data, color = "hsl(var(--primary))" }: { data: number[]; color?: string }) {
+  if (data.length < 2 || data.every((n) => n === data[0])) return null
+  const series = data.map((v, i) => ({ i, v }))
+  return (
+    <div className="mt-2 h-8 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={series} margin={{ top: 2, bottom: 2, left: 0, right: 0 }}>
+          <Line type="monotone" dataKey="v" stroke={color} strokeWidth={1.75} dot={false} isAnimationActive={false} />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
 type KpiProps = {
   label: string
   value: string
@@ -70,9 +87,10 @@ type KpiProps = {
   icon: React.ComponentType<{ className?: string }>
   to: string
   accent?: string
+  series?: number[]
 }
 
-function Kpi({ label, value, hint, icon: Icon, to, accent }: KpiProps) {
+function Kpi({ label, value, hint, icon: Icon, to, accent, series }: KpiProps) {
   const navigate = useNavigate()
   return (
     <div
@@ -82,21 +100,24 @@ function Kpi({ label, value, hint, icon: Icon, to, accent }: KpiProps) {
       onKeyDown={(e) => e.key === "Enter" && navigate(to)}
       className="gk-app-card cursor-pointer"
     >
-      <div className="flex items-start justify-between gap-3 p-5">
-        <div className="min-w-0">
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="mt-1 truncate text-2xl font-semibold tracking-tight">{value}</p>
-          {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+      <div className="p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-sm text-muted-foreground">{label}</p>
+            <p className="mt-1 truncate text-2xl font-semibold tracking-tight">{value}</p>
+            {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
+          </div>
+          <span
+            className={
+              accent
+                ? `inline-flex h-10 w-10 items-center justify-center rounded-lg ${accent}`
+                : "gk-app-chip h-10 w-10"
+            }
+          >
+            <Icon className="h-5 w-5" />
+          </span>
         </div>
-        <span
-          className={
-            accent
-              ? `inline-flex h-10 w-10 items-center justify-center rounded-lg ${accent}`
-              : "gk-app-chip h-10 w-10"
-          }
-        >
-          <Icon className="h-5 w-5" />
-        </span>
+        {series && <Sparkline data={series} />}
       </div>
     </div>
   )
@@ -116,6 +137,28 @@ function startOfWeek(d: Date) {
   x.setHours(0, 0, 0, 0)
   x.setDate(x.getDate() - day)
   return x
+}
+
+// The last N month keys ("YYYY-MM"), oldest → newest, ending this month.
+function lastNMonths(n: number): string[] {
+  const now = new Date()
+  const out: string[] = []
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    out.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`)
+  }
+  return out
+}
+// The last N Monday week-start ISO dates, oldest → newest, ending this week.
+function lastNWeeks(n: number): string[] {
+  const base = startOfWeek(new Date())
+  const out: string[] = []
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(base)
+    d.setDate(base.getDate() - i * 7)
+    out.push(d.toISOString().slice(0, 10))
+  }
+  return out
 }
 
 export default function Dashboard() {
@@ -223,6 +266,31 @@ export default function Dashboard() {
     [leads],
   )
 
+  // Per-KPI trend series for the card sparklines.
+  const spark = useMemo(() => {
+    const months = lastNMonths(6)
+    const countByMonth = (dates: string[]) =>
+      months.map((m) => dates.filter((d) => d && monthKey(d) === m).length)
+    const weeks = lastNWeeks(6)
+    const billable = weeks.map((ws) =>
+      entries
+        .filter((e) => e.billable && startOfWeek(new Date(e.entry_date.replace(" ", "T"))).toISOString().slice(0, 10) === ws)
+        .reduce((s, e) => s + e.minutes, 0),
+    )
+    return {
+      leads: countByMonth(leads.map((l) => l.created_at)),
+      projects: countByMonth(projects.map((p) => p.created_at)),
+      tickets: countByMonth(tickets.map((t) => t.created_at)),
+      paid: months.map((m) =>
+        invoices.filter((i) => i.status === "paid" && monthKey(i.paid_at ?? i.issued_at) === m).reduce((s, i) => s + Number(i.total), 0),
+      ),
+      outstanding: months.map((m) =>
+        invoices.filter((i) => i.status === "sent" && monthKey(i.issued_at) === m).reduce((s, i) => s + Number(i.total), 0),
+      ),
+      billable,
+    }
+  }, [leads, projects, tickets, invoices, entries])
+
   const generateBrief = async () => {
     setBriefing(true)
     setBrief(null)
@@ -310,6 +378,7 @@ export default function Dashboard() {
           hint="In the pipeline"
           icon={Inbox}
           to="/app/leads"
+          series={spark.leads}
         />
         <Kpi
           label="Active projects"
@@ -317,6 +386,7 @@ export default function Dashboard() {
           hint="Not yet launched"
           icon={FolderKanban}
           to="/app/projects"
+          series={spark.projects}
         />
         <Kpi
           label="Revenue paid"
@@ -325,6 +395,7 @@ export default function Dashboard() {
           icon={Banknote}
           to="/app/invoicing"
           accent="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+          series={spark.paid}
         />
         <Kpi
           label="Outstanding"
@@ -337,6 +408,7 @@ export default function Dashboard() {
               ? "bg-red-500/10 text-red-600 dark:text-red-400"
               : "bg-primary/10 text-primary"
           }
+          series={spark.outstanding}
         />
         <Kpi
           label="Open tickets"
@@ -344,6 +416,7 @@ export default function Dashboard() {
           hint="Needs a reply"
           icon={LifeBuoy}
           to="/app/support"
+          series={spark.tickets}
         />
         <Kpi
           label="Billable (wk)"
@@ -351,6 +424,7 @@ export default function Dashboard() {
           hint={`${stats.weekHours.toFixed(1)}h logged`}
           icon={Clock}
           to="/app/time"
+          series={spark.billable}
         />
       </div>
 
