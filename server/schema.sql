@@ -92,6 +92,7 @@ CREATE TABLE IF NOT EXISTS clients (
   email          VARCHAR(200) DEFAULT NULL,
   phone          VARCHAR(60)  DEFAULT NULL,
   tag            VARCHAR(30)  NOT NULL DEFAULT 'one-off',  -- retainer | one-off | vip | dormant
+  retainer_amount DECIMAL(10,2) NOT NULL DEFAULT 0,        -- monthly care-plan/retainer fee (£), billed by cron
   notes          TEXT DEFAULT NULL,
   source_lead_id INT NULL,
   created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -290,6 +291,11 @@ CREATE TABLE IF NOT EXISTS comm_messages (
 --   ALTER TABLE users ADD COLUMN cost_rate DECIMAL(8,2) NOT NULL DEFAULT 0 AFTER client_id;
 --   ALTER TABLE users ADD COLUMN totp_secret VARCHAR(64) DEFAULT NULL AFTER cost_rate;
 --   ALTER TABLE users ADD COLUMN totp_enabled TINYINT(1) NOT NULL DEFAULT 0 AFTER totp_secret;
+-- Recurring billing + care-plan monitoring:
+--   ALTER TABLE clients ADD COLUMN retainer_amount DECIMAL(10,2) NOT NULL DEFAULT 0 AFTER tag;
+--   ALTER TABLE project_dev ADD COLUMN last_http_status INT NULL DEFAULT NULL AFTER checklist;
+--   ALTER TABLE project_dev ADD COLUMN ssl_days_left INT NULL DEFAULT NULL AFTER last_http_status;
+--   ALTER TABLE project_dev ADD COLUMN last_checked_at TIMESTAMP NULL DEFAULT NULL AFTER ssl_days_left;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- MISSING-category modules (Design · Dev Pipeline · Resourcing · Contracts · KB).
@@ -322,6 +328,9 @@ CREATE TABLE IF NOT EXISTS project_dev (
   staging_url VARCHAR(500) DEFAULT NULL,
   prod_url    VARCHAR(500) DEFAULT NULL,
   checklist   TEXT DEFAULT NULL,                        -- JSON: {key:bool} build/QA checklist
+  last_http_status INT NULL DEFAULT NULL,               -- last uptime check HTTP code
+  ssl_days_left    INT NULL DEFAULT NULL,               -- days until the TLS cert expires
+  last_checked_at  TIMESTAMP NULL DEFAULT NULL,         -- when the monitor last ran
   updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT fk_pdev_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

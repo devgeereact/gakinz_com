@@ -34,6 +34,7 @@ import {
   FileSignature,
   BookOpen,
   FolderOpen,
+  HeartPulse,
   ChevronRight,
   type LucideIcon,
 } from "lucide-react"
@@ -56,6 +57,7 @@ const COMMANDS: Cmd[] = [
   { key: "portal", label: "Client Portal", path: "/app/portal", icon: PanelsTopLeft },
   { key: "time", label: "Time", path: "/app/time", icon: Clock },
   { key: "resourcing", label: "Resourcing", path: "/app/resourcing", icon: CalendarRange },
+  { key: "careplan", label: "Care Plan", path: "/app/careplan", icon: HeartPulse },
   { key: "support", label: "Support", path: "/app/support", icon: LifeBuoy },
   { key: "comms", label: "Comms", path: "/app/comms", icon: MessagesSquare },
   { key: "mailbox", label: "Mailbox", path: "/app/mailbox", icon: Mail },

@@ -51,7 +51,7 @@ const tagClass: Record<ClientTag, string> = {
   dormant: "bg-secondary text-secondary-foreground",
 }
 
-const emptyForm: ClientInput = { company: "", contact_name: "", email: "", phone: "", tag: "one-off", notes: "" }
+const emptyForm: ClientInput = { company: "", contact_name: "", email: "", phone: "", tag: "one-off", retainer_amount: 0, notes: "" }
 
 export default function Clients() {
   const [items, setItems] = useState<Client[]>([])
@@ -179,6 +179,19 @@ export default function Clients() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <Label htmlFor="retainer">Care plan / retainer (£ per month)</Label>
+                  <Input
+                    id="retainer"
+                    type="number"
+                    min="0"
+                    step="10"
+                    value={String(form.retainer_amount ?? 0)}
+                    onChange={(e) => setForm((f) => ({ ...f, retainer_amount: parseFloat(e.target.value) || 0 }))}
+                    className="mt-1.5"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">Billed automatically each month by the cron runner (if &gt; 0).</p>
+                </div>
                 <div className="sm:col-span-2">
                   <Label htmlFor="notes">Notes</Label>
                   <Textarea id="notes" rows={3} value={form.notes} onChange={(e) => set("notes", e.target.value)} className="mt-1.5" />
@@ -276,6 +289,13 @@ export default function Clients() {
               {(detail.client.contact_name || detail.client.email || detail.client.phone) && (
                 <div className="text-sm text-muted-foreground">
                   {[detail.client.contact_name, detail.client.email, detail.client.phone].filter(Boolean).join(" · ")}
+                </div>
+              )}
+              {detail.client.retainer_amount > 0 && (
+                <div className="text-sm">
+                  <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                    Care plan · {gbp(detail.client.retainer_amount)}/mo
+                  </span>
                 </div>
               )}
 

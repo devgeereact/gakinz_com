@@ -363,3 +363,19 @@ auth_tokens device cols, + 6 new tables). Every endpoint degrades gracefully pre
 + updated `_bootstrap.php auth.php users.php invoices.php`; migrations at foot of `schema.sql` (users
 cost_rate/totp_*, + `files`/`announcements` tables); create writable `server/uploads/`; optional `$GOOGLE_*`.
 All degrade gracefully pre-migration / pre-config.
+
+**Automation + monitoring + integrations hub (this session):**
+- **Cron runner** `server/cron.php` (key-gated by `$CRON_KEY`, NOT user-auth) with jobs `chase` (email every
+  overdue invoice), `billing` (raise this month's invoice for each `clients.retainer_amount>0` retainer client,
+  idempotent per month), `uptime` (ping every `project_dev.prod_url`, store HTTP+SSL), `digest` (weekly KPI email
+  to `$REPORT_RECIPIENTS`), `all`. cPanel cron: `wget -qO- "https://gakinz.com/cron.php?key=KEY&job=all"`.
+- **Care-Plan module** (`CarePlan.tsx` + `careplan.php` + shared `_monitor.php` `gk_site_check` HTTP+SSL).
+  Sites = projects with a prod URL; shows uptime, SSL days-left, care-plan MRR, on-demand "Check now". New
+  module key `careplan` (manager+); `project_dev` gained `last_http_status/ssl_days_left/last_checked_at`.
+- **Integrations hub** — `integrations.php` (admins) returns BOOLEANS only (smtp/imap/openrouter/stripe/twilio/
+  google/openweather/cron/reports); Platform → Integrations tab renders connection status.
+- `clients.retainer_amount` added (Clients form + detail; drives cron billing + Care-Plan MRR).
+- New config keys: `$CRON_KEY`, `$REPORT_RECIPIENTS` (see config.php.example).
+⚠️ DEPLOY: client via `dist/` push; server hand-upload NEW `cron.php careplan.php integrations.php _monitor.php`
++ updated `clients.php`; migrations at foot of `schema.sql` (clients.retainer_amount, project_dev monitor cols);
+set `$CRON_KEY`/`$REPORT_RECIPIENTS` + add the cPanel cron entry. All degrade gracefully pre-config.

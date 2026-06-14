@@ -21,13 +21,14 @@ if ($method === 'GET' && isset($_GET['id'])) {
   require_auth($conn, STAFF); // staff only
   $id = (int)$_GET['id'];
 
-  $stmt = $conn->prepare('SELECT id, company, contact_name, email, phone, tag, notes, source_lead_id, created_at
-                          FROM clients WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+  $stmt = $conn->prepare('SELECT id, company, contact_name, email, phone, tag, retainer_amount, notes, source_lead_id, created_at
+                          FROM clients WHERE id = ? AND deleted_at IS NULL LIMIT 1'); // (detail)
   $stmt->bind_param('i', $id);
   $stmt->execute();
   $client = $stmt->get_result()->fetch_assoc();
   if (!$client) fail('Client not found.', 404);
   $client['id'] = (int)$client['id'];
+  $client['retainer_amount'] = (float)($client['retainer_amount'] ?? 0);
   $client['source_lead_id'] = $client['source_lead_id'] !== null ? (int)$client['source_lead_id'] : null;
 
   $timeline = [];
@@ -103,11 +104,12 @@ if ($method === 'GET' && isset($_GET['id'])) {
 if ($method === 'GET') {
   require_auth($conn, STAFF); // staff only — never expose the client list to a client login
   $rows = [];
-  $sql = 'SELECT id, company, contact_name, email, phone, tag, notes, source_lead_id, created_at
+  $sql = 'SELECT id, company, contact_name, email, phone, tag, retainer_amount, notes, source_lead_id, created_at
           FROM clients WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 500';
   if ($res = $conn->query($sql)) {
     while ($r = $res->fetch_assoc()) {
       $r['id'] = (int)$r['id'];
+      $r['retainer_amount'] = (float)($r['retainer_amount'] ?? 0);
       $r['source_lead_id'] = $r['source_lead_id'] !== null ? (int)$r['source_lead_id'] : null;
       $rows[] = $r;
     }
@@ -125,10 +127,11 @@ if ($method === 'POST' && $action === 'create') {
   $phone   = str_field($in, 'phone', 60);
   $tag     = str_field($in, 'tag', 30);
   $notes   = str_field($in, 'notes', 5000);
+  $retainer = max(0, (float)($in['retainer_amount'] ?? 0));
   if ($tag === '' || !in_array($tag, TAGS, true)) $tag = 'one-off';
 
-  $stmt = $conn->prepare('INSERT INTO clients (company, contact_name, email, phone, tag, notes) VALUES (?, ?, ?, ?, ?, ?)');
-  $stmt->bind_param('ssssss', $company, $contact, $email, $phone, $tag, $notes);
+  $stmt = $conn->prepare('INSERT INTO clients (company, contact_name, email, phone, tag, retainer_amount, notes) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  $stmt->bind_param('sssssds', $company, $contact, $email, $phone, $tag, $retainer, $notes);
   if (!$stmt->execute()) fail('Could not create the client.', 500);
   audit($conn, $user['id'], 'client_create', $company);
   ok(['id' => $conn->insert_id], 201);
@@ -146,10 +149,11 @@ if ($method === 'POST' && $action === 'update') {
   $phone   = str_field($in, 'phone', 60);
   $tag     = str_field($in, 'tag', 30);
   $notes   = str_field($in, 'notes', 5000);
+  $retainer = max(0, (float)($in['retainer_amount'] ?? 0));
   if (!in_array($tag, TAGS, true)) $tag = 'one-off';
 
-  $stmt = $conn->prepare('UPDATE clients SET company=?, contact_name=?, email=?, phone=?, tag=?, notes=? WHERE id=? AND deleted_at IS NULL');
-  $stmt->bind_param('ssssssi', $company, $contact, $email, $phone, $tag, $notes, $id);
+  $stmt = $conn->prepare('UPDATE clients SET company=?, contact_name=?, email=?, phone=?, tag=?, retainer_amount=?, notes=? WHERE id=? AND deleted_at IS NULL');
+  $stmt->bind_param('sssssdsi', $company, $contact, $email, $phone, $tag, $retainer, $notes, $id);
   if (!$stmt->execute()) fail('Could not update the client.', 500);
   audit($conn, $user['id'], 'client_update', "#$id");
   ok(['ok' => true]);

@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { users, audit, auth, announcements, clients as clientsApi, type ManagedUser, type AuditEntry, type Client, type Session, type Announcement } from "@/lib/api"
+import { users, audit, auth, announcements, integrations, clients as clientsApi, type ManagedUser, type AuditEntry, type Client, type Session, type Announcement, type IntegrationStatus } from "@/lib/api"
 import { useAuth, type Role } from "@/store/auth.store"
 import { cn } from "@/lib/utils"
 
@@ -64,6 +64,7 @@ export default function Platform() {
           <TabsTrigger value="team">Team &amp; roles</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="announcements">Announcements</TabsTrigger>
+          <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="sessions">My sessions</TabsTrigger>
           <TabsTrigger value="audit">Audit log</TabsTrigger>
         </TabsList>
@@ -75,6 +76,9 @@ export default function Platform() {
         </TabsContent>
         <TabsContent value="announcements" className="mt-4">
           <AnnouncementsTab />
+        </TabsContent>
+        <TabsContent value="integrations" className="mt-4">
+          <IntegrationsTab />
         </TabsContent>
         <TabsContent value="sessions" className="mt-4">
           <SessionsTab />
@@ -545,6 +549,81 @@ function AnnouncementsTab() {
           </ul>
         )}
       </div>
+    </div>
+  )
+}
+
+// Integrations status — which external services are configured on the server.
+const INTEGRATIONS: { key: keyof IntegrationStatus; label: string; note: string }[] = [
+  { key: "smtp", label: "Email (SMTP)", note: "Mailbox send, invoice chasing, digests" },
+  { key: "imap", label: "Inbox (IMAP)", note: "Mailbox inbox" },
+  { key: "stripe", label: "Stripe", note: "Invoice payment links + webhook" },
+  { key: "twilio", label: "Twilio (SMS)", note: "SMS sends from Comms" },
+  { key: "openrouter", label: "OpenRouter (AI)", note: "AI assists, briefs, drafts" },
+  { key: "google", label: "Google SSO", note: "Continue-with-Google sign-in" },
+  { key: "openweather", label: "OpenWeather", note: "Dashboard weather pill" },
+  { key: "cron", label: "Cron runner", note: "Scheduled chase / billing / uptime / digest" },
+  { key: "reports", label: "Scheduled reports", note: "Weekly digest recipients" },
+]
+
+function IntegrationsTab() {
+  const [status, setStatus] = useState<IntegrationStatus | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = async () => {
+    setLoading(true)
+    const res = await integrations.status()
+    if (res.ok) {
+      setStatus(res.data)
+      setError(null)
+    } else setError(res.error)
+    setLoading(false)
+  }
+  useEffect(() => { load() }, [])
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-sm text-muted-foreground">
+          Connection status of external services. Keys live only in server <code>config.php</code> — never shown here.
+        </p>
+        <Button variant="outline" size="sm" onClick={load}>
+          <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+        </Button>
+      </div>
+
+      {error && (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+          {error} — the integrations endpoint must be live, and you must be an admin.
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+        </div>
+      ) : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {INTEGRATIONS.map((i) => {
+            const on = !!status?.[i.key]
+            return (
+              <div key={i.key} className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
+                <div>
+                  <p className="text-sm font-medium">{i.label}</p>
+                  <p className="text-xs text-muted-foreground">{i.note}</p>
+                </div>
+                <span className={cn(
+                  "rounded px-2 py-0.5 text-xs font-medium",
+                  on ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-muted text-muted-foreground",
+                )}>
+                  {on ? "Connected" : "Not set"}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }

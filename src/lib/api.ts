@@ -113,6 +113,7 @@ export type Client = {
   email: string | null
   phone: string | null
   tag: ClientTag
+  retainer_amount: number
   notes: string | null
   source_lead_id: number | null
   created_at: string
@@ -123,6 +124,7 @@ export type ClientInput = {
   email?: string
   phone?: string
   tag?: ClientTag
+  retainer_amount?: number
   notes?: string
 }
 // Client detail: lifetime value + a merged, newest-first history.
@@ -696,6 +698,44 @@ export const announcements = {
   create: (payload: { title: string; body?: string; level?: string }) =>
     api.post<{ id: number }>("/announcements.php?action=create", payload),
   remove: (id: number) => api.post<{ ok: boolean }>("/announcements.php?action=delete", { id }),
+}
+
+// Launch & Care-Plan — sites under management (projects with a prod URL),
+// with the latest uptime + SSL-expiry from the monitor.
+export type CarePlanSite = {
+  project_id: number
+  project_name: string
+  status: string
+  client_company: string | null
+  retainer_amount: number
+  prod_url: string
+  last_http_status: number | null
+  ssl_days_left: number | null
+  last_checked_at: string | null
+}
+export const careplan = {
+  list: () => api.get<CarePlanSite[]>("/careplan.php"),
+  check: (project_id: number) =>
+    api.post<{ project_id: number; last_http_status: number | null; ssl_days_left: number | null; ok: boolean }>(
+      "/careplan.php?action=check",
+      { project_id },
+    ),
+}
+
+// Integrations status (admins) — booleans only, never the keys.
+export type IntegrationStatus = {
+  smtp: boolean
+  imap: boolean
+  openrouter: boolean
+  stripe: boolean
+  twilio: boolean
+  google: boolean
+  openweather: boolean
+  cron: boolean
+  reports: boolean
+}
+export const integrations = {
+  status: () => api.get<IntegrationStatus>("/integrations.php"),
 }
 
 // Weather (CMS dashboard widget). Server proxies OpenWeather; key stays server-side.

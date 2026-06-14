@@ -20,6 +20,7 @@ import {
   FileSignature,
   BookOpen,
   FolderOpen,
+  HeartPulse,
 } from "lucide-react"
 
 import { Link } from "react-router-dom"
@@ -53,6 +54,7 @@ const navMain = [
   { key: "portal", title: "Client Portal", url: "app/portal", icon: PanelsTopLeft },
   { key: "time", title: "Time", url: "app/time", icon: Clock },
   { key: "resourcing", title: "Resourcing", url: "app/resourcing", icon: CalendarRange },
+  { key: "careplan", title: "Care Plan", url: "app/careplan", icon: HeartPulse },
   { key: "support", title: "Support", url: "app/support", icon: LifeBuoy },
   { key: "comms", title: "Comms", url: "app/comms", icon: MessagesSquare },
   { key: "mailbox", title: "Mailbox", url: "app/mailbox", icon: Mail },
