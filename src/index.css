@@ -861,8 +861,11 @@
    Uses --primary token so it adapts to the active CMS theme.
    ──────────────────────────────────────────────────────────────────────── */
 
-/* Gradient text from the active primary */
+/* CMS page title — Caudex editorial display + gradient from the active primary.
+   One rule styles all module titles (the workspace signature). See DESIGN-SYSTEM.md §3/§7. */
 .gk-app-grad {
+  font-family: 'Caudex', Georgia, 'Times New Roman', serif;
+  letter-spacing: -0.01em;
   background-image: linear-gradient(110deg,
     hsl(var(--foreground)) 0%,
     hsl(var(--primary)) 100%);

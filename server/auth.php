@@ -35,6 +35,9 @@ switch ($action) {
   case 'twofa_setup':   if ($method === 'POST') return twofa_setup($conn); break;
   case 'twofa_enable':  if ($method === 'POST') return twofa_enable($conn); break;
   case 'twofa_disable': if ($method === 'POST') return twofa_disable($conn); break;
+  case 'twofa_recodes': if ($method === 'POST') return twofa_recodes($conn); break;
+  case 'magic_request': if ($method === 'POST') return magic_request($conn); break;
+  case 'magic_consume': if ($method === 'POST') return magic_consume($conn); break;
 }
 fail('Unknown auth action.', 404);
 

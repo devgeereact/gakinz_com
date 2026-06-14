@@ -107,6 +107,13 @@ $APP_URL              = 'https://gakinz.com'; // SPA origin the SSO callback ret
 $CRON_KEY          = '';
 $REPORT_RECIPIENTS = '';  // e.g. 'founder@gakinz.com, ops@gakinz.com'
 
+// ── PayPal (payments.php) — optional. Orders API v2. ────────────────────────────
+$PAYPAL_CLIENT_ID  = '';
+$PAYPAL_SECRET     = '';
+$PAYPAL_MODE       = 'live';  // 'sandbox' | 'live'
+// ── WhatsApp via Twilio (reuses $TWILIO_SID/$TWILIO_TOKEN). Sender in whatsapp: form.
+$TWILIO_WHATSAPP_FROM = '';   // e.g. 'whatsapp:+14155238886'
+
 // ── External connectors — all optional, each degrades until set. ────────────────
 $GITHUB_TOKEN      = '';  // GitHub PAT — only needed for private repos / rate limits (public works without)
 $FIGMA_TOKEN       = '';  // Figma personal access token — required for the Design Figma preview

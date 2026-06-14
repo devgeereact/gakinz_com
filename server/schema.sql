@@ -42,6 +42,7 @@ CREATE TABLE IF NOT EXISTS users (
   cost_rate     DECIMAL(8,2) NOT NULL DEFAULT 0,         -- internal hourly cost (£) for profitability
   totp_secret   VARCHAR(64) DEFAULT NULL,                -- base32 TOTP secret (2FA)
   totp_enabled  TINYINT(1)  NOT NULL DEFAULT 0,          -- is 2FA active for this user
+  totp_recovery VARCHAR(1000) DEFAULT NULL,              -- JSON array of bcrypt-hashed backup codes
   status        VARCHAR(20)  NOT NULL DEFAULT 'active',  -- active | suspended
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -64,6 +65,17 @@ CREATE TABLE IF NOT EXISTS auth_tokens (
   expires_at   TIMESTAMP NOT NULL,
   created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_token_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Passwordless magic-link login tokens (short-lived, single-use)
+CREATE TABLE IF NOT EXISTS magic_links (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  user_id    INT NOT NULL,
+  token      CHAR(64) NOT NULL UNIQUE,
+  expires_at TIMESTAMP NOT NULL,
+  used_at    TIMESTAMP NULL DEFAULT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT fk_magic_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Password reset tokens
@@ -310,6 +322,9 @@ CREATE TABLE IF NOT EXISTS comm_messages (
 --   ALTER TABLE proposals ADD COLUMN views INT NOT NULL DEFAULT 0 AFTER share_token;
 --   ALTER TABLE proposals ADD COLUMN last_viewed_at TIMESTAMP NULL DEFAULT NULL AFTER views;
 --   ALTER TABLE proposals ADD UNIQUE KEY uk_prop_share (share_token);  -- NULLs allowed; guards token collisions
+-- 2FA recovery codes + magic-link login:
+--   ALTER TABLE users ADD COLUMN totp_recovery VARCHAR(1000) DEFAULT NULL AFTER totp_enabled;
+--   (plus run the new `magic_links` CREATE TABLE above)
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- MISSING-category modules (Design · Dev Pipeline · Resourcing · Contracts · KB).
