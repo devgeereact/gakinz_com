@@ -182,7 +182,7 @@ function reset_password(mysqli $conn): void {
   $uid = (int)$r['user_id'];
   $rid = (int)$r['id'];
 
-  $stmt = $conn->prepare('UPDATE users SET password_hash = ? WHERE id = ?');
+  $stmt = $conn->prepare('UPDATE users SET password_hash = ? WHERE id = ? AND deleted_at IS NULL');
   $stmt->bind_param('si', $hash, $uid);
   $stmt->execute();
 
