@@ -75,6 +75,51 @@ if ($method === 'POST' && $action === 'create') {
   ok(['id' => $conn->insert_id], 201);
 }
 
+// Invite a staff member: create the account with a random password, then email a
+// set-password link (7-day token) instead of handing over a temporary password.
+if ($method === 'POST' && $action === 'invite') {
+  $admin = require_auth($conn, ADMINS);
+  $in = body();
+  $name  = str_field($in, 'name', 200);
+  $email = strtolower(str_field($in, 'email', 200));
+  $role  = str_field($in, 'role', 30);
+  if ($name === '') fail('A name is required.');
+  if (!filter_var($email, FILTER_VALIDATE_EMAIL)) fail('A valid email is required.');
+  if (!in_array($role, VALID_ROLES, true) || $role === 'client') fail('Pick a staff role.');
+  if ($role === 'super_admin' && $admin['role'] !== 'super_admin') fail('Only a super admin can invite a super admin.', 403);
+  if (($GLOBALS['SMTP_HOST'] ?? '') === '') fail('Email is not configured, so invites cannot be sent.', 503);
+
+  $chk = $conn->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
+  $chk->bind_param('s', $email);
+  $chk->execute();
+  if ($chk->get_result()->fetch_assoc()) fail('A user with that email already exists.', 409);
+
+  $randomPass = bin2hex(random_bytes(16));
+  $hash = password_hash($randomPass, PASSWORD_BCRYPT);
+  $stmt = $conn->prepare('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)');
+  $stmt->bind_param('ssss', $name, $email, $hash, $role);
+  if (!$stmt->execute()) fail('Could not create the user.', 500);
+  $uid = $conn->insert_id;
+
+  // Set-password token (reuses password_resets; 7-day window for an invite).
+  $token = bin2hex(random_bytes(32));
+  $exp = (new DateTime('+7 days'))->format('Y-m-d H:i:s');
+  $ins = $conn->prepare('INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)');
+  $ins->bind_param('iss', $uid, $token, $exp);
+  $ins->execute();
+
+  $appUrl = rtrim($GLOBALS['APP_URL'] ?? 'https://gakinz.com', '/');
+  $link = "$appUrl/set-password#token=$token";
+  require_once __DIR__ . '/_smtp.php';
+  gk_send_email([
+    'to' => $email,
+    'subject' => 'You have been invited to GAkinzOS',
+    'body' => "Hello $name,\n\nYou have been added to the GAkinz studio platform. Set your password to get started (link valid 7 days):\n$link\n\nGAkinz",
+  ]);
+  audit($conn, $admin['id'], 'user_invite', "$email ($role)");
+  ok(['id' => $uid], 201);
+}
+
 if ($method === 'POST' && $action === 'role') {
   $admin = require_auth($conn, ADMINS);
   $in = body();

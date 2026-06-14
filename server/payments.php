@@ -149,4 +149,122 @@ if ($method === 'POST' && $action === 'webhook') {
   exit;
 }
 
+// ── PayPal (Orders API v2) ──────────────────────────────────────────────────
+function paypal_base(): string {
+  return (($GLOBALS['PAYPAL_MODE'] ?? 'live') === 'sandbox')
+    ? 'https://api-m.sandbox.paypal.com' : 'https://api-m.paypal.com';
+}
+function paypal_token(): string {
+  $id = $GLOBALS['PAYPAL_CLIENT_ID'] ?? '';
+  $secret = $GLOBALS['PAYPAL_SECRET'] ?? '';
+  if ($id === '' || $secret === '') return '';
+  $ch = curl_init(paypal_base() . '/v1/oauth2/token');
+  curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_USERPWD => $id . ':' . $secret,
+    CURLOPT_TIMEOUT => 30,
+    CURLOPT_POSTFIELDS => 'grant_type=client_credentials',
+  ]);
+  $res = curl_exec($ch);
+  curl_close($ch);
+  return json_decode((string)$res, true)['access_token'] ?? '';
+}
+
+// Create a PayPal order and return the approve URL.
+if ($method === 'POST' && $action === 'paypal_link') {
+  $user = require_auth($conn, PAY_STAFF);
+  if (($GLOBALS['PAYPAL_CLIENT_ID'] ?? '') === '' || ($GLOBALS['PAYPAL_SECRET'] ?? '') === '') {
+    fail('PayPal is not configured on the server.', 503);
+  }
+  if (!function_exists('curl_init')) fail('PayPal needs the PHP cURL extension.', 503);
+
+  $invoiceId = (int)(body()['invoice_id'] ?? 0);
+  if ($invoiceId <= 0) fail('An invoice id is required.');
+  $stmt = $conn->prepare(
+    'SELECT i.id, i.number, i.status, i.currency, i.vat_rate,
+            (SELECT COALESCE(SUM(qty*unit_price),0) FROM invoice_items it WHERE it.invoice_id=i.id) AS sub
+     FROM invoices i WHERE i.id = ? AND i.deleted_at IS NULL LIMIT 1'
+  );
+  $stmt->bind_param('i', $invoiceId);
+  $stmt->execute();
+  $inv = $stmt->get_result()->fetch_assoc();
+  if (!$inv) fail('Invoice not found.', 404);
+  if ($inv['status'] === 'paid') fail('This invoice is already paid.');
+  $total = round((float)$inv['sub'] * (1 + (float)$inv['vat_rate'] / 100), 2);
+  if ($total <= 0) fail('This invoice has no billable total.');
+
+  $token = paypal_token();
+  if ($token === '') fail('Could not authenticate with PayPal.', 502);
+
+  $appUrl = rtrim($GLOBALS['APP_URL'] ?? 'https://gakinz.com', '/');
+  $num = $inv['number'] ?: ('#' . $inv['id']);
+  $payload = json_encode([
+    'intent' => 'CAPTURE',
+    'purchase_units' => [[
+      'custom_id' => (string)$inv['id'],
+      'description' => 'Invoice ' . $num,
+      'amount' => ['currency_code' => strtoupper($inv['currency'] ?: 'GBP'), 'value' => number_format($total, 2, '.', '')],
+    ]],
+    'application_context' => [
+      'user_action' => 'PAY_NOW',
+      'return_url' => "$appUrl/payments.php?action=paypal_return&invoice_id=" . $inv['id'],
+      'cancel_url' => "$appUrl/app/invoicing",
+    ],
+  ]);
+  $ch = curl_init(paypal_base() . '/v2/checkout/orders');
+  curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_TIMEOUT => 30,
+    CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Authorization: Bearer ' . $token],
+    CURLOPT_POSTFIELDS => $payload,
+  ]);
+  $res = curl_exec($ch);
+  $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+  curl_close($ch);
+  $data = json_decode((string)$res, true) ?: [];
+  if ($code >= 400) { error_log('GAkinz PayPal order: ' . $res); fail('PayPal error creating the order.', 502); }
+  $approve = '';
+  foreach ($data['links'] ?? [] as $l) if (($l['rel'] ?? '') === 'approve') $approve = $l['href'];
+  if ($approve === '') fail('PayPal returned no approval URL.', 502);
+  audit($conn, $user['id'], 'invoice_paypal_link', '#' . $inv['id']);
+  ok(['url' => $approve, 'order_id' => $data['id'] ?? '']);
+}
+
+// PayPal return → capture the order, mark the invoice paid, redirect back.
+if ($method === 'GET' && $action === 'paypal_return') {
+  $appUrl = rtrim($GLOBALS['APP_URL'] ?? 'https://gakinz.com', '/');
+  $invoiceId = (int)($_GET['invoice_id'] ?? 0);
+  $orderId = preg_replace('/[^A-Za-z0-9]/', '', (string)($_GET['token'] ?? ''));
+  $bounce = "$appUrl/app/invoicing";
+  if ($invoiceId <= 0 || $orderId === '') { header("Location: $bounce?payfail=1"); exit; }
+  $token = paypal_token();
+  if ($token === '') { header("Location: $bounce?payfail=1"); exit; }
+
+  $ch = curl_init(paypal_base() . "/v2/checkout/orders/$orderId/capture");
+  curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true,
+    CURLOPT_POST => true,
+    CURLOPT_TIMEOUT => 30,
+    CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'Authorization: Bearer ' . $token],
+    CURLOPT_POSTFIELDS => '{}',
+  ]);
+  $res = curl_exec($ch);
+  curl_close($ch);
+  $data = json_decode((string)$res, true) ?: [];
+  // Require COMPLETED capture AND a custom_id matching the expected invoice.
+  $captured = ($data['status'] ?? '') === 'COMPLETED';
+  $custom = $data['purchase_units'][0]['payments']['captures'][0]['custom_id']
+          ?? ($data['purchase_units'][0]['custom_id'] ?? '');
+  if ($captured && (int)$custom === $invoiceId) {
+    $upd = $conn->prepare('UPDATE invoices SET status = "paid", paid_at = NOW() WHERE id = ? AND status <> "paid" AND deleted_at IS NULL');
+    $upd->bind_param('i', $invoiceId);
+    $upd->execute();
+    if ($upd->affected_rows > 0) audit($conn, null, 'invoice_paid_paypal', '#' . $invoiceId);
+    header("Location: $bounce?paid=1"); exit;
+  }
+  header("Location: $bounce?payfail=1"); exit;
+}
+
 fail('Unknown action.', 400);

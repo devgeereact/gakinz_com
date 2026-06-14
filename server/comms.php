@@ -23,7 +23,7 @@ require __DIR__ . '/_smtp.php';
 require __DIR__ . '/_sms.php';
 
 const STAFF = ['super_admin', 'admin', 'manager', 'editor', 'employee'];
-const CHANNELS = ['email', 'sms', 'call', 'meeting', 'client', 'internal'];
+const CHANNELS = ['email', 'sms', 'whatsapp', 'call', 'meeting', 'client', 'internal'];
 const DIRECTIONS = ['out', 'in', 'note'];
 const STATUSES = ['open', 'archived'];
 
@@ -187,19 +187,21 @@ if ($method === 'POST' && $action === 'send') {
     if (!$res['ok']) { error_log('GAkinz comms send (email): ' . $res['error']); fail('Could not send the email. Please try again.', 502); }
     $sentTo = $clientEmail;
 
-  } elseif ($channel === 'sms') {
-    if (!gk_sms_configured()) fail('SMS sending is not configured on the server.', 503);
+  } elseif ($channel === 'sms' || $channel === 'whatsapp') {
+    $isWa = $channel === 'whatsapp';
+    if ($isWa ? !gk_whatsapp_configured() : !gk_sms_configured())
+      fail(($isWa ? 'WhatsApp' : 'SMS') . ' sending is not configured on the server.', 503);
     $clientPhone = trim((string)($t['client_phone'] ?? ''));
     // Loose E.164-ish check: optional +, 7–15 digits (after stripping spaces).
     $normalized = preg_replace('/[\s\-().]/', '', $clientPhone);
     if ($normalized === '' || !preg_match('/^\+?[0-9]{7,15}$/', $normalized))
-      fail('This conversation has no valid client phone number to text.');
-    $res = gk_send_sms($normalized, $bodyText);
-    if (!$res['ok']) { error_log('GAkinz comms send (sms): ' . $res['error']); fail('Could not send the SMS. Please try again.', 502); }
+      fail('This conversation has no valid client phone number to message.');
+    $res = $isWa ? gk_send_whatsapp($normalized, $bodyText) : gk_send_sms($normalized, $bodyText);
+    if (!$res['ok']) { error_log("GAkinz comms send ($channel): " . $res['error']); fail('Could not send the ' . ($isWa ? 'WhatsApp message' : 'SMS') . '. Please try again.', 502); }
     $sentTo = $normalized;
 
   } else {
-    fail('Only email or SMS conversations can be sent.');
+    fail('Only email, SMS or WhatsApp conversations can be sent.');
   }
 
   // Record the delivered message as an outbound entry on the thread.
