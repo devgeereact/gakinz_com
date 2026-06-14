@@ -297,6 +297,9 @@ export const invoices = {
   // (payments.php?action=webhook) marks it paid once Stripe confirms.
   payLink: (invoice_id: number) =>
     api.post<{ url: string; session_id: string }>("/payments.php?action=link", { invoice_id }),
+  // PayPal: create an order and return the approve URL (capture happens on return).
+  paypalLink: (invoice_id: number) =>
+    api.post<{ url: string; order_id: string }>("/payments.php?action=paypal_link", { invoice_id }),
   // Email the client a payment reminder for an unpaid invoice (needs SMTP).
   chase: (id: number) => api.post<{ ok: boolean; sent_to: string }>("/invoices.php?action=chase", { id }),
 }
@@ -384,7 +387,7 @@ export const portal = {
 
 // Communication Hub (§6 Comms). Threads tie every conversation to a client /
 // project. No external provider yet — messages are recorded, not delivered.
-export type CommChannel = "email" | "sms" | "call" | "meeting" | "client" | "internal"
+export type CommChannel = "email" | "sms" | "whatsapp" | "call" | "meeting" | "client" | "internal"
 export type CommDirection = "out" | "in" | "note"
 export type CommThread = {
   id: number
@@ -468,6 +471,9 @@ export const users = {
     api.post<{ ok: boolean }>("/users.php?action=status", { id, status }),
   setRate: (id: number, cost_rate: number) =>
     api.post<{ ok: boolean }>("/users.php?action=rate", { id, cost_rate }),
+  // Invite a staff member (emails a set-password link instead of a temp password).
+  invite: (payload: { name: string; email: string; role: Role }) =>
+    api.post<{ id: number }>("/users.php?action=invite", payload),
 }
 
 // Audit log (§6.1).
@@ -492,8 +498,12 @@ export const auth = {
   login: (email: string, password: string, code?: string) =>
     api.post<LoginResponse>("/auth.php?action=login", { email, password, ...(code ? { code } : {}) }),
   twofaSetup: () => api.post<{ secret: string; otpauth: string }>("/auth.php?action=twofa_setup", {}),
-  twofaEnable: (code: string) => api.post<{ ok: boolean }>("/auth.php?action=twofa_enable", { code }),
+  twofaEnable: (code: string) => api.post<{ ok: boolean; recovery_codes: string[] }>("/auth.php?action=twofa_enable", { code }),
   twofaDisable: (code: string) => api.post<{ ok: boolean }>("/auth.php?action=twofa_disable", { code }),
+  twofaRecodes: (code: string) => api.post<{ ok: boolean; recovery_codes: string[] }>("/auth.php?action=twofa_recodes", { code }),
+  // Passwordless magic-link login.
+  magicRequest: (email: string) => api.post<{ ok: boolean }>("/auth.php?action=magic_request", { email }),
+  magicConsume: (token: string) => api.post<LoginResponse>("/auth.php?action=magic_consume", { token }),
   ssoStatus: () => api.get<{ google: boolean }>("/oauth.php?action=status"),
   me: () => api.get<{ user: AuthUser }>("/auth.php?action=me"),
   logout: () => api.post<{ ok: boolean }>("/auth.php?action=logout", {}),

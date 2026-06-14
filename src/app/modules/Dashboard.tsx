@@ -89,34 +89,35 @@ type KpiProps = {
 
 function Kpi({ label, value, hint, icon: Icon, to, accent, series }: KpiProps) {
   const navigate = useNavigate()
+  // Real <button> → native Enter/Space + focus. h-full + flex column keeps every
+  // KPI the same height whether or not it has a sparkline (equal cards).
   return (
-    <div
-      role="button"
-      tabIndex={0}
+    <button
+      type="button"
       onClick={() => navigate(to)}
-      onKeyDown={(e) => e.key === "Enter" && navigate(to)}
-      className="gk-app-card cursor-pointer"
+      aria-label={`${label}: ${value}${hint ? `, ${hint}` : ""}`}
+      className="gk-app-card flex h-full w-full flex-col p-5 text-left"
     >
-      <div className="p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm text-muted-foreground">{label}</p>
-            <p className="mt-1 truncate text-2xl font-semibold tracking-tight">{value}</p>
-            {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
-          </div>
-          <span
-            className={
-              accent
-                ? `inline-flex h-10 w-10 items-center justify-center rounded-lg ${accent}`
-                : "gk-app-chip h-10 w-10"
-            }
-          >
-            <Icon className="h-5 w-5" />
-          </span>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm text-muted-foreground">{label}</p>
+          <p className="mt-1 truncate text-2xl font-semibold tracking-tight">{value}</p>
+          {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
         </div>
-        {series && <Sparkline data={series} />}
+        <span
+          aria-hidden
+          className={
+            accent
+              ? `inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${accent}`
+              : "gk-app-chip h-10 w-10 shrink-0"
+          }
+        >
+          <Icon className="h-5 w-5" />
+        </span>
       </div>
-    </div>
+      {/* Sparkline pinned to the bottom so card bodies stay aligned. */}
+      <div className="mt-auto" aria-hidden>{series && <Sparkline data={series} />}</div>
+    </button>
   )
 }
 
@@ -349,7 +350,7 @@ export default function Dashboard() {
       </div>
 
       {errors.length > 0 && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200">
+        <div role="alert" className="flex items-start gap-2 rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
             Couldn’t reach: {errors.join(", ")}. Showing what loaded. If you’re running locally,
@@ -381,9 +382,9 @@ export default function Dashboard() {
       )}
 
       {brief && (
-        <div className="gk-app-ring gk-app-accent p-5">
+        <div role="status" aria-live="polite" className="gk-app-ring gk-app-accent p-5">
           <div className="flex gap-3">
-            <span className="gk-app-chip mt-0.5 h-8 w-8 shrink-0">
+            <span aria-hidden className="gk-app-chip mt-0.5 h-8 w-8 shrink-0">
               <Sparkles className="h-4 w-4" />
             </span>
             <p className="text-sm leading-relaxed">{brief}</p>
@@ -451,7 +452,7 @@ export default function Dashboard() {
 
       <div className="grid grid-cols-12 gap-6">
         {/* Revenue trend */}
-        <Card className="gk-app-accent col-span-12 overflow-hidden xl:col-span-7">
+        <Card className="gk-app-accent col-span-12 h-full overflow-hidden xl:col-span-7">
           <CardHeader>
             <CardTitle className="text-base">Revenue (paid)</CardTitle>
           </CardHeader>
@@ -461,6 +462,10 @@ export default function Dashboard() {
                 No paid invoices yet. Settled invoices will chart here.
               </p>
             ) : (
+              <div
+                role="img"
+                aria-label={`Paid revenue over the last ${revenueSeries.length} months, from ${revenueSeries[0]?.month} to ${revenueSeries[revenueSeries.length - 1]?.month}.`}
+              >
               <ResponsiveContainer width="100%" height={260}>
                 <AreaChart data={revenueSeries} margin={{ left: -10, right: 8, top: 8 }}>
                   <defs>
@@ -495,12 +500,13 @@ export default function Dashboard() {
                   />
                 </AreaChart>
               </ResponsiveContainer>
+              </div>
             )}
           </CardContent>
         </Card>
 
         {/* Pipeline */}
-        <Card className="col-span-12 xl:col-span-5">
+        <Card className="col-span-12 h-full xl:col-span-5">
           <CardHeader>
             <CardTitle className="text-base">Lead pipeline</CardTitle>
           </CardHeader>
@@ -529,7 +535,7 @@ export default function Dashboard() {
         </Card>
 
         {/* Recent leads */}
-        <Card className="col-span-12 xl:col-span-7">
+        <Card className="col-span-12 h-full xl:col-span-7">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-base">Recent leads</CardTitle>
             <Button variant="ghost" size="sm" onClick={() => navigate("/app/leads")}>
@@ -544,20 +550,23 @@ export default function Dashboard() {
             ) : (
               <ul className="divide-y">
                 {recentLeads.map((l) => (
-                  <li
-                    key={l.id}
-                    className="flex cursor-pointer items-center justify-between gap-3 py-2.5 hover:text-primary"
-                    onClick={() => navigate("/app/leads")}
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{l.name}</p>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {l.company || l.email}
-                      </p>
-                    </div>
-                    <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs capitalize">
-                      {l.status}
-                    </span>
+                  <li key={l.id}>
+                    <button
+                      type="button"
+                      onClick={() => navigate("/app/leads")}
+                      aria-label={`Lead ${l.name}${l.company ? `, ${l.company}` : ""}, status ${l.status}. Open leads.`}
+                      className="flex w-full items-center justify-between gap-3 py-2.5 text-left hover:text-primary"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">{l.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {l.company || l.email}
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs capitalize">
+                        {l.status}
+                      </span>
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -566,7 +575,7 @@ export default function Dashboard() {
         </Card>
 
         {/* Snapshot tiles */}
-        <Card className="col-span-12 xl:col-span-5">
+        <Card className="col-span-12 h-full xl:col-span-5">
           <CardHeader>
             <CardTitle className="text-base">Studio snapshot</CardTitle>
           </CardHeader>
@@ -578,9 +587,9 @@ export default function Dashboard() {
               to="/app/projects"
             />
             <Snapshot
-              label="Proposals out"
-              value={money(stats.outstanding)}
-              to="/app/proposals"
+              label="Active projects"
+              value={String(stats.activeProjects)}
+              to="/app/projects"
             />
             <Snapshot
               label="Overdue invoices"
@@ -598,8 +607,10 @@ function Snapshot({ label, value, to }: { label: string; value: string; to: stri
   const navigate = useNavigate()
   return (
     <button
+      type="button"
       onClick={() => navigate(to)}
-      className="gk-app-card p-4 text-left"
+      aria-label={`${label}: ${value}`}
+      className="gk-app-card flex h-full flex-col p-4 text-left"
     >
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="mt-1 text-xl font-semibold">{value}</p>

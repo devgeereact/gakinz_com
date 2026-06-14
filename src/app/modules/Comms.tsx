@@ -51,6 +51,7 @@ import AiAssist from "@/app/components/AiAssist"
 const CHANNELS: { key: CommChannel; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
   { key: "email", label: "Email", icon: Mail },
   { key: "sms", label: "SMS", icon: MessageSquare },
+  { key: "whatsapp", label: "WhatsApp", icon: MessageSquare },
   { key: "call", label: "Call", icon: Phone },
   { key: "meeting", label: "Meeting", icon: CalendarDays },
   { key: "client", label: "Client", icon: Users2 },
@@ -197,7 +198,8 @@ export default function Comms() {
     const res = await comms.send(detail.id, composer)
     setSending(false)
     if (res.ok) {
-      toast.success(`${res.data.channel === "sms" ? "Text" : "Email"} sent to ${res.data.sent_to}.`)
+      const kind = res.data.channel === "sms" ? "Text" : res.data.channel === "whatsapp" ? "WhatsApp message" : "Email"
+      toast.success(`${kind} sent to ${res.data.sent_to}.`)
       setComposer("")
       await loadDetail(detail.id)
       loadThreads()
@@ -206,10 +208,11 @@ export default function Comms() {
     }
   }
 
-  // An email or SMS conversation tied to a client can be delivered, not just logged.
+  // An email / SMS / WhatsApp conversation tied to a client can be delivered.
   const canSend =
-    !!detail && (detail.channel === "email" || detail.channel === "sms") && detail.client_id != null
-  const sendLabel = detail?.channel === "sms" ? "Send SMS" : "Send email"
+    !!detail && ["email", "sms", "whatsapp"].includes(detail.channel) && detail.client_id != null
+  const sendLabel =
+    detail?.channel === "sms" ? "Send SMS" : detail?.channel === "whatsapp" ? "Send WhatsApp" : "Send email"
 
   const toggleArchive = async () => {
     if (!detail) return

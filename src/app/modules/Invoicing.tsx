@@ -156,6 +156,18 @@ export default function Invoicing() {
     }
   }
 
+  const createPayPal = async (inv: Invoice) => {
+    setBusyId(inv.id)
+    const res = await invoices.paypalLink(inv.id)
+    setBusyId(null)
+    if (res.ok) {
+      window.open(res.data.url, "_blank", "noopener")
+      toast.success("PayPal opened — the invoice marks paid automatically once approved.")
+    } else {
+      toast.error(res.error || "Could not create a PayPal link.")
+    }
+  }
+
   const chase = async (inv: Invoice) => {
     setBusyId(inv.id)
     const res = await invoices.chase(inv.id)
@@ -343,6 +355,11 @@ export default function Invoicing() {
                       {inv.status !== "paid" && (
                         <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => createPayLink(inv)} title="Create a Stripe payment link">
                           <CreditCard className="mr-1 h-3.5 w-3.5" /> Pay link
+                        </Button>
+                      )}
+                      {inv.status !== "paid" && (
+                        <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => createPayPal(inv)} title="Create a PayPal checkout">
+                          PayPal
                         </Button>
                       )}
                       {inv.status !== "paid" && (

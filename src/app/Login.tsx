@@ -25,6 +25,7 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [ssoGoogle, setSsoGoogle] = useState(false)
+  const [magicSent, setMagicSent] = useState(false)
   const setAuth = useAuth((s) => s.setAuth)
   const setUser = useAuth((s) => s.setUser)
   const token = useAuth((s) => s.token)
@@ -53,7 +54,20 @@ export default function Login() {
     const params = new URLSearchParams(hash)
     const ssoToken = params.get("sso_token")
     const ssoError = params.get("sso_error")
-    if (ssoError) {
+    const magic = params.get("magic")
+    if (magic) {
+      window.history.replaceState(null, "", window.location.pathname)
+      setBusy(true)
+      auth.magicConsume(magic).then((r) => {
+        setBusy(false)
+        if (r.ok) {
+          setAuth(r.data.token, r.data.user)
+          navigate(defaultPathForRole(r.data.user.role), { replace: true })
+        } else {
+          setError(r.error || "That sign-in link is invalid or expired.")
+        }
+      })
+    } else if (ssoError) {
       setError(SSO_ERRORS[ssoError] || "Google sign-in failed.")
       window.history.replaceState(null, "", window.location.pathname)
     } else if (ssoToken) {
@@ -97,6 +111,18 @@ export default function Login() {
     } else {
       setError(res.error)
     }
+  }
+
+  const sendMagic = async () => {
+    if (!email.trim()) {
+      setError("Enter your email first, then request a link.")
+      return
+    }
+    setError(null)
+    setBusy(true)
+    await auth.magicRequest(email.trim())
+    setBusy(false)
+    setMagicSent(true)
   }
 
   return (
@@ -189,6 +215,23 @@ export default function Login() {
                 Continue with Google
               </Button>
             </>
+          )}
+
+          {!needs2fa && (
+            magicSent ? (
+              <p className="mt-4 text-center text-sm text-muted-foreground">
+                If that email has an account, a sign-in link is on its way. Check your inbox.
+              </p>
+            ) : (
+              <button
+                type="button"
+                onClick={sendMagic}
+                disabled={busy}
+                className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground"
+              >
+                Email me a sign-in link instead
+              </button>
+            )
           )}
         </div>
 
