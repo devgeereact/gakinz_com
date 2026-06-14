@@ -147,6 +147,28 @@ function TeamTab() {
     }
   }
 
+  const inviteUser = async () => {
+    if (!form.name.trim() || !form.email.trim()) {
+      toast.error("Name and email are required to invite.")
+      return
+    }
+    if (form.role === "client") {
+      toast.error("Invites are for staff. Create a client account from the client record.")
+      return
+    }
+    setSaving(true)
+    const res = await users.invite({ name: form.name, email: form.email, role: form.role })
+    setSaving(false)
+    if (res.ok) {
+      toast.success("Invite sent — they'll get a set-password link by email.")
+      setForm({ name: "", email: "", password: "", role: "employee", client_id: "" })
+      setOpen(false)
+      load()
+    } else {
+      toast.error(res.error || "Could not send the invite.")
+    }
+  }
+
   const changeRole = async (u: ManagedUser, role: Role) => {
     setItems((xs) => xs.map((x) => (x.id === u.id ? { ...x, role } : x)))
     const res = await users.setRole(u.id, role)
@@ -231,7 +253,10 @@ function TeamTab() {
                 </div>
               )}
             </div>
-            <DialogFooter>
+            <DialogFooter className="gap-2 sm:gap-2">
+              <Button variant="outline" onClick={inviteUser} disabled={saving} title="Email a set-password link instead of setting a password">
+                Send invite
+              </Button>
               <Button onClick={createUser} disabled={saving}>
                 {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Create user
@@ -374,6 +399,7 @@ function SecurityTab() {
   const [otpauth, setOtpauth] = useState("")
   const [code, setCode] = useState("")
   const [busy, setBusy] = useState(false)
+  const [codes, setCodes] = useState<string[]>([]) // recovery codes shown once
 
   useEffect(() => {
     // Read current 2FA state from the team list (admins) or assume off otherwise.
@@ -403,6 +429,7 @@ function SecurityTab() {
       setSecret("")
       setOtpauth("")
       setCode("")
+      setCodes(res.data.recovery_codes || [])
       toast.success("Two-factor enabled.")
     } else toast.error(res.error || "Could not enable 2FA.")
   }
@@ -413,8 +440,19 @@ function SecurityTab() {
     if (res.ok) {
       setEnabled(false)
       setCode("")
+      setCodes([])
       toast.success("Two-factor disabled.")
     } else toast.error(res.error || "Could not disable 2FA.")
+  }
+  const regen = async () => {
+    setBusy(true)
+    const res = await auth.twofaRecodes(code.trim())
+    setBusy(false)
+    if (res.ok) {
+      setCodes(res.data.recovery_codes || [])
+      setCode("")
+      toast.success("New recovery codes generated. Old ones no longer work.")
+    } else toast.error(res.error || "Could not regenerate codes.")
   }
 
   return (
@@ -432,9 +470,10 @@ function SecurityTab() {
             </span>
             <div className="flex items-end gap-2">
               <div>
-                <Label htmlFor="dcode">Current code to disable</Label>
+                <Label htmlFor="dcode">Current code</Label>
                 <Input id="dcode" value={code} onChange={(e) => setCode(e.target.value)} className="mt-1.5 w-40" placeholder="123456" />
               </div>
+              <Button variant="outline" onClick={regen} disabled={busy}>Regenerate codes</Button>
               <Button variant="outline" onClick={disable} disabled={busy}>
                 {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Disable
               </Button>
@@ -461,6 +500,23 @@ function SecurityTab() {
           </div>
         )}
       </div>
+
+      {codes.length > 0 && (
+        <div className="rounded-xl border border-amber-300/60 bg-amber-50 p-5 dark:border-amber-500/30 dark:bg-amber-950/30">
+          <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">Save your recovery codes</h3>
+          <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+            Each works once if you lose your authenticator. Stored hashed — they won't be shown again.
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2 font-mono text-sm">
+            {codes.map((c) => (
+              <code key={c} className="rounded bg-background px-2 py-1 text-center">{c}</code>
+            ))}
+          </div>
+          <Button variant="outline" size="sm" className="mt-3" onClick={() => navigator.clipboard?.writeText(codes.join("\n"))}>
+            Copy all
+          </Button>
+        </div>
+      )}
     </div>
   )
 }
@@ -564,6 +620,8 @@ const INTEGRATIONS: { key: keyof IntegrationStatus; label: string; note: string 
   { key: "openweather", label: "OpenWeather", note: "Dashboard weather pill" },
   { key: "cron", label: "Cron runner", note: "Scheduled chase / billing / uptime / digest" },
   { key: "reports", label: "Scheduled reports", note: "Weekly digest recipients" },
+  { key: "paypal", label: "PayPal", note: "Invoice checkout via PayPal" },
+  { key: "whatsapp", label: "WhatsApp", note: "Send WhatsApp from Comms (Twilio)" },
   { key: "github", label: "GitHub", note: "Commits / PRs / CI in Dev Pipeline" },
   { key: "figma", label: "Figma", note: "Design file preview + thumbnail" },
   { key: "slack", label: "Slack", note: "Announcements broadcast to a channel" },

@@ -17,6 +17,7 @@ import { UserDropdown } from "@/components/UserDropdown"
 import WeatherPill from "@/app/components/WeatherPill"
 import ClockPill from "@/app/components/ClockPill"
 import NotificationBell from "@/app/components/NotificationBell"
+import LockScreen from "@/app/components/LockScreen"
 
 export default function AppLayout() {
   const [scrolled, setScrolled] = useState(false)
@@ -51,6 +52,7 @@ export default function AppLayout() {
 
   return (
     <SidebarProvider open={isExpanded} onOpenChange={setOpen}>
+      <LockScreen />
       <AppSidebar onHoverChange={setHovered} />
 
       <SidebarInset>

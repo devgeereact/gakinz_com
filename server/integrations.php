@@ -28,4 +28,6 @@ ok([
   'figma'      => $has('FIGMA_TOKEN'),
   'slack'      => $has('SLACK_WEBHOOK_URL'),
   'calendly'   => $has('CALENDLY_URL'),
+  'paypal'     => $has('PAYPAL_CLIENT_ID') && $has('PAYPAL_SECRET'),
+  'whatsapp'   => $has('TWILIO_SID') && $has('TWILIO_WHATSAPP_FROM'),
 ]);

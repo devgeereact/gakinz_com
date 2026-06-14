@@ -770,6 +770,8 @@ export type IntegrationStatus = {
   figma: boolean
   slack: boolean
   calendly: boolean
+  paypal: boolean
+  whatsapp: boolean
 }
 export const integrations = {
   status: () => api.get<IntegrationStatus>("/integrations.php"),

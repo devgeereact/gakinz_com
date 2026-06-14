@@ -409,3 +409,20 @@ creation. Each is a net-new OAuth integration — provide a sandbox app + creden
   no auth). Proposals module: "Share"/"Copy link" button + a view count with last-viewed tooltip.
 ⚠️ DEPLOY: client via `dist/` push; server hand-upload updated `leads.php proposals.php`; migrations at foot of
 `schema.sql` (enquiries tags/score/lost_reason, proposals share_token/views/last_viewed_at). No new tables.
+
+**Keyed/auth batch (this session) — PayPal · WhatsApp · magic-link · invite · lock · 2FA recovery:**
+- **PayPal** (`payments.php` `paypal_link`/`paypal_return`, Orders v2) — Invoicing "PayPal" button beside Stripe;
+  capture on return marks the invoice paid (custom_id verified). Config `$PAYPAL_CLIENT_ID/_SECRET/_MODE`.
+- **WhatsApp** (`_sms.php` `gk_send_whatsapp`, Twilio) — new `whatsapp` Comms channel; "Send WhatsApp" on
+  whatsapp threads with a client. Config `$TWILIO_WHATSAPP_FROM` (reuses Twilio SID/token).
+- **Magic-link login** (`auth.php` `magic_request`/`magic_consume` + `magic_links` table) — Login "Email me a
+  sign-in link"; consumes `/login#magic=token`. Needs SMTP.
+- **Team invite** (`users.php` `invite`) — creates the account + emails a 7-day set-password link; new
+  standalone `/set-password` page (`SetPassword.tsx`). Platform → Team "Send invite" button.
+- **Lock screen** (`LockScreen.tsx` in AppLayout) — 15-min idle overlay; unlock re-runs login (password + 2FA).
+- **2FA recovery codes** (`users.totp_recovery`) — 10 codes issued on enable (shown once), consumed at login if
+  the authenticator is lost, regenerate via `twofa_recodes`. Platform → Security shows/regenerates them.
+- Integrations hub + `integrations.php` extended with paypal/whatsapp booleans.
+⚠️ DEPLOY: client via `dist/` push; server hand-upload `payments.php _sms.php comms.php auth.php users.php
+integrations.php`; migrations at foot of `schema.sql` (users.totp_recovery + `magic_links` table); optional config
+`$PAYPAL_*`, `$TWILIO_WHATSAPP_FROM`. All degrade until keyed.
