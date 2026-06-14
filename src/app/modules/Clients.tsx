@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Loader2, Download, RefreshCw, Plus } from "lucide-react"
+import { Loader2, Download, RefreshCw, Plus, Building2 } from "lucide-react"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -31,9 +31,9 @@ import {
 } from "@/components/ui/table"
 import { clients, type Client, type ClientInput, type ClientTag, type ClientDetail } from "@/lib/api"
 import { cn } from "@/lib/utils"
-
-const gbp = (n: number) =>
-  new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(n)
+import { gbp } from "@/lib/format"
+import { EmptyState } from "@/app/components/EmptyState"
+import { TableSkeleton } from "@/app/components/TableSkeleton"
 
 const timelineMeta: Record<ClientDetail["timeline"][number]["type"], { label: string; cls: string }> = {
   proposal: { label: "Proposal", cls: "bg-primary/10 text-primary" },
@@ -216,13 +216,13 @@ export default function Clients() {
 
       <div className="rounded-xl border border-border bg-card">
         {loading ? (
-          <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading clients…
-          </div>
+          <TableSkeleton rows={6} cols={5} />
         ) : items.length === 0 ? (
-          <div className="p-10 text-center text-sm text-muted-foreground">
-            No clients yet. Add one, or convert a won lead from the Leads board.
-          </div>
+          <EmptyState
+            icon={Building2}
+            title="No clients yet"
+            description="Add one, or convert a won lead from the Leads board."
+          />
         ) : (
           <Table>
             <TableHeader>
