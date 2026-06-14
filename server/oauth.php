@@ -32,6 +32,7 @@ if ($action === 'status') {
 }
 
 if (!$configured) fail('Google SSO is not configured on the server.', 503);
+if (!function_exists('curl_init')) fail('Google SSO needs the PHP cURL extension.', 503);
 
 if ($action === 'start') {
   $params = http_build_query([

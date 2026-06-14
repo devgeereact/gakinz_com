@@ -80,7 +80,9 @@ function cron_billing(mysqli $conn): array {
     $ins->execute();
     $iid = $conn->insert_id;
     $num = sprintf('GK-INV-%04d', $iid);
-    $conn->query("UPDATE invoices SET number = '$num' WHERE id = $iid");
+    $setNum = $conn->prepare('UPDATE invoices SET number = ? WHERE id = ?');
+    $setNum->bind_param('si', $num, $iid);
+    $setNum->execute();
     $desc = 'Care plan / retainer — ' . date('F Y');
     $it = $conn->prepare('INSERT INTO invoice_items (invoice_id, description, qty, unit_price) VALUES (?, ?, 1, ?)');
     $it->bind_param('isd', $iid, $desc, $amount);
@@ -114,7 +116,12 @@ function cron_digest(mysqli $conn): array {
   if ($recips === '' || empty($GLOBALS['SMTP_HOST'])) return ['skipped' => 'no recipients/smtp'];
   require_once __DIR__ . '/_smtp.php';
 
-  $val = fn(string $sql) => ($r = $conn->query($sql)) ? array_values($r->fetch_assoc())[0] : 0;
+  $val = function (string $sql) use ($conn) {
+    $r = @$conn->query($sql);
+    if (!$r) return 0;
+    $row = $r->fetch_assoc();
+    return $row ? array_values($row)[0] : 0;
+  };
   $openLeads = $val("SELECT COUNT(*) FROM enquiries WHERE status NOT IN ('won','lost') AND deleted_at IS NULL");
   $activeProjects = $val("SELECT COUNT(*) FROM projects WHERE status <> 'launched' AND deleted_at IS NULL");
   $paid = $val("SELECT COALESCE(SUM((SELECT COALESCE(SUM(qty*unit_price),0) FROM invoice_items it WHERE it.invoice_id=i.id)*(1+i.vat_rate/100)),0) FROM invoices i WHERE i.status='paid' AND i.deleted_at IS NULL");

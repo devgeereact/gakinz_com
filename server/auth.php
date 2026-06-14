@@ -317,7 +317,7 @@ function twofa_disable(mysqli $conn): void {
   $stmt->bind_param('i', $uid);
   $stmt->execute();
   $row = $stmt->get_result()->fetch_assoc();
-  if (empty($row['totp_enabled'])) ok(['ok' => true]); // already off
+  if (!$row || empty($row['totp_enabled'])) ok(['ok' => true]); // already off / not found
   if (!gk_totp_verify((string)$row['totp_secret'], $code)) fail('Enter a current code to turn off two-factor.');
   $stmt = $conn->prepare('UPDATE users SET totp_enabled = 0, totp_secret = NULL WHERE id = ?');
   $stmt->bind_param('i', $uid);

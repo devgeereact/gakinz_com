@@ -28,7 +28,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T
       // purge auth — RequireAuth then redirects to /login instead of leaving the
       // user stuck on a module that keeps erroring. (No-op pre-login.) Exception:
       // a 2FA-required 401 during login must NOT clear (there's nothing to clear).
-      if (res.status === 401 && !(body && body.two_factor_required)) useAuth.getState().clear()
+      if (res.status === 401 && body?.two_factor_required !== true) useAuth.getState().clear()
       return { ok: false, error: (body && body.error) || `Request failed (${res.status})`, status: res.status, details: body || undefined }
     }
     return { ok: true, data: body as T }
