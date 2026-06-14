@@ -21,6 +21,9 @@ CREATE TABLE IF NOT EXISTS enquiries (
   message      TEXT NOT NULL,
   source       VARCHAR(50)  DEFAULT 'website',
   status       VARCHAR(30)  DEFAULT 'new',   -- new | contacted | proposal | won | lost
+  tags         VARCHAR(255) DEFAULT NULL,    -- comma-separated labels
+  score        INT NOT NULL DEFAULT 0,       -- 0 unscored | 1 cold | 2 warm | 3 hot
+  lost_reason  VARCHAR(300) DEFAULT NULL,    -- captured when moved to 'lost'
   ip           VARCHAR(45)  DEFAULT NULL,
   created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -137,6 +140,9 @@ CREATE TABLE IF NOT EXISTS proposals (
   status      VARCHAR(20) NOT NULL DEFAULT 'draft', -- draft | sent | accepted | declined
   currency    VARCHAR(3)  NOT NULL DEFAULT 'GBP',
   vat_rate    DECIMAL(5,2) NOT NULL DEFAULT 0,      -- % VAT carried onto the scheduled invoices
+  share_token CHAR(40) DEFAULT NULL,                -- public read-only link token
+  views       INT NOT NULL DEFAULT 0,               -- public-view count
+  last_viewed_at TIMESTAMP NULL DEFAULT NULL,       -- last time the client opened the link
   notes       TEXT DEFAULT NULL,
   valid_until DATE NULL DEFAULT NULL,
   project_id  INT NULL,                              -- set when accepted
@@ -296,6 +302,13 @@ CREATE TABLE IF NOT EXISTS comm_messages (
 --   ALTER TABLE project_dev ADD COLUMN last_http_status INT NULL DEFAULT NULL AFTER checklist;
 --   ALTER TABLE project_dev ADD COLUMN ssl_days_left INT NULL DEFAULT NULL AFTER last_http_status;
 --   ALTER TABLE project_dev ADD COLUMN last_checked_at TIMESTAMP NULL DEFAULT NULL AFTER ssl_days_left;
+-- Lead depth (tags / scoring / lost-reason) + proposal sharing/view-tracking:
+--   ALTER TABLE enquiries ADD COLUMN tags VARCHAR(255) DEFAULT NULL AFTER status;
+--   ALTER TABLE enquiries ADD COLUMN score INT NOT NULL DEFAULT 0 AFTER tags;
+--   ALTER TABLE enquiries ADD COLUMN lost_reason VARCHAR(300) DEFAULT NULL AFTER score;
+--   ALTER TABLE proposals ADD COLUMN share_token CHAR(40) DEFAULT NULL AFTER vat_rate;
+--   ALTER TABLE proposals ADD COLUMN views INT NOT NULL DEFAULT 0 AFTER share_token;
+--   ALTER TABLE proposals ADD COLUMN last_viewed_at TIMESTAMP NULL DEFAULT NULL AFTER views;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- MISSING-category modules (Design · Dev Pipeline · Resourcing · Contracts · KB).

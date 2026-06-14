@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Loader2, Plus, RefreshCw, Trash2, Send, Check, X } from "lucide-react"
+import { Loader2, Plus, RefreshCw, Trash2, Send, Check, X, Share2, Eye } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -145,6 +145,22 @@ export default function Proposals() {
     if (res.ok) {
       setItems((xs) => xs.map((x) => (x.id === p.id ? { ...x, status: "declined" } : x)))
     } else toast.error(res.error || "Could not decline.")
+  }
+
+  const share = async (p: Proposal) => {
+    setBusyId(p.id)
+    const res = await proposals.share(p.id)
+    setBusyId(null)
+    if (res.ok) {
+      const url = `${window.location.origin}/p/${res.data.token}`
+      setItems((xs) => xs.map((x) => (x.id === p.id ? { ...x, share_token: res.data.token } : x)))
+      try {
+        await navigator.clipboard.writeText(url)
+        toast.success("Public link copied to clipboard.")
+      } catch {
+        toast.success(`Public link: ${url}`)
+      }
+    } else toast.error(res.error || "Could not create a link.")
   }
 
   const accept = async (p: Proposal) => {
@@ -322,7 +338,15 @@ export default function Proposals() {
                   </TableCell>
                   <TableCell className="text-right font-medium">{gbp(p.total)}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
+                    <div className="flex items-center justify-end gap-1">
+                      {p.views > 0 && (
+                        <span className="mr-1 inline-flex items-center gap-0.5 text-xs text-muted-foreground" title={p.last_viewed_at ? `Last viewed ${new Date(p.last_viewed_at.replace(" ", "T")).toLocaleString("en-GB")}` : undefined}>
+                          <Eye className="h-3.5 w-3.5" /> {p.views}
+                        </span>
+                      )}
+                      <Button variant="ghost" size="sm" disabled={busyId === p.id} onClick={() => share(p)} title="Copy a public read-only link">
+                        <Share2 className="mr-1 h-3.5 w-3.5" /> {p.share_token ? "Copy link" : "Share"}
+                      </Button>
                       {p.status === "draft" && (
                         <Button variant="ghost" size="sm" disabled={busyId === p.id} onClick={() => send(p)}>
                           <Send className="mr-1 h-3.5 w-3.5" /> Send

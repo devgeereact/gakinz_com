@@ -36,6 +36,9 @@ export const router = createBrowserRouter([
   // 🔐 Member login (standalone, full-screen) — lazy
   { path: "login", lazy: lz(() => import("@/app/Login")) },
 
+  // 🔗 Public read-only proposal (share link) — standalone, lazy
+  { path: "p/:token", lazy: lz(() => import("@/marketing/pages/ProposalView")) },
+
   // 🌐 PUBLIC CORPORATE SITE (gakinz.com)
   {
     element: <PublicLayout />,

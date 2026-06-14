@@ -21,11 +21,12 @@ $action = $_GET['action'] ?? '';
 if ($method === 'GET') {
   require_auth($conn, STAFF); // staff only — a client must never read all leads
   $rows = [];
-  $sql = 'SELECT id, name, email, company, budget, project_type, message, status, source, created_at
+  $sql = 'SELECT id, name, email, company, budget, project_type, message, status, source, tags, score, lost_reason, created_at
           FROM enquiries WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 500';
   if ($res = $conn->query($sql)) {
     while ($r = $res->fetch_assoc()) {
       $r['id'] = (int)$r['id'];
+      $r['score'] = (int)($r['score'] ?? 0);
       $rows[] = $r;
     }
   }
@@ -40,12 +41,39 @@ if ($method === 'POST' && $action === 'status') {
   if ($id <= 0) fail('A lead id is required.');
   if (!in_array($status, STAGES, true)) fail('Invalid stage.');
 
-  $stmt = $conn->prepare('UPDATE enquiries SET status = ? WHERE id = ? AND deleted_at IS NULL');
-  $stmt->bind_param('si', $status, $id);
+  // Capture a lost-reason when moving to 'lost'; clear it otherwise.
+  if ($status === 'lost') {
+    $reason = str_field($in, 'lost_reason', 300);
+    $stmt = $conn->prepare('UPDATE enquiries SET status = ?, lost_reason = ? WHERE id = ? AND deleted_at IS NULL');
+    $stmt->bind_param('ssi', $status, $reason, $id);
+  } else {
+    $stmt = $conn->prepare('UPDATE enquiries SET status = ?, lost_reason = NULL WHERE id = ? AND deleted_at IS NULL');
+    $stmt->bind_param('si', $status, $id);
+  }
   $stmt->execute();
   if ($stmt->affected_rows < 1) fail('Lead not found.', 404);
 
   audit($conn, $user['id'], 'lead_status', "#$id → $status");
+  ok(['ok' => true]);
+}
+
+if ($method === 'POST' && $action === 'meta') {
+  $user = require_auth($conn, STAFF);
+  $in = body();
+  $id = (int)($in['id'] ?? 0);
+  if ($id <= 0) fail('A lead id is required.');
+  $tags = str_field($in, 'tags', 255);
+  $score = max(0, min(3, (int)($in['score'] ?? 0)));
+  $stmt = $conn->prepare('UPDATE enquiries SET tags = ?, score = ? WHERE id = ? AND deleted_at IS NULL');
+  $stmt->bind_param('sii', $tags, $score, $id);
+  $stmt->execute();
+  if ($stmt->affected_rows < 1) {
+    $chk = $conn->prepare('SELECT id FROM enquiries WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+    $chk->bind_param('i', $id);
+    $chk->execute();
+    if (!$chk->get_result()->fetch_assoc()) fail('Lead not found.', 404);
+  }
+  audit($conn, $user['id'], 'lead_meta', "#$id");
   ok(['ok' => true]);
 }
 

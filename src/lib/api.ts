@@ -96,12 +96,17 @@ export type Lead = {
   message: string
   status: LeadStage
   source: string
+  tags: string | null
+  score: number // 0 unscored | 1 cold | 2 warm | 3 hot
+  lost_reason: string | null
   created_at: string
 }
 export const leads = {
   list: () => api.get<Lead[]>("/leads.php"),
-  setStatus: (id: number, status: LeadStage) =>
-    api.post<{ ok: boolean }>("/leads.php?action=status", { id, status }),
+  setStatus: (id: number, status: LeadStage, lost_reason?: string) =>
+    api.post<{ ok: boolean }>("/leads.php?action=status", { id, status, ...(lost_reason ? { lost_reason } : {}) }),
+  setMeta: (id: number, payload: { tags?: string; score?: number }) =>
+    api.post<{ ok: boolean }>("/leads.php?action=meta", { id, ...payload }),
 }
 
 // Clients / CRM (§6 Clients).
@@ -204,12 +209,27 @@ export type Proposal = {
   status: ProposalStatus
   currency: string
   vat_rate: number
+  share_token: string | null
+  views: number
+  last_viewed_at: string | null
   valid_until: string | null
   client_id: number | null
   project_id: number | null
   client_company: string | null
   total: number // ex VAT (line-item sum)
   created_at: string
+}
+// Public read-only proposal (by share token) — no auth.
+export type PublicProposal = {
+  id: number
+  title: string
+  status: ProposalStatus
+  currency: string
+  vat_rate: number
+  notes: string | null
+  valid_until: string | null
+  client_company: string | null
+  items: { description: string; qty: number; unit_price: number }[]
 }
 // One leg of the 40/30/30 schedule auto-created when a proposal is accepted.
 export type ScheduledInvoice = { id: number; number: string; label: string; amount: number; due_at: string }
@@ -230,6 +250,9 @@ export const proposals = {
       "/proposals.php?action=accept",
       { id },
     ),
+  share: (id: number) => api.post<{ token: string }>("/proposals.php?action=share", { id }),
+  // Public, no-auth read-only fetch by share token (records a view server-side).
+  publicView: (token: string) => api.get<PublicProposal>(`/proposals.php?token=${encodeURIComponent(token)}`),
 }
 
 // Invoicing (§6 Invoicing & Payments). Manual mark-as-paid.

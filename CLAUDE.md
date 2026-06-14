@@ -398,3 +398,14 @@ $CALENDLY_URL`. No schema change.
 **Still NOT built (need full OAuth apps + sandbox testing, not doable headless):** Xero / QuickBooks two-way
 accounting sync; Google Drive / Box / Dropbox storage backends (local file storage exists); Zoom/Meet meeting
 creation. Each is a net-new OAuth integration — provide a sandbox app + credentials to build one.
+
+**Backlog batch B1 — CRM + sales depth (no external keys):**
+- **Leads depth:** `enquiries` gained `tags`/`score`/`lost_reason`. Kanban board already existed; added a
+  score badge (Cold/Warm/Hot), tag chips, a per-card Tags&score editor (`leads.php?action=meta`), and a
+  lost-reason capture dialog when moving a lead to "lost" (`leads.php?action=status` now stores `lost_reason`).
+- **Proposal sharing + view tracking:** `proposals` gained `share_token`/`views`/`last_viewed_at`.
+  `proposals.php?action=share` issues a token; public `proposals.php?token=` returns a read-only proposal and
+  records a view. New standalone public route `/p/:token` → `src/marketing/pages/ProposalView.tsx` (light theme,
+  no auth). Proposals module: "Share"/"Copy link" button + a view count with last-viewed tooltip.
+⚠️ DEPLOY: client via `dist/` push; server hand-upload updated `leads.php proposals.php`; migrations at foot of
+`schema.sql` (enquiries tags/score/lost_reason, proposals share_token/views/last_viewed_at). No new tables.

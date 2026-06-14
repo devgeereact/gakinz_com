@@ -1,9 +1,19 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Loader2, Download, RefreshCw, Mail, Building2, UserPlus } from "lucide-react"
+import { Loader2, Download, RefreshCw, Mail, Building2, UserPlus, Tag, Flame } from "lucide-react"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import {
   Select,
   SelectContent,
@@ -13,6 +23,15 @@ import {
 } from "@/components/ui/select"
 import { leads, clients, type Lead, type LeadStage } from "@/lib/api"
 import AiAssist from "@/app/components/AiAssist"
+import { cn } from "@/lib/utils"
+
+const SCORE_META: Record<number, { label: string; cls: string }> = {
+  0: { label: "Unscored", cls: "bg-muted text-muted-foreground" },
+  1: { label: "Cold", cls: "bg-sky-500/15 text-sky-700 dark:text-sky-300" },
+  2: { label: "Warm", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
+  3: { label: "Hot", cls: "bg-destructive/10 text-destructive" },
+}
+const parseTags = (t: string | null) => (t ? t.split(",").map((x) => x.trim()).filter(Boolean) : [])
 
 const STAGES: { key: LeadStage; label: string }[] = [
   { key: "new", label: "New" },
@@ -35,6 +54,15 @@ export default function Leads() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [converting, setConverting] = useState<number | null>(null)
+
+  // Lost-reason capture
+  const [lostFor, setLostFor] = useState<Lead | null>(null)
+  const [lostReason, setLostReason] = useState("")
+  // Tags + score editor
+  const [editFor, setEditFor] = useState<Lead | null>(null)
+  const [editTags, setEditTags] = useState("")
+  const [editScore, setEditScore] = useState("0")
+  const [savingMeta, setSavingMeta] = useState(false)
 
   const load = async () => {
     setLoading(true)
@@ -59,13 +87,50 @@ export default function Leads() {
   }, [items])
 
   const move = async (lead: Lead, status: LeadStage) => {
+    // Moving to "lost" → capture a reason first.
+    if (status === "lost") {
+      setLostFor(lead)
+      setLostReason(lead.lost_reason ?? "")
+      return
+    }
     const prev = lead.status
-    setItems((xs) => xs.map((x) => (x.id === lead.id ? { ...x, status } : x)))
+    setItems((xs) => xs.map((x) => (x.id === lead.id ? { ...x, status, lost_reason: null } : x)))
     const res = await leads.setStatus(lead.id, status)
     if (!res.ok) {
       setItems((xs) => xs.map((x) => (x.id === lead.id ? { ...x, status: prev } : x)))
       toast.error(res.error || "Could not update the lead.")
     }
+  }
+
+  const confirmLost = async () => {
+    if (!lostFor) return
+    const id = lostFor.id
+    const reason = lostReason.trim()
+    setItems((xs) => xs.map((x) => (x.id === id ? { ...x, status: "lost", lost_reason: reason } : x)))
+    setLostFor(null)
+    const res = await leads.setStatus(id, "lost", reason || undefined)
+    if (!res.ok) {
+      toast.error(res.error || "Could not update the lead.")
+      load()
+    }
+  }
+
+  const openEdit = (lead: Lead) => {
+    setEditFor(lead)
+    setEditTags(lead.tags ?? "")
+    setEditScore(String(lead.score ?? 0))
+  }
+  const saveMeta = async () => {
+    if (!editFor) return
+    setSavingMeta(true)
+    const tags = editTags.trim()
+    const score = Number(editScore)
+    const res = await leads.setMeta(editFor.id, { tags, score })
+    setSavingMeta(false)
+    if (res.ok) {
+      setItems((xs) => xs.map((x) => (x.id === editFor.id ? { ...x, tags, score } : x)))
+      setEditFor(null)
+    } else toast.error(res.error || "Could not save.")
   }
 
   const convert = async (lead: Lead) => {
@@ -136,8 +201,25 @@ export default function Leads() {
                     <div key={lead.id} className="rounded-lg border border-border bg-card p-3 shadow-sm">
                       <div className="flex items-start justify-between gap-2">
                         <span className="text-sm font-medium">{lead.name}</span>
-                        <span className="text-xs text-muted-foreground">{formatDate(lead.created_at)}</span>
+                        <div className="flex items-center gap-1">
+                          {lead.score > 0 && (
+                            <span className={cn("inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium", SCORE_META[lead.score].cls)}>
+                              <Flame className="h-2.5 w-2.5" /> {SCORE_META[lead.score].label}
+                            </span>
+                          )}
+                          <span className="text-xs text-muted-foreground">{formatDate(lead.created_at)}</span>
+                        </div>
                       </div>
+                      {parseTags(lead.tags).length > 0 && (
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {parseTags(lead.tags).map((t) => (
+                            <span key={t} className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">{t}</span>
+                          ))}
+                        </div>
+                      )}
+                      {lead.status === "lost" && lead.lost_reason && (
+                        <p className="mt-1 text-[11px] italic text-muted-foreground">Lost: {lead.lost_reason}</p>
+                      )}
                       {lead.company && (
                         <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                           <Building2 className="h-3 w-3" /> {lead.company}
@@ -190,6 +272,15 @@ export default function Leads() {
                           variant="outline"
                           size="icon"
                           className="h-8 w-8 flex-shrink-0"
+                          title="Tags & score"
+                          onClick={() => openEdit(lead)}
+                        >
+                          <Tag className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-8 w-8 flex-shrink-0"
                           title="Convert to client"
                           onClick={() => convert(lead)}
                           disabled={converting === lead.id}
@@ -209,6 +300,56 @@ export default function Leads() {
           ))}
         </div>
       )}
+
+      {/* Lost-reason capture */}
+      <Dialog open={!!lostFor} onOpenChange={(o) => !o && setLostFor(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark “{lostFor?.name}” as lost</DialogTitle>
+          </DialogHeader>
+          <div>
+            <Label htmlFor="lostreason">Why was it lost?</Label>
+            <Textarea id="lostreason" rows={3} value={lostReason} onChange={(e) => setLostReason(e.target.value)} className="mt-1.5" placeholder="e.g. budget, timing, went with a competitor…" />
+            <p className="mt-1.5 text-xs text-muted-foreground">Captured for win/loss reporting.</p>
+          </div>
+          <DialogFooter>
+            <Button onClick={confirmLost}>Mark lost</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Tags & score */}
+      <Dialog open={!!editFor} onOpenChange={(o) => !o && setEditFor(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tags &amp; score — {editFor?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Score</Label>
+              <Select value={editScore} onValueChange={setEditScore}>
+                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="0">Unscored</SelectItem>
+                  <SelectItem value="1">Cold</SelectItem>
+                  <SelectItem value="2">Warm</SelectItem>
+                  <SelectItem value="3">Hot</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="ltags">Tags</Label>
+              <Input id="ltags" value={editTags} onChange={(e) => setEditTags(e.target.value)} className="mt-1.5" placeholder="comma, separated, labels" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={saveMeta} disabled={savingMeta}>
+              {savingMeta && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

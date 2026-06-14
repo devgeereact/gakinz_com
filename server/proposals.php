@@ -17,6 +17,43 @@ const STAFF = ['super_admin', 'admin', 'manager', 'editor'];
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
+// ── Public read-only view by share token (no auth). Records a view. ──────────
+if ($method === 'GET' && isset($_GET['token'])) {
+  $token = preg_replace('/[^a-f0-9]/', '', (string)$_GET['token']);
+  if ($token === '') fail('Invalid link.', 404);
+  $stmt = $conn->prepare(
+    'SELECT p.id, p.title, p.status, p.currency, p.vat_rate, p.notes, p.valid_until,
+            c.company AS client_company
+     FROM proposals p LEFT JOIN clients c ON c.id = p.client_id
+     WHERE p.share_token = ? AND p.deleted_at IS NULL LIMIT 1'
+  );
+  $stmt->bind_param('s', $token);
+  $stmt->execute();
+  $p = $stmt->get_result()->fetch_assoc();
+  if (!$p) fail('This proposal link is invalid or has expired.', 404);
+  $p['id'] = (int)$p['id'];
+  $p['vat_rate'] = (float)$p['vat_rate'];
+
+  $items = [];
+  $stmt = $conn->prepare('SELECT description, qty, unit_price FROM proposal_items WHERE proposal_id = ? ORDER BY id ASC');
+  $stmt->bind_param('i', $p['id']);
+  $stmt->execute();
+  $res = $stmt->get_result();
+  while ($r = $res->fetch_assoc()) {
+    $r['qty'] = (float)$r['qty'];
+    $r['unit_price'] = (float)$r['unit_price'];
+    $items[] = $r;
+  }
+  $p['items'] = $items;
+
+  // Record the view (best-effort).
+  $upd = $conn->prepare('UPDATE proposals SET views = views + 1, last_viewed_at = NOW() WHERE id = ?');
+  $upd->bind_param('i', $p['id']);
+  $upd->execute();
+
+  ok($p);
+}
+
 if ($method === 'GET' && isset($_GET['id'])) {
   require_auth($conn, STAFF); // staff only
   $id = (int)$_GET['id'];
@@ -51,7 +88,8 @@ if ($method === 'GET' && isset($_GET['id'])) {
 if ($method === 'GET') {
   require_auth($conn, STAFF); // staff only
   $rows = [];
-  $sql = 'SELECT p.id, p.title, p.status, p.currency, p.vat_rate, p.valid_until, p.client_id, p.project_id,
+  $sql = 'SELECT p.id, p.title, p.status, p.currency, p.vat_rate, p.share_token, p.views, p.last_viewed_at,
+                 p.valid_until, p.client_id, p.project_id,
                  c.company AS client_company, p.created_at,
                  (SELECT COALESCE(SUM(qty * unit_price), 0) FROM proposal_items i WHERE i.proposal_id = p.id) AS total
           FROM proposals p LEFT JOIN clients c ON c.id = p.client_id
@@ -62,6 +100,7 @@ if ($method === 'GET') {
       $r['client_id'] = $r['client_id'] !== null ? (int)$r['client_id'] : null;
       $r['project_id'] = $r['project_id'] !== null ? (int)$r['project_id'] : null;
       $r['vat_rate'] = (float)$r['vat_rate'];
+      $r['views'] = (int)($r['views'] ?? 0);
       $r['total'] = (float)$r['total'];
       $rows[] = $r;
     }
@@ -192,6 +231,26 @@ if ($method === 'POST' && $action === 'accept') {
   }
   audit($conn, $user['id'], 'proposal_accept', "#$id → project #$projectId + 3 invoices (40/30/30)");
   ok(['ok' => true, 'project_id' => $projectId, 'invoices' => $schedule]);
+}
+
+// Issue (or reuse) a public share token for a read-only proposal link.
+if ($method === 'POST' && $action === 'share') {
+  $user = require_auth($conn, STAFF);
+  $id = (int)(body()['id'] ?? 0);
+  if ($id <= 0) fail('A proposal id is required.');
+  $stmt = $conn->prepare('SELECT share_token FROM proposals WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  $row = $stmt->get_result()->fetch_assoc();
+  if (!$row) fail('Proposal not found.', 404);
+  $token = $row['share_token'] ?: bin2hex(random_bytes(20));
+  if (!$row['share_token']) {
+    $upd = $conn->prepare('UPDATE proposals SET share_token = ? WHERE id = ?');
+    $upd->bind_param('si', $token, $id);
+    $upd->execute();
+  }
+  audit($conn, $user['id'], 'proposal_share', "#$id");
+  ok(['token' => $token]);
 }
 
 fail('Method not allowed.', 405);
