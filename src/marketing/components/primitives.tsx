@@ -137,11 +137,14 @@ export function CtaBand({
   return (
     <section className="relative overflow-hidden">
       <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <div className="gk-glow relative overflow-hidden rounded-3xl bg-gradient-to-br from-[hsl(242_47%_34%)] via-primary to-[hsl(258_90%_66%)] px-6 py-16 text-center text-primary-foreground sm:py-20">
-          <div className="absolute inset-0 gk-dots opacity-30" aria-hidden />
+        {/* Dark-forest editorial accent band — grain texture over a deep green
+           gradient, cream type. See DESIGN-SYSTEM.md §2/§7. */}
+        <div className="gk-glow relative overflow-hidden rounded-3xl bg-gradient-to-br from-[hsl(130_18%_12%)] via-[hsl(98_24%_24%)] to-[hsl(91_18%_36%)] px-6 py-16 text-center text-[hsl(47_42%_91%)] sm:py-20">
+          <span className="gk-grain" aria-hidden />
+          <div className="absolute inset-0 gk-dots opacity-20" aria-hidden />
           <FadeIn>
             <h2 className="relative font-serif text-3xl font-bold sm:text-4xl">{title}</h2>
-            <p className="relative mx-auto mt-4 max-w-xl text-primary-foreground/85">{intro}</p>
+            <p className="relative mx-auto mt-4 max-w-xl text-[hsl(47_42%_91%)]/80">{intro}</p>
             <div className="relative mt-8">
               <Button asChild size="lg" variant="secondary" className="gk-shine shadow-xl">
                 <Link to={to}>

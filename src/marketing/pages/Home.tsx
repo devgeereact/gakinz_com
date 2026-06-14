@@ -44,6 +44,7 @@ export default function Home() {
       <section className="relative overflow-hidden border-b border-border">
         <div className="gk-aurora" aria-hidden />
         <div className="absolute inset-0 gk-grid" aria-hidden />
+        <span className="gk-grain" aria-hidden />
         <div className="relative mx-auto max-w-6xl px-4 pb-12 pt-20 sm:px-6 sm:pb-16 sm:pt-28">
           <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_0.95fr]">
             <FadeIn>
