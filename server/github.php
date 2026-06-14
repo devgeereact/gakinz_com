@@ -43,7 +43,10 @@ $base = "/repos/$owner/$repo";
 
 [$rc, $repoData] = gh_get($base);
 if ($rc === 404) fail('Repository not found (or private without a token).', 404);
-if ($rc === 403) fail('GitHub rate limit reached. Add a $GITHUB_TOKEN in config.', 429);
+if ($rc === 403) {
+  $hasToken = trim((string)($GLOBALS['GITHUB_TOKEN'] ?? '')) !== '';
+  fail('GitHub rate limit reached.' . ($hasToken ? ' Try again shortly.' : ' Add a $GITHUB_TOKEN in config to raise the limit.'), 429);
+}
 if ($rc >= 400 || !is_array($repoData)) fail('Could not reach GitHub.', 502);
 
 $commits = [];

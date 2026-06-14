@@ -15,6 +15,7 @@ function gk_slack_post(string $text): array {
     CURLOPT_POST => true,
     CURLOPT_HTTPHEADER => ['Content-Type: application/json'],
     CURLOPT_POSTFIELDS => json_encode(['text' => $text]),
+    CURLOPT_CONNECTTIMEOUT => 3, // fail fast on DNS/connect hang (runs inline on announce)
     CURLOPT_TIMEOUT => 8,
   ]);
   $resp = curl_exec($ch);
