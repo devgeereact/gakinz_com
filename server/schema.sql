@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS proposals (
   status      VARCHAR(20) NOT NULL DEFAULT 'draft', -- draft | sent | accepted | declined
   currency    VARCHAR(3)  NOT NULL DEFAULT 'GBP',
   vat_rate    DECIMAL(5,2) NOT NULL DEFAULT 0,      -- % VAT carried onto the scheduled invoices
-  share_token CHAR(40) DEFAULT NULL,                -- public read-only link token
+  share_token CHAR(40) DEFAULT NULL UNIQUE,         -- public read-only link token (NULLs allowed)
   views       INT NOT NULL DEFAULT 0,               -- public-view count
   last_viewed_at TIMESTAMP NULL DEFAULT NULL,       -- last time the client opened the link
   notes       TEXT DEFAULT NULL,
@@ -309,6 +309,7 @@ CREATE TABLE IF NOT EXISTS comm_messages (
 --   ALTER TABLE proposals ADD COLUMN share_token CHAR(40) DEFAULT NULL AFTER vat_rate;
 --   ALTER TABLE proposals ADD COLUMN views INT NOT NULL DEFAULT 0 AFTER share_token;
 --   ALTER TABLE proposals ADD COLUMN last_viewed_at TIMESTAMP NULL DEFAULT NULL AFTER views;
+--   ALTER TABLE proposals ADD UNIQUE KEY uk_prop_share (share_token);  -- NULLs allowed; guards token collisions
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- MISSING-category modules (Design · Dev Pipeline · Resourcing · Contracts · KB).
