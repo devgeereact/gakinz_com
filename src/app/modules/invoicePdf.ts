@@ -2,8 +2,8 @@ import { jsPDF } from "jspdf"
 import autoTable from "jspdf-autotable"
 import type { InvoiceDetail } from "@/lib/api"
 
-const VIOLET: [number, number, number] = [110, 86, 207] // #6e56cf
-const INK: [number, number, number] = [42, 42, 74] // #2a2a4a
+const VIOLET: [number, number, number] = [62, 82, 50] // #3E5232 deep sage (forest brand)
+const INK: [number, number, number] = [45, 58, 47] // #2D3A2F forest ink
 
 const gbp = (n: number) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(n)

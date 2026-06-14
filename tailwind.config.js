@@ -21,8 +21,8 @@ var config = {
                 sm: 'calc(var(--radius) - 4px)'
             },
             fontFamily: {
-                sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                serif: ['Georgia', 'Times New Roman', 'serif'],
+                sans: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                serif: ['Caudex', 'Georgia', 'Times New Roman', 'serif'],
                 mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
             },
             colors: {

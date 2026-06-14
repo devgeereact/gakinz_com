@@ -52,10 +52,10 @@ function monthLabel(key: string) {
 }
 
 const STATUS_COLORS: Record<Project["status"], string> = {
-  planning: "#a48fff",
-  in_progress: "#6e56cf",
-  on_hold: "#f59e0b",
-  launched: "#10b981",
+  planning: "#A8C090",
+  in_progress: "#5A6B4A",
+  on_hold: "#c08a3e",
+  launched: "#3E7D52",
 }
 const STATUS_LABEL: Record<Project["status"], string> = {
   planning: "Planning",
@@ -311,7 +311,7 @@ export default function Analytics() {
                     }}
                   />
                   <Bar dataKey="paid" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="outstanding" stackId="a" fill="#6e56cf" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="outstanding" stackId="a" fill="#5A6B4A" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -396,7 +396,7 @@ export default function Analytics() {
                       background: "hsl(var(--popover))",
                     }}
                   />
-                  <Bar dataKey="pct" fill="#6e56cf" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="pct" fill="#5A6B4A" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             )}
