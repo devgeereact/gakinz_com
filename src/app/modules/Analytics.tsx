@@ -15,6 +15,7 @@ import { Loader2, RefreshCw, TrendingUp, Target, Receipt, Clock, Download } from
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
+import { money } from "@/lib/format"
 import {
   leads as leadsApi,
   invoices as invoicesApi,
@@ -34,14 +35,6 @@ import {
 // conversion, project mix, utilisation — all derived from the same live API the
 // operational modules write to. No separate analytics store; numbers can never
 // drift from the source of truth.
-
-function money(n: number, currency = "GBP") {
-  return new Intl.NumberFormat("en-GB", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(n)
-}
 
 function monthKey(iso: string) {
   return iso.slice(0, 7)

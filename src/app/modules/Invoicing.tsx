@@ -38,10 +38,8 @@ import {
   type Client,
 } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { gbp } from "@/lib/format"
 import { downloadInvoicePdf } from "./invoicePdf"
-
-const gbp = (n: number) =>
-  new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(n)
 
 const statusClass: Record<InvoiceStatus, string> = {
   draft: "bg-muted text-muted-foreground",

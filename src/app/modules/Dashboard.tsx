@@ -27,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
+import { money } from "@/lib/format"
 import {
   leads as leadsApi,
   clients as clientsApi,
@@ -48,14 +49,6 @@ import {
 // overview — pipeline, delivery, cash, support, utilisation — so staff land on
 // real numbers, not demo content. Every section degrades on its own: a failed
 // endpoint shows a quiet error in its card and the rest of the page still works.
-
-function money(n: number, currency = "GBP") {
-  return new Intl.NumberFormat("en-GB", {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(n)
-}
 
 function monthKey(iso: string) {
   // "2026-06-01 ..." → "2026-06"
