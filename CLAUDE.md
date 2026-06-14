@@ -379,3 +379,22 @@ All degrade gracefully pre-migration / pre-config.
 ⚠️ DEPLOY: client via `dist/` push; server hand-upload NEW `cron.php careplan.php integrations.php _monitor.php`
 + updated `clients.php`; migrations at foot of `schema.sql` (clients.retainer_amount, project_dev monitor cols);
 set `$CRON_KEY`/`$REPORT_RECIPIENTS` + add the cPanel cron entry. All degrade gracefully pre-config.
+
+**External connectors (this session) — token/webhook/URL based, degrade-until-keyed:**
+- **GitHub** (`github.php`, PAT optional via `$GITHUB_TOKEN` — public repos work tokenless) → Dev Pipeline shows
+  recent commits, open PRs and the latest Actions/CI run for a project's repo URL (auto-loads when repo is a
+  github.com URL).
+- **Figma** (`figma.php`, needs `$FIGMA_TOKEN`) → Design module "Preview" button resolves a review's Figma URL
+  to its name + thumbnail + last-modified.
+- **Slack** (`_slack.php` + `slack.php`, `$SLACK_WEBHOOK_URL`) → announcements broadcast to a channel; Platform →
+  Integrations has a "Test" button. Best-effort (never blocks the announcement).
+- **Calendly** (`book.php` public GET, `$CALENDLY_URL`) → "Book a discovery call" CTA on the public Contact page
+  (hidden until configured).
+- Integrations hub + `integrations.php` extended with github/figma/slack/calendly booleans.
+⚠️ DEPLOY: client via `dist/` push; server hand-upload NEW `github.php figma.php slack.php _slack.php book.php`
++ updated `integrations.php announcements.php`; add optional keys `$GITHUB_TOKEN $FIGMA_TOKEN $SLACK_WEBHOOK_URL
+$CALENDLY_URL`. No schema change.
+
+**Still NOT built (need full OAuth apps + sandbox testing, not doable headless):** Xero / QuickBooks two-way
+accounting sync; Google Drive / Box / Dropbox storage backends (local file storage exists); Zoom/Meet meeting
+creation. Each is a net-new OAuth integration — provide a sandbox app + credentials to build one.

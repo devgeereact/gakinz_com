@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { dev, type DevProjectRow, type DevMeta, type Deploy } from "@/lib/api"
+import { dev, github, type DevProjectRow, type DevMeta, type Deploy, type GithubRepo } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 // Build / QA checklist keys (SEO + a11y + perf + cross-browser fundamentals).
@@ -125,6 +125,21 @@ function ProjectPipeline({ project, onChanged }: { project: DevProjectRow; onCha
   const [depNotes, setDepNotes] = useState("")
   const [deploying, setDeploying] = useState(false)
 
+  // GitHub panel
+  const [gh, setGh] = useState<GithubRepo | null>(null)
+  const [ghLoading, setGhLoading] = useState(false)
+  const [ghError, setGhError] = useState<string | null>(null)
+
+  const loadGithub = async (url: string) => {
+    if (!/github\.com/i.test(url)) { setGh(null); setGhError(null); return }
+    setGhLoading(true)
+    setGhError(null)
+    const res = await github.repo(url)
+    setGhLoading(false)
+    if (res.ok) setGh(res.data)
+    else { setGh(null); setGhError(res.error) }
+  }
+
   const load = async () => {
     setLoading(true)
     const res = await dev.get(project.id)
@@ -139,6 +154,8 @@ function ProjectPipeline({ project, onChanged }: { project: DevProjectRow; onCha
       } catch {
         setChecks({})
       }
+      if (res.data.meta?.repo_url) loadGithub(res.data.meta.repo_url)
+      else setGh(null)
     }
     setLoading(false)
   }
@@ -278,6 +295,58 @@ function ProjectPipeline({ project, onChanged }: { project: DevProjectRow; onCha
               )}
             </div>
           </div>
+
+          {/* GitHub */}
+          {(ghLoading || gh || ghError) && (
+            <div className="lg:col-span-2 rounded-lg border border-border bg-muted/20 p-4">
+              <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                <Github className="h-4 w-4" /> GitHub{gh ? ` · ${gh.repo}` : ""}
+                {gh?.run && (
+                  <span className={cn(
+                    "rounded px-1.5 py-0.5 text-xs font-medium",
+                    gh.run.conclusion === "success" ? "bg-accent text-accent-foreground"
+                      : gh.run.conclusion === "failure" ? "bg-destructive/10 text-destructive"
+                      : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+                  )}>
+                    CI: {gh.run.conclusion || gh.run.status}
+                  </span>
+                )}
+              </h3>
+              {ghLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading from GitHub…</div>
+              ) : ghError ? (
+                <p className="text-sm text-muted-foreground">{ghError}</p>
+              ) : gh ? (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Recent commits</p>
+                    <ul className="space-y-1">
+                      {gh.commits.map((c) => (
+                        <li key={c.sha} className="text-sm">
+                          <a href={c.url} target="_blank" rel="noopener noreferrer" className="font-mono text-xs text-primary hover:underline">{c.sha}</a>{" "}
+                          <span>{c.message}</span>
+                          <span className="text-xs text-muted-foreground"> — {c.author}</span>
+                        </li>
+                      ))}
+                      {gh.commits.length === 0 && <li className="text-sm text-muted-foreground">No commits.</li>}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Open PRs ({gh.pulls.length})</p>
+                    <ul className="space-y-1">
+                      {gh.pulls.map((p) => (
+                        <li key={p.number} className="text-sm">
+                          <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">#{p.number}</a>{" "}
+                          {p.title}<span className="text-xs text-muted-foreground"> — {p.author}</span>
+                        </li>
+                      ))}
+                      {gh.pulls.length === 0 && <li className="text-sm text-muted-foreground">No open PRs.</li>}
+                    </ul>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          )}
         </div>
       )}
     </div>

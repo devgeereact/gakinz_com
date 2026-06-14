@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Loader2, Plus, RefreshCw, ExternalLink, Check, MessageSquare, Trash2 } from "lucide-react"
+import { Loader2, Plus, RefreshCw, ExternalLink, Check, MessageSquare, Trash2, Eye } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { design, projects as projectsApi, type DesignReview, type DesignStatus, type Project } from "@/lib/api"
+import { design, figma as figmaApi, projects as projectsApi, type DesignReview, type DesignStatus, type Project, type FigmaFile } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 const statusClass: Record<DesignStatus, string> = {
@@ -53,6 +53,24 @@ export default function Design() {
   // Request-changes dialog
   const [changeFor, setChangeFor] = useState<DesignReview | null>(null)
   const [comment, setComment] = useState("")
+
+  // Figma preview dialog
+  const [figmaOpen, setFigmaOpen] = useState(false)
+  const [figmaData, setFigmaData] = useState<FigmaFile | null>(null)
+  const [figmaLoading, setFigmaLoading] = useState(false)
+  const [figmaErr, setFigmaErr] = useState<string | null>(null)
+
+  const preview = async (r: DesignReview) => {
+    if (!r.figma_url) return
+    setFigmaOpen(true)
+    setFigmaData(null)
+    setFigmaErr(null)
+    setFigmaLoading(true)
+    const res = await figmaApi.file(r.figma_url)
+    setFigmaLoading(false)
+    if (res.ok) setFigmaData(res.data)
+    else setFigmaErr(res.error)
+  }
 
   const load = async () => {
     setLoading(true)
@@ -227,6 +245,11 @@ export default function Design() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
+                      {r.figma_url && (
+                        <Button variant="ghost" size="sm" onClick={() => preview(r)} title="Preview Figma file">
+                          <Eye className="mr-1 h-3.5 w-3.5" /> Preview
+                        </Button>
+                      )}
                       {r.status !== "approved" && (
                         <Button variant="ghost" size="sm" disabled={busyId === r.id} onClick={() => approve(r)}>
                           <Check className="mr-1 h-3.5 w-3.5" /> Approve
@@ -246,6 +269,34 @@ export default function Design() {
           </Table>
         )}
       </div>
+
+      <Dialog open={figmaOpen} onOpenChange={setFigmaOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{figmaData?.name ?? "Figma preview"}</DialogTitle>
+          </DialogHeader>
+          {figmaLoading ? (
+            <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading from Figma…
+            </div>
+          ) : figmaErr ? (
+            <p className="py-6 text-sm text-muted-foreground">{figmaErr}</p>
+          ) : figmaData ? (
+            <div className="space-y-3">
+              {figmaData.thumbnail ? (
+                <img src={figmaData.thumbnail} alt={figmaData.name} className="w-full rounded-lg border border-border" />
+              ) : (
+                <p className="text-sm text-muted-foreground">No thumbnail available.</p>
+              )}
+              {figmaData.last_modified && (
+                <p className="text-xs text-muted-foreground">
+                  Last modified {new Date(figmaData.last_modified).toLocaleString("en-GB")}
+                </p>
+              )}
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!changeFor} onOpenChange={(o) => !o && setChangeFor(null)}>
         <DialogContent>

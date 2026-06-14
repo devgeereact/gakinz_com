@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { Mail, MapPin, Clock, Loader2 } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Mail, MapPin, Clock, Loader2, CalendarClock } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { company, contactSteps } from "@/marketing/data/site"
-import { contact, type EnquiryPayload } from "@/lib/api"
+import { contact, booking, type EnquiryPayload } from "@/lib/api"
 import { PageHero, Section, SectionHeading } from "../components/primitives"
 import FadeIn from "../components/FadeIn"
 
@@ -33,6 +33,12 @@ export default function Contact() {
   const [form, setForm] = useState<EnquiryPayload>(empty)
   const [sending, setSending] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [bookUrl, setBookUrl] = useState("")
+
+  // Discovery-call booking link (Calendly) — shown only when configured.
+  useEffect(() => {
+    booking.url().then((r) => r.ok && r.data.url && setBookUrl(r.data.url))
+  }, [])
 
   const set = (k: keyof EnquiryPayload, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -66,6 +72,24 @@ export default function Contact() {
         title="Tell us what you are building"
         intro="Send a few lines about your project. We will come back with a clear next step, not a hard sell."
       />
+      {bookUrl && (
+        <Section>
+          <div className="gk-card flex flex-col items-center gap-4 rounded-2xl p-8 text-center sm:flex-row sm:justify-between sm:text-left">
+            <div className="flex items-center gap-3">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <CalendarClock className="h-5 w-5" />
+              </span>
+              <div>
+                <h3 className="text-lg font-bold">Prefer to talk it through?</h3>
+                <p className="text-sm text-muted-foreground">Book a free 30-minute discovery call.</p>
+              </div>
+            </div>
+            <Button asChild size="lg" className="gk-shine">
+              <a href={bookUrl} target="_blank" rel="noopener noreferrer">Book a discovery call</a>
+            </Button>
+          </div>
+        </Section>
+      )}
       <Section>
         <div className="grid gap-12 lg:grid-cols-[1fr_1.4fr]">
           {/* Details */}

@@ -733,9 +733,42 @@ export type IntegrationStatus = {
   openweather: boolean
   cron: boolean
   reports: boolean
+  github: boolean
+  figma: boolean
+  slack: boolean
+  calendly: boolean
 }
 export const integrations = {
   status: () => api.get<IntegrationStatus>("/integrations.php"),
+  slackTest: () => api.post<{ ok: boolean }>("/slack.php?action=test", {}),
+}
+
+// GitHub connector — recent commits / open PRs / latest CI run for a repo URL.
+export type GithubCommit = { sha: string; message: string; author: string; date: string; url: string }
+export type GithubPull = { number: number; title: string; author: string; url: string }
+export type GithubRun = { name: string; status: string; conclusion: string; url: string; date: string }
+export type GithubRepo = {
+  repo: string
+  url: string
+  default_branch: string
+  open_issues: number
+  commits: GithubCommit[]
+  pulls: GithubPull[]
+  run: GithubRun | null
+}
+export const github = {
+  repo: (url: string) => api.get<GithubRepo>(`/github.php?url=${encodeURIComponent(url)}`),
+}
+
+// Figma connector — file name / thumbnail / last-modified for a Figma URL.
+export type FigmaFile = { key: string; name: string; last_modified: string | null; thumbnail: string | null; version: string | null }
+export const figma = {
+  file: (url: string) => api.get<FigmaFile>(`/figma.php?url=${encodeURIComponent(url)}`),
+}
+
+// Discovery-call booking (Calendly). Public — returns "" when not configured.
+export const booking = {
+  url: () => api.get<{ url: string }>("/book.php"),
 }
 
 // Weather (CMS dashboard widget). Server proxies OpenWeather; key stays server-side.

@@ -564,6 +564,10 @@ const INTEGRATIONS: { key: keyof IntegrationStatus; label: string; note: string 
   { key: "openweather", label: "OpenWeather", note: "Dashboard weather pill" },
   { key: "cron", label: "Cron runner", note: "Scheduled chase / billing / uptime / digest" },
   { key: "reports", label: "Scheduled reports", note: "Weekly digest recipients" },
+  { key: "github", label: "GitHub", note: "Commits / PRs / CI in Dev Pipeline" },
+  { key: "figma", label: "Figma", note: "Design file preview + thumbnail" },
+  { key: "slack", label: "Slack", note: "Announcements broadcast to a channel" },
+  { key: "calendly", label: "Calendly", note: "Discovery-call booking" },
 ]
 
 function IntegrationsTab() {
@@ -613,12 +617,26 @@ function IntegrationsTab() {
                   <p className="text-sm font-medium">{i.label}</p>
                   <p className="text-xs text-muted-foreground">{i.note}</p>
                 </div>
-                <span className={cn(
-                  "rounded px-2 py-0.5 text-xs font-medium",
-                  on ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-muted text-muted-foreground",
-                )}>
-                  {on ? "Connected" : "Not set"}
-                </span>
+                <div className="flex items-center gap-2">
+                  {i.key === "slack" && on && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        const r = await integrations.slackTest()
+                        r.ok ? toast.success("Posted to Slack.") : toast.error(r.error || "Slack test failed.")
+                      }}
+                    >
+                      Test
+                    </Button>
+                  )}
+                  <span className={cn(
+                    "rounded px-2 py-0.5 text-xs font-medium",
+                    on ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-muted text-muted-foreground",
+                  )}>
+                    {on ? "Connected" : "Not set"}
+                  </span>
+                </div>
               </div>
             )
           })}

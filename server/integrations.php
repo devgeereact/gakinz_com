@@ -24,4 +24,8 @@ ok([
   'openweather'=> $has('OPENWEATHER_API_KEY'),
   'cron'       => $has('CRON_KEY'),
   'reports'    => $has('REPORT_RECIPIENTS'),
+  'github'     => $has('GITHUB_TOKEN'),
+  'figma'      => $has('FIGMA_TOKEN'),
+  'slack'      => $has('SLACK_WEBHOOK_URL'),
+  'calendly'   => $has('CALENDLY_URL'),
 ]);

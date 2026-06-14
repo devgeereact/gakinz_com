@@ -39,8 +39,13 @@ if ($method === 'POST' && $action === 'create') {
   $stmt = $conn->prepare('INSERT INTO announcements (title, body, level, created_by) VALUES (?, ?, ?, ?)');
   $stmt->bind_param('sssi', $title, $bodyText, $level, $uid);
   if (!$stmt->execute()) fail('Could not post the announcement.', 500);
+  $newId = $conn->insert_id;
   audit($conn, $uid, 'announcement_create', $title);
-  ok(['id' => $conn->insert_id], 201);
+  // Best-effort broadcast to Slack (no-op if not configured).
+  require_once __DIR__ . '/_slack.php';
+  $prefix = $level === 'warning' ? ':warning: ' : ':loudspeaker: ';
+  gk_slack_post($prefix . "*$title*" . ($bodyText !== '' ? "\n$bodyText" : ''));
+  ok(['id' => $newId], 201);
 }
 
 if ($method === 'POST' && $action === 'delete') {
