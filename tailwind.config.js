@@ -22,7 +22,7 @@ var config = {
             },
             fontFamily: {
                 sans: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                serif: ['Caudex', 'Georgia', 'Times New Roman', 'serif'],
+                serif: ['Space Grotesk', 'ui-sans-serif', 'system-ui', 'sans-serif'],
                 mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
             },
             colors: {

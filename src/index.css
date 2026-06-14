@@ -2,134 +2,135 @@
 @tailwind components;
 @tailwind utilities;
 
-/* GAkinz "Forest Editorial" brand fonts — Caudex (serif display/headings),
-   Manrope (sans body + UI), JetBrains Mono (data/code). One pairing, both surfaces.
-   See DESIGN-SYSTEM.md §3. */
-@import url('https://fonts.googleapis.com/css2?family=Caudex:wght@400;700&family=Manrope:wght@400;500;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+/* GAkinz brand fonts — Space Grotesk (display/headings), Manrope (sans body + UI),
+   JetBrains Mono (data/code). One pairing, both surfaces. */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @layer base {
-  /* GAkinz "Forest Editorial" — LIGHT skin (cream bg / forest ink / sage accent).
-     Base + CMS light mode. Swatch hex → shadcn HSL triplets. See DESIGN-SYSTEM.md §2. */
+  /* GAkinz brand — LIGHT skin (white bg / near-black ink / lavender accent).
+     Base + CMS light mode. Swatch hex → shadcn HSL triplets.
+     Palette: primary #0A0A0A, accent1 #D4537E (rose), accent2 #7F77DD (lavender), bg #FFFFFF. */
   :root {
-    --background: 45 35% 93%;        /* #F4F1E8 cream */
-    --foreground: 129 13% 20%;       /* #2D3A2F forest ink */
-    --card: 0 0% 100%;               /* #ffffff */
-    --card-foreground: 129 13% 20%;
+    --background: 0 0% 100%;         /* #FFFFFF */
+    --foreground: 0 0% 4%;           /* #0A0A0A — 19.8:1 on bg (AAA) */
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 4%;
     --popover: 0 0% 100%;
-    --popover-foreground: 129 13% 20%;
-    --primary: 98 24% 26%;           /* #3E5232 deep sage — THE action color */
-    --primary-foreground: 45 40% 97%;/* #FBF9F2 cream */
-    --secondary: 90 28% 90%;         /* light sage tint */
-    --secondary-foreground: 98 24% 26%;
-    --muted: 45 25% 90%;             /* warm cream */
-    --muted-foreground: 130 8% 38%;  /* muted forest */
-    --accent: 90 30% 85%;            /* sage wash */
-    --accent-foreground: 98 24% 26%;
-    --destructive: 8 60% 50%;        /* warm terracotta-red */
+    --popover-foreground: 0 0% 4%;
+    --primary: 0 0% 4%;              /* #0A0A0A — THE action color */
+    --primary-foreground: 0 0% 100%; /* white on black: 19.8:1 (AAA) */
+    --secondary: 240 8% 96%;         /* near-white neutral */
+    --secondary-foreground: 0 0% 4%;
+    --muted: 240 8% 96%;
+    --muted-foreground: 240 4% 36%;  /* #58585e — 6.9:1 on white (AA+) */
+    --accent: 245 65% 96%;           /* very light lavender wash for hover surfaces */
+    --accent-foreground: 245 40% 28%;/* deep indigo text on lavender wash */
+    --destructive: 0 72% 48%;        /* clean red */
     --destructive-foreground: 0 0% 100%;
-    --border: 46 23% 81%;            /* #DAD5C4 warm hairline */
-    --input: 46 23% 81%;
-    --ring: 98 24% 26%;              /* deep sage focus */
-    --chart-1: 90 28% 56%;           /* sage */
-    --chart-2: 98 24% 36%;           /* deep sage */
-    --chart-3: 160 28% 42%;          /* pine-teal */
-    --chart-4: 70 26% 52%;           /* olive */
-    --chart-5: 130 18% 30%;          /* forest */
+    --border: 240 6% 88%;            /* hairline */
+    --input: 240 6% 88%;
+    --ring: 245 56% 60%;             /* accent2 lavender focus */
+    --chart-1: 245 56% 60%;          /* accent2 lavender */
+    --chart-2: 340 58% 55%;          /* accent1 rose */
+    --chart-3: 0 0% 4%;              /* black */
+    --chart-4: 245 56% 75%;          /* light lavender */
+    --chart-5: 340 58% 75%;          /* light rose */
     --radius: 0.75rem;               /* 12px cards; md=10, sm=8 */
-    --sidebar-background: 45 25% 90%;
-    --sidebar-foreground: 129 13% 20%;
-    --sidebar-primary: 98 24% 26%;
-    --sidebar-primary-foreground: 45 40% 97%;
-    --sidebar-accent: 90 30% 85%;
-    --sidebar-accent-foreground: 98 24% 26%;
-    --sidebar-border: 46 23% 81%;
-    --sidebar-ring: 98 24% 26%;
-    /* Raw brand tokens for non-token marketing styling (forest palette) */
-    --gk-violet: #5A6B4A;            /* sage (legacy var name, forest value) */
-    --gk-violet-2: #A8C090;          /* light sage */
-    --gk-violet-dk: #3E5232;         /* deep sage */
-    --gk-bg: #F4F1E8;                /* cream */
-    --gk-ink: #2D3A2F;               /* forest ink */
-    --font-serif: Caudex, Georgia, 'Times New Roman', serif;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 4%;
+    --sidebar-primary: 0 0% 4%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 245 65% 96%;
+    --sidebar-accent-foreground: 245 40% 28%;
+    --sidebar-border: 240 6% 88%;
+    --sidebar-ring: 245 56% 60%;
+    /* Raw brand tokens (legacy var names kept so existing utilities keep working;
+       values remapped to the new palette: accent2 = lavender, accent1 = rose). */
+    --gk-violet: #7F77DD;            /* accent2 lavender (was sage) */
+    --gk-violet-2: #D4537E;          /* accent1 rose */
+    --gk-violet-dk: #0A0A0A;         /* primary black */
+    --gk-bg: #FFFFFF;                /* white */
+    --gk-ink: #0A0A0A;               /* near-black ink */
+    --font-serif: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
   }
 
   /* Public corporate site always renders in the designed light brand theme,
      regardless of the visitor's OS dark-mode preference. Re-declaring the
      tokens on the wrapper overrides any inherited .dark values for its subtree. */
-  /* Public corporate site palette — "Forest Editorial" LIGHT skin: cream bg,
-     forest-green ink, deep-sage primary. Hex → shadcn HSL triplets. Scoped to the
-     wrapper so the CMS theme is untouched. See DESIGN-SYSTEM.md §2. */
+  /* Public corporate site palette — LIGHT skin: white bg, near-black ink,
+     black primary, lavender/rose accents. Hex → shadcn HSL triplets. Scoped to
+     the wrapper so the CMS theme is untouched. */
   .gk-public {
-    --background: 45 35% 93%;        /* #F4F1E8 cream */
-    --foreground: 129 13% 20%;       /* #2D3A2F forest ink */
-    --card: 0 0% 100%;               /* #ffffff */
-    --card-foreground: 129 13% 20%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 4%;
     --popover: 0 0% 100%;
-    --popover-foreground: 129 13% 20%;
-    --primary: 98 24% 26%;           /* #3E5232 deep sage — THE action color */
-    --primary-foreground: 45 40% 97%;/* #FBF9F2 cream */
-    --secondary: 90 28% 90%;         /* light sage tint */
-    --secondary-foreground: 98 24% 26%;
-    --muted: 45 25% 90%;             /* warm cream */
-    --muted-foreground: 130 8% 38%;  /* muted forest */
-    --accent: 90 30% 85%;            /* sage wash */
-    --accent-foreground: 98 24% 26%;
-    --destructive: 8 60% 50%;
+    --popover-foreground: 0 0% 4%;
+    --primary: 0 0% 4%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 8% 96%;
+    --secondary-foreground: 0 0% 4%;
+    --muted: 240 8% 96%;
+    --muted-foreground: 240 4% 36%;
+    --accent: 245 65% 96%;
+    --accent-foreground: 245 40% 28%;
+    --destructive: 0 72% 48%;
     --destructive-foreground: 0 0% 100%;
-    --border: 46 23% 81%;            /* #DAD5C4 warm hairline */
-    --input: 46 23% 81%;
-    --ring: 98 24% 26%;
+    --border: 240 6% 88%;
+    --input: 240 6% 88%;
+    --ring: 245 56% 60%;
     --radius: 0.75rem;
-    /* Brand fonts — Manrope body. Caudex headings (mapped below). */
+    /* Brand fonts — Manrope body, Space Grotesk headings (mapped below). */
     font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
     color-scheme: light;
   }
 
-  /* Marketing `font-serif` + headings → Caudex; `font-mono` → JetBrains Mono,
-     without touching the global Tailwind font config. */
+  /* Marketing `font-serif` + headings → Space Grotesk; `font-mono` → JetBrains
+     Mono, without touching the global Tailwind font config. */
   .gk-public :is(.font-serif, h1, h2, h3) {
-    font-family: 'Caudex', Georgia, 'Times New Roman', serif;
+    font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
   }
   .gk-public .font-mono {
     font-family: 'JetBrains Mono', ui-monospace, monospace;
   }
 
-  /* "Forest Editorial" DARK skin — CMS default workspace. Stepped green
-     elevation ladder; cream demoted to headings, brighter ink for body.
-     See DESIGN-SYSTEM.md §2. */
+  /* DARK skin — CMS workspace. Primary swaps to accent2 (lavender) because pure
+     black is invisible on a dark surface; rose/lavender brand accents intact.
+     Stepped neutral elevation ladder, AA contrast on body text. */
   .dark {
-    --background: 130 16% 14%;       /* #21291F page floor */
-    --foreground: 47 42% 91%;        /* #F2EEDF bright body ink */
-    --card: 128 12% 25%;             /* #38473A surface */
-    --card-foreground: 47 42% 91%;
-    --popover: 130 14% 20%;          /* #2D3A2F raised */
-    --popover-foreground: 47 42% 91%;
-    --primary: 90 28% 66%;           /* #A8C090 light sage — THE action color */
-    --primary-foreground: 130 16% 10%;
-    --secondary: 91 18% 36%;         /* #5A6B4A sage — quiet/secondary */
-    --secondary-foreground: 47 42% 91%;
-    --muted: 128 14% 29%;            /* #43543F surface-hi */
-    --muted-foreground: 90 10% 66%;  /* sage-grey */
-    --accent: 128 14% 29%;           /* #43543F hover surface */
-    --accent-foreground: 47 42% 91%;
-    --destructive: 8 55% 52%;
+    --background: 240 8% 8%;         /* #13131a page floor */
+    --foreground: 0 0% 96%;          /* #F5F5F5 body ink — 18:1 on bg (AAA) */
+    --card: 240 7% 12%;               /* #1C1C24 surface */
+    --card-foreground: 0 0% 96%;
+    --popover: 240 7% 14%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 245 56% 67%;          /* #7F77DD accent2 lavender — THE action color */
+    --primary-foreground: 0 0% 4%;   /* near-black on lavender → 6.1:1 (AA+) */
+    --secondary: 240 6% 18%;         /* quiet surface */
+    --secondary-foreground: 0 0% 96%;
+    --muted: 240 6% 16%;
+    --muted-foreground: 0 0% 70%;    /* #B3B3B3 — 9.7:1 on dark bg (AAA) */
+    --accent: 340 58% 58%;           /* accent1 rose for hover/highlight */
+    --accent-foreground: 0 0% 100%;  /* white on rose → 4.5:1 (AA) */
+    --destructive: 0 72% 55%;
     --destructive-foreground: 0 0% 100%;
-    --border: 130 8% 28%;            /* green-grey hairline */
-    --input: 130 8% 28%;
-    --ring: 90 40% 73%;              /* #BBD6A0 accent glow */
-    --chart-1: 90 28% 66%;           /* light sage */
-    --chart-2: 91 18% 46%;           /* sage */
-    --chart-3: 160 30% 50%;          /* pine-teal */
-    --chart-4: 70 30% 55%;           /* olive */
-    --chart-5: 130 20% 42%;          /* forest */
-    --sidebar-background: 130 18% 12%;
-    --sidebar-foreground: 47 42% 91%;
-    --sidebar-primary: 90 28% 66%;
-    --sidebar-primary-foreground: 130 16% 10%;
-    --sidebar-accent: 128 14% 29%;
-    --sidebar-accent-foreground: 47 42% 91%;
-    --sidebar-border: 130 8% 28%;
-    --sidebar-ring: 90 40% 73%;
+    --border: 240 6% 24%;            /* hairline */
+    --input: 240 6% 24%;
+    --ring: 245 56% 67%;             /* lavender focus glow */
+    --chart-1: 245 56% 67%;          /* lavender */
+    --chart-2: 340 58% 62%;          /* rose */
+    --chart-3: 0 0% 96%;             /* near-white */
+    --chart-4: 245 56% 80%;          /* light lavender */
+    --chart-5: 340 58% 78%;          /* light rose */
+    --sidebar-background: 240 8% 6%; /* slightly deeper than bg */
+    --sidebar-foreground: 0 0% 96%;
+    --sidebar-primary: 245 56% 67%;
+    --sidebar-primary-foreground: 0 0% 4%;
+    --sidebar-accent: 240 6% 18%;
+    --sidebar-accent-foreground: 0 0% 96%;
+    --sidebar-border: 240 6% 24%;
+    --sidebar-ring: 245 56% 67%;
   }
 
   /* Force the LIGHT brand palette on the public site / login, even when the CMS
@@ -137,25 +138,25 @@
      touches this class — so the marketing pages never wash out. PublicLayout and
      Login add `gk-force-light` to <html>. */
   html.gk-force-light {
-    --background: 45 35% 93%;
-    --foreground: 129 13% 20%;
+    --background: 0 0% 100%;
+    --foreground: 0 0% 4%;
     --card: 0 0% 100%;
-    --card-foreground: 129 13% 20%;
+    --card-foreground: 0 0% 4%;
     --popover: 0 0% 100%;
-    --popover-foreground: 129 13% 20%;
-    --primary: 98 24% 26%;
-    --primary-foreground: 45 40% 97%;
-    --secondary: 90 28% 90%;
-    --secondary-foreground: 98 24% 26%;
-    --muted: 45 25% 90%;
-    --muted-foreground: 130 8% 38%;
-    --accent: 90 30% 85%;
-    --accent-foreground: 98 24% 26%;
-    --destructive: 8 60% 50%;
+    --popover-foreground: 0 0% 4%;
+    --primary: 0 0% 4%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 8% 96%;
+    --secondary-foreground: 0 0% 4%;
+    --muted: 240 8% 96%;
+    --muted-foreground: 240 4% 36%;
+    --accent: 245 65% 96%;
+    --accent-foreground: 245 40% 28%;
+    --destructive: 0 72% 48%;
     --destructive-foreground: 0 0% 100%;
-    --border: 46 23% 81%;
-    --input: 46 23% 81%;
-    --ring: 98 24% 26%;
+    --border: 240 6% 88%;
+    --input: 240 6% 88%;
+    --ring: 245 56% 60%;
     color-scheme: light;
   }
 }
@@ -649,11 +650,12 @@
    Cinematic gradients, glass, glow, grid, marquee, refined motion.
    ──────────────────────────────────────────────────────────────────────── */
 .gk-public {
-  /* Forest gradient/effect stops (legacy var names, forest values) — recolors
-     grad-text, aurora, grid, glass, rings, cards site-wide. See DESIGN-SYSTEM.md §7. */
-  --gk-violet: 98 24% 30%;    /* deep sage */
-  --gk-indigo: 129 13% 20%;   /* forest ink */
-  --gk-sky:    90 30% 55%;    /* light sage (replaces sky accent) */
+  /* Brand gradient stops (legacy var names) — recolors grad-text, aurora, grid,
+     glass, rings, cards site-wide. New palette: accent2 lavender + black ink +
+     accent1 rose for the gradient sweep. */
+  --gk-violet: 245 56% 60%;   /* #7F77DD accent2 lavender */
+  --gk-indigo: 0 0% 4%;       /* #0A0A0A near-black ink */
+  --gk-sky:    340 58% 58%;   /* #D4537E accent1 rose */
 }
 
 /* Display headings: tighter tracking, balanced wrapping, fluid scale */
@@ -851,9 +853,9 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  /* Deep sage so the small eyebrow text clears WCAG AA (4.5:1) on the tinted
-     sage pill background. */
-  color: #2f4023;
+  /* Deep indigo so the small eyebrow text clears WCAG AA (4.5:1) on the tinted
+     lavender pill background. */
+  color: #312e81;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────
@@ -861,14 +863,14 @@
    Uses --primary token so it adapts to the active CMS theme.
    ──────────────────────────────────────────────────────────────────────── */
 
-/* CMS page title — Caudex editorial display + gradient from the active primary.
-   One rule styles all module titles (the workspace signature). See DESIGN-SYSTEM.md §3/§7. */
+/* CMS page title — Space Grotesk display + gradient from foreground → lavender
+   accent (so titles read on dark workspace where --primary is the lavender). */
 .gk-app-grad {
-  font-family: 'Caudex', Georgia, 'Times New Roman', serif;
+  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
   letter-spacing: -0.01em;
   background-image: linear-gradient(110deg,
     hsl(var(--foreground)) 0%,
-    hsl(var(--primary)) 100%);
+    hsl(245 56% 60%) 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
