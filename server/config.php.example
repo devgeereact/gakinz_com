@@ -92,6 +92,14 @@ $STRIPE_WEBHOOK_SECRET = '';  // whsec_…
 $STRIPE_SUCCESS_URL    = 'https://gakinz.com/app/invoicing?paid=1';
 $STRIPE_CANCEL_URL     = 'https://gakinz.com/app/invoicing';
 
+// ── Google SSO (oauth.php) — optional. Leave blank to hide the SSO button. ──────
+// Create an OAuth 2.0 Web client in Google Cloud Console; set its redirect URI
+// to GOOGLE_REDIRECT below. SSO only logs in users that ALREADY exist.
+$GOOGLE_CLIENT_ID     = '';
+$GOOGLE_CLIENT_SECRET = '';
+$GOOGLE_REDIRECT      = 'https://gakinz.com/oauth.php?action=callback';
+$APP_URL              = 'https://gakinz.com'; // SPA origin the SSO callback returns to
+
 // ── Connection ────────────────────────────────────────────────────────────────
 $conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 if ($conn->connect_errno) {

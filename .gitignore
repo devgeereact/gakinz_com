@@ -27,3 +27,6 @@ dist-ssr
 config.php
 .vite
 *.tsbuildinfo
+
+# Uploaded files (server runtime, never committed)
+server/uploads/

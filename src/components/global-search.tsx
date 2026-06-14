@@ -33,6 +33,7 @@ import {
   CalendarRange,
   FileSignature,
   BookOpen,
+  FolderOpen,
   ChevronRight,
   type LucideIcon,
 } from "lucide-react"
@@ -59,6 +60,7 @@ const COMMANDS: Cmd[] = [
   { key: "comms", label: "Comms", path: "/app/comms", icon: MessagesSquare },
   { key: "mailbox", label: "Mailbox", path: "/app/mailbox", icon: Mail },
   { key: "knowledge", label: "Knowledge", path: "/app/knowledge", icon: BookOpen },
+  { key: "files", label: "Files", path: "/app/files", icon: FolderOpen },
   { key: "analytics", label: "Analytics", path: "/app/analytics", icon: BarChart3 },
   { key: "platform", label: "Platform", path: "/app/platform", icon: Settings },
 ]

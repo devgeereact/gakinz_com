@@ -341,3 +341,25 @@ design/devpipeline/resourcing/contracts/knowledge) + `api.ts`. `tsc -b` + `vite 
 contracts.php knowledge.php` + updated `_bootstrap.php auth.php clients.php invoices.php proposals.php
 projects.php time.php portal.php`, plus ALL migrations at foot of `schema.sql` (VAT, stage, time.status,
 auth_tokens device cols, + 6 new tables). Every endpoint degrades gracefully pre-migration.
+
+**Carry-forward areas built (Finance · Files · Collaboration · Auth) — this session:**
+- **Finance:** `cost_rate` on users (Platform → Team inline edit, admins); `reports.php?report=profitability`
+  (revenue from paid invoices inc VAT vs cost from time×cost_rate → margin) surfaced as a 4th Analytics report;
+  `invoices.php?action=chase` emails an overdue reminder via `_smtp` + a "work-pause" banner listing clients
+  with overdue invoices.
+- **Files & Documents:** real per-project/client storage — `files.php` (multipart upload to `server/uploads/`
+  [gitignored, auto-`.htaccess` deny], auth download stream, expiring public share token, soft delete) +
+  `files` table + `Files.tsx` (drag-drop, list, download-as-blob, copy share link, delete). Module key `files`
+  wired in routes/sidebar/search/access (ALL_STAFF).
+- **Collaboration:** derived **NotificationBell** in the app header (overdue invoices + open tickets, links to
+  module; no table); **announcements** (`announcements.php` + table) — managers+ post in Platform →
+  Announcements, everyone sees top 3 on the Dashboard.
+- **Auth hardening:** **TOTP 2FA** (no library) — `users.totp_secret/totp_enabled`; `auth.php` `twofa_setup`
+  /`twofa_enable`/`twofa_disable` + login gate (`two_factor_required` flag → Login shows a code step);
+  Platform → Security self-enroll (shows secret + otpauth link). **Google SSO** — `oauth.php` (status/start/
+  callback, code→id_token→match existing active user→token in `#sso_token`); Login shows "Continue with
+  Google" only when `oauth.php?action=status` reports configured. SSO needs `$GOOGLE_*`/`$APP_URL` in config.
+⚠️ DEPLOY: client via `dist/` push; server hand-upload NEW `reports.php files.php announcements.php oauth.php`
++ updated `_bootstrap.php auth.php users.php invoices.php`; migrations at foot of `schema.sql` (users
+cost_rate/totp_*, + `files`/`announcements` tables); create writable `server/uploads/`; optional `$GOOGLE_*`.
+All degrade gracefully pre-migration / pre-config.

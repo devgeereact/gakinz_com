@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Loader2, Plus, RefreshCw, Trash2, Send, BadgePoundSterling, FileDown, Download, CreditCard } from "lucide-react"
+import { Loader2, Plus, RefreshCw, Trash2, Send, BadgePoundSterling, FileDown, Download, CreditCard, AlertTriangle, BellRing } from "lucide-react"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -90,6 +90,10 @@ export default function Invoicing() {
   }, [])
 
   const outstanding = items.filter((i) => i.status !== "paid").reduce((s, i) => s + i.total, 0)
+  // Clients with at least one overdue invoice → studio "work-pause" flag.
+  const overdueClients = Array.from(
+    new Set(items.filter((i) => i.overdue && i.client_company).map((i) => i.client_company as string)),
+  )
 
   const draftSubtotal = lines.reduce(
     (sum, l) => sum + (parseFloat(l.qty) || 0) * (parseFloat(l.unit_price) || 0),
@@ -152,6 +156,14 @@ export default function Invoicing() {
     } else {
       toast.error(res.error || "Could not create a payment link.")
     }
+  }
+
+  const chase = async (inv: Invoice) => {
+    setBusyId(inv.id)
+    const res = await invoices.chase(inv.id)
+    setBusyId(null)
+    if (res.ok) toast.success(`Reminder emailed to ${res.data.sent_to}.`)
+    else toast.error(res.error || "Could not send the reminder.")
   }
 
   const downloadPdf = async (inv: Invoice) => {
@@ -270,6 +282,16 @@ export default function Invoicing() {
         </div>
       )}
 
+      {overdueClients.length > 0 && (
+        <div className="flex items-start gap-2 rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            <strong>Work-pause flag:</strong> {overdueClients.join(", ")} {overdueClients.length === 1 ? "has" : "have"} overdue
+            invoices. Studio policy is to pause delivery until settled — chase the invoice below.
+          </span>
+        </div>
+      )}
+
       <div className="rounded-xl border border-border bg-card">
         {loading ? (
           <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
@@ -313,6 +335,11 @@ export default function Invoicing() {
                       {inv.status === "draft" && (
                         <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => setStatus(inv, "sent")}>
                           <Send className="mr-1 h-3.5 w-3.5" /> Send
+                        </Button>
+                      )}
+                      {inv.overdue && (
+                        <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => chase(inv)} title="Email the client a payment reminder">
+                          <BellRing className="mr-1 h-3.5 w-3.5" /> Chase
                         </Button>
                       )}
                       {inv.status !== "paid" && (

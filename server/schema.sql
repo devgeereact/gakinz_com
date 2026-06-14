@@ -36,6 +36,9 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash VARCHAR(255) NOT NULL,
   role          VARCHAR(30)  NOT NULL DEFAULT 'employee',
   client_id     INT NULL DEFAULT NULL,                   -- set ONLY for role='client': the client they portal into
+  cost_rate     DECIMAL(8,2) NOT NULL DEFAULT 0,         -- internal hourly cost (£) for profitability
+  totp_secret   VARCHAR(64) DEFAULT NULL,                -- base32 TOTP secret (2FA)
+  totp_enabled  TINYINT(1)  NOT NULL DEFAULT 0,          -- is 2FA active for this user
   status        VARCHAR(20)  NOT NULL DEFAULT 'active',  -- active | suspended
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -283,6 +286,10 @@ CREATE TABLE IF NOT EXISTS comm_messages (
 --   ALTER TABLE auth_tokens ADD COLUMN user_agent VARCHAR(255) DEFAULT NULL AFTER token;
 --   ALTER TABLE auth_tokens ADD COLUMN ip VARCHAR(45) DEFAULT NULL AFTER user_agent;
 --   ALTER TABLE auth_tokens ADD COLUMN last_seen_at TIMESTAMP NULL DEFAULT NULL AFTER ip;
+-- Finance (profitability) + 2FA columns on users:
+--   ALTER TABLE users ADD COLUMN cost_rate DECIMAL(8,2) NOT NULL DEFAULT 0 AFTER client_id;
+--   ALTER TABLE users ADD COLUMN totp_secret VARCHAR(64) DEFAULT NULL AFTER cost_rate;
+--   ALTER TABLE users ADD COLUMN totp_enabled TINYINT(1) NOT NULL DEFAULT 0 AFTER totp_secret;
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- MISSING-category modules (Design · Dev Pipeline · Resourcing · Contracts · KB).
@@ -369,6 +376,38 @@ CREATE TABLE IF NOT EXISTS contracts (
   CONSTRAINT fk_contract_client  FOREIGN KEY (client_id)  REFERENCES clients(id)  ON DELETE SET NULL,
   CONSTRAINT fk_contract_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
   CONSTRAINT fk_contract_user    FOREIGN KEY (created_by) REFERENCES users(id)    ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Files & Documents: per-project/client file storage. Binary lives on disk under
+-- server/uploads/; this row is the metadata + optional expiring share token.
+CREATE TABLE IF NOT EXISTS files (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  client_id   INT NULL,
+  project_id  INT NULL,
+  name        VARCHAR(255) NOT NULL,            -- original filename
+  stored      VARCHAR(255) NOT NULL,            -- on-disk name (random)
+  mime        VARCHAR(120) DEFAULT NULL,
+  size        INT NOT NULL DEFAULT 0,
+  share_token CHAR(40) DEFAULT NULL,            -- set when a public link is issued
+  expires_at  TIMESTAMP NULL DEFAULT NULL,      -- share-link expiry
+  uploaded_by INT NULL,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  deleted_at  TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT fk_file_client  FOREIGN KEY (client_id)  REFERENCES clients(id)  ON DELETE SET NULL,
+  CONSTRAINT fk_file_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
+  CONSTRAINT fk_file_user    FOREIGN KEY (uploaded_by) REFERENCES users(id)   ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Announcements / broadcasts shown on the dashboard.
+CREATE TABLE IF NOT EXISTS announcements (
+  id         INT AUTO_INCREMENT PRIMARY KEY,
+  title      VARCHAR(200) NOT NULL,
+  body       TEXT DEFAULT NULL,
+  level      VARCHAR(10) NOT NULL DEFAULT 'info',  -- info | warning
+  created_by INT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT fk_ann_user FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Knowledge Base & SOPs: internal wiki / runbooks / client-facing help.

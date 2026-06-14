@@ -142,4 +142,37 @@ if ($method === 'POST' && $action === 'status') {
   ok(['ok' => true]);
 }
 
+// Chase an unpaid invoice: email the client a payment reminder and log it.
+// Needs SMTP configured + a client email; otherwise returns a clear 503/400.
+if ($method === 'POST' && $action === 'chase') {
+  $user = require_auth($conn, STAFF);
+  $id = (int)(body()['id'] ?? 0);
+  if ($id <= 0) fail('An invoice id is required.');
+  $stmt = $conn->prepare(
+    'SELECT i.number, i.status, i.due_at, c.company, c.email,
+            (SELECT COALESCE(SUM(qty*unit_price),0) FROM invoice_items it WHERE it.invoice_id = i.id) AS subtotal, i.vat_rate
+     FROM invoices i LEFT JOIN clients c ON c.id = i.client_id
+     WHERE i.id = ? AND i.deleted_at IS NULL LIMIT 1'
+  );
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  $inv = $stmt->get_result()->fetch_assoc();
+  if (!$inv) fail('Invoice not found.', 404);
+  if ($inv['status'] === 'paid') fail('That invoice is already paid.');
+  if (empty($inv['email'])) fail('That client has no email address on file.');
+  if (empty($GLOBALS['SMTP_HOST'])) fail('Email is not configured on the server.', 503);
+
+  $total = round((float)$inv['subtotal'] * (1 + (float)$inv['vat_rate'] / 100), 2);
+  $num = $inv['number'] ?: ('#' . $id);
+  $due = $inv['due_at'] ?: 'now';
+  $body = "Hello {$inv['company']},\n\nThis is a friendly reminder that invoice $num for £" . number_format($total, 2)
+        . " was due on $due and is currently unpaid.\n\nPlease arrange payment at your earliest convenience. "
+        . "If you have already paid, thank you — please disregard this note.\n\nKind regards,\nGAkinz";
+  require_once __DIR__ . '/_smtp.php';
+  $sent = gk_send_email(['to' => $inv['email'], 'subject' => "Payment reminder — invoice $num", 'body' => $body]);
+  if (empty($sent['ok'])) fail('Could not send the reminder: ' . ($sent['error'] ?? 'unknown error'), 502);
+  audit($conn, $user['id'], 'invoice_chase', "$num → {$inv['email']}");
+  ok(['ok' => true, 'sent_to' => $inv['email']]);
+}
+
 fail('Method not allowed.', 405);

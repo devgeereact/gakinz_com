@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Loader2, Plus, RefreshCw, ShieldCheck, Monitor, LogOut } from "lucide-react"
+import { Loader2, Plus, RefreshCw, ShieldCheck, Monitor, LogOut, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,7 +28,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { users, audit, auth, clients as clientsApi, type ManagedUser, type AuditEntry, type Client, type Session } from "@/lib/api"
+import { users, audit, auth, announcements, clients as clientsApi, type ManagedUser, type AuditEntry, type Client, type Session, type Announcement } from "@/lib/api"
 import { useAuth, type Role } from "@/store/auth.store"
 import { cn } from "@/lib/utils"
 
@@ -62,11 +62,19 @@ export default function Platform() {
       <Tabs defaultValue="team">
         <TabsList>
           <TabsTrigger value="team">Team &amp; roles</TabsTrigger>
+          <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="announcements">Announcements</TabsTrigger>
           <TabsTrigger value="sessions">My sessions</TabsTrigger>
           <TabsTrigger value="audit">Audit log</TabsTrigger>
         </TabsList>
         <TabsContent value="team" className="mt-4">
           <TeamTab />
+        </TabsContent>
+        <TabsContent value="security" className="mt-4">
+          <SecurityTab />
+        </TabsContent>
+        <TabsContent value="announcements" className="mt-4">
+          <AnnouncementsTab />
         </TabsContent>
         <TabsContent value="sessions" className="mt-4">
           <SessionsTab />
@@ -249,6 +257,8 @@ function TeamTab() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
+                <TableHead>Cost £/h</TableHead>
+                <TableHead>2FA</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Action</TableHead>
               </TableRow>
@@ -278,6 +288,16 @@ function TeamTab() {
                       </Select>
                     </TableCell>
                     <TableCell>
+                      <RateCell user={u} />
+                    </TableCell>
+                    <TableCell>
+                      {u.totp_enabled ? (
+                        <span className="rounded bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">On</span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Off</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <span
                         className={cn(
                           "rounded px-2 py-0.5 text-xs font-medium",
@@ -302,6 +322,227 @@ function TeamTab() {
               })}
             </TableBody>
           </Table>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Inline editable internal cost rate (£/h) for profitability reporting.
+function RateCell({ user }: { user: ManagedUser }) {
+  const [value, setValue] = useState(String(user.cost_rate ?? 0))
+  const [saving, setSaving] = useState(false)
+  const save = async () => {
+    const n = parseFloat(value) || 0
+    if (n === user.cost_rate) return
+    setSaving(true)
+    const res = await users.setRate(user.id, n)
+    setSaving(false)
+    if (!res.ok) {
+      toast.error(res.error || "Could not save the rate.")
+      setValue(String(user.cost_rate ?? 0))
+    } else {
+      user.cost_rate = n
+    }
+  }
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        type="number"
+        min="0"
+        step="5"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
+        className="h-8 w-20 text-xs"
+      />
+      {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+    </div>
+  )
+}
+
+// Self-service two-factor (TOTP). Any signed-in user can enable/disable their own.
+function SecurityTab() {
+  const me = useAuth((s) => s.user)
+  const [enabled, setEnabled] = useState(false)
+  const [secret, setSecret] = useState("")
+  const [otpauth, setOtpauth] = useState("")
+  const [code, setCode] = useState("")
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    // Read current 2FA state from the team list (admins) or assume off otherwise.
+    users.list().then((r) => {
+      if (r.ok && me) {
+        const self = r.data.find((u) => u.id === me.id)
+        if (self) setEnabled(self.totp_enabled)
+      }
+    })
+  }, [me])
+
+  const startSetup = async () => {
+    setBusy(true)
+    const res = await auth.twofaSetup()
+    setBusy(false)
+    if (res.ok) {
+      setSecret(res.data.secret)
+      setOtpauth(res.data.otpauth)
+    } else toast.error(res.error || "Could not start setup.")
+  }
+  const enable = async () => {
+    setBusy(true)
+    const res = await auth.twofaEnable(code.trim())
+    setBusy(false)
+    if (res.ok) {
+      setEnabled(true)
+      setSecret("")
+      setOtpauth("")
+      setCode("")
+      toast.success("Two-factor enabled.")
+    } else toast.error(res.error || "Could not enable 2FA.")
+  }
+  const disable = async () => {
+    setBusy(true)
+    const res = await auth.twofaDisable(code.trim())
+    setBusy(false)
+    if (res.ok) {
+      setEnabled(false)
+      setCode("")
+      toast.success("Two-factor disabled.")
+    } else toast.error(res.error || "Could not disable 2FA.")
+  }
+
+  return (
+    <div className="max-w-xl space-y-4">
+      <div className="rounded-xl border border-border bg-card p-5">
+        <h3 className="text-sm font-semibold">Two-factor authentication</h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Add a time-based code (Google Authenticator, 1Password, Authy…) to your sign-in.
+        </p>
+
+        {enabled ? (
+          <div className="mt-4 space-y-3">
+            <span className="inline-flex items-center gap-1 rounded bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
+              <ShieldCheck className="h-3 w-3" /> Enabled
+            </span>
+            <div className="flex items-end gap-2">
+              <div>
+                <Label htmlFor="dcode">Current code to disable</Label>
+                <Input id="dcode" value={code} onChange={(e) => setCode(e.target.value)} className="mt-1.5 w-40" placeholder="123456" />
+              </div>
+              <Button variant="outline" onClick={disable} disabled={busy}>
+                {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Disable
+              </Button>
+            </div>
+          </div>
+        ) : !secret ? (
+          <Button className="mt-4" onClick={startSetup} disabled={busy}>
+            {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Set up two-factor
+          </Button>
+        ) : (
+          <div className="mt-4 space-y-3">
+            <p className="text-sm">Add this secret to your authenticator app, then enter the 6-digit code to confirm:</p>
+            <code className="block break-all rounded bg-muted px-3 py-2 text-sm">{secret}</code>
+            <a href={otpauth} className="text-xs text-primary hover:underline">Open in authenticator app →</a>
+            <div className="flex items-end gap-2">
+              <div>
+                <Label htmlFor="ecode">Code</Label>
+                <Input id="ecode" value={code} onChange={(e) => setCode(e.target.value)} className="mt-1.5 w-40" placeholder="123456" />
+              </div>
+              <Button onClick={enable} disabled={busy}>
+                {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Enable
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// Studio-wide announcements (managers+ post; everyone sees them on the dashboard).
+function AnnouncementsTab() {
+  const [items, setItems] = useState<Announcement[]>([])
+  const [loading, setLoading] = useState(true)
+  const [title, setTitle] = useState("")
+  const [body, setBody] = useState("")
+  const [level, setLevel] = useState("info")
+  const [saving, setSaving] = useState(false)
+
+  const load = async () => {
+    setLoading(true)
+    const res = await announcements.list()
+    if (res.ok) setItems(res.data)
+    setLoading(false)
+  }
+  useEffect(() => { load() }, [])
+
+  const post = async () => {
+    if (!title.trim()) return toast.error("A title is required.")
+    setSaving(true)
+    const res = await announcements.create({ title: title.trim(), body, level })
+    setSaving(false)
+    if (res.ok) {
+      setTitle("")
+      setBody("")
+      setLevel("info")
+      load()
+    } else toast.error(res.error || "Could not post.")
+  }
+  const remove = async (id: number) => {
+    const res = await announcements.remove(id)
+    if (res.ok) setItems((xs) => xs.filter((x) => x.id !== id))
+    else toast.error(res.error || "Could not delete.")
+  }
+
+  return (
+    <div className="max-w-2xl space-y-4">
+      <div className="rounded-xl border border-border bg-card p-5">
+        <h3 className="text-sm font-semibold">Post an announcement</h3>
+        <div className="mt-3 space-y-3">
+          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
+          <Input value={body} onChange={(e) => setBody(e.target.value)} placeholder="Message (optional)" />
+          <div className="flex items-center gap-2">
+            <Select value={level} onValueChange={setLevel}>
+              <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="info">Info</SelectItem>
+                <SelectItem value="warning">Warning</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button onClick={post} disabled={saving}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Post
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card">
+        {loading ? (
+          <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+          </div>
+        ) : items.length === 0 ? (
+          <div className="p-8 text-center text-sm text-muted-foreground">No announcements.</div>
+        ) : (
+          <ul className="divide-y">
+            {items.map((a) => (
+              <li key={a.id} className="flex items-start justify-between gap-3 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium">
+                    {a.level === "warning" && <span className="mr-2 rounded bg-amber-500/15 px-1.5 py-0.5 text-xs text-amber-700 dark:text-amber-300">warning</span>}
+                    {a.title}
+                  </p>
+                  {a.body && <p className="mt-0.5 text-sm text-muted-foreground">{a.body}</p>}
+                  <p className="mt-0.5 text-xs text-muted-foreground">{a.author || "—"} · {fmt(a.created_at)}</p>
+                </div>
+                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(a.id)} aria-label="Delete announcement">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </div>

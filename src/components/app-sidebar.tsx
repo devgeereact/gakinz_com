@@ -19,6 +19,7 @@ import {
   CalendarRange,
   FileSignature,
   BookOpen,
+  FolderOpen,
 } from "lucide-react"
 
 import { Link } from "react-router-dom"
@@ -56,6 +57,7 @@ const navMain = [
   { key: "comms", title: "Comms", url: "app/comms", icon: MessagesSquare },
   { key: "mailbox", title: "Mailbox", url: "app/mailbox", icon: Mail },
   { key: "knowledge", title: "Knowledge", url: "app/knowledge", icon: BookOpen },
+  { key: "files", title: "Files", url: "app/files", icon: FolderOpen },
   { key: "analytics", title: "Analytics", url: "app/analytics", icon: BarChart3 },
   { key: "platform", title: "Platform", url: "app/platform", icon: Settings },
 ]

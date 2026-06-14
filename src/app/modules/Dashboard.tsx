@@ -22,9 +22,11 @@ import {
   RefreshCw,
   Sparkles,
   AlertTriangle,
+  Megaphone,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { cn } from "@/lib/utils"
 import {
   leads as leadsApi,
   clients as clientsApi,
@@ -32,12 +34,14 @@ import {
   invoices as invoicesApi,
   support as supportApi,
   time as timeApi,
+  announcements as announcementsApi,
   ai,
   type Lead,
   type Project,
   type Invoice,
   type Ticket,
   type TimeEntry,
+  type Announcement,
 } from "@/lib/api"
 
 // The GAkinzOS home. Aggregates the live API into a single operational
@@ -172,6 +176,7 @@ export default function Dashboard() {
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [tickets, setTickets] = useState<Ticket[]>([])
   const [entries, setEntries] = useState<TimeEntry[]>([])
+  const [anns, setAnns] = useState<Announcement[]>([])
 
   const [brief, setBrief] = useState<string | null>(null)
   const [briefing, setBriefing] = useState(false)
@@ -201,6 +206,7 @@ export default function Dashboard() {
     else errs.push("time")
     setErrors(errs)
     setLoading(false)
+    announcementsApi.list().then((r) => r.ok && setAnns(r.data.slice(0, 3)))
   }
 
   useEffect(() => {
@@ -356,6 +362,28 @@ export default function Dashboard() {
             Couldn’t reach: {errors.join(", ")}. Showing what loaded. If you’re running locally,
             the live API may not be deployed yet.
           </span>
+        </div>
+      )}
+
+      {anns.length > 0 && (
+        <div className="space-y-2">
+          {anns.map((a) => (
+            <div
+              key={a.id}
+              className={cn(
+                "flex items-start gap-2 rounded-lg border p-3 text-sm",
+                a.level === "warning"
+                  ? "border-amber-300/60 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200"
+                  : "border-primary/20 bg-primary/5 text-foreground",
+              )}
+            >
+              <Megaphone className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                <strong>{a.title}</strong>
+                {a.body ? <> — {a.body}</> : null}
+              </span>
+            </div>
+          ))}
         </div>
       )}
 

@@ -43,6 +43,8 @@ export const MODULE_ROLES: Record<string, Role[]> = {
   contracts: ["super_admin", "admin", "manager"],
   // knowledge.php — all staff
   knowledge: ALL_STAFF,
+  // files.php — all staff
+  files: ALL_STAFF,
   // users.php / audit.php ADMINS
   platform: ["super_admin", "admin"],
   // client portal — the external client's home, plus staff who manage it
@@ -74,6 +76,7 @@ export function moduleKeyForPath(pathname: string): string | null {
     resourcing: "resourcing",
     contracts: "contracts",
     knowledge: "knowledge",
+    files: "files",
     platform: "platform",
   }
   return map[seg] ?? null

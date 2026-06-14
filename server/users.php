@@ -20,7 +20,7 @@ $action = $_GET['action'] ?? '';
 if ($method === 'GET') {
   require_auth($conn, ADMINS);
   $rows = [];
-  $sql = 'SELECT u.id, u.name, u.email, u.role, u.client_id, u.status, u.created_at,
+  $sql = 'SELECT u.id, u.name, u.email, u.role, u.client_id, u.cost_rate, u.totp_enabled, u.status, u.created_at,
                  c.company AS client_company
           FROM users u LEFT JOIN clients c ON c.id = u.client_id
           WHERE u.deleted_at IS NULL ORDER BY u.id ASC';
@@ -28,6 +28,8 @@ if ($method === 'GET') {
     while ($r = $res->fetch_assoc()) {
       $r['id'] = (int)$r['id'];
       $r['client_id'] = $r['client_id'] !== null ? (int)$r['client_id'] : null;
+      $r['cost_rate'] = (float)$r['cost_rate'];
+      $r['totp_enabled'] = (bool)$r['totp_enabled'];
       $rows[] = $r;
     }
   }
@@ -92,6 +94,25 @@ if ($method === 'POST' && $action === 'role') {
   $stmt->execute();
   if ($stmt->affected_rows < 1) fail('User not found.', 404);
   audit($conn, $admin['id'], 'user_role', "#$id → $role");
+  ok(['ok' => true]);
+}
+
+if ($method === 'POST' && $action === 'rate') {
+  $admin = require_auth($conn, ADMINS);
+  $in = body();
+  $id = (int)($in['id'] ?? 0);
+  $rate = max(0, (float)($in['cost_rate'] ?? 0));
+  if ($id <= 0) fail('A user id is required.');
+  $stmt = $conn->prepare('UPDATE users SET cost_rate = ? WHERE id = ? AND deleted_at IS NULL');
+  $stmt->bind_param('di', $rate, $id);
+  $stmt->execute();
+  if ($stmt->affected_rows < 1) {
+    $chk = $conn->prepare('SELECT id FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+    $chk->bind_param('i', $id);
+    $chk->execute();
+    if (!$chk->get_result()->fetch_assoc()) fail('User not found.', 404);
+  }
+  audit($conn, $admin['id'], 'user_rate', "#$id → £$rate/h");
   ok(['ok' => true]);
 }
 

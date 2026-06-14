@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils"
 import { UserDropdown } from "@/components/UserDropdown"
 import WeatherPill from "@/app/components/WeatherPill"
 import ClockPill from "@/app/components/ClockPill"
+import NotificationBell from "@/app/components/NotificationBell"
 
 export default function AppLayout() {
   const [scrolled, setScrolled] = useState(false)
@@ -73,6 +74,7 @@ export default function AppLayout() {
                     <div className="flex items-center gap-1">
                         <WeatherPill />
                         <GlobalSearch />
+                        <NotificationBell />
                         <ThemeToggle />
                         <UserDropdown />
                     </div>

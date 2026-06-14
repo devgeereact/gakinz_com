@@ -4,17 +4,29 @@ import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { auth } from "@/lib/api"
+import { auth, API_BASE } from "@/lib/api"
 import { useAuth } from "@/store/auth.store"
 import { defaultPathForRole } from "@/lib/access"
 import BrandMark from "@/marketing/components/BrandMark"
 
+const SSO_ERRORS: Record<string, string> = {
+  cancelled: "Google sign-in was cancelled.",
+  no_account: "No GAkinz account matches that Google email. Ask an admin to create one.",
+  inactive: "That account is suspended.",
+  exchange_failed: "Google sign-in failed. Please try again.",
+  no_email: "Google didn’t return a verified email.",
+}
+
 export default function Login() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [code, setCode] = useState("")
+  const [needs2fa, setNeeds2fa] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [ssoGoogle, setSsoGoogle] = useState(false)
   const setAuth = useAuth((s) => s.setAuth)
+  const setUser = useAuth((s) => s.setUser)
   const token = useAuth((s) => s.token)
   const user = useAuth((s) => s.user)
   const navigate = useNavigate()
@@ -28,6 +40,40 @@ export default function Login() {
     if (token && user) navigate(defaultPathForRole(user.role), { replace: true })
   }, [token, user, navigate])
 
+  // Is Google SSO configured on the server?
+  useEffect(() => {
+    auth.ssoStatus().then((r) => r.ok && setSsoGoogle(r.data.google))
+  }, [])
+
+  // OAuth bounce-back: the SSO callback redirects to /login#sso_token=… (or
+  // #sso_error=…). Consume the hash, establish the session, then clean the URL.
+  useEffect(() => {
+    const hash = window.location.hash.replace(/^#/, "")
+    if (!hash) return
+    const params = new URLSearchParams(hash)
+    const ssoToken = params.get("sso_token")
+    const ssoError = params.get("sso_error")
+    if (ssoError) {
+      setError(SSO_ERRORS[ssoError] || "Google sign-in failed.")
+      window.history.replaceState(null, "", window.location.pathname)
+    } else if (ssoToken) {
+      window.history.replaceState(null, "", window.location.pathname)
+      setBusy(true)
+      // We have a token but not the user yet — persist the token, fetch /me.
+      useAuth.getState().setAuth(ssoToken, useAuth.getState().user as never)
+      auth.me().then((r) => {
+        setBusy(false)
+        if (r.ok) {
+          setUser(r.data.user)
+          navigate(defaultPathForRole(r.data.user.role), { replace: true })
+        } else {
+          useAuth.getState().clear()
+          setError("Could not complete Google sign-in.")
+        }
+      })
+    }
+  }, [navigate, setUser])
+
   // Login screen is the light brand theme too — assert it via the same marker
   // the public layout uses (CSS re-asserts light tokens; next-themes keeps `dark`).
   useEffect(() => {
@@ -39,11 +85,15 @@ export default function Login() {
     e.preventDefault()
     setError(null)
     setBusy(true)
-    const res = await auth.login(email.trim(), password)
+    const res = await auth.login(email.trim(), password, needs2fa ? code.trim() : undefined)
     setBusy(false)
     if (res.ok) {
       setAuth(res.data.token, res.data.user)
       navigate(from, { replace: true })
+    } else if (res.details?.two_factor_required) {
+      // Password was accepted; now ask for the authenticator code.
+      setNeeds2fa(true)
+      setError(needs2fa ? res.error : null)
     } else {
       setError(res.error)
     }
@@ -93,6 +143,26 @@ export default function Login() {
               />
             </div>
 
+            {needs2fa && (
+              <div>
+                <Label htmlFor="code">Authenticator code</Label>
+                <Input
+                  id="code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={code}
+                  onChange={(e) => setCode(e.target.value)}
+                  className="mt-1.5 tracking-[0.4em]"
+                  placeholder="123456"
+                  maxLength={6}
+                  autoFocus
+                  required
+                />
+                <p className="mt-1.5 text-xs text-muted-foreground">Enter the 6-digit code from your authenticator app.</p>
+              </div>
+            )}
+
             {error && (
               <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
                 {error}
@@ -101,9 +171,25 @@ export default function Login() {
 
             <Button type="submit" className="gk-shine w-full shadow-md shadow-primary/20" disabled={busy}>
               {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {busy ? "Signing in…" : "Sign in"}
+              {busy ? "Signing in…" : needs2fa ? "Verify & sign in" : "Sign in"}
             </Button>
           </form>
+
+          {ssoGoogle && !needs2fa && (
+            <>
+              <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                onClick={() => { window.location.href = `${API_BASE}/oauth.php?action=start` }}
+              >
+                Continue with Google
+              </Button>
+            </>
+          )}
         </div>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">

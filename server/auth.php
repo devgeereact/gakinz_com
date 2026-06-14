@@ -32,6 +32,9 @@ switch ($action) {
   case 'reset':   if ($method === 'POST') return reset_password($conn); break;
   case 'sessions': if ($method === 'GET')  return sessions($conn); break;
   case 'revoke':   if ($method === 'POST') return revoke_session($conn); break;
+  case 'twofa_setup':   if ($method === 'POST') return twofa_setup($conn); break;
+  case 'twofa_enable':  if ($method === 'POST') return twofa_enable($conn); break;
+  case 'twofa_disable': if ($method === 'POST') return twofa_disable($conn); break;
 }
 fail('Unknown auth action.', 404);
 
@@ -56,7 +59,11 @@ function login(mysqli $conn): void {
     fail('Too many attempts. Please wait a few minutes and try again.', 429);
   }
 
-  $stmt = $conn->prepare('SELECT id, name, email, role, client_id, status, password_hash FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1');
+  // totp columns are optional (un-migrated DB): fall back to a query without them.
+  $stmt = @$conn->prepare('SELECT id, name, email, role, client_id, status, password_hash, totp_secret, totp_enabled FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1');
+  if (!$stmt) {
+    $stmt = $conn->prepare('SELECT id, name, email, role, client_id, status, password_hash FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1');
+  }
   $stmt->bind_param('s', $email);
   $stmt->execute();
   $u = $stmt->get_result()->fetch_assoc();
@@ -66,6 +73,16 @@ function login(mysqli $conn): void {
     fail('Email or password is incorrect.', 401);
   }
   if ($u['status'] !== 'active') fail('Account is not active.', 403);
+
+  // Two-factor gate: if enabled, a valid TOTP code must accompany the login.
+  if (!empty($u['totp_enabled']) && !empty($u['totp_secret'])) {
+    $code = preg_replace('/\s+/', '', (string)($in['code'] ?? ''));
+    if ($code === '') fail('Two-factor code required.', 401, ['two_factor_required' => true]);
+    if (!gk_totp_verify($u['totp_secret'], $code)) {
+      audit($conn, (int)$u['id'], 'login_2fa_failed', $email);
+      fail('That two-factor code is invalid or expired.', 401, ['two_factor_required' => true]);
+    }
+  }
 
   $token = new_token();
   $exp = (new DateTime("+" . TOKEN_TTL_DAYS . " days"))->format('Y-m-d H:i:s');
@@ -212,6 +229,100 @@ function revoke_session(mysqli $conn): void {
   $stmt->execute();
   if ($stmt->affected_rows < 1) fail('Session not found.', 404);
   audit($conn, $uid, 'session_revoke', "#$id");
+  ok(['ok' => true]);
+}
+
+// ── Two-factor (TOTP) ───────────────────────────────────────────────────────
+// Standard RFC-6238 TOTP (30s step, 6 digits, SHA1) — works with Google
+// Authenticator, 1Password, Authy, etc. Implemented without any library.
+function gk_base32_encode(string $bin): string {
+  $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  $bits = '';
+  foreach (str_split($bin) as $c) $bits .= str_pad(decbin(ord($c)), 8, '0', STR_PAD_LEFT);
+  $out = '';
+  foreach (str_split($bits, 5) as $chunk) {
+    $out .= $alphabet[bindec(str_pad($chunk, 5, '0', STR_PAD_RIGHT))];
+  }
+  return $out;
+}
+function gk_base32_decode(string $b32): string {
+  $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
+  $b32 = strtoupper(preg_replace('/[^A-Z2-7]/', '', $b32));
+  $bits = '';
+  foreach (str_split($b32) as $c) $bits .= str_pad(decbin(strpos($alphabet, $c)), 5, '0', STR_PAD_LEFT);
+  $out = '';
+  foreach (str_split($bits, 8) as $byte) {
+    if (strlen($byte) === 8) $out .= chr(bindec($byte));
+  }
+  return $out;
+}
+function gk_totp_at(string $secretB32, int $counter): string {
+  $key = gk_base32_decode($secretB32);
+  $bin = pack('N*', 0) . pack('N*', $counter); // 64-bit big-endian counter
+  $hash = hash_hmac('sha1', $bin, $key, true);
+  $offset = ord($hash[19]) & 0xf;
+  $val = ((ord($hash[$offset]) & 0x7f) << 24)
+       | ((ord($hash[$offset + 1]) & 0xff) << 16)
+       | ((ord($hash[$offset + 2]) & 0xff) << 8)
+       | (ord($hash[$offset + 3]) & 0xff);
+  return str_pad((string)($val % 1000000), 6, '0', STR_PAD_LEFT);
+}
+function gk_totp_verify(string $secretB32, string $code): bool {
+  $code = preg_replace('/\D/', '', $code);
+  if (strlen($code) !== 6) return false;
+  $t = (int)floor(time() / 30);
+  // Allow ±1 step for clock drift.
+  for ($i = -1; $i <= 1; $i++) {
+    if (hash_equals(gk_totp_at($secretB32, $t + $i), $code)) return true;
+  }
+  return false;
+}
+
+function twofa_setup(mysqli $conn): void {
+  $u = require_auth($conn);
+  $secret = gk_base32_encode(random_bytes(20));
+  $uid = $u['id'];
+  // Store the pending secret but DON'T enable until a code is verified.
+  $stmt = $conn->prepare('UPDATE users SET totp_secret = ?, totp_enabled = 0 WHERE id = ?');
+  $stmt->bind_param('si', $secret, $uid);
+  $stmt->execute();
+  $label = rawurlencode('GAkinz:' . $u['email']);
+  $issuer = rawurlencode('GAkinz');
+  $otpauth = "otpauth://totp/$label?secret=$secret&issuer=$issuer&period=30&digits=6";
+  ok(['secret' => $secret, 'otpauth' => $otpauth]);
+}
+
+function twofa_enable(mysqli $conn): void {
+  $u = require_auth($conn);
+  $code = (string)(body()['code'] ?? '');
+  $uid = $u['id'];
+  $stmt = $conn->prepare('SELECT totp_secret FROM users WHERE id = ? LIMIT 1');
+  $stmt->bind_param('i', $uid);
+  $stmt->execute();
+  $secret = $stmt->get_result()->fetch_assoc()['totp_secret'] ?? '';
+  if ($secret === '') fail('Start setup first.');
+  if (!gk_totp_verify($secret, $code)) fail('That code is invalid. Check your authenticator and try again.');
+  $stmt = $conn->prepare('UPDATE users SET totp_enabled = 1 WHERE id = ?');
+  $stmt->bind_param('i', $uid);
+  $stmt->execute();
+  audit($conn, $uid, '2fa_enabled', '');
+  ok(['ok' => true]);
+}
+
+function twofa_disable(mysqli $conn): void {
+  $u = require_auth($conn);
+  $code = (string)(body()['code'] ?? '');
+  $uid = $u['id'];
+  $stmt = $conn->prepare('SELECT totp_secret, totp_enabled FROM users WHERE id = ? LIMIT 1');
+  $stmt->bind_param('i', $uid);
+  $stmt->execute();
+  $row = $stmt->get_result()->fetch_assoc();
+  if (empty($row['totp_enabled'])) ok(['ok' => true]); // already off
+  if (!gk_totp_verify((string)$row['totp_secret'], $code)) fail('Enter a current code to turn off two-factor.');
+  $stmt = $conn->prepare('UPDATE users SET totp_enabled = 0, totp_secret = NULL WHERE id = ?');
+  $stmt->bind_param('i', $uid);
+  $stmt->execute();
+  audit($conn, $uid, '2fa_disabled', '');
   ok(['ok' => true]);
 }
 

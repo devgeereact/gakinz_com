@@ -21,11 +21,13 @@ import {
   projects as projectsApi,
   time as timeApi,
   clients as clientsApi,
+  reports as reportsApi,
   type Lead,
   type Invoice,
   type Project,
   type TimeEntry,
   type Client,
+  type ProfitabilityRow,
 } from "@/lib/api"
 
 // Analytics & Reporting (§6 Analytics). Management view: revenue, pipeline
@@ -97,17 +99,20 @@ export default function Analytics() {
   const [projects, setProjects] = useState<Project[]>([])
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [clientList, setClientList] = useState<Client[]>([])
+  const [profit, setProfit] = useState<ProfitabilityRow[]>([])
 
   const load = async () => {
     setLoading(true)
     const errs: string[] = []
-    const [l, inv, p, tm, cl] = await Promise.all([
+    const [l, inv, p, tm, cl, pr] = await Promise.all([
       leadsApi.list(),
       invoicesApi.list(),
       projectsApi.list(),
       timeApi.list(),
       clientsApi.list(),
+      reportsApi.profitability(),
     ])
+    if (pr.ok) setProfit(pr.data)
     if (l.ok) setLeads(l.data)
     else errs.push("leads")
     if (inv.ok) setInvoices(inv.data)
@@ -403,10 +408,18 @@ export default function Analytics() {
       <div>
         <h2 className="gk-app-grad text-lg font-semibold tracking-tight">Reports</h2>
         <p className="mb-3 text-sm text-muted-foreground">
-          Export-ready tables (CSV / XLSX). Project profitability is deferred until per-hour cost
-          rates are configured.
+          Export-ready tables (CSV / XLSX). Profitability uses per-person cost rates set in Platform → Team.
         </p>
         <div className="grid grid-cols-12 gap-6">
+          <ReportCard
+            className="col-span-12"
+            title="Project profitability"
+            filename="gakinz-project-profitability"
+            head={["project", "client", "revenue", "cost", "margin"]}
+            labels={["Project", "Client", "Revenue", "Cost", "Margin"]}
+            money={["revenue", "cost", "margin"]}
+            rows={profit as unknown as Record<string, unknown>[]}
+          />
           <ReportCard
             className="col-span-12 xl:col-span-6"
             title="Client lifetime value"

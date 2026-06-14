@@ -35,9 +35,9 @@ function ok($data, int $code = 200): void {
   exit;
 }
 
-function fail(string $message, int $code = 400): void {
+function fail(string $message, int $code = 400, array $extra = []): void {
   http_response_code($code);
-  echo json_encode(['error' => $message]);
+  echo json_encode(array_merge(['error' => $message], $extra));
   exit;
 }
 

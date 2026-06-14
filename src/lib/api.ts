@@ -5,7 +5,10 @@ import { getStoredToken, useAuth, type AuthUser, type Role } from "@/store/auth.
 
 export const API_BASE = import.meta.env.DEV ? "https://gakinz.com" : ""
 
-export type ApiResult<T> = { ok: true; data: T } | { ok: false; error: string; status?: number }
+export type ApiResult<T> =
+  | { ok: true; data: T }
+  // `details` carries the full parsed error body (e.g. { two_factor_required }).
+  | { ok: false; error: string; status?: number; details?: Record<string, unknown> }
 
 async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
   try {
@@ -23,9 +26,10 @@ async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T
     if (!res.ok) {
       // Self-healing session expiry: a 401 means the token is gone/expired, so
       // purge auth — RequireAuth then redirects to /login instead of leaving the
-      // user stuck on a module that keeps erroring. (No-op pre-login.)
-      if (res.status === 401) useAuth.getState().clear()
-      return { ok: false, error: (body && body.error) || `Request failed (${res.status})`, status: res.status }
+      // user stuck on a module that keeps erroring. (No-op pre-login.) Exception:
+      // a 2FA-required 401 during login must NOT clear (there's nothing to clear).
+      if (res.status === 401 && !(body && body.two_factor_required)) useAuth.getState().clear()
+      return { ok: false, error: (body && body.error) || `Request failed (${res.status})`, status: res.status, details: body || undefined }
     }
     return { ok: true, data: body as T }
   } catch (e) {
@@ -37,6 +41,27 @@ export const api = {
   get: <T>(path: string) => request<T>(path),
   post: <T>(path: string, payload: unknown) =>
     request<T>(path, { method: "POST", body: JSON.stringify(payload) }),
+  // Multipart upload (FormData). No Content-Type header — the browser sets the
+  // multipart boundary itself.
+  upload: async <T>(path: string, form: FormData): Promise<ApiResult<T>> => {
+    try {
+      const token = getStoredToken()
+      const res = await fetch(`${API_BASE}${path}`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: form,
+      })
+      const text = await res.text()
+      const body = text ? JSON.parse(text) : null
+      if (!res.ok) {
+        if (res.status === 401) useAuth.getState().clear()
+        return { ok: false, error: (body && body.error) || `Upload failed (${res.status})`, status: res.status }
+      }
+      return { ok: true, data: body as T }
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : "Network error" }
+    }
+  },
 }
 
 // Smoke-test endpoint (build order step 1): GET returns rows, POST inserts one.
@@ -247,6 +272,21 @@ export const invoices = {
   // (payments.php?action=webhook) marks it paid once Stripe confirms.
   payLink: (invoice_id: number) =>
     api.post<{ url: string; session_id: string }>("/payments.php?action=link", { invoice_id }),
+  // Email the client a payment reminder for an unpaid invoice (needs SMTP).
+  chase: (id: number) => api.post<{ ok: boolean; sent_to: string }>("/invoices.php?action=chase", { id }),
+}
+
+// Profitability report (management). Per-project revenue vs cost vs margin.
+export type ProfitabilityRow = {
+  project_id: number
+  project: string
+  client: string | null
+  revenue: number
+  cost: number
+  margin: number
+}
+export const reports = {
+  profitability: () => api.get<ProfitabilityRow[]>("/reports.php?report=profitability"),
 }
 
 // Time tracking (§6 Time).
@@ -384,6 +424,8 @@ export type ManagedUser = {
   role: Role
   client_id: number | null
   client_company: string | null
+  cost_rate: number
+  totp_enabled: boolean
   status: UserStatus
   created_at: string
 }
@@ -399,6 +441,8 @@ export const users = {
   setRole: (id: number, role: Role) => api.post<{ ok: boolean }>("/users.php?action=role", { id, role }),
   setStatus: (id: number, status: UserStatus) =>
     api.post<{ ok: boolean }>("/users.php?action=status", { id, status }),
+  setRate: (id: number, cost_rate: number) =>
+    api.post<{ ok: boolean }>("/users.php?action=rate", { id, cost_rate }),
 }
 
 // Audit log (§6.1).
@@ -418,8 +462,14 @@ export const audit = {
 // Auth (§6.1). Token + user persisted in the auth store; api attaches the bearer.
 export type LoginResponse = { token: string; expires: string; user: AuthUser }
 export const auth = {
-  login: (email: string, password: string) =>
-    api.post<LoginResponse>("/auth.php?action=login", { email, password }),
+  // `code` is the 6-digit TOTP, sent only when the account has 2FA enabled. A
+  // first attempt without it returns 401 + details.two_factor_required.
+  login: (email: string, password: string, code?: string) =>
+    api.post<LoginResponse>("/auth.php?action=login", { email, password, ...(code ? { code } : {}) }),
+  twofaSetup: () => api.post<{ secret: string; otpauth: string }>("/auth.php?action=twofa_setup", {}),
+  twofaEnable: (code: string) => api.post<{ ok: boolean }>("/auth.php?action=twofa_enable", { code }),
+  twofaDisable: (code: string) => api.post<{ ok: boolean }>("/auth.php?action=twofa_disable", { code }),
+  ssoStatus: () => api.get<{ google: boolean }>("/oauth.php?action=status"),
   me: () => api.get<{ user: AuthUser }>("/auth.php?action=me"),
   logout: () => api.post<{ ok: boolean }>("/auth.php?action=logout", {}),
   forgot: (email: string) => api.post<{ ok: boolean }>("/auth.php?action=forgot", { email }),
@@ -592,6 +642,60 @@ export const knowledge = {
   update: (id: number, payload: { title: string; category?: string; audience?: string; body?: string }) =>
     api.post<{ ok: boolean }>("/knowledge.php?action=update", { id, ...payload }),
   remove: (id: number) => api.post<{ ok: boolean }>("/knowledge.php?action=delete", { id }),
+}
+
+// Files & Documents — per-project/client storage with expiring share links.
+export type FileRow = {
+  id: number
+  client_id: number | null
+  project_id: number | null
+  name: string
+  mime: string | null
+  size: number
+  share_token: string | null
+  expires_at: string | null
+  created_at: string
+  client_company: string | null
+  project_name: string | null
+  uploaded_by_name: string | null
+}
+export const files = {
+  list: (params?: { project_id?: number; client_id?: number }) => {
+    const q = new URLSearchParams()
+    if (params?.project_id) q.set("project_id", String(params.project_id))
+    if (params?.client_id) q.set("client_id", String(params.client_id))
+    const s = q.toString()
+    return api.get<FileRow[]>(`/files.php${s ? `?${s}` : ""}`)
+  },
+  upload: (file: File, params?: { project_id?: number; client_id?: number }) => {
+    const form = new FormData()
+    form.append("file", file)
+    if (params?.project_id) form.append("project_id", String(params.project_id))
+    if (params?.client_id) form.append("client_id", String(params.client_id))
+    return api.upload<{ id: number }>("/files.php?action=upload", form)
+  },
+  share: (id: number, days = 7) => api.post<{ token: string; expires_at: string }>("/files.php?action=share", { id, days }),
+  remove: (id: number) => api.post<{ ok: boolean }>("/files.php?action=delete", { id }),
+  // Authenticated download URL (token is attached by the browser via the page,
+  // so for direct links prefer a share link). Returns the absolute API path.
+  downloadUrl: (id: number) => `${API_BASE}/files.php?download=${id}`,
+  shareUrl: (token: string) => `${API_BASE}/files.php?token=${token}`,
+}
+
+// Announcements / broadcasts.
+export type Announcement = {
+  id: number
+  title: string
+  body: string | null
+  level: "info" | "warning"
+  created_at: string
+  author: string | null
+}
+export const announcements = {
+  list: () => api.get<Announcement[]>("/announcements.php"),
+  create: (payload: { title: string; body?: string; level?: string }) =>
+    api.post<{ id: number }>("/announcements.php?action=create", payload),
+  remove: (id: number) => api.post<{ ok: boolean }>("/announcements.php?action=delete", { id }),
 }
 
 // Weather (CMS dashboard widget). Server proxies OpenWeather; key stays server-side.

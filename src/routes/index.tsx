@@ -87,6 +87,7 @@ export const router = createBrowserRouter([
       { path: "resourcing", lazy: lz(() => import("@/app/modules/Resourcing")) },
       { path: "contracts", lazy: lz(() => import("@/app/modules/Contracts")) },
       { path: "knowledge", lazy: lz(() => import("@/app/modules/Knowledge")) },
+      { path: "files", lazy: lz(() => import("@/app/modules/Files")) },
       { path: "platform", lazy: lz(() => import("@/app/modules/Platform")) },
 
       // ✅ 404 HANDLER
