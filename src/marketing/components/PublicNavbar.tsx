@@ -46,7 +46,7 @@ export default function PublicNavbar() {
       "rounded-md px-3 py-2 text-sm font-medium transition-colors",
       "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       isActive
-        ? "bg-primary/8 text-primary"
+        ? "bg-[hsl(var(--gk-violet)/0.1)] text-[hsl(var(--gk-violet))]"
         : "text-foreground/70 hover:bg-muted hover:text-foreground",
     )
 
@@ -67,7 +67,7 @@ export default function PublicNavbar() {
         >
           <BrandMark className="h-8 w-8" />
           <span className="text-lg font-extrabold tracking-tight">
-            GAkin<span className="text-primary">z</span>
+            GAkin<span className="gk-grad-text">z</span>
           </span>
         </Link>
 
@@ -108,7 +108,7 @@ export default function PublicNavbar() {
                   ))}
                   <Link
                     to="/services"
-                    className="col-span-2 rounded-lg bg-accent/60 p-3 text-sm font-medium text-primary transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="col-span-2 rounded-lg bg-accent/60 p-3 text-sm font-medium text-[hsl(var(--gk-violet))] transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     View all services →
                   </Link>

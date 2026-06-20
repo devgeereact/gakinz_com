@@ -13,6 +13,7 @@ export default function Pricing() {
         eyebrow="Services & pricing"
         title="Clear packages, no surprises"
         intro="Every site is a little different, so these are starting points, not final quotes. After a short discovery call we send a fixed price for your project, so you know the number before any work begins. Prices are in GBP and exclude VAT."
+        breadcrumb="Pricing"
       />
 
       {/* Packages */}
@@ -23,11 +24,11 @@ export default function Pricing() {
               <div
                 className={cn(
                   "gk-card relative flex h-full flex-col p-6",
-                  p.featured && "gk-glow border-primary/40 ring-1 ring-primary/30",
+                  p.featured && "gk-glow border-[hsl(var(--gk-violet)/0.45)] ring-1 ring-[hsl(var(--gk-violet)/0.35)]",
                 )}
               >
                 {p.featured && (
-                  <span className="mb-3 inline-flex w-fit items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/30">
+                  <span className="mb-3 inline-flex w-fit items-center gap-1 rounded-full bg-gradient-to-r from-[hsl(var(--gk-violet))] to-[hsl(var(--gk-sky))] px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
                     <Star className="h-3 w-3 fill-current" /> Most popular
                   </span>
                 )}
@@ -44,7 +45,7 @@ export default function Pricing() {
                 <ul className="mt-5 flex-1 space-y-2.5">
                   {p.features.map((f) => (
                     <li key={f} className="flex items-start gap-2 text-sm">
-                      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-primary" />
+                      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-[hsl(var(--gk-violet))]" />
                       <span className="text-foreground">{f}</span>
                     </li>
                   ))}
@@ -76,7 +77,7 @@ export default function Pricing() {
             <ul className="grid gap-4 sm:grid-cols-2">
               {alwaysIncluded.map((item) => (
                 <li key={item} className="flex items-start gap-3">
-                  <span className="mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <span className="mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[hsl(var(--gk-violet)/0.12)] text-[hsl(var(--gk-violet))]">
                     <Check className="h-3.5 w-3.5" />
                   </span>
                   <span className="text-sm text-foreground">{item}</span>
@@ -136,7 +137,7 @@ export default function Pricing() {
             <ol className="space-y-4">
               {paymentTerms.map((t, i) => (
                 <li key={t} className="gk-card flex items-start gap-4 p-5">
-                  <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 font-serif text-lg font-bold text-primary">
+                  <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[hsl(var(--gk-violet)/0.12)] font-serif text-lg font-bold text-[hsl(var(--gk-violet))]">
                     {i + 1}
                   </span>
                   <span className="text-sm text-foreground">{t}</span>
@@ -155,7 +156,7 @@ export default function Pricing() {
             <details key={f.q} className="group gk-card px-5 py-4">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-semibold text-foreground">
                 {f.q}
-                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg text-primary transition-transform group-open:rotate-45">
+                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[hsl(var(--gk-violet)/0.12)] text-lg text-[hsl(var(--gk-violet))] transition-transform group-open:rotate-45">
                   +
                 </span>
               </summary>

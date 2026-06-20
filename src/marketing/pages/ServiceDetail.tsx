@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, Check } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { services, processStages, alwaysIncluded } from "@/marketing/data/site"
 import FadeIn from "../components/FadeIn"
+import SiteMockup, { variantForService } from "../components/SiteMockup"
 import { PageHero, Section, SectionHeading, CtaBand } from "../components/primitives"
 import NotFound from "./NotFound"
 
@@ -15,7 +16,7 @@ export default function ServiceDetail() {
 
   return (
     <>
-      <PageHero eyebrow="Service" title={service.title} intro={service.summary} />
+      <PageHero eyebrow="Service" title={service.title} intro={service.summary} breadcrumb={service.title} />
       <Section>
         <Link
           to="/services"
@@ -23,14 +24,21 @@ export default function ServiceDetail() {
         >
           <ArrowLeft className="mr-1 h-4 w-4" /> All services
         </Link>
-        <div className="mt-6 grid gap-12 lg:grid-cols-[1.5fr_1fr]">
+        <FadeIn>
+          <div className="relative mt-6 overflow-hidden rounded-2xl border border-[hsl(var(--gk-indigo)/0.08)] shadow-xl shadow-[hsl(var(--gk-violet)/0.12)]">
+            <div className="aspect-[16/7] w-full">
+              <SiteMockup variant={variantForService(service.slug)} url={`${service.slug.replace(/-/g, "")}.example`} />
+            </div>
+          </div>
+        </FadeIn>
+        <div className="mt-10 grid gap-12 lg:grid-cols-[1.5fr_1fr]">
           <FadeIn>
             <p className="text-lg text-muted-foreground">{service.detail}</p>
             <h2 className="mt-8 text-lg font-semibold">What you get</h2>
             <ul className="mt-4 space-y-3">
               {service.deliverables.map((d) => (
                 <li key={d} className="flex items-start gap-3">
-                  <span className="mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <span className="mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[hsl(var(--gk-violet)/0.12)] text-[hsl(var(--gk-violet))]">
                     <Check className="h-3.5 w-3.5" />
                   </span>
                   <span className="text-sm text-foreground">{d}</span>
@@ -56,7 +64,7 @@ export default function ServiceDetail() {
                       className="flex items-center justify-between rounded-lg p-2 text-sm hover:bg-accent"
                     >
                       {o.title}
-                      <ArrowRight className="h-4 w-4 text-primary" />
+                      <ArrowRight className="h-4 w-4 text-[hsl(var(--gk-violet))]" />
                     </Link>
                   </li>
                 ))}
@@ -92,7 +100,7 @@ export default function ServiceDetail() {
           {processStages.map((stage, i) => (
             <FadeIn key={stage.n} delay={i * 0.05}>
               <div className="gk-card h-full p-6">
-                <span className="font-serif text-3xl font-bold text-primary/30">{stage.n}</span>
+                <span className="font-serif text-4xl font-extrabold text-[hsl(var(--gk-indigo)/0.10)]">{stage.n}</span>
                 <h3 className="mt-2 text-base font-semibold">{stage.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{stage.what}</p>
               </div>
@@ -111,7 +119,7 @@ export default function ServiceDetail() {
             <ul className="grid gap-4 sm:grid-cols-2">
               {alwaysIncluded.map((item) => (
                 <li key={item} className="flex items-start gap-3">
-                  <span className="mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
+                  <span className="mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[hsl(var(--gk-violet)/0.12)] text-[hsl(var(--gk-violet))]">
                     <Check className="h-3.5 w-3.5" />
                   </span>
                   <span className="text-sm text-foreground">{item}</span>

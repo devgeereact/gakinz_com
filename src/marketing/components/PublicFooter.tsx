@@ -19,7 +19,7 @@ export default function PublicFooter() {
             <Link to="/" className="flex items-center gap-2" aria-label="GAkinz home">
               <BrandMark className="h-8 w-8" />
               <span className="text-lg font-extrabold tracking-tight">
-                GAkin<span className="text-primary">z</span>
+                GAkin<span className="gk-grad-text">z</span>
               </span>
             </Link>
             <p className="mt-3 max-w-xs text-sm text-muted-foreground">{company.tagline}</p>

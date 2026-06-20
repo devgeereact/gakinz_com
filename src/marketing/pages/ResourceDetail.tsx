@@ -2,6 +2,7 @@ import { Link, useParams } from "react-router-dom"
 import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { insights } from "@/marketing/data/site"
+import SiteMockup from "../components/SiteMockup"
 import { PageHero, Section } from "../components/primitives"
 import NotFound from "./NotFound"
 
@@ -16,12 +17,17 @@ export default function ResourceDetail() {
 
   return (
     <>
-      <PageHero eyebrow={`${formatDate(post.date)} · ${post.readMins} min read`} title={post.title} />
+      <PageHero eyebrow={`${formatDate(post.date)} · ${post.readMins} min read`} title={post.title} breadcrumb="Insights" />
       <Section>
         <Link to="/resources" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="mr-1 h-4 w-4" /> All insights
         </Link>
-        <article className="mt-6 max-w-2xl space-y-5">
+        <div className="relative mt-6 max-w-2xl overflow-hidden rounded-2xl border border-[hsl(var(--gk-indigo)/0.08)] shadow-xl shadow-[hsl(var(--gk-violet)/0.12)]">
+          <div className="aspect-[16/7] w-full">
+            <SiteMockup variant="article" url="gakinz.com/insights" />
+          </div>
+        </div>
+        <article className="mt-8 max-w-2xl space-y-5">
           {post.body.map((para, i) => (
             <p key={i} className="text-lg leading-relaxed text-muted-foreground">
               {para}

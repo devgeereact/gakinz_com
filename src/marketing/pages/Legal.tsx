@@ -6,7 +6,7 @@ type Block = { h: string; p: string[] }
 function LegalPage({ title, intro, blocks }: { title: string; intro: string; blocks: Block[] }) {
   return (
     <>
-      <PageHero eyebrow="Legal" title={title} intro={intro} />
+      <PageHero eyebrow="Legal" title={title} intro={intro} breadcrumb={title} />
       <Section>
         <div className="max-w-2xl space-y-8">
           <p className="text-sm text-muted-foreground">Last updated 1 June 2026.</p>
@@ -22,7 +22,7 @@ function LegalPage({ title, intro, blocks }: { title: string; intro: string; blo
           ))}
           <p className="text-muted-foreground">
             Questions about this policy? Email{" "}
-            <a className="text-primary hover:underline" href={`mailto:${company.email}`}>
+            <a className="text-[hsl(var(--gk-violet))] hover:underline" href={`mailto:${company.email}`}>
               {company.email}
             </a>
             .

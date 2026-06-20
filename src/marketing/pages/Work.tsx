@@ -1,5 +1,7 @@
+import { Check } from "lucide-react"
 import { work, processStages } from "@/marketing/data/site"
 import FadeIn from "../components/FadeIn"
+import SiteMockup, { variantForSector } from "../components/SiteMockup"
 import { PageHero, Section, SectionHeading, Stat, CtaBand } from "../components/primitives"
 
 const stats = [
@@ -16,6 +18,7 @@ export default function Work() {
         eyebrow="Our work"
         title="Sites we have designed and built"
         intro="A selection of projects. Each was designed and built by the same team, from first sketch to launch — and each is a site the client can run, not one that needs us forever."
+        breadcrumb="Work"
       />
 
       {/* Stats strip */}
@@ -38,23 +41,28 @@ export default function Work() {
               <article className="gk-card grid gap-6 p-6 sm:p-8 lg:grid-cols-[1fr_1.6fr]">
                 {/* Left — title + visual */}
                 <div>
-                  <span className="text-xs font-semibold uppercase tracking-wide text-primary">
-                    {w.sector}
-                  </span>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--gk-violet))]">
+                      {w.sector}
+                    </span>
+                    <span className="font-serif text-3xl font-extrabold text-[hsl(var(--gk-indigo)/0.08)]">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                  </div>
                   <h3 className="mt-2 font-serif text-xl font-bold">{w.title}</h3>
                   <p className="mt-2 text-sm text-muted-foreground">{w.summary}</p>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {w.services.map((s) => (
                       <span
                         key={s}
-                        className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary"
+                        className="rounded-full bg-[hsl(var(--gk-violet)/0.10)] px-2.5 py-1 text-xs font-medium text-[hsl(var(--gk-violet))]"
                       >
                         {s}
                       </span>
                     ))}
                   </div>
-                  <div className="relative mt-5 aspect-[4/3] w-full overflow-hidden rounded-xl bg-gradient-to-br from-primary/20 via-primary/8 to-transparent ring-1 ring-primary/10">
-                    <div className="absolute inset-0 gk-dots" aria-hidden />
+                  <div className="relative mt-5 aspect-[4/3] w-full overflow-hidden rounded-xl ring-1 ring-[hsl(var(--gk-violet)/0.12)]">
+                    <SiteMockup variant={variantForSector(w.sector)} />
                   </div>
                 </div>
                 {/* Right — challenge / approach / result */}
@@ -67,9 +75,11 @@ export default function Work() {
                     <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Approach</dt>
                     <dd className="mt-2 text-sm text-foreground">{w.approach}</dd>
                   </div>
-                  <div className="rounded-lg bg-primary/5 p-4 sm:bg-transparent sm:p-0">
-                    <dt className="text-xs font-semibold uppercase tracking-wide text-primary">Result</dt>
-                    <dd className="mt-2 text-sm font-medium text-foreground">{w.result}</dd>
+                  <div className="rounded-lg bg-[hsl(var(--gk-violet)/0.06)] p-4 sm:bg-transparent sm:p-0">
+                    <dt className="text-xs font-semibold uppercase tracking-wide text-[hsl(var(--gk-violet))]">Result</dt>
+                    <dd className="mt-2 flex items-start gap-1.5 text-sm font-medium text-foreground">
+                      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" /> {w.result}
+                    </dd>
                   </div>
                 </dl>
               </article>
@@ -89,7 +99,9 @@ export default function Work() {
           {processStages.map((stage, i) => (
             <FadeIn key={stage.n} delay={i * 0.05}>
               <div className="gk-card h-full p-6">
-                <span className="font-serif text-3xl font-bold text-primary/30">{stage.n}</span>
+                <span className="font-serif text-4xl font-extrabold text-[hsl(var(--gk-indigo)/0.10)]">
+                  {stage.n}
+                </span>
                 <h3 className="mt-2 text-base font-semibold">{stage.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{stage.what}</p>
               </div>

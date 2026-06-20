@@ -15,6 +15,7 @@ import {
 import { company, contactSteps } from "@/marketing/data/site"
 import { contact, booking, type EnquiryPayload } from "@/lib/api"
 import { PageHero, Section, SectionHeading } from "../components/primitives"
+import SiteMockup from "../components/SiteMockup"
 import FadeIn from "../components/FadeIn"
 
 const projectTypes = ["New website", "Redesign", "Ecommerce", "Care & support", "Something else"]
@@ -71,12 +72,13 @@ export default function Contact() {
         eyebrow="Contact"
         title="Tell us what you are building"
         intro="Send a few lines about your project. We will come back with a clear next step, not a hard sell."
+        breadcrumb="Contact"
       />
       {bookUrl && (
         <Section>
           <div className="gk-card flex flex-col items-center gap-4 rounded-2xl p-8 text-center sm:flex-row sm:justify-between sm:text-left">
             <div className="flex items-center gap-3">
-              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[hsl(var(--gk-violet)/0.12)] text-[hsl(var(--gk-violet))]">
                 <CalendarClock className="h-5 w-5" />
               </span>
               <div>
@@ -95,7 +97,7 @@ export default function Contact() {
           {/* Details */}
           <div className="space-y-6">
             <div className="flex items-start gap-3">
-              <Mail className="mt-0.5 h-5 w-5 text-primary" />
+              <Mail className="mt-0.5 h-5 w-5 text-[hsl(var(--gk-violet))]" />
               <div>
                 <div className="text-sm font-semibold">Email</div>
                 <a className="text-sm text-muted-foreground hover:text-foreground" href={`mailto:${company.email}`}>
@@ -104,17 +106,22 @@ export default function Contact() {
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <MapPin className="mt-0.5 h-5 w-5 text-primary" />
+              <MapPin className="mt-0.5 h-5 w-5 text-[hsl(var(--gk-violet))]" />
               <div>
                 <div className="text-sm font-semibold">Where we are</div>
                 <p className="text-sm text-muted-foreground">{company.address}</p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <Clock className="mt-0.5 h-5 w-5 text-primary" />
+              <Clock className="mt-0.5 h-5 w-5 text-[hsl(var(--gk-violet))]" />
               <div>
                 <div className="text-sm font-semibold">Hours</div>
                 <p className="text-sm text-muted-foreground">{company.hours}</p>
+              </div>
+            </div>
+            <div className="relative mt-2 hidden overflow-hidden rounded-2xl border border-[hsl(var(--gk-indigo)/0.08)] shadow-lg shadow-[hsl(var(--gk-violet)/0.12)] sm:block">
+              <div className="aspect-[16/10] w-full">
+                <SiteMockup variant="studio" />
               </div>
             </div>
           </div>
@@ -220,7 +227,7 @@ export default function Contact() {
           {contactSteps.map((step, i) => (
             <FadeIn key={step.title} delay={i * 0.05}>
               <div className="gk-card h-full p-6">
-                <span className="font-serif text-3xl font-bold text-primary/30">{`0${i + 1}`}</span>
+                <span className="font-serif text-4xl font-extrabold text-[hsl(var(--gk-indigo)/0.10)]">{`0${i + 1}`}</span>
                 <h3 className="mt-2 text-base font-semibold">{step.title}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{step.detail}</p>
               </div>
