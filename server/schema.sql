@@ -461,3 +461,56 @@ CREATE TABLE IF NOT EXISTS kb_articles (
   deleted_at  TIMESTAMP NULL DEFAULT NULL,
   CONSTRAINT fk_kb_author FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ── Public blog (dedicated Blog module → public site) ────────────────────────
+-- Authored in the CMS "Blog" module; blog.php serves `published` rows publicly.
+CREATE TABLE IF NOT EXISTS posts (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  slug          VARCHAR(200) NOT NULL UNIQUE,
+  title         VARCHAR(200) NOT NULL,
+  excerpt       VARCHAR(400) DEFAULT NULL,
+  body          MEDIUMTEXT DEFAULT NULL,
+  category      VARCHAR(60) NOT NULL DEFAULT 'General',
+  cover         VARCHAR(20) NOT NULL DEFAULT 'article',   -- SiteMockup variant
+  read_mins     INT NOT NULL DEFAULT 4,
+  status        VARCHAR(20) NOT NULL DEFAULT 'draft',      -- draft | published
+  author_id     INT NULL,
+  published_at  TIMESTAMP NULL DEFAULT NULL,
+  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at    TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT fk_post_author FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ── Curated testimonials (CMS-approved → public site) ────────────────────────
+CREATE TABLE IF NOT EXISTS testimonials (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  author      VARCHAR(120) NOT NULL,
+  role        VARCHAR(120) DEFAULT NULL,
+  company     VARCHAR(120) DEFAULT NULL,
+  quote       VARCHAR(600) NOT NULL,
+  rating      TINYINT NOT NULL DEFAULT 5,
+  approved    TINYINT(1) NOT NULL DEFAULT 0,
+  sort_order  INT NOT NULL DEFAULT 0,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at  TIMESTAMP NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ── Content Hub drafts (AI-assisted multi-platform content) ──────────────────
+-- Saved output from the CMS "Content Hub". Blog drafts can be pushed into posts.
+CREATE TABLE IF NOT EXISTS content_drafts (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  topic       VARCHAR(300) NOT NULL,
+  platform    VARCHAR(30) NOT NULL DEFAULT 'blog',  -- blog|linkedin|x|instagram|facebook|tiktok
+  title       VARCHAR(200) DEFAULT NULL,
+  body        MEDIUMTEXT DEFAULT NULL,
+  hashtags    VARCHAR(800) DEFAULT NULL,            -- space-separated
+  keywords    VARCHAR(800) DEFAULT NULL,            -- comma-separated
+  status      VARCHAR(20) NOT NULL DEFAULT 'draft', -- draft|used
+  author_id   INT NULL,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at  TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT fk_draft_author FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

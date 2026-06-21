@@ -35,18 +35,18 @@ export default function Verify() {
 
   return (
     <>
-      <PageHero eyebrow="Verification" title="Certificate check" intro={`Verifying certificate ${id}.`} />
+      <PageHero eyebrow="Verification" title="Certificate check" intro={`Verifying certificate ${id}.`} breadcrumb="Verification" />
       <Section>
         <div className="gk-ring mx-auto max-w-md p-8 text-center shadow-xl shadow-primary/5">
           {state === "loading" && (
             <>
-              <Loader2 className="mx-auto h-10 w-10 animate-spin text-primary" />
+              <Loader2 className="mx-auto h-10 w-10 animate-spin text-[hsl(var(--gk-violet))]" />
               <p className="mt-4 text-muted-foreground">Checking the record…</p>
             </>
           )}
           {state === "valid" && cert && (
             <>
-              <BadgeCheck className="mx-auto h-12 w-12 text-primary" />
+              <BadgeCheck className="mx-auto h-12 w-12 text-emerald-500" />
               <h2 className="mt-4 font-serif text-2xl font-bold">Valid certificate</h2>
               <dl className="mt-6 space-y-2 text-left text-sm">
                 <div className="flex justify-between border-b border-border pb-2">

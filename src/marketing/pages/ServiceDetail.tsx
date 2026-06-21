@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { services, processStages, alwaysIncluded } from "@/marketing/data/site"
 import FadeIn from "../components/FadeIn"
 import SiteMockup, { variantForService } from "../components/SiteMockup"
-import { PageHero, Section, SectionHeading, CtaBand } from "../components/primitives"
+import { PageHero, Section, Split, RuleEyebrow, CtaBand } from "../components/primitives"
 import NotFound from "./NotFound"
 
 export default function ServiceDetail() {
@@ -52,38 +52,33 @@ export default function ServiceDetail() {
             </Button>
           </FadeIn>
           <FadeIn delay={0.1}>
-            <div className="gk-card p-6">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Other services
-              </h3>
-              <ul className="mt-4 space-y-3">
+            <div className="lg:sticky lg:top-24">
+              <RuleEyebrow>Other services</RuleEyebrow>
+              <div className="mt-5 border-t border-[hsl(var(--gk-indigo)/0.14)]">
                 {others.map((o) => (
-                  <li key={o.slug}>
-                    <Link
-                      to={`/services/${o.slug}`}
-                      className="flex items-center justify-between rounded-lg p-2 text-sm hover:bg-accent"
-                    >
-                      {o.title}
-                      <ArrowRight className="h-4 w-4 text-[hsl(var(--gk-violet))]" />
-                    </Link>
-                  </li>
+                  <Link
+                    key={o.slug}
+                    to={`/services/${o.slug}`}
+                    className="group flex items-center justify-between gap-3 border-b border-[hsl(var(--gk-indigo)/0.14)] py-4 transition-colors hover:text-[hsl(var(--gk-violet))]"
+                  >
+                    <span className="font-serif text-base font-bold">{o.title}</span>
+                    <ArrowRight className="h-4 w-4 text-[hsl(var(--gk-violet))] transition-transform group-hover:translate-x-1" />
+                  </Link>
                 ))}
-              </ul>
-            </div>
+              </div>
 
-            <div className="gk-card mt-5 p-6">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                Pricing
-              </h3>
-              <p className="mt-3 text-sm text-muted-foreground">
-                Every project is fixed-price after a short discovery call, so you know the number before
-                any work begins.
-              </p>
-              <Button asChild variant="outline" className="mt-4 w-full">
-                <Link to="/pricing">
-                  See packages <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
+              <div className="mt-10">
+                <RuleEyebrow>Pricing</RuleEyebrow>
+                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+                  Every project is fixed-price after a short discovery call, so you know the number before
+                  any work begins.
+                </p>
+                <Button asChild variant="outline" className="mt-4">
+                  <Link to="/pricing">
+                    See packages <ArrowRight className="ml-1 h-4 w-4" />
+                  </Link>
+                </Button>
+              </div>
             </div>
           </FadeIn>
         </div>
@@ -91,43 +86,36 @@ export default function ServiceDetail() {
 
       {/* How we work */}
       <Section muted>
-        <SectionHeading
-          eyebrow="How we work"
-          title="A simple path from first call to a live site"
-          intro="Five clear stages. You always know what stage you're at and what happens next."
-        />
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
-          {processStages.map((stage, i) => (
-            <FadeIn key={stage.n} delay={i * 0.05}>
-              <div className="gk-card h-full p-6">
-                <span className="font-serif text-4xl font-extrabold text-[hsl(var(--gk-indigo)/0.10)]">{stage.n}</span>
-                <h3 className="mt-2 text-base font-semibold">{stage.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{stage.what}</p>
-              </div>
-            </FadeIn>
+        <RuleEyebrow>How we work</RuleEyebrow>
+        <h2 className="mt-4 max-w-2xl font-serif text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.05]">
+          A simple path from first call to a live site
+        </h2>
+        <div className="mt-12 grid grid-cols-1 border-t border-[hsl(var(--gk-indigo)/0.14)] lg:grid-cols-5">
+          {processStages.map((stage) => (
+            <div
+              key={stage.n}
+              className="border-b border-[hsl(var(--gk-indigo)/0.14)] py-7 lg:border-b-0 lg:px-6 lg:[&:not(:first-child)]:border-l lg:[&:not(:first-child)]:border-[hsl(var(--gk-indigo)/0.14)] lg:first:pl-0"
+            >
+              <span className="font-serif text-4xl font-extrabold text-[hsl(var(--gk-indigo)/0.12)]">{stage.n}</span>
+              <h3 className="mt-3 text-base font-semibold">{stage.title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{stage.what}</p>
+            </div>
           ))}
         </div>
       </Section>
 
       {/* Always included */}
       <Section>
-        <div className="grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:items-start">
-          <FadeIn>
-            <SectionHeading eyebrow="Every project" title="What's always included" />
-          </FadeIn>
-          <FadeIn delay={0.1}>
-            <ul className="grid gap-4 sm:grid-cols-2">
-              {alwaysIncluded.map((item) => (
-                <li key={item} className="flex items-start gap-3">
-                  <span className="mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[hsl(var(--gk-violet)/0.12)] text-[hsl(var(--gk-violet))]">
-                    <Check className="h-3.5 w-3.5" />
-                  </span>
-                  <span className="text-sm text-foreground">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </FadeIn>
-        </div>
+        <Split label="Every project" title="What's always included" sticky>
+          <ul className="grid border-t border-[hsl(var(--gk-indigo)/0.14)] sm:grid-cols-2 sm:gap-x-12">
+            {alwaysIncluded.map((item) => (
+              <li key={item} className="flex items-start gap-3 border-b border-[hsl(var(--gk-indigo)/0.14)] py-5">
+                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-[hsl(var(--gk-violet))]" />
+                <span className="text-sm text-foreground">{item}</span>
+              </li>
+            ))}
+          </ul>
+        </Split>
       </Section>
 
       <CtaBand

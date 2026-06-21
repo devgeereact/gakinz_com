@@ -1,6 +1,7 @@
 import { Layers, Eye, Sprout, Gem } from "lucide-react"
 import FadeIn from "../components/FadeIn"
-import { PageHero, Section, SectionHeading, GradientText, QuoteBand, CtaBand } from "../components/primitives"
+import Testimonials from "../components/Testimonials"
+import { PageHero, Section, Split, IndexList, IndexRow, RuleEyebrow, GradientText, QuoteBand, CtaBand } from "../components/primitives"
 
 const beliefs = [
   { t: "Craft is in the details", d: "The polish a visitor can't name is the part they feel." },
@@ -40,7 +41,10 @@ export default function About() {
             </div>
           </FadeIn>
           <FadeIn delay={0.1}>
-            <SectionHeading eyebrow="Our story" title="We built GAkinz to close a gap" />
+            <RuleEyebrow>Our story</RuleEyebrow>
+            <h2 className="mt-4 font-serif text-3xl font-bold tracking-tight sm:text-[2.5rem] sm:leading-[1.05]">
+              We built GAkinz to close a gap
+            </h2>
             <div className="mt-5 space-y-4 text-muted-foreground">
               <p>
                 GAkinz started from a simple frustration: too many small businesses end up with websites
@@ -57,50 +61,45 @@ export default function About() {
         </div>
       </Section>
 
-      {/* What we stand for — pillars */}
+      {/* What we stand for — pillars index */}
       <Section muted>
-        <SectionHeading eyebrow="What we stand for" title="Four things we hold to" center />
-        <div className="mt-10 grid gap-5 sm:grid-cols-2">
-          {pillars.map((p, i) => {
-            const Icon = p.icon
-            return (
-              <FadeIn key={p.t} delay={i * 0.05}>
-                <div className="gk-card flex h-full items-start gap-4 p-6">
-                  <span className="inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[hsl(var(--gk-violet))] to-[hsl(var(--gk-sky))] text-white shadow-md">
-                    <Icon className="h-5 w-5" />
-                  </span>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-base font-semibold">{p.t}</h3>
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">{p.d}</p>
-                  </div>
-                  <span className="ml-auto font-serif text-3xl font-extrabold text-[hsl(var(--gk-indigo)/0.08)]">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                </div>
-              </FadeIn>
-            )
-          })}
-        </div>
+        <Split label="What we stand for" title="Four things we hold to" sticky>
+          <IndexList>
+            {pillars.map((p, i) => (
+              <IndexRow key={p.t} index={i + 1} title={p.t}>
+                {p.d}
+              </IndexRow>
+            ))}
+          </IndexList>
+        </Split>
       </Section>
 
       {/* Mission + vision */}
       <Section>
-        <div className="grid gap-12 lg:grid-cols-2">
+        <div className="grid gap-px border-y border-[hsl(var(--gk-indigo)/0.14)] sm:grid-cols-2">
           <FadeIn>
-            <SectionHeading eyebrow="Our mission" title="One team for both design and build" />
-            <p className="mt-4 text-muted-foreground">
-              GAkinz exists to give businesses one team for both design and build, so their website looks
-              right and works right, without the handoff gaps that slow most projects down.
-            </p>
+            <div className="py-8 sm:pr-10">
+              <RuleEyebrow>Our mission</RuleEyebrow>
+              <h2 className="mt-4 font-serif text-2xl font-bold tracking-tight sm:text-3xl">
+                One team for both design and build
+              </h2>
+              <p className="mt-4 text-muted-foreground">
+                GAkinz exists to give businesses one team for both design and build, so their website looks
+                right and works right, without the handoff gaps that slow most projects down.
+              </p>
+            </div>
           </FadeIn>
           <FadeIn delay={0.1}>
-            <SectionHeading eyebrow="Our vision" title="Sketch to launch, never falling between" />
-            <p className="mt-4 text-muted-foreground">
-              A web where any business can hand its whole site to one studio and watch it move from sketch
-              to launch without ever falling between design and code.
-            </p>
+            <div className="border-t border-[hsl(var(--gk-indigo)/0.14)] py-8 sm:border-l sm:border-t-0 sm:pl-10">
+              <RuleEyebrow>Our vision</RuleEyebrow>
+              <h2 className="mt-4 font-serif text-2xl font-bold tracking-tight sm:text-3xl">
+                Sketch to launch, never falling between
+              </h2>
+              <p className="mt-4 text-muted-foreground">
+                A web where any business can hand its whole site to one studio and watch it move from sketch
+                to launch without ever falling between design and code.
+              </p>
+            </div>
           </FadeIn>
         </div>
       </Section>
@@ -115,23 +114,28 @@ export default function About() {
         attribution="What we believe"
       />
 
-      {/* What we believe */}
+      {/* What we believe — manifesto columns */}
       <Section muted>
-        <SectionHeading eyebrow="What we believe" title="The thinking behind the work" center />
-        <div className="mt-10 grid gap-5 sm:grid-cols-3">
+        <RuleEyebrow>What we believe</RuleEyebrow>
+        <h2 className="mt-4 max-w-2xl font-serif text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.05]">
+          The thinking behind the work
+        </h2>
+        <div className="mt-10 grid border-y border-[hsl(var(--gk-indigo)/0.14)] sm:grid-cols-3">
           {beliefs.map((b, i) => (
             <FadeIn key={b.t} delay={i * 0.05}>
-              <div className="gk-card h-full p-6">
-                <span className="font-serif text-3xl font-extrabold text-[hsl(var(--gk-indigo)/0.10)]">
+              <div className="border-b border-[hsl(var(--gk-indigo)/0.14)] py-8 sm:border-b-0 sm:px-7 sm:[&:not(:first-child)]:border-l sm:[&:not(:first-child)]:border-[hsl(var(--gk-indigo)/0.14)] sm:first:pl-0">
+                <span className="font-serif text-4xl font-extrabold text-[hsl(var(--gk-indigo)/0.12)]">
                   {String(i + 1).padStart(2, "0")}
                 </span>
-                <h3 className="mt-2 text-base font-semibold">{b.t}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{b.d}</p>
+                <h3 className="mt-3 font-serif text-lg font-bold">{b.t}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{b.d}</p>
               </div>
             </FadeIn>
           ))}
         </div>
       </Section>
+
+      <Testimonials muted />
 
       <CtaBand
         title="Want to work with us?"

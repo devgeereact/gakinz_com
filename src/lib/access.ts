@@ -43,6 +43,10 @@ export const MODULE_ROLES: Record<string, Role[]> = {
   contracts: ["super_admin", "admin", "manager"],
   // knowledge.php — all staff
   knowledge: ALL_STAFF,
+  // content.php (Content Hub) / blog.php / testimonials.php — content editors
+  content: ["super_admin", "admin", "manager", "editor"],
+  blog: ["super_admin", "admin", "manager", "editor"],
+  testimonials: ["super_admin", "admin", "manager", "editor"],
   // files.php — all staff
   files: ALL_STAFF,
   // careplan.php — management view
@@ -78,6 +82,9 @@ export function moduleKeyForPath(pathname: string): string | null {
     resourcing: "resourcing",
     contracts: "contracts",
     knowledge: "knowledge",
+    content: "content",
+    blog: "blog",
+    testimonials: "testimonials",
     files: "files",
     careplan: "careplan",
     platform: "platform",

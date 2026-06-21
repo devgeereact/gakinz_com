@@ -1,10 +1,12 @@
 import { ComponentType, ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { ArrowRight } from "lucide-react"
+import { ArrowRight, ArrowUpRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import FadeIn from "./FadeIn"
 import CountUp from "./CountUp"
+
+const HAIR = "border-[hsl(var(--gk-indigo)/0.14)]"
 
 // Brand accent helpers — in the public theme `--primary` is near-black ink, so
 // the *colour* identity lives in the lavender (--gk-violet) + rose (--gk-sky)
@@ -90,6 +92,127 @@ export function SectionHeading({
         {title}
       </h2>
       {intro && <p className="mt-5 text-lg leading-relaxed text-muted-foreground">{intro}</p>}
+    </div>
+  )
+}
+
+// ── Editorial system ────────────────────────────────────────────────────────
+// Asymmetric spread: a sticky label/heading column on the left, free content on
+// the right. The backbone of the Swiss layout (replaces "heading then grid").
+export function Split({
+  label,
+  title,
+  intro,
+  children,
+  sticky = false,
+  aside,
+}: {
+  label?: string
+  title?: ReactNode
+  intro?: string
+  children: ReactNode
+  sticky?: boolean
+  aside?: ReactNode
+}) {
+  return (
+    <div className="grid gap-10 lg:grid-cols-[19rem_1fr] lg:gap-16">
+      <div className={cn(sticky && "lg:sticky lg:top-24 lg:self-start")}>
+        {label && <RuleEyebrow>{label}</RuleEyebrow>}
+        {title && (
+          <h2 className="mt-4 font-serif text-3xl font-bold tracking-tight sm:text-[2.5rem] sm:leading-[1.05]">
+            {title}
+          </h2>
+        )}
+        {intro && <p className="mt-5 max-w-sm leading-relaxed text-muted-foreground">{intro}</p>}
+        {aside && <div className="mt-7">{aside}</div>}
+      </div>
+      <div className="min-w-0">{children}</div>
+    </div>
+  )
+}
+
+// Numbered hairline index — the signature device that replaces card grids.
+export function IndexList({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn("border-t", HAIR, className)}>{children}</div>
+}
+
+export function IndexRow({
+  index,
+  title,
+  children,
+  to,
+  meta,
+}: {
+  index: string | number
+  title: ReactNode
+  children?: ReactNode
+  to?: string
+  meta?: ReactNode
+}) {
+  const inner = (
+    <div
+      className={cn(
+        "group grid grid-cols-[2.5rem_1fr] items-baseline gap-x-5 gap-y-1 border-b py-7 transition-colors sm:grid-cols-[4rem_1fr_auto] sm:gap-x-8 sm:py-8",
+        HAIR,
+        to && "hover:bg-[hsl(var(--gk-violet)/0.04)]",
+      )}
+    >
+      <span className="font-serif text-xl font-bold tabular-nums text-[hsl(var(--gk-violet))] sm:text-2xl">
+        {typeof index === "number" ? String(index).padStart(2, "0") : index}
+      </span>
+      <div>
+        <h3 className="font-serif text-xl font-bold tracking-tight sm:text-[1.7rem] sm:leading-tight">
+          {title}
+        </h3>
+        {children && <p className="mt-2 max-w-xl leading-relaxed text-muted-foreground">{children}</p>}
+        {meta && (
+          <div className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{meta}</div>
+        )}
+      </div>
+      {to && (
+        <ArrowUpRight className="col-start-2 mt-2 h-6 w-6 text-muted-foreground transition-all group-hover:translate-x-1 group-hover:text-[hsl(var(--gk-violet))] sm:col-start-3 sm:mt-0 sm:self-center" />
+      )}
+    </div>
+  )
+  return to ? (
+    <Link to={to} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+      {inner}
+    </Link>
+  ) : (
+    inner
+  )
+}
+
+// Full-width alternating feature spread (media + editorial text).
+export function FeatureRow({
+  index,
+  eyebrow,
+  title,
+  media,
+  flip = false,
+  children,
+  footer,
+}: {
+  index: string
+  eyebrow: string
+  title: ReactNode
+  media: ReactNode
+  flip?: boolean
+  children?: ReactNode
+  footer?: ReactNode
+}) {
+  return (
+    <div className={cn("grid items-center gap-8 border-t py-12 first:border-t-0 first:pt-0 lg:grid-cols-2 lg:gap-16", HAIR)}>
+      <div className={cn("min-w-0", flip ? "lg:order-2" : "lg:order-1")}>{media}</div>
+      <div className={cn("min-w-0", flip ? "lg:order-1" : "lg:order-2")}>
+        <div className="flex items-baseline gap-4">
+          <span className="font-serif text-2xl font-bold text-[hsl(var(--gk-indigo)/0.18)]">{index}</span>
+          <RuleEyebrow>{eyebrow}</RuleEyebrow>
+        </div>
+        <h3 className="mt-4 font-serif text-2xl font-bold tracking-tight sm:text-3xl">{title}</h3>
+        {children}
+        {footer && <div className="mt-6">{footer}</div>}
+      </div>
     </div>
   )
 }

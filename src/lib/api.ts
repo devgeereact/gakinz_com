@@ -865,3 +865,108 @@ export const mail = {
   send: (payload: SendMailPayload) => api.post<{ ok: boolean; message_id: string }>("/mail.php?action=send", payload),
   setSeen: (uid: number, seen = true) => api.post<{ ok: boolean }>("/mail.php?action=seen", { uid, seen }),
 }
+
+// ── Blog (public site) ───────────────────────────────────────────────────────
+export type BlogSummary = {
+  id: number
+  slug: string
+  title: string
+  excerpt: string | null
+  category: string
+  cover: string
+  read_mins: number
+  published_at: string | null
+  author?: string | null
+}
+export type BlogPost = BlogSummary & { body: string | null }
+export type BlogAdminRow = {
+  id: number
+  slug: string
+  title: string
+  category: string
+  cover: string
+  read_mins: number
+  status: string
+  published_at: string | null
+  updated_at: string
+}
+export type BlogInput = {
+  title: string
+  slug?: string
+  excerpt?: string
+  body?: string
+  category?: string
+  cover?: string
+  read_mins?: number
+  status?: string
+}
+
+export const blog = {
+  list: () => api.get<BlogSummary[]>("/blog.php"),
+  get: (slug: string) => api.get<BlogPost>(`/blog.php?slug=${encodeURIComponent(slug)}`),
+  listAll: () => api.get<BlogAdminRow[]>("/blog.php?all=1"),
+  create: (p: BlogInput) => api.post<{ id: number; slug: string }>("/blog.php?action=create", p),
+  update: (id: number, p: BlogInput) => api.post<{ ok: boolean; slug: string }>("/blog.php?action=update", { id, ...p }),
+  publish: (id: number, status: string) => api.post<{ ok: boolean }>("/blog.php?action=publish", { id, status }),
+  remove: (id: number) => api.post<{ ok: boolean }>("/blog.php?action=delete", { id }),
+}
+
+// ── Testimonials (public site, CMS-curated) ──────────────────────────────────
+export type Testimonial = {
+  id: number
+  author: string
+  role: string | null
+  company: string | null
+  quote: string
+  rating: number
+}
+export type TestimonialAdmin = Testimonial & { approved: number; sort_order: number; updated_at: string }
+export type TestimonialInput = {
+  author: string
+  role?: string
+  company?: string
+  quote: string
+  rating?: number
+  approved?: boolean
+  sort_order?: number
+}
+
+export const testimonials = {
+  list: () => api.get<Testimonial[]>("/testimonials.php"),
+  listAll: () => api.get<TestimonialAdmin[]>("/testimonials.php?all=1"),
+  create: (p: TestimonialInput) => api.post<{ id: number }>("/testimonials.php?action=create", p),
+  update: (id: number, p: TestimonialInput) =>
+    api.post<{ ok: boolean }>("/testimonials.php?action=update", { id, ...p }),
+  approve: (id: number, approved: boolean) =>
+    api.post<{ ok: boolean }>("/testimonials.php?action=approve", { id, approved }),
+  remove: (id: number) => api.post<{ ok: boolean }>("/testimonials.php?action=delete", { id }),
+}
+
+// ── Content Hub (AI multi-platform drafts) ───────────────────────────────────
+export type ContentDraft = {
+  id: number
+  topic: string
+  platform: string
+  title: string | null
+  body: string | null
+  hashtags: string | null
+  keywords: string | null
+  status: string
+  created_at: string
+  updated_at: string
+}
+export type ContentDraftInput = {
+  topic: string
+  platform: string
+  title?: string
+  body?: string
+  hashtags?: string
+  keywords?: string
+}
+
+export const content = {
+  list: () => api.get<ContentDraft[]>("/content.php"),
+  create: (p: ContentDraftInput) => api.post<{ id: number }>("/content.php?action=create", p),
+  update: (id: number, p: ContentDraftInput) => api.post<{ ok: boolean }>("/content.php?action=update", { id, ...p }),
+  remove: (id: number) => api.post<{ ok: boolean }>("/content.php?action=delete", { id }),
+}

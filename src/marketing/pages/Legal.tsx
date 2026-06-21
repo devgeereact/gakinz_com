@@ -1,5 +1,5 @@
 import { company } from "@/marketing/data/site"
-import { PageHero, Section } from "../components/primitives"
+import { PageHero, Section, Split } from "../components/primitives"
 
 type Block = { h: string; p: string[] }
 
@@ -8,26 +8,40 @@ function LegalPage({ title, intro, blocks }: { title: string; intro: string; blo
     <>
       <PageHero eyebrow="Legal" title={title} intro={intro} breadcrumb={title} />
       <Section>
-        <div className="max-w-2xl space-y-8">
-          <p className="text-sm text-muted-foreground">Last updated 1 June 2026.</p>
-          {blocks.map((b) => (
-            <div key={b.h}>
-              <h2 className="text-lg font-semibold">{b.h}</h2>
-              {b.p.map((para, i) => (
-                <p key={i} className="mt-2 text-muted-foreground">
-                  {para}
-                </p>
-              ))}
-            </div>
-          ))}
-          <p className="text-muted-foreground">
-            Questions about this policy? Email{" "}
-            <a className="text-[hsl(var(--gk-violet))] hover:underline" href={`mailto:${company.email}`}>
-              {company.email}
-            </a>
-            .
-          </p>
-        </div>
+        <Split
+          label="Last updated"
+          title="1 June 2026"
+          sticky
+          aside={
+            <p className="text-sm text-muted-foreground">
+              Questions about this policy? Email{" "}
+              <a className="text-[hsl(var(--gk-violet))] hover:underline" href={`mailto:${company.email}`}>
+                {company.email}
+              </a>
+              .
+            </p>
+          }
+        >
+          <div className="border-t border-[hsl(var(--gk-indigo)/0.14)]">
+            {blocks.map((b, i) => (
+              <section key={b.h} className="border-b border-[hsl(var(--gk-indigo)/0.14)] py-7">
+                <div className="flex items-baseline gap-4">
+                  <span className="font-serif text-sm font-bold text-[hsl(var(--gk-violet))]">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <h2 className="font-serif text-xl font-bold tracking-tight">{b.h}</h2>
+                </div>
+                <div className="mt-3 space-y-3 pl-8">
+                  {b.p.map((para, j) => (
+                    <p key={j} className="leading-relaxed text-muted-foreground">
+                      {para}
+                    </p>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        </Split>
       </Section>
     </>
   )

@@ -7,6 +7,7 @@ import { services } from "@/marketing/data/site"
 import { useAuth } from "@/store/auth.store"
 import { defaultPathForRole } from "@/lib/access"
 import BrandMark from "./BrandMark"
+import ServicesMenu from "./ServicesMenu"
 
 const primary = [
   { to: "/about", label: "About" },
@@ -19,7 +20,6 @@ const primary = [
 export default function PublicNavbar() {
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [servicesOpen, setServicesOpen] = useState(false)
   const [mobileServices, setMobileServices] = useState(false)
   const location = useLocation()
   const user = useAuth((s) => s.user)
@@ -37,7 +37,6 @@ export default function PublicNavbar() {
   // Close menus on route change
   useEffect(() => {
     setMobileOpen(false)
-    setServicesOpen(false)
     setMobileServices(false)
   }, [location.pathname])
 
@@ -73,49 +72,7 @@ export default function PublicNavbar() {
 
         {/* Desktop nav */}
         <div className="hidden items-center gap-1 lg:flex">
-          {/* Services dropdown */}
-          <div
-            className="relative"
-            onMouseEnter={() => setServicesOpen(true)}
-            onMouseLeave={() => setServicesOpen(false)}
-          >
-            <button
-              type="button"
-              className={cn(
-                "flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium transition-colors",
-                "text-foreground/70 hover:text-foreground",
-                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-              )}
-              aria-expanded={servicesOpen}
-              aria-haspopup="true"
-              onClick={() => setServicesOpen((v) => !v)}
-            >
-              Services
-              <ChevronDown className={cn("h-4 w-4 transition-transform", servicesOpen && "rotate-180")} />
-            </button>
-            {servicesOpen && (
-              <div className="absolute left-0 top-full w-[34rem] pt-2">
-                <div className="grid grid-cols-2 gap-1 rounded-xl border border-border bg-popover p-2 shadow-lg">
-                  {services.map((s) => (
-                    <Link
-                      key={s.slug}
-                      to={`/services/${s.slug}`}
-                      className="rounded-lg p-3 transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    >
-                      <div className="text-sm font-semibold text-foreground">{s.title}</div>
-                      <div className="mt-0.5 text-xs text-muted-foreground">{s.summary}</div>
-                    </Link>
-                  ))}
-                  <Link
-                    to="/services"
-                    className="col-span-2 rounded-lg bg-accent/60 p-3 text-sm font-medium text-[hsl(var(--gk-violet))] transition-colors hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    View all services →
-                  </Link>
-                </div>
-              </div>
-            )}
-          </div>
+          <ServicesMenu />
 
           {primary.map((l) => (
             <NavLink key={l.to} to={l.to} className={linkClass}>

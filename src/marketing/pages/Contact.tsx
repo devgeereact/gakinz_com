@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/select"
 import { company, contactSteps } from "@/marketing/data/site"
 import { contact, booking, type EnquiryPayload } from "@/lib/api"
-import { PageHero, Section, SectionHeading } from "../components/primitives"
+import { PageHero, Section, RuleEyebrow } from "../components/primitives"
 import SiteMockup from "../components/SiteMockup"
 import FadeIn from "../components/FadeIn"
 
@@ -76,7 +76,7 @@ export default function Contact() {
       />
       {bookUrl && (
         <Section>
-          <div className="gk-card flex flex-col items-center gap-4 rounded-2xl p-8 text-center sm:flex-row sm:justify-between sm:text-left">
+          <div className="flex flex-col items-center gap-4 rounded-2xl border border-[hsl(var(--gk-indigo)/0.12)] bg-muted/30 p-8 text-center sm:flex-row sm:justify-between sm:text-left">
             <div className="flex items-center gap-3">
               <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-[hsl(var(--gk-violet)/0.12)] text-[hsl(var(--gk-violet))]">
                 <CalendarClock className="h-5 w-5" />
@@ -217,19 +217,18 @@ export default function Contact() {
 
       {/* What happens next */}
       <Section muted>
-        <SectionHeading
-          eyebrow="What happens next"
-          title="From message to fixed price"
-          intro="No black box. Here's exactly what follows once you hit send."
-          center
-        />
-        <div className="mx-auto mt-10 grid max-w-4xl gap-5 sm:grid-cols-3">
+        <RuleEyebrow>What happens next</RuleEyebrow>
+        <h2 className="mt-4 max-w-2xl font-serif text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.05]">
+          From message to fixed price
+        </h2>
+        <p className="mt-4 max-w-xl text-muted-foreground">No black box. Here's exactly what follows once you hit send.</p>
+        <div className="mt-10 grid border-t border-[hsl(var(--gk-indigo)/0.14)] sm:grid-cols-3">
           {contactSteps.map((step, i) => (
             <FadeIn key={step.title} delay={i * 0.05}>
-              <div className="gk-card h-full p-6">
-                <span className="font-serif text-4xl font-extrabold text-[hsl(var(--gk-indigo)/0.10)]">{`0${i + 1}`}</span>
-                <h3 className="mt-2 text-base font-semibold">{step.title}</h3>
-                <p className="mt-2 text-sm text-muted-foreground">{step.detail}</p>
+              <div className="border-b border-[hsl(var(--gk-indigo)/0.14)] py-8 sm:border-b-0 sm:px-7 sm:[&:not(:first-child)]:border-l sm:[&:not(:first-child)]:border-[hsl(var(--gk-indigo)/0.14)] sm:first:pl-0">
+                <span className="font-serif text-4xl font-extrabold text-[hsl(var(--gk-indigo)/0.12)]">{`0${i + 1}`}</span>
+                <h3 className="mt-3 font-serif text-lg font-bold">{step.title}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.detail}</p>
               </div>
             </FadeIn>
           ))}

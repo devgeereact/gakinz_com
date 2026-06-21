@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { packages, addOns, alwaysIncluded, paymentTerms, faqs } from "@/marketing/data/site"
 import FadeIn from "../components/FadeIn"
-import { PageHero, Section, SectionHeading, GradientText, CtaBand } from "../components/primitives"
+import { PageHero, Section, Split, RuleEyebrow, GradientText, CtaBand } from "../components/primitives"
 
 export default function Pricing() {
   return (
@@ -16,29 +16,34 @@ export default function Pricing() {
         breadcrumb="Pricing"
       />
 
-      {/* Packages */}
+      {/* Packages — flat editorial tiles */}
       <Section>
         <div className="grid gap-5 lg:grid-cols-4 lg:items-stretch">
           {packages.map((p, i) => (
             <FadeIn key={p.name} delay={i * 0.05} className="h-full">
               <div
                 className={cn(
-                  "gk-card relative flex h-full flex-col p-6",
-                  p.featured && "gk-glow border-[hsl(var(--gk-violet)/0.45)] ring-1 ring-[hsl(var(--gk-violet)/0.35)]",
+                  "relative flex h-full flex-col rounded-2xl border bg-background p-6",
+                  p.featured
+                    ? "border-[hsl(var(--gk-violet)/0.5)] shadow-xl shadow-[hsl(var(--gk-violet)/0.15)]"
+                    : "border-[hsl(var(--gk-indigo)/0.12)]",
                 )}
               >
                 {p.featured && (
-                  <span className="mb-3 inline-flex w-fit items-center gap-1 rounded-full bg-gradient-to-r from-[hsl(var(--gk-violet))] to-[hsl(var(--gk-sky))] px-2.5 py-1 text-xs font-semibold text-white shadow-sm">
-                    <Star className="h-3 w-3 fill-current" /> Most popular
-                  </span>
+                  <span className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-[hsl(var(--gk-violet))] to-[hsl(var(--gk-sky))]" aria-hidden />
                 )}
-                <h2 className="text-lg font-semibold">{p.name}</h2>
-                <p className="mt-1 text-sm text-muted-foreground">{p.best}</p>
-                <div className="mt-4 flex items-baseline gap-1">
-                  {p.price !== "Quoted" && (
-                    <span className="text-sm font-medium text-muted-foreground">from</span>
+                <div className="flex items-center justify-between">
+                  <h2 className="font-serif text-lg font-bold">{p.name}</h2>
+                  {p.featured && (
+                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-[hsl(var(--gk-violet))]">
+                      <Star className="h-3 w-3 fill-current" /> Popular
+                    </span>
                   )}
-                  <span className="font-serif text-3xl font-bold">
+                </div>
+                <p className="mt-1 text-sm text-muted-foreground">{p.best}</p>
+                <div className="mt-5 flex items-baseline gap-1 border-b border-[hsl(var(--gk-indigo)/0.12)] pb-5">
+                  {p.price !== "Quoted" && <span className="text-sm font-medium text-muted-foreground">from</span>}
+                  <span className="font-serif text-4xl font-extrabold">
                     <GradientText>{p.price}</GradientText>
                   </span>
                 </div>
@@ -61,7 +66,7 @@ export default function Pricing() {
             </FadeIn>
           ))}
         </div>
-        <p className="mt-6 text-center text-sm text-muted-foreground">
+        <p className="mt-6 text-sm text-muted-foreground">
           Every package includes design and development by one team, a preview link to review before
           launch, launch testing, and a short post-launch settling-in period.
         </p>
@@ -69,101 +74,79 @@ export default function Pricing() {
 
       {/* Always included */}
       <Section muted>
-        <div className="grid gap-12 lg:grid-cols-[1fr_1.2fr] lg:items-start">
-          <FadeIn>
-            <SectionHeading eyebrow="Every project" title="What's always included" />
-          </FadeIn>
-          <FadeIn delay={0.1}>
-            <ul className="grid gap-4 sm:grid-cols-2">
-              {alwaysIncluded.map((item) => (
-                <li key={item} className="flex items-start gap-3">
-                  <span className="mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[hsl(var(--gk-violet)/0.12)] text-[hsl(var(--gk-violet))]">
-                    <Check className="h-3.5 w-3.5" />
-                  </span>
-                  <span className="text-sm text-foreground">{item}</span>
-                </li>
-              ))}
-            </ul>
-          </FadeIn>
-        </div>
+        <Split label="Every project" title="What's always included" sticky>
+          <ul className="grid border-t border-[hsl(var(--gk-indigo)/0.14)] sm:grid-cols-2 sm:gap-x-12">
+            {alwaysIncluded.map((item) => (
+              <li key={item} className="flex items-start gap-3 border-b border-[hsl(var(--gk-indigo)/0.14)] py-5">
+                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-[hsl(var(--gk-violet))]" />
+                <span className="text-sm text-foreground">{item}</span>
+              </li>
+            ))}
+          </ul>
+        </Split>
       </Section>
 
       {/* Add-ons */}
       <Section>
-        <SectionHeading
-          eyebrow="Add-ons"
+        <Split
+          label="Add-ons"
           title="Extend a package when you need to"
           intro="Optional extras you can bolt onto any project, priced the same plain way as everything else."
-        />
-        <div className="gk-ring mt-10 overflow-hidden shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-muted/60 text-muted-foreground">
-              <tr>
-                <th className="px-5 py-3 font-semibold">Add-on</th>
-                <th className="hidden px-5 py-3 font-semibold sm:table-cell">What it is</th>
-                <th className="px-5 py-3 text-right font-semibold">Price</th>
-              </tr>
-            </thead>
-            <tbody>
-              {addOns.map((a) => (
-                <tr key={a.name} className="border-t border-border">
-                  <td className="px-5 py-4 font-medium text-foreground">
-                    {a.name}
-                    <span className="mt-0.5 block text-xs text-muted-foreground sm:hidden">{a.what}</span>
-                  </td>
-                  <td className="hidden px-5 py-4 text-muted-foreground sm:table-cell">{a.what}</td>
-                  <td className="px-5 py-4 text-right font-medium text-foreground">{a.price}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+          sticky
+        >
+          <div className="border-t border-[hsl(var(--gk-indigo)/0.14)]">
+            {addOns.map((a) => (
+              <div key={a.name} className="flex items-baseline justify-between gap-6 border-b border-[hsl(var(--gk-indigo)/0.14)] py-5">
+                <div>
+                  <div className="font-serif text-base font-bold">{a.name}</div>
+                  <div className="mt-0.5 text-sm text-muted-foreground">{a.what}</div>
+                </div>
+                <div className="flex-shrink-0 font-serif text-base font-bold text-[hsl(var(--gk-violet))]">{a.price}</div>
+              </div>
+            ))}
+          </div>
+        </Split>
       </Section>
 
       {/* Payment terms */}
       <Section muted>
-        <div className="grid gap-12 lg:grid-cols-2">
-          <FadeIn>
-            <SectionHeading
-              eyebrow="Payment"
-              title="Simple, staged terms"
-              intro="No long invoices to decode. Payment is split across the project so it tracks the work."
-            />
-            <p className="mt-4 text-sm text-muted-foreground">
-              Full terms are set out in the service agreement before work starts.
-            </p>
-          </FadeIn>
-          <FadeIn delay={0.1}>
-            <ol className="space-y-4">
-              {paymentTerms.map((t, i) => (
-                <li key={t} className="gk-card flex items-start gap-4 p-5">
-                  <span className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-[hsl(var(--gk-violet)/0.12)] font-serif text-lg font-bold text-[hsl(var(--gk-violet))]">
-                    {i + 1}
-                  </span>
-                  <span className="text-sm text-foreground">{t}</span>
-                </li>
-              ))}
-            </ol>
-          </FadeIn>
-        </div>
+        <Split
+          label="Payment"
+          title="Simple, staged terms"
+          intro="No long invoices to decode. Payment is split across the project so it tracks the work."
+          sticky
+          aside={<p className="text-sm text-muted-foreground">Full terms are set out in the service agreement before work starts.</p>}
+        >
+          <ol className="border-t border-[hsl(var(--gk-indigo)/0.14)]">
+            {paymentTerms.map((t, i) => (
+              <li key={t} className="flex items-start gap-5 border-b border-[hsl(var(--gk-indigo)/0.14)] py-5">
+                <span className="font-serif text-2xl font-extrabold tabular-nums text-[hsl(var(--gk-violet))]">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="pt-1 text-sm text-foreground">{t}</span>
+              </li>
+            ))}
+          </ol>
+        </Split>
       </Section>
 
       {/* FAQs */}
       <Section>
-        <SectionHeading eyebrow="Questions" title="Common questions" center />
-        <div className="mx-auto mt-10 max-w-3xl space-y-3">
-          {faqs.map((f) => (
-            <details key={f.q} className="group gk-card px-5 py-4">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-base font-semibold text-foreground">
-                {f.q}
-                <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[hsl(var(--gk-violet)/0.12)] text-lg text-[hsl(var(--gk-violet))] transition-transform group-open:rotate-45">
-                  +
-                </span>
-              </summary>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{f.a}</p>
-            </details>
-          ))}
-        </div>
+        <Split label="Questions" title="Common questions" sticky>
+          <div className="border-t border-[hsl(var(--gk-indigo)/0.14)]">
+            {faqs.map((f) => (
+              <details key={f.q} className="group border-b border-[hsl(var(--gk-indigo)/0.14)] py-5">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-serif text-lg font-bold text-foreground">
+                  {f.q}
+                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-[hsl(var(--gk-violet)/0.3)] text-lg text-[hsl(var(--gk-violet))] transition-transform group-open:rotate-45">
+                    +
+                  </span>
+                </summary>
+                <p className="mt-3 max-w-2xl leading-relaxed text-muted-foreground">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </Split>
       </Section>
 
       <CtaBand

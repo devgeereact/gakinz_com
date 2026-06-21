@@ -34,7 +34,7 @@ export default function ProposalView() {
         <div className="mb-8 flex items-center justify-between">
           <a href="/" className="flex items-center gap-2" aria-label="GAkinz home">
             <BrandMark className="h-8 w-8" />
-            <span className="text-lg font-extrabold tracking-tight">GAkin<span className="text-primary">z</span></span>
+            <span className="text-lg font-extrabold tracking-tight">GAkin<span className="gk-grad-text">z</span></span>
           </a>
           <span className="text-sm text-muted-foreground">Proposal</span>
         </div>
@@ -55,7 +55,7 @@ export default function ProposalView() {
                 <h1 className="font-serif text-2xl font-bold tracking-tight">{p.title}</h1>
                 {p.client_company && <p className="mt-1 text-sm text-muted-foreground">Prepared for {p.client_company}</p>}
               </div>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-medium capitalize text-primary">{p.status}</span>
+              <span className="rounded-full bg-[hsl(var(--gk-violet)/0.12)] px-3 py-1 text-xs font-medium capitalize text-[hsl(var(--gk-violet))]">{p.status}</span>
             </div>
 
             <table className="mt-6 w-full text-sm">
