@@ -4,10 +4,17 @@ import path from "path"
 
 export default defineConfig({
   base: "/",
+  // Project block 10 in the workspace port scheme (see ~/.claude/CLAUDE.md, "Dev-server ports").
+  // strictPort so a clash fails loudly instead of drifting to a random port —
+  // a drifted port is silently rejected by the live API's ALLOWED_ORIGINS,
+  // which surfaces as an opaque CORS failure rather than "port in use".
   server: {
-    // 5174: gakinz's own dev port (5173 is taken by another local project);
-    // listed in the API's ALLOWED_ORIGINS for dev CORS.
-    port: Number(process.env.PORT) || 5174,
+    port: 5102,
+    strictPort: true,
+  },
+  preview: {
+    port: 5102,
+    strictPort: true,
   },
   plugins: [react()],
   resolve: {

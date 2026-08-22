@@ -38,13 +38,14 @@ define('OR_SITE', 'https://gakinz.com');            // sent as HTTP-Referer to O
 //   'anthropic/claude-sonnet-4.6'
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
-// In dev the Vite app runs on localhost:5173 and calls this live API.
+// In dev the Vite app runs on localhost:5102 (project block 10 in the workspace
+// port scheme, ~/.claude/CLAUDE.md "Dev-server ports") and calls this live API. The dev port is pinned
+// with strictPort, so this list only ever needs the one localhost entry.
 // _bootstrap.php fatals without this constant — keep it defined.
 define('ALLOWED_ORIGINS', [
   'https://gakinz.com',
   'https://www.gakinz.com',
-  'http://localhost:5174',  // gakinz dev port (5173 belongs to another project)
-  'http://localhost:5173',
+  'http://localhost:5102',  // gakinz dev port — block 10, pinned in vite.config.ts
 ]);
 
 // ── Optional integrations ────────────────────────────────────────────────────
