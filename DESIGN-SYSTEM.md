@@ -1,3 +1,21 @@
+> ## SUPERSEDED — historical document, do not build from this
+>
+> This document specified the "Forest Editorial" green and cream direction. It was
+> **implemented in June 2026 and then replaced the same month** by the mono and duo rebrand
+> (commit `d9b27a2`, "Full palette + typography swap, replaces Forest Editorial").
+>
+> **The implemented design system is `docs/DESIGN-SYSTEM.md`.** Read that before touching any
+> styling. The decision record, including what survived this document and what did not, is
+> `docs/DECISIONS.md` entry D-006.
+>
+> This file is kept because it explains why several global interface details exist: the custom
+> focus ring, branded selection, themed scrollbars, the radius ladder, the motion baseline and
+> the themed empty states are all still live. Its colour and typography tables are not.
+>
+> Nothing below has been altered. The banner is the only addition.
+
+---
+
 # GAkinz Design System — "Forest Editorial"
 
 > **The rebrand contract.** This is the single source of truth for the GAkinz UI rebrand

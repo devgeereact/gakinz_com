@@ -1,0 +1,54 @@
+project:
+  name: "GAkinz (gakinz.com)"
+  type: "application"
+  lifecycle: "maintenance"
+  risk: "production"
+
+defaults:
+  mode: "existing-application"
+  workflows:
+    - "existing-app-recovery"
+  specialists:
+    - "typescript-react"
+    - "php-mysql-api"
+    - "security-review"
+    - "accessibility-review"
+
+exclusions:
+  - "framework migration or Pulse UI kit rewrite"
+  - "DNS, Cloudflare, TLS and mail-host changes (owned by the operator's global notes)"
+  - "new external OAuth integrations without sandbox credentials"
+  - "unapproved production deploys, database changes or outbound sends"
+  - "git history rewriting"
+
+sources_of_truth:
+  product: "GAkinzOS.html (summarised in docs/PRODUCT-SPEC.md)"
+  public_copy: "src/marketing/data/site.ts"
+  routes: "src/routes/index.tsx"
+  client_api_boundary: "src/lib/api.ts"
+  server_boundary: "server/_bootstrap.php"
+  data_model: "server/schema.sql"
+  role_access: "per-endpoint constants in server/*.php; src/lib/access.ts is an interface mirror only"
+  design_tokens: "src/index.css and tailwind.config.js (documented in docs/DESIGN-SYSTEM.md)"
+  server_config_keys: "server/config.php.example"
+  client_deploy: ".github/workflows/deploy.yml"
+  server_deploy: "docs/DEPLOYMENT.md"
+  current_state: "docs/STATUS.md"
+  decisions: "docs/DECISIONS.md"
+  open_problems: "docs/KNOWN-ISSUES.md"
+  completion_standard: "AGENTS.md and qa/RELEASE-CHECKLIST.md"
+
+superseded:
+  - path: "DESIGN-SYSTEM.md"
+    reason: "Forest Editorial direction, built June 2026 then replaced by the mono and duo rebrand"
+    replaced_by: "docs/DESIGN-SYSTEM.md"
+    recorded_in: "docs/DECISIONS.md D-006"
+
+not_owned_here:
+  - "hosting and cPanel account configuration"
+  - "DNS records and Cloudflare proxy state"
+  - "TLS certificates"
+  - "mail server hostnames and mailbox credentials"
+  - "the dev-server port registry (this repository states only that its own port is 5102)"
+
+mcp_profile: ".agent/MCP-PROFILE.yml"
