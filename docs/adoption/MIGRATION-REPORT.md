@@ -1,7 +1,17 @@
 # Documentation migration report — GAkinz
 
-Companion to `docs/adoption/AUDIT.md`. Nothing has been deleted. The previous `CLAUDE.md` is
-untouched at the repository root and stays there until the destinations below are approved.
+Companion to `docs/adoption/AUDIT.md`. Nothing has been deleted.
+
+**Status: the migration has been carried out.** The slim root `CLAUDE.md` is adopted and is the
+live Claude-specific pointer. The previous 29 kB `CLAUDE.md` was replaced in place; its content
+remains in git history and is classified in `docs/adoption/AUDIT.md`.
+`docs/adoption/CLAUDE.proposed.md` was the draft of that replacement. It is retained only as an
+adoption record, not as a pending proposal, and it is not current instruction.
+
+Sections 1 to 5 below are the proposal exactly as it was written before approval, kept unedited
+as the record of what was put forward. Where they describe the root `CLAUDE.md` as a draft, or
+as untouched pending approval, they describe that moment and not the current state. Section 6
+records what was actually built.
 
 ---
 
@@ -208,7 +218,7 @@ The approved document set is larger and uses different names. The mapping:
 | not proposed | **`docs/PRODUCT-SPEC.md`**, **`docs/OPERATIONS.md`**, **`docs/KNOWN-ISSUES.md`** |
 | not proposed | the whole **`qa/`** set: `TEST-PLAN.md`, `SECURITY-AUDIT.md`, `ACCESSIBILITY-AUDIT.md`, `PERFORMANCE-AUDIT.md`, `RELEASE-CHECKLIST.md` |
 | `docs/adoption/HOLDING.md` | **not created.** Every held item found a home: the design-system question in `docs/DECISIONS.md` D-006 and D-019, the outstanding uploads in `docs/DEPLOYMENT.md` section 5, the accessibility claim in D-020 and `qa/ACCESSIBILITY-AUDIT.md`, the lint backlog in D-021 and K-002, and the history question in K-001 |
-| `docs/adoption/CLAUDE.proposed.md` | superseded by the adopted `CLAUDE.md` at the root. The draft is left in place as a record |
+| `docs/adoption/CLAUDE.proposed.md` | **adopted.** The slim root `CLAUDE.md` is the live file. The draft is left in place only as an adoption record, and carries no instruction authority |
 
 ### One factual correction to the audit
 

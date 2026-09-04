@@ -333,4 +333,3 @@ A convention, such as cPanel's `<cpanel_user>_<database>` prefix, goes in a comm
 
 **Not covered by this:** `server/auth.php` still defaults the seed admin address to a literal.
 That is application code and was left alone. See `docs/KNOWN-ISSUES.md` K-014.
-
