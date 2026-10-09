@@ -1,0 +1,18 @@
+# gakinz.com
+
+User-agent: *
+Allow: /
+
+# Private workspace. Client-side gated only, so it is stated here too.
+Disallow: /app
+Disallow: /login
+Disallow: /set-password
+
+# Per-record capability links. Unguessable, and not for the index.
+Disallow: /p/
+Disallow: /verify/
+
+# Server endpoints.
+Disallow: /*.php$
+
+Sitemap: https://gakinz.com/sitemap.xml
