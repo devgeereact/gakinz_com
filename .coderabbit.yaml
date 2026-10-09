@@ -1,0 +1,64 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+# CodeRabbit AI code review. CodeRabbit reviews PULL REQUESTS only, so it does
+# nothing while work is pushed straight to main. Configuration is this file plus
+# the GitHub App — no API key lives in the repo.
+language: en-GB
+
+reviews:
+  profile: assertive
+  request_changes_workflow: false
+  high_level_summary: true
+  auto_apply_labels: true
+  review_status: true
+  auto_review:
+    enabled: true
+    drafts: false
+  path_filters:
+    - "!**/package-lock.json"
+    - "!**/dist/**"
+    - "!**/node_modules/**"
+  path_instructions:
+    - path: "src/**"
+      instructions: >
+        Vite + React + TypeScript SPA, deployed to shared cPanel hosting behind
+        Cloudflare.
+
+        ROUTING: deployment depends on a server-side .htaccess rewrite that is
+        NOT in this repo. Flag any change to the router basename or Vite `base`
+        — a mismatch produces a blank page with an empty #root that still
+        builds clean and still returns HTTP 200, so neither the build nor a
+        curl check catches it. This has already cost a live outage.
+
+        SECRETS: everything in this bundle is public. Flag any API key, token,
+        or credential reaching client code — it belongs server-side.
+
+        IMAGES: an ImageKit CDN is available. Flag large unoptimised images
+        committed to the repo or served straight from the origin.
+
+        ACCESSIBILITY: these are client-facing marketing and service sites,
+        several in the care sector. Flag missing alt text, unlabelled controls,
+        and colour contrast below WCAG AA.
+
+    - path: "**/*.php"
+      instructions: >
+        PHP running on shared cPanel hosting, public internet, no WAF.
+
+        Flag any committed credential, and any new *.bak / *.old / *.zip /
+        *.sql file destined for a webroot — a .bak is not parsed by PHP, so
+        Apache serves the source as PLAIN TEXT. Three live credential leaks
+        were found this way across these sites on 2026-07-21.
+
+        Never echo a raw PHP or database error to the client; return a message
+        we wrote and log the detail server-side. Every query taking user input
+        must be a prepared statement.
+
+  tools:
+    languagetool:
+      enabled: true
+
+code_generation:
+  docstrings:
+    language: en-GB
+
+chat:
+  auto_reply: true

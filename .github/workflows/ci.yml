@@ -1,0 +1,56 @@
+name: CI
+
+# Until now the only workflow here was deploy.yml, which runs on push to main —
+# so the first thing to notice a broken build was the live site. Nothing ran on
+# a pull request at all.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+# A new push supersedes the previous run for the same ref, but never on main —
+# a cancelled main run leaves the branch with no verdict at all.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: typecheck + lint + build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` deliberately, not `npm install`: it installs the lockfile
+      # exactly and fails on a lockfile that cannot be satisfied. `npm install`
+      # succeeding proves nothing about `npm ci` — it rewrites the lockfile to
+      # make itself work.
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Lint is ADVISORY for now. The tree currently has 60 errors (mostly
+      # unused-imports), so making this blocking today would paint main red and
+      # teach everyone to ignore the badge. Clear the backlog, then delete this
+      # line — a lint gate nobody trusts is worse than no lint gate.
+      - name: Lint (advisory)
+        run: npm run lint
+        continue-on-error: true
+
+      # The build is a real gate: deploy.yml ships whatever `vite build`
+      # produces, so a build that fails here is a deploy that would have shipped
+      # a broken site.
+      - run: npm run build
