@@ -153,7 +153,8 @@ per-endpoint role lists to hide navigation and redirect disallowed routes.
 security. Both statements are true at once, so both mechanisms exist.
 
 **Consequence:** the two lists can drift. `src/lib/access.test.ts` covers the client side with
-11 tests. Nothing automatically checks the mirror against the server.
+21 tests as at 2026-09-22, up from 11. Nothing automatically checks the mirror against the
+server. See D-028 for the 2026-09-22 narrowing and the fail-closed correction.
 
 ---
 
@@ -233,14 +234,15 @@ contradicted itself about whether these were rebranded or deleted.
 ## D-016 · Tests cover access control only
 **Date:** 2026-06-12 (`b43abc1`) · **Status:** active, deliberately narrow
 
-Vitest runs `src/lib/access.test.ts`: 11 tests over `canAccess`, `moduleKeyForPath` and
-`defaultPathForRole`, with the client-isolation rules asserted explicitly.
+Vitest runs `src/lib/access.test.ts`: 21 tests as at 2026-09-22, up from 11, over
+`canAccess`, `moduleKeyForPath` and `defaultPathForRole`, with the client-isolation rules
+asserted explicitly.
 
 **Why:** role gating is the logic where a mistake is silent and expensive. Everything else
 was left to the type checker and the build.
 
-**Consequence:** there is no component test, no endpoint test and no end-to-end test. See
-`qa/TEST-PLAN.md`.
+**Consequence:** there is no component test, no endpoint test and no end-to-end test. This
+now includes `server/work.php`, which has never been executed. See `qa/TEST-PLAN.md`.
 
 ---
 
@@ -281,7 +283,9 @@ single source of truth", and instructs the reader to read it before touching any
 ---
 
 ## D-020 · The accessibility claim is withdrawn to NOT TESTED
-**Date:** 2026-09-04 · **Status:** active
+**Date:** 2026-09-04 · **Status:** **superseded by D-030 on 2026-09-22.** The body below is
+unchanged and was correct when written. A measured run now exists for the public surface;
+D-030 states what it covers and what it does not.
 
 A previous session recorded an axe run with zero violations on the home, contact and pricing
 pages, and a contrast fix to the `.gk-pill` eyebrow (`b43abc1`, 2026-06-12).
@@ -309,6 +313,10 @@ scope decision for the owner, and mixing it into a documentation change would hi
 **Rule going forward:** the backlog must not grow. A change that adds a new lint error is not
 complete.
 
+**Where it stands, 2026-09-22:** 47 errors and 2 warnings across 33 files. The ratchet held
+through the relaunch and the count came down by twelve without anyone setting out to fix the
+backlog. 48 and 2 are the new ceiling. The breakdown is in `docs/STATUS.md` section 2.
+
 ---
 
 ## D-022 · The configuration template holds placeholders, never real values
@@ -333,3 +341,287 @@ A convention, such as cPanel's `<cpanel_user>_<database>` prefix, goes in a comm
 
 **Not covered by this:** `server/auth.php` still defaults the seed admin address to a literal.
 That is application code and was left alone. See `docs/KNOWN-ISSUES.md` K-014.
+
+---
+
+## D-023 · A new design system for the public surface, and only the public surface
+**Date:** 2026-09-22 · **Status:** active. **Narrows D-006.**
+
+The public site at `/` is rebuilt on a new palette, type scale and component set, scoped to
+the `.gk-public` wrapper in `src/index.css`. GAkinzOS at `/app/*` keeps the mono and duo
+tokens D-006 describes, unchanged.
+
+The direction is recorded as "direction C with direction A's colour" in
+`docs/design/2026-09-22-directions/direction-approved.md`, chosen from three directions
+produced independently against one shared specification.
+
+**What the palette is.** Warm paper `#F6F3ED` and a sunk half-step `#EFEBE2`; warm ink
+`#1C1A16` with `#514C42` and `#6B6459` beneath it; two chromatics, navy `#2A3160` named
+`set` and red oxide `#933C2F` named `come`; and two rules, `#D8D2C6` for decoration and
+`#8E8577` for structure and form borders.
+
+**What was retired, and why.** Lavender `#7F77DD` and rose `#D4537E` are gone from the public
+surface, and with them the animated gradient, the aurora hero backdrop, the ghost numerals
+and the card idiom. The reason is measurable rather than a matter of taste: neither accent
+can hold a flat block or carry white text, which is precisely why the old site could only
+ever wash them into a gradient. All three independent directions derived new inks from them
+rather than using them.
+
+**What survives at `:root`, and why.** The `--gk-violet`, `--gk-indigo` and `--gk-sky`
+definitions remain, but the `.gk-public` override of them is gone. They survive only because
+`src/app/Login.tsx` and `src/app/SetPassword.tsx` still use `.gk-grad-text`, `.gk-aurora` and
+`.gk-grid`. The names contradicted their values, which the audit named as a standing source
+of error: `--gk-indigo` held black and `--gk-sky` held rose.
+
+**Evidence.** Contrast on the new palette was computed and then measured again on rendered
+pixels: 28 distinct foreground, background and size combinations across the public routes,
+0 failures, lowest 4.91:1. See `qa/ACCESSIBILITY-AUDIT.md`.
+
+**Rule going forward.** None of `.gk-aurora`, `.gk-grid`, `.gk-shine`, `.gk-grad-text`,
+`.gk-ring` or `.gk-grain` may appear on a public page. If one turns up in `src/marketing/`
+again, that is a regression, not a choice.
+
+---
+
+## D-024 · The public type scale is closed at nine values
+**Date:** 2026-09-22 · **Status:** active
+
+`tailwind.config.js` defines a nine-value perfect-fourth scale under semantic names: `label`,
+`body`, `lede`, `t4`, `t3`, `t2`, `t1`, `display`, `hero`. **No size outside the scale may
+ship on a public page.** Three families carry it: Newsreader as `font-display`, Instrument
+Sans as `font-ui`, IBM Plex Mono as `font-data`.
+
+**Why a closed scale rather than a recommended one.** The site it replaced used eight
+arbitrary heading sizes. That was the clearest single signal that it had been assembled
+rather than designed. Semantic names remove the thing that caused it: there is no
+`text-[2.6rem]` to reach for, and a reviewer can see at a glance whether a page has invented
+a size.
+
+**Why Newsreader.** Its optical-size axis carries a 120px masthead and a 21px standfirst from
+one family, so the page needs no second display voice.
+
+**Consequence for the CMS.** These are additions. GAkinzOS keeps Tailwind's default sizes,
+Manrope and JetBrains Mono. Space Grotesk is gone from both surfaces; it had been mapped to
+`font-serif`, a slot with no serif fallback, so `font-serif` silently rendered a sans.
+
+---
+
+## D-025 · One work record type with four kinds, not four tables
+**Date:** 2026-09-22 · **Status:** active
+
+The work ledger is one table, `work`, with a `kind` column taking `case_study`, `product`,
+`experiment` or `writing`, and one child table `work_images`. There is no separate table, no
+separate endpoint and no separate CMS module per kind.
+
+**Why one table.** The four kinds share every field that matters: a slug, a title, a summary,
+three body sections, dates, links and an ordered image set. Four tables would have meant four
+copies of the same create, update, publish, reorder and image-attachment code, and four
+places for the client-consent rule to be forgotten.
+
+**How one table still expresses four kinds.** The three ledger row labels change with the
+kind. A case study reads Problem, Built, Outcome. An experiment reads Question, Made,
+Learned. Writing reads Argument, Written, Status. This is the mechanism that replaces a
+badge: an experiment never has to pretend it had a client, because its rows ask a different
+question. The mapping lives in `KIND_LABELS` in `src/marketing/data/work.ts` and comes from
+the approved direction.
+
+**Evidence.** `server/schema.sql`, the `work` and `work_images` blocks at the foot;
+`server/work.php`; `src/marketing/components/Ledger.tsx`.
+
+**Not yet true of the live system.** Neither table exists on any database, and `work.php` has
+never been executed. See `docs/STATUS.md` section 5.
+
+---
+
+## D-026 · Per-route metadata through React 19's native hoisting, not a metadata library
+**Date:** 2026-09-22 · **Status:** active
+
+`src/marketing/components/Seo.tsx` renders `<title>`, `<meta>` and `<link rel="canonical">`
+inside the page component. React 19 hoists all three into the document head from anywhere in
+the tree, so no library sits between the page and its metadata.
+
+**Why not react-helmet or a similar package.** It would buy nothing that the runtime already
+does, and it would add a dependency to a tree this branch was otherwise cutting down. The
+dependency count went from 56 to 29; adding one back to reimplement a built-in would be a
+poor trade.
+
+**The one exception.** JSON-LD is rendered in place rather than hoisted, because React has no
+special handling for an inline `<script>`. That is valid: structured data may sit anywhere in
+the document.
+
+**The limitation, stated plainly.** This is a client-rendered single-page application with no
+prerender step. A crawler that does not execute JavaScript sees none of this metadata.
+Googlebot renders; most social scrapers and LLM crawlers do not. `public/llms.txt` is a
+hand-written mitigation for that, not a fix. Recorded in `docs/KNOWN-ISSUES.md`.
+
+**Evidence.** Every public page renders a `<Seo>` with its own title, description and
+canonical. `/verify/:id`, `/p/:token`, the `ServiceDetail` not-found branch and the 404 are
+`noindex`. Lighthouse SEO scored 100 on the local production build, which checks that the
+tags are present in the rendered document; it does not check what a non-rendering crawler
+sees.
+
+---
+
+## D-027 · A labelled gap ships in preference to an invented value
+**Date:** 2026-09-22 · **Status:** active
+
+Where the site has no real material for a slot, it ships a designed, visible, labelled
+placeholder carrying the red oxide that means "awaiting material". It does not ship a stock
+photograph, an invented client, a rounded-up figure or a plausible-sounding outcome.
+
+Two primitives implement it: `Placeholder` for a block, `Gap` for a missing value inside a
+line of text. Both are in `src/marketing/components/primitives.tsx`.
+
+**Why this is a decision and not a stopgap.** The convention has a cost, which is that the
+site looks unfinished in the places where it is unfinished. That is the point. A portfolio
+that invents a client, or a personal site that uses a photograph of a stranger, has made a
+false statement to the exact audience it is trying to persuade. A labelled gap has not.
+
+**Where it binds beyond the interface.** `src/marketing/data/work.ts` holds a static fallback
+whose every record is true and describes the owner's own work; a field with no true value is
+`null` and renders as a gap. `server/work.php` refuses to publish a record that names a
+client without stored consent. `personSchema()` in `Seo.tsx` omits `sameAs` entirely rather
+than pointing it at `https://github.com/`, because structured data is read by machines that
+cannot tell a placeholder from an identity claim.
+
+**Consequence.** Filling a gap means obtaining the real material, never relaxing the rule.
+
+---
+
+## D-028 · `canAccess` fails closed
+**Date:** 2026-09-22 · **Status:** active. **Corrects a defect in D-009's implementation.**
+
+`canAccess(role, moduleKey)` in `src/lib/access.ts` now returns `false` for a module key that
+has no `MODULE_ROLES` entry. It previously returned `true`.
+
+**Why it mattered.** A CMS route added without an `access.ts` entry was reachable by every
+signed-in user, the `client` role included. The failure was silent: adding a module and
+forgetting one of the five wirings produced a working, visible, ungated page rather than an
+error. D-009 already says `access.ts` is not a security boundary, and that remains true, but
+a navigation guard that opens by default is not doing the job it exists for either.
+
+**Why it does not break ungated pages.** `moduleKeyForPath` returns `null`, never an unmapped
+key, for a genuinely ungated path such as account settings, and `RequireAuth` skips the gate
+on `null`.
+
+**Also narrowed in the same change.** `work` was added to match `work.php`; `files` lost
+`trainer`, which the server list never held; `portal` was narrowed to match the server after
+`portal.php` restricted its staff branch; and `dashboard` was narrowed, with
+`defaultPathForRole` updated so `trainer` and `employee` land on a module they can actually
+open instead of being bounced off the index they had just been sent to.
+
+**Evidence.** `src/lib/access.test.ts`, now 21 tests, passing.
+
+---
+
+## D-029 · A work image gets a permanent public share token, and that widens the exposure
+**Date:** 2026-09-22 · **Status:** active, and it is a deliberate trade
+
+`work.php?action=addImage` issues the underlying file a `share_token` with **no expiry**, and
+clears any existing expiry, before writing the `work_images` row. `files.php?token=...` then
+streams the binary to anyone who has the URL.
+
+**Why.** A public portfolio image has to stay reachable for as long as the record is
+published. The alternative was a second manual step per picture, in which the owner issues
+and re-issues a share link by hand, and the visible failure of forgetting is a broken image
+on the public site. The token is written before the row so that a failure cannot leave an
+attached image that silently never renders.
+
+**What this widens, stated plainly.** Before this change every `files` share token expired.
+Now some do not. A permanent token is an unguessable but unexpiring public URL to a file in
+the same table that holds client deliverables. It is not revoked by unpublishing the work
+record, and it is not revoked by removing the image from the record; only deleting the file
+or clearing its token revokes it. Anyone who has ever held the URL keeps it.
+
+**The second hazard, and its guard.** `files.share_token` has **no unique constraint**,
+unlike `proposals.share_token`, and the public lookup in `files.php` uses `LIMIT 1`. A
+duplicate token would therefore serve the wrong file to the public. `work.php` checks a token
+is unused before writing it, which turns the common case into a safe one, but a race between
+two requests would still slip through. The second guard is
+`ALTER TABLE files ADD UNIQUE KEY uk_file_share (share_token)`, written at the foot of
+`server/schema.sql` and **not applied**. It must be run after checking for existing
+duplicates, because it fails if any exist.
+
+**Consequence.** Until that index is applied, the collision guard is one application-level
+check with a race in it. Treat attaching a work image as a publishing action with a
+permanent consequence, not as an upload.
+
+---
+
+## D-030 · D-020 is superseded: the public surface is measured, the rest is not
+**Date:** 2026-09-22 · **Status:** active. **Supersedes D-020.**
+
+D-020 withdrew an unevidenced accessibility claim to NOT TESTED. That withdrawal did its job
+and is not edited. It is superseded here rather than amended, because the situation has
+changed rather than the history.
+
+**What was measured, on 2026-09-22, against the production build served locally by
+`npm run preview` and driven through the Chrome DevTools protocol:**
+
+| Measurement | Result |
+|---|---|
+| axe-core 4.10.2, 16 public routes | 0 violations |
+| Lighthouse mobile, Accessibility category | 100. 54 audits passed, 0 failed |
+| Contrast on rendered pixels | 28 combinations, 0 failures, lowest 4.91:1 |
+| Focus indicators | 353 focusable elements across 13 routes, 0 failures, lowest ring contrast 14.46:1 |
+| Reflow at 640x512, equivalent to 1280x1024 at 200 per cent | No horizontal scrolling on 8 routes |
+| 390px viewport | No overflow, no target under 24x24 |
+
+The report is `qa/ACCESSIBILITY-AUDIT.md`, which states for each line what was run, against
+what, and on what date.
+
+**What is still NOT TESTED, and it is not a footnote.** No screen-reader pass with real
+assistive technology has been run. Automated tooling catches a specific and limited class of
+problem; it cannot tell you whether a page makes sense read aloud. GAkinzOS at `/app/*` was
+not audited at all and is out of scope of this run.
+
+**The rule that D-020 established and this decision keeps.** The measurement lives in the
+audit file, not in marketing copy. The public site now makes no accessibility claim anywhere
+in its own text. The previous site animated the figure "100% Accessible, WCAG 2.1 AA" on its
+home page while the project's own documentation retracted it, and that must not recur. The
+correct sentence is "axe-core reported zero violations across 16 routes on 2026-09-22", never
+"the site is accessible".
+
+---
+
+## D-031 · `api.php` is a read-only health check
+**Date:** 2026-09-22 · **Status:** active
+
+`server/api.php` now answers `GET` only, with `{ ok, php, db }`, proving that PHP runs and
+the database connection works. It touches no application table and mutates nothing. Any other
+method returns 405.
+
+**Why.** It previously listed and inserted rows in `items` with no authentication, so anyone
+on the internet could write to the production database. It was a build-order artefact from
+step one of the project that nothing had ever removed. This closes `docs/KNOWN-ISSUES.md`
+K-004 in source.
+
+**Not yet true of the live server.** The file is committed and **not uploaded**. The
+unauthenticated POST is presumed still live until someone with server access confirms
+otherwise. See `docs/DEPLOYMENT.md`.
+
+---
+
+## D-032 · Dead weight is removed, and the counts become a ratchet
+**Date:** 2026-09-22 · **Status:** active
+
+35.92 MiB of unreferenced assets were deleted from `public/`, along with 27 orphaned source
+files and 27 npm packages. Direct dependencies went from 56 to 29. `index.html` stopped
+loading two render-blocking icon webfonts from two CDNs that had zero usages between them.
+The empty `tailwind.config.ts` stub was deleted and `components.json` repointed at
+`tailwind.config.js`. `vite.config.ts` gained a `manualChunks` function cutting a `vendor`
+chunk and one `icons` chunk in place of roughly thirty lucide micro-chunks.
+
+**Measured effect.** Entry chunk 556.94 kB to 181.76 kB. `dist/` 43 MB to 2.6 MB. `public/`
+36.1 MB to 96 KB. `npm audit` findings 33 to 7, of which only `xlsx` is a direct dependency
+and it has no fix available.
+
+**Why record this as a decision rather than as a changelog entry.** Because the numbers are
+now a ratchet, in the same way D-021 made the lint count one. A change that re-adds an
+unreferenced asset, an unused dependency or a CDN webfont is not complete. The 43 MB `dist/`
+did not arrive in one commit; it accumulated because nothing was counting.
+
+**What was deliberately kept.** The CDN-free rule applies to the public surface. The Google
+Fonts stylesheet in `src/index.css` remains, because the three public families and the two
+CMS families are loaded from it and there is no self-hosted alternative in this tree. That is
+still a third-party render dependency and is recorded as such in `docs/ARCHITECTURE.md`.

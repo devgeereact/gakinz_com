@@ -1,10 +1,15 @@
 # API specification
 
-**Status:** current for the tracked source. All of it is verified by source inspection and by
-`php -l` across the 44 files. **No endpoint has been exercised at runtime**, locally or
-against production, so every behavioural claim below is source inspection only.
+**Status:** current for the tracked source as at 2026-09-22. All of it is verified by source
+inspection and by `php -l` across the 45 files. **No endpoint has been exercised at runtime**,
+locally or against production, so every behavioural claim below is source inspection only.
+That applies with particular force to `work.php`, which is new on this branch, has never run,
+and has no tables behind it on any database.
 
-Authority: `server/*.php`. Client mirror: `src/lib/api.ts`.
+Fourteen files changed on 2026-09-22 and one was added. None of it is uploaded. Where this
+document describes behaviour, it describes the repository, not the live server.
+
+Authority: `server/*.php`. Client mirror: `src/lib/api.ts`, 36 exported groups.
 
 ---
 
@@ -31,6 +36,10 @@ Authentication is an opaque bearer token, 64 hex characters, in the `Authorizati
 `server/.htaccess` re-exposes that header into `HTTP_AUTHORIZATION`, because the CGI and
 FastCGI setup strips it.
 
+Since 2026-09-22 the bootstrap also sends three response headers on every request:
+`X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` and
+`X-Frame-Options: DENY`.
+
 ## 2. Status codes in use
 
 | Code | Meaning here |
@@ -42,8 +51,10 @@ FastCGI setup strips it.
 | 403 | Authenticated but not allowed, inactive account, or a bad cron key |
 | 404 | Not found, or an expired or invalid share token |
 | 405 | Method not allowed |
+| 409 | A work slug is already in use, or a work record names a client and has no stored consent, so it may not be published |
 | 413 | Upload over 20 MB |
-| 429 | Login throttle, or the per-role AI daily cap |
+| 415 | Upload whose extension is outside the allowlist, or whose sniffed type contradicts it |
+| 429 | Login throttle, the contact-form IP throttle, or the per-role AI daily cap |
 | 500 | Write failed |
 | 502 | Upstream provider error |
 | 503 | Integration not configured on the server |
@@ -61,7 +72,8 @@ server; `src/lib/access.ts` is the client mirror and is not a boundary.
 | `MAIL_ROLES` | super_admin, admin, manager | `mail.php` |
 | `PAY_STAFF` | super_admin, admin, manager | `payments.php` |
 | `STAFF` | varies by file, see below | most modules |
-| `EDITORS` | super_admin, admin, manager, editor | `blog.php`, `testimonials.php`, `content.php` |
+| `EDITORS` | super_admin, admin, manager, editor | `blog.php`, `testimonials.php`, `content.php`, `work.php` |
+| `PORTAL_PREVIEW_ROLES` | super_admin, admin, manager | `portal.php` staff branch. Narrowed on 2026-09-22 |
 
 `STAFF` is not one list. Its value per file:
 
@@ -81,18 +93,25 @@ Treat these as the internet-facing attack surface.
 
 | Endpoint | Method | Purpose |
 |---|---|---|
-| `contact.php` | POST | Public enquiry form. Validates name, email and a message of at least 10 characters, then inserts into `enquiries` with the caller IP |
+| `contact.php` | POST | Public enquiry form. Validates name, email and a message of at least 10 characters, then inserts into `enquiries` with the caller IP. Throttled per IP from `audit_log`, modelled on the login throttle; over the limit it returns 429 |
 | `verify.php` | GET `?id=` | Certificate lookup by `public_id`, excluding revoked ones |
 | `book.php` | GET | Returns the configured Calendly URL, or an empty string |
 | `blog.php` | GET, and GET `?slug=` | Published posts, and one published post with its body |
 | `testimonials.php` | GET | Approved testimonials |
 | `proposals.php` | GET `?token=` | Read-only shared proposal. Records a view |
-| `files.php` | GET `?token=` | Streams a shared file while the token is unexpired |
+| `files.php` | GET `?token=` | Streams a shared file while the token is unexpired. A token issued by `work.php?action=addImage` has **no expiry**, so it streams indefinitely. See section 7 |
+| `work.php` | GET `?action=list[&kind=]` | Published work records, cover folded in, ordered by featured, then `sort_order`, then id, limit 200 |
+| `work.php` | GET `?action=get&slug=` | One published record with its ordered image set |
 | `payments.php` | POST `?action=webhook` | Stripe webhook. HMAC verified, 5 minute replay window |
 | `payments.php` | GET `?action=paypal_return` | PayPal capture on return |
-| `oauth.php` | GET `?action=status`, `start`, `callback` | Google SSO. Matches an existing active user only, never provisions |
+| `oauth.php` | GET `?action=status`, `start`, `callback` | Google SSO. Matches an existing active user only, never provisions. Carries a CSRF `state` parameter in a short-lived HttpOnly cookie, and validates the id_token's `aud` and `iss` |
 | `cron.php` | GET `?key=&job=` | Scheduled jobs. Gated by a shared secret with `hash_equals`, not by a user session |
-| `api.php` | GET, POST | Smoke test over the `items` table. **The POST is unauthenticated.** See `docs/KNOWN-ISSUES.md` |
+| `api.php` | GET | Read-only health check. Returns `{ ok, php, db }`, touches no application table and mutates nothing. Any other method is 405 |
+
+`api.php` used to list and INSERT rows in `items` with no authentication. Both branches were
+removed on 2026-09-22. See `docs/DECISIONS.md` D-031. **The fix is not uploaded**, so the
+unauthenticated POST should be presumed live until someone with server access confirms
+otherwise.
 
 ## 5. Authenticated endpoints
 
@@ -143,7 +162,7 @@ Grouped by area. Actions are the `?action=` value on POST unless stated.
 
 | Endpoint | Actions | Roles |
 |---|---|---|
-| `portal.php` | GET | Any authenticated user. Client role is bound to its own `client_id` |
+| `portal.php` | GET | Any authenticated user. The `client` role is bound to its own `client_id` and that branch is unchanged. The staff preview branch now requires super_admin, admin or manager |
 | `support.php` | GET list, GET `?id=`, `create`, `status`, `priority`, `assign`, `reply` | STAFF |
 | `comms.php` | GET list, GET `?id=`, `create`, `post`, `send`, `status` | STAFF |
 | `mail.php` | GET `status`, `inbox`, `message`; POST `send`, `seen` | MAIL_ROLES |
@@ -155,6 +174,7 @@ Grouped by area. Actions are the `?action=` value on POST unless stated.
 | `blog.php` | GET `?all=1`, `create`, `update`, `publish`, `delete` | EDITORS |
 | `testimonials.php` | GET `?all=1`, `create`, `update`, `approve`, `delete` | EDITORS |
 | `content.php` | GET list, `create`, `update`, `delete` | EDITORS |
+| `work.php` | `listAll`, `getAdmin`, `create`, `update`, `publish`, `remove`, `reorder`, `addImage`, `removeImage` | EDITORS. See section 7 |
 | `knowledge.php` | GET list with `?q=` and `?category=`, GET `?id=`, `create`, `update`, `delete` | STAFF |
 | `announcements.php` | GET list, `create`, `delete` | ALL_STAFF to read, AUTHORS to write |
 
@@ -182,7 +202,67 @@ Enforced in `ai.php` by counting `ai_call` rows in `audit_log` since `CURDATE()`
 
 Past the cap the endpoint returns 429.
 
-## 7. Adding an endpoint
+## 7. `work.php` in detail
+
+New on 2026-09-22, and the only endpoint that serves both the public site and the CMS from
+one file. It is described at length here because it carries two rules that no other endpoint
+has, and because **it has never been executed**: there are no `work` tables on any database.
+
+### Actions
+
+| Action | Method | Auth | Behaviour |
+|---|---|---|---|
+| `list` (also the default when `action` is absent) | GET | none | Published records only. Optional `kind` filter, validated against the four legal values. Ordered by `featured DESC`, `sort_order ASC`, `id DESC`, limit 200 |
+| `get` | GET `?slug=` | none | One published record with its ordered image set |
+| `listAll` | GET | EDITORS | Every record including drafts, with consent visible |
+| `getAdmin` | GET `?id=` or `?slug=` | EDITORS | One record in full at any status, with its images |
+| `create` | POST | EDITORS | Returns `{ id, slug }` with 201. Slug derived from the title if not supplied, and refused if taken |
+| `update` | POST | EDITORS | Same field set as `create`, plus `id` |
+| `publish` | POST | EDITORS | `{ id, status }` where status is `draft` or `published` |
+| `remove` | POST | EDITORS | **A hard delete.** `work_images` rows cascade |
+| `reorder` | POST | EDITORS | `{ ids: [...] }`, up to 500, writes each position as `sort_order` |
+| `addImage` | POST | EDITORS | `{ work_id, file_id, alt, caption?, sort_order? }`, 201. Alt text is mandatory |
+| `removeImage` | POST | EDITORS | `{ id }`, a `work_images` row id |
+
+### The consent rule
+
+**A record that names a client cannot be published without stored consent.** The check runs
+in two places, on the shared field reader used by `create` and `update`, and again on
+`publish`, and it returns 409 with a sentence explaining why.
+
+The public read enforces the other half: `client_name` is **omitted from the response
+entirely**, key and all, unless `client_consent = 1` and the name is non-empty. `client_consent`
+itself is never returned publicly. A blank string was rejected as the mechanism because a
+caller cannot tell a suppressed value from an absent one.
+
+The rule fails closed on purpose. A forgotten permission produces a refused publish, never a
+named client on a public page.
+
+### The permanent share token
+
+`addImage` gives the underlying file a `share_token` with **no expiry**, clearing any
+existing expiry, and does so **before** the `work_images` row is written. Written the other
+way round, a failure would leave an attached image that silently never renders.
+
+This widens the public exposure of the `files` table, and the trade is recorded in
+`docs/DECISIONS.md` D-029. Two audit actions record it: `file_share_permanent` and
+`file_share_expiry_cleared`.
+
+`files.share_token` has **no unique constraint** and the public lookup in `files.php` uses
+`LIMIT 1`, so a duplicate token would serve the wrong file. `work.php` checks a token is
+unused before writing it and takes the other request's token if it loses a race, but the
+real guard is `ALTER TABLE files ADD UNIQUE KEY uk_file_share (share_token)`, which is
+written at the foot of `server/schema.sql` and **not applied**.
+
+### Validation worth knowing
+
+`live_url` and `repo_url` must start with `http://` or `https://` or the request is refused
+rather than the value rendered. Dates must match `YYYY-MM-DD`. `kind` and `status` are
+checked with `in_array(..., true)` against the constants at the top of the file, because the
+schema uses `VARCHAR` with a trailing comment rather than an `ENUM`, in keeping with the rest
+of the schema.
+
+## 8. Adding an endpoint
 
 1. Create `server/<resource>.php`. Start with `require __DIR__ . '/_bootstrap.php';`.
 2. Declare a local role constant and call `require_auth($conn, ROLES)` in every branch,
