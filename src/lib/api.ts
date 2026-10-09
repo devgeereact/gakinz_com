@@ -970,3 +970,123 @@ export const content = {
   update: (id: number, p: ContentDraftInput) => api.post<{ ok: boolean }>("/content.php?action=update", { id, ...p }),
   remove: (id: number) => api.post<{ ok: boolean }>("/content.php?action=delete", { id }),
 }
+
+// ── Work / portfolio (GAkinzOS Work module → public site) ────────────────────
+// Mirrors server/work.php. Public reads (`list`, `get`) see published rows only
+// and never a client name without recorded consent; `listAll` is staff-only and
+// shows drafts plus the consent flag.
+export type WorkKind = "case_study" | "product" | "experiment" | "writing"
+export type WorkStatus = "draft" | "published"
+
+// The cover the endpoint folds out of the joined work_images/files columns.
+export type WorkCover = {
+  file_id: number
+  alt: string
+  caption: string | null
+  share_token: string | null
+  mime: string | null
+}
+
+export type WorkImage = {
+  id: number
+  file_id: number
+  alt: string
+  caption: string | null
+  sort_order: number
+  share_token: string | null
+  mime: string | null
+}
+
+// WORK_COLUMNS + the folded cover, minus anything a branch strips.
+type WorkBase = {
+  id: number
+  slug: string
+  kind: WorkKind
+  title: string
+  sector: string
+  summary: string
+  live_url: string | null
+  repo_url: string | null
+  post_id: number | null
+  started_on: string | null
+  completed_on: string | null
+  cover_file_id: number | null
+  featured: number
+  sort_order: number
+  status: WorkStatus
+  created_at: string
+  updated_at: string
+  cover: WorkCover | null
+}
+
+// Public rows: `client_consent` is removed, and `client_name` is OMITTED
+// entirely (key absent, not blank) unless consent was recorded.
+export type WorkSummary = WorkBase & { client_name?: string }
+// `?action=get` additionally selects the three narrative columns and the images.
+export type WorkDetail = WorkSummary & {
+  problem: string | null
+  built: string | null
+  outcome: string | null
+  images: WorkImage[]
+}
+// `?action=listAll` keeps the client name and the consent flag, but does NOT
+// select problem/built/outcome — only the public `get` returns those.
+export type WorkAdminRow = WorkBase & { client_name: string; client_consent: number }
+
+export type WorkInput = {
+  title: string
+  slug?: string
+  kind?: WorkKind
+  status?: WorkStatus
+  client_name?: string
+  client_consent?: boolean
+  sector?: string
+  summary?: string
+  problem?: string
+  built?: string
+  outcome?: string
+  live_url?: string
+  repo_url?: string
+  post_id?: number | null
+  started_on?: string | null
+  completed_on?: string | null
+  cover_file_id?: number | null
+  featured?: boolean
+  sort_order?: number
+}
+
+export type WorkImageInput = {
+  work_id: number
+  file_id: number
+  alt: string
+  caption?: string
+  sort_order?: number
+}
+
+// addImage reports what it had to do to the underlying files row to make the
+// image publicly reachable. `expiry_cleared` means an existing Files-module
+// share link that would have expired is now permanent.
+export type WorkAddImageResult = {
+  id: number
+  share_token: string | null
+  token_issued: boolean
+  expiry_cleared: boolean
+}
+
+export const work = {
+  list: (kind?: WorkKind) => api.get<WorkSummary[]>(`/work.php?action=list${kind ? `&kind=${kind}` : ""}`),
+  get: (slug: string) => api.get<WorkDetail>(`/work.php?action=get&slug=${encodeURIComponent(slug)}`),
+  listAll: () => api.get<WorkAdminRow[]>("/work.php?action=listAll"),
+  create: (p: WorkInput) => api.post<{ id: number; slug: string }>("/work.php?action=create", p),
+  update: (id: number, p: WorkInput) => api.post<{ ok: boolean; slug: string }>("/work.php?action=update", { id, ...p }),
+  // Re-reads the STORED row, so a 409 here means consent is missing on the record.
+  publish: (id: number, status: WorkStatus) =>
+    api.post<{ ok: boolean; status: WorkStatus }>("/work.php?action=publish", { id, status }),
+  remove: (id: number) => api.post<{ ok: boolean }>("/work.php?action=remove", { id }),
+  reorder: (ids: number[]) => api.post<{ ok: boolean; count: number }>("/work.php?action=reorder", { ids }),
+  // Alt text is mandatory server-side; an empty string is a 400. Attaching also
+  // issues the file a permanent public share token (and clears any expiry a
+  // previous Files share had set), so the image cannot quietly 404 later.
+  addImage: (p: WorkImageInput) => api.post<WorkAddImageResult>("/work.php?action=addImage", p),
+  removeImage: (id: number) => api.post<{ ok: boolean }>("/work.php?action=removeImage", { id }),
+}
