@@ -118,6 +118,7 @@ if ($method === 'POST' && $action === 'priority') {
   $stmt->bind_param('si', $priority, $id);
   $stmt->execute();
   if ($stmt->affected_rows < 1) fail('Ticket not found.', 404);
+  audit($conn, $user['id'], 'ticket_priority', "#$id → $priority");
   ok(['ok' => true]);
 }
 
@@ -144,8 +145,11 @@ if ($method === 'POST' && $action === 'reply') {
   $stmt = $conn->prepare('INSERT INTO ticket_replies (ticket_id, user_id, body) VALUES (?, ?, ?)');
   $stmt->bind_param('iis', $id, $uid, $bodyText);
   if (!$stmt->execute()) fail('Could not add the reply.', 500);
-  // A reply moves an open ticket into progress.
-  $conn->query("UPDATE tickets SET status = 'in_progress' WHERE id = " . (int)$id . " AND status = 'open'");
+  // A reply moves an open ticket into progress. Bound, not concatenated.
+  $touch = $conn->prepare("UPDATE tickets SET status = 'in_progress' WHERE id = ? AND status = 'open'");
+  $touch->bind_param('i', $id);
+  $touch->execute();
+  audit($conn, $uid, 'ticket_reply', "#$id");
   ok(['id' => $conn->insert_id], 201);
 }
 

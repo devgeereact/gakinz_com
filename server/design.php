@@ -22,15 +22,21 @@ if ($method === 'GET') {
   require_auth($conn, STAFF);
   $where = 'd.deleted_at IS NULL';
   $pid = isset($_GET['project_id']) ? (int)$_GET['project_id'] : 0;
+  // The project filter is bound rather than concatenated: prepared statements
+  // only, even for a value that has already been cast to an integer.
   $sql = "SELECT d.id, d.project_id, d.title, d.figma_url, d.round, d.status, d.client_comment,
                  d.created_at, p.name AS project_name, c.company AS client_company
           FROM design_reviews d
           JOIN projects p ON p.id = d.project_id
           LEFT JOIN clients c ON c.id = p.client_id
-          WHERE $where" . ($pid > 0 ? ' AND d.project_id = ' . $pid : '') . '
+          WHERE $where" . ($pid > 0 ? ' AND d.project_id = ?' : '') . '
           ORDER BY d.project_id DESC, d.round ASC, d.id ASC LIMIT 500';
   $rows = [];
-  if ($res = $conn->query($sql)) {
+  $stmt = $conn->prepare($sql);
+  if (!$stmt) fail('Could not list design reviews.', 500);
+  if ($pid > 0) $stmt->bind_param('i', $pid);
+  $stmt->execute();
+  if ($res = $stmt->get_result()) {
     while ($r = $res->fetch_assoc()) {
       $r['id'] = (int)$r['id'];
       $r['project_id'] = (int)$r['project_id'];

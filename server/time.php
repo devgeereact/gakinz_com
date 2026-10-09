@@ -75,6 +75,7 @@ if ($method === 'POST' && $action === 'delete') {
   }
   $stmt->execute();
   if ($stmt->affected_rows < 1) fail('Entry not found or not yours.', 404);
+  audit($conn, $user['id'], 'time_delete', "#$id");
   ok(['ok' => true]);
 }
 
