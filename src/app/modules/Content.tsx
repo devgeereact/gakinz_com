@@ -275,7 +275,12 @@ export default function Content() {
                   return (
                     <TabsContent key={p.id} value={p.id} className="mt-4">
                       <div className="gk-app-card p-5">
-                        {data.title && <h3 className="font-serif text-lg font-bold">{data.title}</h3>}
+                        {/* font-sans, not font-serif. `serif` was remapped from Space
+                            Grotesk (a sans-serif, despite the name) to Newsreader (an
+                            actual serif) for the public relaunch. This is a CMS preview
+                            card and is not inside `.gk-public`, so it keeps the
+                            workspace's own face. */}
+                        {data.title && <h3 className="font-sans text-lg font-bold">{data.title}</h3>}
                         <p className="mt-2 whitespace-pre-wrap text-sm leading-relaxed text-foreground">{data.body}</p>
                         {data.hashtags?.length > 0 && (
                           <p className="mt-3 text-sm font-medium text-[hsl(var(--primary))]">{data.hashtags.join(" ")}</p>

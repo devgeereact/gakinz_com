@@ -2,9 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
-/* GAkinz brand fonts — Space Grotesk (display/headings), Manrope (sans body + UI),
-   JetBrains Mono (data/code). One pairing, both surfaces. */
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Fonts are imported here, deliberately, and this was measured both ways.
+
+   Linking them from index.html with preconnect is the textbook advice, and it
+   does start the request earlier. It also took Cumulative Layout Shift on the
+   home page from 0.00 to 0.151, past the 0.1 threshold, because the text then
+   paints in a fallback face and reflows when Newsreader arrives. On a site
+   whose entire argument is its typography that is the wrong trade.
+
+   Keeping the @import holds CLS at 0.00. `preconnect` in index.html still
+   shortens the handshake. Moving the link out properly needs `size-adjust`
+   fallback metrics so the swap does not move anything, and that is recorded as
+   remaining work in qa/PERFORMANCE-AUDIT.md rather than half done here.
+
+   PUBLIC SURFACE: Newsreader for display, exploiting its optical-size axis so
+   one family carries both 120px and 21px without a second display voice;
+   Instrument Sans for interface text; IBM Plex Mono confined to record data,
+   where tabular figures matter.
+   CMS: Manrope and JetBrains Mono, unchanged. The public rebrand does not
+   propagate into GAkinzOS.
+   Space Grotesk is gone. It was mapped to `font-serif`, so `font-serif`
+   silently rendered a sans-serif with no serif fallback. */
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @layer base {
   /* GAkinz brand — LIGHT skin (white bg / near-black ink / lavender accent).
@@ -47,11 +66,6 @@
     /* Raw brand tokens (legacy var names kept so existing utilities keep working;
        values remapped to the new palette: accent2 = lavender, accent1 = rose). */
     --gk-violet: #7F77DD;            /* accent2 lavender (was sage) */
-    --gk-violet-2: #D4537E;          /* accent1 rose */
-    --gk-violet-dk: #0A0A0A;         /* primary black */
-    --gk-bg: #FFFFFF;                /* white */
-    --gk-ink: #0A0A0A;               /* near-black ink */
-    --font-serif: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
   }
 
   /* Public corporate site always renders in the designed light brand theme,
@@ -60,39 +74,64 @@
   /* Public corporate site palette — LIGHT skin: white bg, near-black ink,
      black primary, lavender/rose accents. Hex → shadcn HSL triplets. Scoped to
      the wrapper so the CMS theme is untouched. */
-  .gk-public {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 4%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 4%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 4%;
-    --primary: 0 0% 4%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 8% 96%;
-    --secondary-foreground: 0 0% 4%;
-    --muted: 240 8% 96%;
-    --muted-foreground: 240 4% 36%;
-    --accent: 245 65% 96%;
-    --accent-foreground: 245 40% 28%;
-    --destructive: 0 72% 48%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 240 6% 88%;
-    --input: 240 6% 88%;
-    --ring: 245 56% 60%;
-    --radius: 0.75rem;
-    /* Brand fonts — Manrope body, Space Grotesk headings (mapped below). */
-    font-family: 'Manrope', ui-sans-serif, system-ui, sans-serif;
-    color-scheme: light;
-  }
+  /* ── PUBLIC SURFACE PALETTE ───────────────────────────────────────────
+     Direction C with direction A's colour. See
+     docs/design/2026-09-22-directions/direction-approved.md.
 
-  /* Marketing `font-serif` + headings → Space Grotesk; `font-mono` → JetBrains
-     Mono, without touching the global Tailwind font config. */
-  .gk-public :is(.font-serif, h1, h2, h3) {
-    font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  }
-  .gk-public .font-mono {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
+     Warm paper rather than pure white, warm ink rather than pure black, and
+     two chromatics that each carry a job: navy marks what is settled, red
+     oxide marks a gap awaiting real material. Neither is decoration.
+
+     Every ratio below was computed, not estimated:
+       ink on paper      15.69:1     set on paper      11.11:1
+       ink-soft on paper  7.70:1     come on paper      6.48:1
+       ink-mute on paper  5.28:1     edge on paper      3.29:1  (non-text AA)
+
+     The retired lavender #7F77DD and rose #D4537E could hold neither a flat
+     block nor white text, which is precisely why the previous site could only
+     ever wash them into a gradient.
+
+     These also remap the shadcn tokens, so any shared component rendered
+     inside .gk-public inherits the public palette rather than the CMS one.
+     Scoped to the wrapper, so GAkinzOS is untouched. */
+  .gk-public {
+    --gk-paper: 40 33% 95%;       /* #F6F3ED */
+    --gk-sunk: 42 29% 91%;        /* #EFEBE2 */
+    --gk-ink: 40 12% 10%;         /* #1C1A16 */
+    --gk-ink-soft: 40 10% 29%;    /* #514C42 */
+    --gk-ink-mute: 37 9% 38%;     /* #6B6459 */
+    --gk-set: 232 39% 27%;        /* #2A3160 */
+    --gk-come: 8 52% 38%;         /* #933C2F */
+    --gk-rule: 40 19% 81%;        /* #D8D2C6 — decorative hairline only */
+    --gk-edge: 37 9% 51%;         /* #8E8577 — structural rule, form borders */
+
+    --background: var(--gk-paper);
+    --foreground: var(--gk-ink);
+    --card: var(--gk-paper);
+    --card-foreground: var(--gk-ink);
+    --popover: var(--gk-paper);
+    --popover-foreground: var(--gk-ink);
+    --primary: var(--gk-set);
+    --primary-foreground: var(--gk-paper);
+    --secondary: var(--gk-sunk);
+    --secondary-foreground: var(--gk-ink);
+    --muted: var(--gk-sunk);
+    --muted-foreground: var(--gk-ink-mute);
+    --accent: var(--gk-sunk);
+    --accent-foreground: var(--gk-set);
+    --destructive: 8 52% 38%;
+    --destructive-foreground: var(--gk-paper);
+    /* --border and --input were 240 6% 88% (#DFDFE2), which is 1.33:1 against
+       the page. Every form-control boundary on the site failed WCAG 1.4.11.
+       The structural edge colour is 3.29:1 and passes. */
+    --border: var(--gk-edge);
+    --input: var(--gk-edge);
+    --ring: var(--gk-ink);
+    /* The document has square corners. The 0.75rem radius belonged to the
+       card idiom that direction C replaces. */
+    --radius: 0rem;
+    font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    color-scheme: light;
   }
 
   /* DARK skin — CMS workspace. Primary swaps to accent2 (lavender) because pure
@@ -208,24 +247,6 @@
 }
 .dark-blue body {
   background-color: transparent;
-  /* background-image: radial-gradient(
-      circle at 30% 30%,
-      rgba(59, 130, 246, 0.25),
-      transparent 40%
-    ),
-    radial-gradient(
-      circle at 70% 60%,
-      rgba(99, 102, 241, 0.25),
-      transparent 50%
-    ),
-    linear-gradient(
-      135deg,
-    =-09876543567987654321`
-    200014b0f2a,456895e//
-      #111a3,a,
-      #1a237e
-    ); */
-    /* background-image: url(https://codervent.com/maxton/demo/vertical-menu/assets/images/bg-themes/body-background-1.webp); */
     background-image: url(../images/bg-themes/dark-blue.webp);
     background-attachment: fixed;
     background-size: cover;
@@ -270,23 +291,6 @@
 
 .gaussian-black body {
   background-color: transparent;
-  /* background-image:
-    radial-gradient(
-      circle at 25% 30%,
-      rgba(168, 85, 247, 0.4),
-      transparent 40%
-    ),
-    radial-gradient(
-      circle at 75% 70%,
-      rgba(139, 92, 246, 0.3),
-      transparent 50%
-    ),
-    linear-gradient(
-      135deg,
-      #020617,
-      #0a0118,
-      #14012e
-    ); */
     background-image: url(../images/bg-themes/gausian-black.jpg);
     background-attachment: fixed;
     background-size: cover;
@@ -550,10 +554,55 @@
 
   /* Custom accent focus-glow ring — replaces the browser default everywhere.
      See DESIGN-SYSTEM.md §5. */
+  /* Focus indicator, WCAG 1.4.11 Non-text Contrast.
+     This was `hsl(var(--ring) / 0.7)`, which composited to #9690E0 — 2.86:1
+     on the page and 2.48:1 on a dark panel. Both failed the 3:1 floor, and
+     `outline: none` meant there was no fallback.
+
+     The fix is two solid layers rather than one translucent one: an inner
+     ring in the surface colour and an outer ring in the ink. On paper the
+     outer ring carries it at 15.69:1; on a dark band the inner ring carries
+     it at the same ratio. There is no background it can disappear against,
+     which one colour alone cannot promise. 4px total also clears 2.4.13
+     Focus Appearance on thickness. */
+  /* The indicator is drawn with `outline`, not `box-shadow`.
+     Measured in Chrome on 2026-09-22: a box-shadow-only rule in @layer base
+     was being overridden on the masthead links by Tailwind's
+     `box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow),
+     var(--tw-shadow)` chain, all three of which resolve to `0 0 #0000`. The
+     element matched :focus-visible and painted nothing. `outline` is not part
+     of that chain, so it cannot be clobbered the same way.
+
+     `outline-offset` leaves a gap in the surface colour between the element
+     and the ring, which is what makes one solid colour sufficient: on paper
+     the ink ring reads at 15.69:1, and inside a dark band the rule below
+     flips it to paper, also 15.69:1. 3px clears 2.4.13 Focus Appearance.
+
+     The box-shadow is kept underneath as a second layer for the cases where
+     an ancestor clips the outline. */
   :focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring) / 0.7);
+    outline: 3px solid hsl(var(--foreground));
+    outline-offset: 2px;
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--foreground));
     border-radius: calc(var(--radius) - 4px);
+  }
+  /* On a dark surface the ink ring disappears, so it flips to paper. Both the
+     element that CARRIES the dark background and anything inside one need
+     covering: the primary action is itself `bg-gk-set`, and an ink ring on
+     navy measures 1.4:1. The skip link is the same case — it only becomes
+     `bg-gk-ink` once focused. */
+  /* Only a control INSIDE a dark band flips to a paper ring.
+     `outline-offset` puts the ring outside the element, so what it has to
+     contrast against is the surface BEHIND the element, not the element's own
+     background. A dark button sitting on paper therefore keeps the ink ring;
+     giving it a paper ring measured 1.01:1 and was invisible. Descendant
+     selectors only — never `.bg-gk-ink:focus-visible`, which would catch the
+     dark button itself. Measured after this change: 15.53:1 on paper,
+     14.46:1 on the sunk band, 15.80:1 inside a dark band. */
+  .gk-public .bg-gk-ink :focus-visible,
+  .gk-public .bg-gk-set :focus-visible {
+    outline-color: hsl(var(--gk-paper));
+    box-shadow: 0 0 0 2px hsl(var(--gk-paper)), 0 0 0 4px hsl(var(--gk-ink));
   }
 
   /* Branded text selection */
@@ -578,7 +627,14 @@
   *::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary) / 0.55); background-clip: padding-box; }
 
   /* Branded placeholders */
-  ::placeholder { color: hsl(var(--muted-foreground) / 0.7); }
+  /* Placeholder text, WCAG 1.4.3. The 0.7 alpha composited to #8A8A8F, which
+     is 3.43:1 on white and fails the 4.5:1 body-text floor. Full-strength
+     muted-foreground is 5.28:1 on the public surface and passes. */
+  ::placeholder { color: hsl(var(--muted-foreground)); }
+
+  /* WCAG 2.4.11 Focus Not Obscured. The masthead is sticky at 64px, so a
+     keyboard target scrolled to the top of the viewport would sit under it. */
+  html { scroll-padding-top: 6rem; }
 
   /* Glide, don't snap — interactive elements get a baseline transition (§5).
      Reduced-motion users opt out. */
@@ -600,14 +656,6 @@
     animation: gk-fade-in 0.5s ease-out both;
     animation-delay: var(--gk-delay, 0s);
   }
-}
-
-/* REMOVE default FullCalendar button styles */
-.fc .fc-button {
-  background: none;
-  border: none;
-  padding: 0;
-  box-shadow: none;
 }
 
 /* Custom scrollbar for dark themes */
@@ -646,31 +694,48 @@
   background-image: linear-gradient(310deg, #2af598, #009efd);
 }
 /* ─────────────────────────────────────────────────────────────────────────
-   GAkinz marketing — premium design layer (scoped to .gk-public)
-   Cinematic gradients, glass, glow, grid, marquee, refined motion.
-   ──────────────────────────────────────────────────────────────────────── */
-.gk-public {
-  /* Brand gradient stops (legacy var names) — recolors grad-text, aurora, grid,
-     glass, rings, cards site-wide. New palette: accent2 lavender + black ink +
-     accent1 rose for the gradient sweep. */
-  --gk-violet: 245 56% 60%;   /* #7F77DD accent2 lavender */
-  --gk-indigo: 0 0% 4%;       /* #0A0A0A near-black ink */
-  --gk-sky:    340 58% 58%;   /* #D4537E accent1 rose */
-}
+   GAkinz public surface — typography layer (scoped to .gk-public)
+   ────────────────────────────────────────────────────────────────────────
 
-/* Display headings: tighter tracking, balanced wrapping, fluid scale */
-.gk-public h1,
-.gk-public .gk-display {
-  letter-spacing: -0.025em;
-  line-height: 1.05;
-  text-wrap: balance; /* avoid orphan words in big headings */
-}
-.gk-public h2 {
-  letter-spacing: -0.02em;
+   The effect classes below this block — .gk-aurora, .gk-grid, .gk-shine,
+   .gk-grad-text, .gk-ring, .gk-grain and the .gk-app-* family — are STILL
+   USED BY GAkinzOS (src/app/Login.tsx, SetPassword.tsx, Dashboard.tsx,
+   Mailbox.tsx and the module headers), which keeps its own design tokens and
+   is out of scope for this relaunch. They are kept for that reason alone.
+
+   NONE of them may appear on a public page. The aurora backdrop on all eight
+   heroes and the animated gradient text were the two things that made the
+   old public site read as templated, and the approved direction retires both.
+   If one turns up in src/marketing/ again, that is a regression.
+
+   The `.gk-public` override of --gk-violet / --gk-indigo / --gk-sky is gone
+   with them: those names lied about their values (--gk-indigo held black,
+   --gk-sky held rose) and the audit named that as a standing source of error.
+   ──────────────────────────────────────────────────────────────────────── */
+
+/* Headings set in Newsreader. Tracking comes from the type scale in
+   tailwind.config.js, so it is not repeated here; this only adds the wrapping
+   behaviour, which no utility covers. */
+.gk-public :is(h1, h2, h3, h4) {
   text-wrap: balance;
 }
 .gk-public p {
-  text-wrap: pretty; /* avoid ragged single-word last lines */
+  text-wrap: pretty;
+}
+
+/* Optical sizing. This is the whole reason Newsreader was chosen: one family
+   carries a 120px masthead and a 21px standfirst without a second display
+   face, because the axis adjusts contrast and detail to the size it is set
+   at. Left to `auto` browsers do this already, but stating it keeps the
+   intent legible. */
+.gk-public :is(h1, h2, h3, h4, blockquote) {
+  font-optical-sizing: auto;
+}
+
+/* Record data aligns in columns, so figures must be tabular. */
+.gk-public .font-data {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
 }
 
 /* Animated gradient text */
@@ -874,25 +939,6 @@
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-}
-
-/* Aurora backdrop tuned to primary — subtle, for headers / hero strips */
-.gk-app-aurora {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-.gk-app-aurora::before {
-  content: "";
-  position: absolute;
-  width: 32rem; height: 32rem;
-  top: -16rem; right: -8rem;
-  border-radius: 9999px;
-  filter: blur(64px);
-  opacity: 0.18;
-  background: radial-gradient(circle at center, hsl(var(--primary)), transparent 70%);
 }
 
 /* Elevated card — primary-tinted shadow + lift on hover (theme-aware) */
