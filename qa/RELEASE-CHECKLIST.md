@@ -24,8 +24,9 @@ All four run. Report the actual output.
 
 - [ ] `npm run build` passes. This runs `tsc -b` first, so it is also the type check.
 - [ ] `npm test` passes.
-- [ ] `npm run lint` adds **no new error**. The existing 60 errors and 7 warnings do not block,
-      but the count must not grow. Record the number.
+- [ ] `npm run lint` adds **no new error**. The ratchet is **47 errors and 2 warnings** as at
+      2026-09-22, down from 60 and 7. It does not block, but the count must not grow. Record
+      the number.
 - [ ] `find server -name '*.php' -print0 | xargs -0 -n1 php -l` passes for any touched PHP.
 
 ## 3. Consistency
@@ -109,3 +110,94 @@ State each of these. Do not soften any of them.
   move real money and reach real people.
 - Development calls the **live** API. There is no staging. Treat a write in development as a
   write to the business.
+
+---
+
+# THE LAUNCH CHECKLIST
+
+Everything above is the routine release loop. This section is the one-off list for taking
+gakinz.com public, as at 2026-09-22.
+
+Nothing in it can be closed from the repository. Every item needs either the owner's
+decision or access to the live server.
+
+## A. Blocks launch
+
+- [ ] **Rotate the super-admin credential (K-001).** A working production password is in
+      git history. The account reaches the mailbox, client records, invoices and payment
+      links. Rotation status is UNVERIFIED and the owner has confirmed it is not yet done.
+      **This is the single highest-priority item on the project and it is independent of
+      everything else here.** Then decide separately whether history needs scrubbing.
+- [ ] **Delete `seed_admin_password.txt` from the live document root (K-015)**, if it is
+      there. Check before and after uploading the new `.htaccess`. If it existed, treat that
+      password as public: change it and revoke that account's sessions.
+- [ ] **Upload the server changes and run the SQL.** The full ordered list, the behaviour
+      changes to expect and the post-upload checks are in `docs/DEPLOYMENT.md` section 5.1.
+      Twenty files and four statements. A server change is not live when it is committed.
+- [ ] **Set `$SEED_ADMIN_EMAIL` in the live `config.php`.** `auth.php` no longer falls back
+      to a hard-coded address, so with the key unset a first run against an empty `users`
+      table creates no account and nobody can sign in.
+- [ ] **Confirm the PHP `fileinfo` extension is enabled.** Without it, `files.php` returns
+      503 on every upload.
+- [ ] **Establish the real deployed server state (K-006).** Which `server/*.php` are current
+      and which migrations have run is UNVERIFIED and cannot be determined from here.
+
+## B. Content the owner must supply
+
+The site launches truthfully without these: every gap is a designed, labelled placeholder
+and nothing is invented. But they are what the site is for.
+
+- [ ] **Three or four real projects**, each with: client name, live URL, sector, year, the
+      problem in one line, what was built in one line, one true outcome, and **written
+      permission to name the client**. `work.php` refuses to publish a named client without
+      stored consent, so the permission is enforced rather than remembered.
+- [ ] **Screenshots**, or the URLs and consent to capture them. Every image needs real alt
+      text; the endpoint rejects an empty one.
+- [ ] **A portrait.** The home page and the about page both currently show a labelled frame
+      saying it is to supply.
+- [ ] **A telephone number**, or a decision that there is not one. The placeholder
+      `+44 20 0000 0000` has been removed rather than replaced.
+- [ ] **A company registration number**, or a decision that the studio is not a registered
+      company. The placeholder `00000000` has been removed.
+- [ ] **Real social profile URLs.** The four links to bare domains are gone. These also feed
+      the `sameAs` field of the Person structured data, which is a machine-readable identity
+      claim, so a wrong one is worse than none.
+- [ ] **Three legal review dates (K-021)**, and a view on the eight compliance gaps listed
+      there. Those pages currently show a visible gap where the date belongs.
+
+## C. Decisions the owner must take
+
+- [ ] **`xlsx` (K-017).** The only direct dependency with a HIGH advisory and no upstream
+      fix. Accept, pin, or migrate.
+- [ ] **The lint backlog (K-002).** Fix, keep ratcheting, or formally accept.
+- [ ] **Prerendering the public routes (K-018).** Without it the site is an empty document to
+      anything that does not run JavaScript.
+- [ ] **Backups (K-010).** No backup procedure is known to exist for a database holding real
+      client and enquiry data.
+
+## D. Verify after going live
+
+- [ ] `https://gakinz.com/api.php` returns `{"ok":true,...,"db":true}`.
+- [ ] `https://gakinz.com/robots.txt`, `/sitemap.xml`, `/llms.txt` and `/og.png` all serve.
+- [ ] A made-up `.txt` name in the document root returns 403.
+- [ ] `GET /work.php?action=list` returns `[]` from a signed-out browser.
+- [ ] Publish one work record with an image, then **open its public page in a signed-out
+      browser and confirm the image loads**. A 404 on the image with a 200 on the page is
+      invisible from inside the CMS.
+- [ ] Submit the contact form once, for real, and confirm the enquiry arrives. Then submit it
+      six times and confirm the sixth returns 429.
+- [ ] Sign in, sign out, and confirm the session is dead server-side.
+- [ ] Share the home page URL into one chat application and confirm the card renders.
+- [ ] Re-run the accessibility measurements in `qa/ACCESSIBILITY-AUDIT.md` section 8 against
+      the live site, not the local preview.
+
+## E. Re-count these figures whenever they are quoted
+
+The public site states two numbers about GAkinzOS, in `src/marketing/data/work.ts`. They are
+counted from this repository and must be re-counted if either changes, because a number on a
+public page without a source is exactly what this relaunch removed.
+
+```bash
+ls src/app/modules/*.tsx | wc -l                                      # modules, expect 24
+find server -name '*.php' ! -name '_*' ! -name 'config.php.example' | wc -l   # endpoints, expect 40
+```
