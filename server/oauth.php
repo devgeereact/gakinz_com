@@ -34,7 +34,38 @@ if ($action === 'status') {
 if (!$configured) fail('Google SSO is not configured on the server.', 503);
 if (!function_exists('curl_init')) fail('Google SSO needs the PHP cURL extension.', 503);
 
+// CSRF state. There is no PHP session anywhere in this codebase and no
+// migration runner to add a table for it, so the state lives in a short-lived
+// HttpOnly cookie: set on start, compared on callback, cleared either way.
+// SameSite must be Lax, not Strict — the callback arrives as a top-level
+// navigation from accounts.google.com, and Strict would withhold the cookie
+// and break every sign-in.
+const OAUTH_STATE_COOKIE = 'gk_oauth_state';
+const OAUTH_STATE_TTL = 600; // 10 minutes
+
+function oauth_set_state(string $state): void {
+  setcookie(OAUTH_STATE_COOKIE, $state, [
+    'expires'  => time() + OAUTH_STATE_TTL,
+    'path'     => '/',
+    'secure'   => true,
+    'httponly' => true,
+    'samesite' => 'Lax',
+  ]);
+}
+
+function oauth_clear_state(): void {
+  setcookie(OAUTH_STATE_COOKIE, '', [
+    'expires'  => time() - 3600,
+    'path'     => '/',
+    'secure'   => true,
+    'httponly' => true,
+    'samesite' => 'Lax',
+  ]);
+}
+
 if ($action === 'start') {
+  $state = bin2hex(random_bytes(16));
+  oauth_set_state($state);
   $params = http_build_query([
     'client_id'     => $clientId,
     'redirect_uri'  => $redirect,
@@ -42,6 +73,7 @@ if ($action === 'start') {
     'scope'         => 'openid email profile',
     'access_type'   => 'online',
     'prompt'        => 'select_account',
+    'state'         => $state,
   ]);
   header('Location: https://accounts.google.com/o/oauth2/v2/auth?' . $params);
   exit;
@@ -50,6 +82,19 @@ if ($action === 'start') {
 if ($action === 'callback') {
   $code = $_GET['code'] ?? '';
   $bounce = $appUrl !== '' ? rtrim($appUrl, '/') . '/login' : '/login';
+
+  // CSRF: the state we issued on start must come back unchanged. A callback
+  // with no cookie, no state, or a mismatched one is rejected before the code
+  // is spent, so an attacker cannot graft their own Google account onto a
+  // victim's browser session.
+  $sentState = (string)($_GET['state'] ?? '');
+  $ourState  = (string)($_COOKIE[OAUTH_STATE_COOKIE] ?? '');
+  oauth_clear_state();
+  if ($sentState === '' || $ourState === '' || !hash_equals($ourState, $sentState)) {
+    header("Location: $bounce#sso_error=bad_state");
+    exit;
+  }
+
   if ($code === '') { header("Location: $bounce#sso_error=cancelled"); exit; }
 
   // Exchange the code for tokens.
@@ -73,10 +118,20 @@ if ($action === 'callback') {
   $idToken = $tok['id_token'] ?? '';
   if ($idToken === '') { header("Location: $bounce#sso_error=exchange_failed"); exit; }
 
-  // Decode the id_token payload (we trust it: it came straight from Google's
-  // token endpoint over TLS using our client secret).
+  // Decode the id_token payload. It came straight from Google's token endpoint
+  // over TLS using our client secret, so the signature is not re-checked here,
+  // but the claims that say who the token was minted for still are: `aud` must
+  // be our own client id and `iss` must be Google. Without those a token issued
+  // for a different application would be accepted as ours.
   $parts = explode('.', $idToken);
   $payload = json_decode(base64_decode(strtr($parts[1] ?? '', '-_', '+/')), true) ?: [];
+  $aud = (string)($payload['aud'] ?? '');
+  $iss = (string)($payload['iss'] ?? '');
+  if (!hash_equals($clientId, $aud)) { header("Location: $bounce#sso_error=bad_audience"); exit; }
+  if (!in_array($iss, ['https://accounts.google.com', 'accounts.google.com'], true)) {
+    header("Location: $bounce#sso_error=bad_issuer");
+    exit;
+  }
   $email = strtolower((string)($payload['email'] ?? ''));
   $verified = !empty($payload['email_verified']);
   if ($email === '' || !$verified) { header("Location: $bounce#sso_error=no_email"); exit; }
