@@ -1,11 +1,29 @@
 import { useEffect, useState } from "react"
-import { Star } from "lucide-react"
 import { testimonials as testimonialsApi, type Testimonial } from "@/lib/api"
-import { Section, RuleEyebrow } from "./primitives"
-import FadeIn from "./FadeIn"
+import { Label, Section } from "./primitives"
 
-// CMS-curated client testimonials. Renders nothing until at least one approved
-// testimonial exists — we never show placeholder or fabricated quotes.
+/**
+ * CMS-curated client testimonials.
+ *
+ * RECORDED FINDING, now fixed: the star rating was a plain <div> carrying
+ * `aria-label={`${t.rating} out of 5`}`, with five decorative <svg> stars
+ * inside it. ARIA does not permit naming a generic element, so that label was
+ * discarded by assistive technology and the rating reached sighted users only.
+ * That is WCAG 1.1.1 Non-text Content and 4.1.2 Name, Role, Value.
+ *
+ * The fix is not a better label. The rating is now plain text that everybody
+ * reads the same way, set in the record face beside the attribution, which
+ * needs no ARIA at all and cannot regress. Five yellow glyphs were carrying
+ * information that one short line of type carries better on a page built out
+ * of type.
+ *
+ * Restyled from a two-column card grid to a ruled quote list, in keeping with
+ * the ledger the rest of the site is built from.
+ *
+ * BEHAVIOUR KEPT: the component renders nothing at all until the API returns
+ * at least one approved testimonial. An absent section is correct here. An
+ * invented quote, or a placeholder one, is not.
+ */
 export default function Testimonials({
   eyebrow = "In their words",
   title = "What clients say",
@@ -31,37 +49,36 @@ export default function Testimonials({
   const shown = items.slice(0, 6)
 
   return (
-    <Section muted={muted}>
-      <RuleEyebrow>{eyebrow}</RuleEyebrow>
-      <h2 className="mt-4 max-w-2xl font-serif text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.05]">
-        {title}
-      </h2>
-      {/* A lone last item spans both columns so an odd count never orphans. */}
-      <div className="mt-10 grid border-t border-[hsl(var(--gk-indigo)/0.14)] sm:grid-cols-2 sm:gap-x-12 [&>*:last-child:nth-child(odd)]:sm:col-span-2">
-        {shown.map((t, i) => (
-          <FadeIn key={t.id} delay={i * 0.05}>
-            <figure className="flex h-full flex-col border-b border-[hsl(var(--gk-indigo)/0.14)] py-7">
-              <div className="flex gap-0.5 text-amber-400" aria-label={`${t.rating} out of 5`}>
-                {Array.from({ length: Math.max(1, Math.min(5, t.rating)) }).map((_, j) => (
-                  <Star key={j} className="h-4 w-4 fill-current" />
-                ))}
-              </div>
-              <blockquote className="mt-4 flex-1 font-serif text-lg font-medium leading-snug tracking-tight sm:text-xl">
-                &ldquo;{t.quote}&rdquo;
-              </blockquote>
-              <figcaption className="mt-5 text-sm">
-                <span className="font-semibold text-foreground">{t.author}</span>
-                {(t.role || t.company) && (
-                  <span className="text-muted-foreground">
-                    {" — "}
-                    {[t.role, t.company].filter(Boolean).join(", ")}
-                  </span>
-                )}
-              </figcaption>
-            </figure>
-          </FadeIn>
-        ))}
+    <Section tone={muted ? "sunk" : "paper"}>
+      <div className="pb-10">
+        <Label>{eyebrow}</Label>
+        <h2 className="mt-5 max-w-2xl font-display text-t2 text-gk-ink">{title}</h2>
       </div>
+
+      <ul className="border-t border-gk-edge">
+        {shown.map((t) => {
+          const rating = Math.max(1, Math.min(5, t.rating))
+          const attribution = [t.role, t.company].filter(Boolean).join(", ")
+          return (
+            <li key={t.id} className="border-b border-gk-edge">
+              <figure className="grid gap-4 py-8 lg:grid-cols-[1fr_16rem] lg:gap-12">
+                <blockquote className="max-w-3xl font-display text-t4 text-gk-ink">
+                  &ldquo;{t.quote}&rdquo;
+                </blockquote>
+                <figcaption className="lg:pt-2">
+                  <span className="block text-body text-gk-ink">{t.author}</span>
+                  {attribution && (
+                    <span className="mt-1 block text-body text-gk-ink-soft">{attribution}</span>
+                  )}
+                  <span className="mt-3 block font-data text-label uppercase text-gk-ink-mute">
+                    Rated {rating} out of 5
+                  </span>
+                </figcaption>
+              </figure>
+            </li>
+          )
+        })}
+      </ul>
     </Section>
   )
 }

@@ -1,27 +1,104 @@
-// Single source of truth for GAkinz corporate site content.
-// Real copy, UK English, no marketing filler (per brief §10).
+/**
+ * Public copy for gakinz.com.
+ *
+ * THE RULE THAT GOVERNS THIS FILE: no claim here may be something the site
+ * cannot stand behind. No statistic without a source. No client name without
+ * written permission. No credential that has not been issued. Where a real
+ * value does not exist yet, the field is `null` and the interface renders a
+ * labelled gap, which is honest, rather than a plausible-looking invention,
+ * which is not.
+ *
+ * Removed in the 2026-09-22 relaunch, and not to be reinstated without
+ * evidence:
+ *   - the animated "100% Accessible, WCAG 2.1 AA" figure on the home page.
+ *     docs/DECISIONS.md D-020 records the earlier zero-violations claim as
+ *     withdrawn. The site was asserting on its front page something its own
+ *     documentation retracts.
+ *   - "One team / WCAG 2.1 AA / Real devices / Fixed price" presented as a
+ *     statistics row on /work. Those are four slogans in a grid built for
+ *     numbers.
+ *   - three invented portfolio entries. Work records now come from the `work`
+ *     table through src/marketing/data/work.ts.
+ *   - the placeholder telephone number +44 20 0000 0000 and the placeholder
+ *     company registration 00000000, both of which shipped live.
+ *   - four social links pointing at bare domains rather than at profiles.
+ *
+ * Voice: first person singular. GAkinz is named only where a team genuinely
+ * does the work. Plain British English.
+ */
 
-export const company = {
-  name: "GAkinz",
-  tagline: "One team that draws the vision and builds it properly.",
-  descriptor: "Web design and development studio",
-  email: "hello@gakinz.com",
-  phone: "+44 20 0000 0000",
-  address: "London, United Kingdom",
-  hours: "Monday to Friday, 9am – 6pm",
-  reg: "Company registration number 00000000 (England & Wales)",
-  social: {
-    linkedin: "https://www.linkedin.com/",
-    x: "https://x.com/",
-    github: "https://github.com/",
-    dribbble: "https://dribbble.com/",
+// ── Identity ────────────────────────────────────────────────────────────────
+
+/**
+ * A value the owner has not supplied yet.
+ *
+ * `null` means: do not render anything, or render the designed placeholder.
+ * It must never be coerced to an empty string and printed, and it must never
+ * be filled with a realistic-looking default.
+ */
+export type Pending<T> = T | null
+
+export const site = {
+  /** The person. The site leads with him, not with the studio. */
+  name: "Gideon Akinlotan",
+  role: "Designer and developer",
+  location: "London",
+  /** One line, first person, specific. Used in the masthead and as og:description input. */
+  line: "I design and build websites for British businesses, and I stay on afterwards so they keep working.",
+
+  /** The studio. Named only where a team genuinely does the work. */
+  studio: {
+    name: "GAkinz",
+    /** What the studio is for, in the owner's own framing. */
+    note: "Where a job needs more than one person, it runs through my studio, GAkinz.",
+    /**
+     * UK company registration. NOT SUPPLIED.
+     * The previous site shipped "00000000", which is not a valid number and is
+     * the kind of detail a cautious buyer checks. Nothing is printed until a
+     * real number exists.
+     */
+    registration: null as Pending<string>,
   },
-}
+
+  contact: {
+    /** Real and in use. */
+    email: "hello@gakinz.com",
+    /** NOT SUPPLIED. The previous site shipped +44 20 0000 0000. */
+    phone: null as Pending<string>,
+    /** True at the level stated. No street address is claimed. */
+    place: "London, United Kingdom",
+    /**
+     * What a sender can expect. This is a commitment the owner controls, not a
+     * measured statistic, and it is worded as one.
+     */
+    replyIntent: "I read every message myself and aim to reply the next working day.",
+  },
+
+  /**
+   * Social profiles. Each entry is included ONLY when it points at a real
+   * profile. The previous site linked https://linkedin.com/, https://x.com/,
+   * https://github.com/ and https://dribbble.com/ — four links to four home
+   * pages, which tell a visitor nothing and read as unfinished.
+   *
+   * These also feed the Person schema's `sameAs`, which is a machine-readable
+   * identity claim, so a wrong one is worse than an absent one.
+   */
+  social: [] as { label: string; url: string }[],
+
+  /** Image slots the owner must fill. The interface renders a designed, labelled frame. */
+  images: {
+    portrait: null as Pending<{ src: string; alt: string }>,
+  },
+} as const
+
+// ── What I do ───────────────────────────────────────────────────────────────
 
 export type ServiceCategory = {
   slug: string
   title: string
+  /** One line. Appears in the index and the navigation. */
   summary: string
+  /** Two or three sentences on the page itself. */
   detail: string
   deliverables: string[]
 }
@@ -30,205 +107,139 @@ export const services: ServiceCategory[] = [
   {
     slug: "web-design",
     title: "Web design",
-    summary: "Brand-led design that reads well and behaves well in a visitor's hands.",
+    summary: "Layout, type and the order of the argument, decided against your content.",
     detail:
-      "We design the whole experience, from the first impression to the small moments that make a site feel considered. You see real screens, not mood boards, and you sign off on the look before a line of code is written.",
+      "I design against your actual content, not a template that happens to be free. You see real screens in a browser rather than a mood board, and you sign off on the look before I write a line of code. The reasoning behind a layout matters as much as the layout, so I tell you why a page is ordered the way it is.",
     deliverables: [
-      "Discovery and a clear brief",
-      "Wireframes and prototypes",
+      "A short discovery conversation and a written brief",
+      "Wireframes for the pages that carry the work",
       "Visual design for every key page",
-      "A reusable design system",
-      "Responsive layouts down to mobile",
+      "A design system you can extend later",
+      "Layouts that hold from a phone to a wide screen",
     ],
   },
   {
     slug: "web-development",
     title: "Web development",
-    summary: "Fast, accessible, maintainable builds, ready for the people who use them.",
+    summary: "I build what I drew. Hand-written, standards-based, and yours to edit.",
     detail:
-      "We build what we draw. The same team carries the work from design into code, so nothing falls between the two. We write to web standards, test on real devices, and hand over a site you can actually run.",
+      "The same person carries the work from design into code, so nothing is lost in a handover. No page builder, no bought theme, nothing you cannot read six months later. I test on real devices and hand over a site you can actually run.",
     deliverables: [
-      "Hand-built, standards-based front end",
-      "Content management you can use",
-      "Performance and accessibility passes",
-      "Cross-browser and device testing",
-      "Documentation and handover",
+      "A hand-built, standards-based front end",
+      "Content management you can operate without me",
+      "An accessibility pass before launch, with the result written down",
+      "Testing across browsers and on real devices",
+      "Documentation and a handover session",
     ],
   },
   {
     slug: "ecommerce",
     title: "Ecommerce",
-    summary: "Shops that make buying simple and managing stock straightforward.",
+    summary: "Catalogue, checkout and the unglamorous parts: stock, tax, delivery, refunds.",
     detail:
-      "We build storefronts that load quickly, read clearly, and keep checkout short. Behind the scenes you get the tools to manage products, orders and payments without fighting the system.",
+      "A shop is mostly the parts nobody demonstrates. Checkout is built to be finished rather than admired, and the platform is chosen to fit your catalogue instead of your catalogue being reshaped to fit a platform.",
     deliverables: [
       "Product and catalogue design",
-      "Checkout built for completion",
-      "Payment and shipping setup",
-      "Order and stock management",
-      "Launch and post-launch support",
+      "A checkout built for completion",
+      "Payment and delivery configuration",
+      "Order and stock management you control",
+      "Launch, and support through the first weeks",
     ],
   },
   {
     slug: "care-and-support",
-    title: "Care & support",
-    summary: "Once a site is live, we keep it healthy, secure and moving forward.",
+    title: "Care and support",
+    summary: "Updates, small changes, and a person who answers when something breaks.",
     detail:
-      "Launch is the start, not the finish. Our care plans cover updates, fixes, security and small improvements, so your site keeps pace with the business instead of ageing in place.",
+      "Launch is the start. A care plan covers updates, backups, monitoring and the small changes a live site always needs. There is no ticket queue and no account manager: you email me, and I answer. Month to month, and you can stop whenever you like.",
     deliverables: [
-      "Monthly care plans",
+      "A monthly arrangement, cancellable at any time",
       "Security and software updates",
       "Backups and uptime monitoring",
-      "A support desk for issues",
-      "Ongoing improvements",
+      "Small changes and fixes included",
+      "Direct email to the person who built it",
     ],
   },
 ]
+
+// ── How I work ──────────────────────────────────────────────────────────────
+
+/**
+ * One idea, not a five-step process diagram. This replaces the previous
+ * "whyOneTeam" block, which argued the studio's case in the third person.
+ */
+export const howIWork = {
+  claim: "You talk to the person doing the work, from the first call to the last fix.",
+  detail:
+    "There is no account layer between you and the build. The same person answers the design question and the invoice question, which is why I take a small number of projects at once rather than a large number badly.",
+  /** Each row is a question a prospective client actually asks. */
+  rows: [
+    { q: "Who you meet", a: "Me, at the first call" },
+    { q: "Who designs it", a: "Me" },
+    { q: "Who builds it", a: "Me, or my studio where a job needs a team" },
+    { q: "Who you email after launch", a: "Still me" },
+  ],
+}
+
+/** What happens after someone gets in touch. Three steps, all within the owner's control. */
+export const whatHappensNext: { title: string; detail: string }[] = [
+  { title: "I read it myself", detail: "Every message. I aim to reply the next working day." },
+  { title: "A short call", detail: "Twenty minutes on the business, what the site has to do, and who it is for." },
+  { title: "A fixed price", detail: "A written scope and one number, before any work starts." },
+]
+
+// ── Sectors ─────────────────────────────────────────────────────────────────
 
 export type Sector = { title: string; blurb: string; needs: string[] }
 
 export const sectors: Sector[] = [
   {
     title: "Professional services",
-    blurb: "Firms that need a site as credible as the advice they give.",
-    needs: ["A presence that signals seniority", "Clear service and team pages", "Easy ways to enquire"],
+    blurb: "Firms whose site has to look as serious as the advice they sell.",
+    needs: ["A presence that reads as senior", "Clear service and people pages", "An obvious way to enquire"],
   },
   {
-    title: "Healthcare & training",
-    blurb: "Providers who must explain complex services plainly and accessibly.",
-    needs: ["Plain-language service pages", "WCAG-level accessibility", "Content the team can update"],
+    title: "Healthcare and training",
+    blurb: "Providers who must explain a complicated service in plain language.",
+    needs: ["Plain-language service pages", "Accessible to people using assistive technology", "Content the team updates itself"],
   },
   {
-    title: "Retail & ecommerce",
-    blurb: "Brands selling online who care how the shop feels, not just that it works.",
-    needs: ["Fast, clear product pages", "A short, secure checkout", "Stock managed without a developer"],
+    title: "Retail and ecommerce",
+    blurb: "Brands selling online who care how the shop feels, not only that it works.",
+    needs: ["Fast, legible product pages", "A short, secure checkout", "Stock managed without a developer"],
   },
   {
-    title: "Startups & founders",
-    blurb: "Early teams who need a sharp first site without a long, costly build.",
-    needs: ["A credible first impression", "Room to grow the site later", "A quick, fixed-price build"],
+    title: "Startups and founders",
+    blurb: "Early teams who need a credible first site without a long build.",
+    needs: ["A first impression that holds up", "Room to grow the site later", "A quick build at a fixed price"],
   },
   {
-    title: "Charities & non-profits",
-    blurb: "Causes that need to move people and budgets that need respecting.",
-    needs: ["Copy and design that move people", "Accessible to every visitor", "Sensible, honest pricing"],
+    title: "Charities and non-profits",
+    blurb: "Causes that need to move people, on budgets that need respecting.",
+    needs: ["Writing and design that move people", "Reachable by every visitor", "Honest pricing"],
   },
   {
-    title: "Hospitality & local",
+    title: "Hospitality and local business",
     blurb: "Places people visit, where the site is the first welcome.",
-    needs: ["A warm first impression", "Clear opening hours and location", "Looks right on a phone"],
+    needs: ["A warm first impression", "Opening hours and directions you cannot miss", "Right on a phone, first"],
   },
 ]
 
-// Why one team matters (from "Capabilities Overview") — reused across pages.
-export type Reason = { title: string; detail: string }
+// ── Process ─────────────────────────────────────────────────────────────────
 
-export const whyOneTeam: Reason[] = [
-  { title: "No handoff gap", detail: "Nothing is lost when the same people design and build." },
-  { title: "One point of contact", detail: "You talk to the studio doing the work, not a middle layer." },
-  { title: "Faster decisions", detail: "Design and build questions get answered in the same room." },
-  { title: "Quality all the way through", detail: "Looks right and works right are held to one standard." },
+export type Stage = { title: string; detail: string }
+
+export const processStages: Stage[] = [
+  { title: "Discover", detail: "What the business does, what the site has to do, and who is reading it." },
+  { title: "Design", detail: "Real screens in a browser, reviewed against your own content." },
+  { title: "Build", detail: "Written by hand, tested as it goes, on a staging link you can watch." },
+  { title: "Launch", detail: "Checks, then the switch, then a week of watching it closely." },
+  { title: "Care", detail: "Updates, small changes, and a person to email." },
 ]
 
-// What happens after you get in touch (Contact / Website Copy).
-export const contactSteps: Reason[] = [
-  { title: "We read your message", detail: "Every one, and we reply within one working day." },
-  { title: "A short discovery call", detail: "We learn the business, the goals, and the audience." },
-  { title: "A fixed price", detail: "A clear scope and number before any work begins." },
-]
-
-export type Insight = {
-  slug: string
-  title: string
-  excerpt: string
-  date: string
-  readMins: number
-  body: string[]
-}
-
-export const insights: Insight[] = [
-  {
-    slug: "why-one-team-design-and-build",
-    title: "Why one team for design and build beats a handoff",
-    excerpt:
-      "Most web projects lose time and quality in the gap between the designer and the developer. Here is how we close it.",
-    date: "2026-05-12",
-    readMins: 5,
-    body: [
-      "The classic web project splits in two. A designer draws the screens, signs them off, and hands a file to a developer who has never sat in the client meetings. What the developer builds is a translation, and translations lose things.",
-      "When the same team designs and builds, there is no handover document to misread. Decisions made in the design carry straight into the code, and the parts that are hard to build get caught while they are still cheap to change.",
-      "It also means one point of accountability. You are not refereeing between two suppliers when something looks off. The team that drew it is the team that built it, and they own the result end to end.",
-    ],
-  },
-  {
-    slug: "what-makes-a-site-fast",
-    title: "What actually makes a website fast",
-    excerpt: "Speed is not one setting. It is a series of small, deliberate choices made throughout a build.",
-    date: "2026-04-03",
-    readMins: 6,
-    body: [
-      "Clients often ask for a fast site as if speed were a switch. It is not. A fast site is the sum of dozens of decisions: how images are sized, how much code ships, how fonts load, how the server responds.",
-      "We treat performance as a budget, set at the start and checked throughout. Every feature has a cost, and we weigh that cost against what it gives the visitor.",
-      "The payoff is real. A site that loads quickly keeps more people, ranks better, and feels more trustworthy before a single word is read.",
-    ],
-  },
-  {
-    slug: "accessibility-is-not-optional",
-    title: "Accessibility is not an extra",
-    excerpt: "Building for everyone is a baseline, not a premium feature. Here is how we approach it.",
-    date: "2026-02-18",
-    readMins: 4,
-    body: [
-      "Accessibility gets treated as a line item to cut when budgets tighten. That is the wrong way to see it. A site that locks people out is simply a site that does not work for part of its audience.",
-      "We build to WCAG 2.1 AA as a matter of course: real keyboard support, sensible contrast, proper structure, focus that you can see. None of it shows off, and that is the point.",
-      "Good accessibility also makes a site better for everyone else. Clear structure and readable text help every visitor, not only those using assistive technology.",
-    ],
-  },
-]
-
-export type WorkItem = {
-  title: string
-  sector: string
-  summary: string
-  challenge: string
-  approach: string
-  result: string
-  services: string[]
-}
-
-export const work: WorkItem[] = [
-  {
-    title: "Clinic group website",
-    sector: "Healthcare",
-    summary: "A multi-site healthcare provider needed one clear home for services across several locations.",
-    challenge: "Services were spread across separate, inconsistent pages, and the team couldn't update them without help.",
-    approach: "We designed one clear structure for every location and built it on a content system the team runs themselves.",
-    result: "Enquiries up, support calls down, content the team can update themselves.",
-    services: ["Web design", "Web development", "Care & support"],
-  },
-  {
-    title: "Independent ecommerce brand",
-    sector: "Retail",
-    summary: "A growing retailer outgrew an off-the-shelf shop that was slow and hard to manage.",
-    challenge: "A template store had become slow, and managing stock and orders was a daily fight.",
-    approach: "We rebuilt the storefront for speed, shortened the checkout, and gave them tools to run stock without a developer.",
-    result: "Faster store, shorter checkout, stock managed without a developer.",
-    services: ["Web design", "Ecommerce"],
-  },
-  {
-    title: "Professional services firm",
-    sector: "Professional services",
-    summary: "A consultancy needed a site that matched the seniority of its work.",
-    challenge: "An ageing site undersold the firm and brought in few qualified enquiries.",
-    approach: "We shaped a credible, considered design and built clear paths to enquire, then tuned the SEO basics.",
-    result: "A credible new presence and a steady stream of qualified leads.",
-    services: ["Web design", "Web development"],
-  },
-]
-
-// ── Pricing (from "Services & Pricing") ──────────────────────────────────────
-// Indicative GBP, ex VAT. Starting points, not final quotes — a fixed price
-// follows a short discovery call.
+// ── Pricing ─────────────────────────────────────────────────────────────────
+// Indicative, in GBP, excluding VAT. Starting points rather than quotes: a
+// fixed price follows a discovery call. These are the owner's own figures.
 
 export type Package = {
   name: string
@@ -242,112 +253,163 @@ export type Package = {
 export const packages: Package[] = [
   {
     name: "Starter",
-    best: "A new business getting online",
+    best: "A first site, or a small one that needs replacing",
     price: "£1,500",
     features: [
-      "Up to 5 pages",
-      "Design + build by one team",
-      "Mobile-ready, responsive",
-      "Basic on-page SEO",
-      "Contact form",
+      "Up to five pages",
+      "Design and build",
+      "Content management",
+      "Accessibility pass before launch",
+      "Thirty days of support after launch",
     ],
   },
   {
-    name: "Growth",
-    best: "An established business that wants more",
+    name: "Business",
+    best: "A site that has to bring in enquiries",
     price: "£3,500",
     featured: true,
     features: [
-      "Up to 12 pages",
-      "Custom design",
-      "Content management system",
-      "Blog",
-      "On-page SEO + analytics",
+      "Up to twelve pages",
+      "Design and build",
+      "Content management and training",
+      "Accessibility pass before launch",
+      "Search and analytics set up properly",
+      "Sixty days of support after launch",
     ],
   },
   {
-    name: "Commerce",
-    best: "Selling products or services online",
+    name: "Ecommerce",
+    best: "Selling online, with stock to manage",
     price: "£6,000",
     features: [
-      "Online store + checkout",
-      "Secure payments",
-      "Product pages + catalogue",
-      "Content management system",
-      "Performance tuning",
+      "Catalogue, product and checkout design",
+      "Payment and delivery configuration",
+      "Order and stock management",
+      "Accessibility pass before launch",
+      "Ninety days of support after launch",
     ],
   },
   {
-    name: "Custom",
-    best: "Something more involved",
+    name: "Bespoke",
+    best: "A system rather than a website",
     price: "Quoted",
     features: [
-      "Scoped to your needs after discovery",
-      "Integrations and bespoke features",
-      "Phased delivery if needed",
-      "A fixed price before any work begins",
+      "Scoped against what you actually need",
+      "Integrations with what you already run",
+      "A written specification before anything is built",
+      "Staged delivery you can stop between stages",
     ],
   },
 ]
 
-export type AddOn = { name: string; what: string; price: string }
-
-export const addOns: AddOn[] = [
-  { name: "Copywriting", what: "We write or polish your page copy", price: "From £350" },
-  { name: "Logo & brand basics", what: "Wordmark, colours, and simple guidelines", price: "From £600" },
-  { name: "Extra pages", what: "Beyond the package count", price: "£180 / page" },
-  { name: "Ongoing care plan", what: "Hosting checks, updates, small changes", price: "£90 / month" },
-  { name: "SEO growth retainer", what: "Monthly SEO and content work", price: "£450 / month" },
+export const addOns: { name: string; price: string }[] = [
+  { name: "Additional page, designed and built", price: "£180 per page" },
+  { name: "Copywriting for a page", price: "£350" },
+  { name: "Brand mark and basic identity", price: "£600" },
+  { name: "Care plan, essentials", price: "£90 per month" },
+  { name: "Care plan, with monthly changes", price: "£450 per month" },
 ]
 
 export const alwaysIncluded: string[] = [
-  "One team handling both design and development",
-  "Responsive design for phones, tablets, and desktops",
-  "Accessibility and SEO fundamentals built in",
-  "A preview link so you see the real site before it goes live",
-  "Clear timelines and a single point of contact",
+  "Layouts that work on a phone",
+  "An accessibility pass before launch, with the result written down",
+  "Search engine basics: titles, descriptions, sitemap, structured data",
+  "Analytics, if you want it, and none if you do not",
+  "A handover session, recorded",
+  "The code, and the accounts, in your name",
 ]
 
-export const paymentTerms: string[] = [
-  "A 40% deposit confirms your project and reserves your start date.",
-  "A 30% payment is due when designs are approved and build begins.",
-  "The final 30% is due before the site goes live.",
-  "Care plans and retainers are billed monthly in advance.",
+export const paymentTerms: { stage: string; share: string }[] = [
+  { stage: "On signing", share: "40%" },
+  { stage: "On design sign-off", share: "30%" },
+  { stage: "On launch", share: "30%" },
 ]
 
-// ── Process (from "Capabilities Overview") ───────────────────────────────────
-export type Stage = { n: string; title: string; what: string; get: string }
+// ── Questions ───────────────────────────────────────────────────────────────
 
-export const processStages: Stage[] = [
-  { n: "01", title: "Discover", what: "We learn your business, goals, and audience.", get: "A short brief we both agree on" },
-  { n: "02", title: "Design", what: "We shape the look and the journey.", get: "Designs to review and sign off" },
-  { n: "03", title: "Build", what: "We develop the approved design.", get: "A working site on a preview link" },
-  { n: "04", title: "Launch", what: "We test, fix, and go live.", get: "Your site, live and checked" },
-  { n: "05", title: "Support", what: "We help as you grow.", get: "A team you can call" },
+export const faqs: { q: string; a: string }[] = [
+  {
+    q: "How long does a site take?",
+    a: "A small site is usually a few weeks; a larger one, a couple of months. The honest answer depends far more on how quickly content and feedback come back than on how quickly I build.",
+  },
+  {
+    q: "Do I have to write the content?",
+    a: "You know the business better than I do, so your words are usually better than mine. If writing it is the thing that stalls the project, I will write it and you edit.",
+  },
+  {
+    q: "Can I edit the site afterwards?",
+    a: "Yes. That is the point of the handover. If you cannot change a price or a phone number without emailing me, I have built it wrong.",
+  },
+  {
+    q: "What happens if something breaks?",
+    a: "You email me. On a care plan that is included; without one, I charge for the time. Either way you are emailing the person who built it.",
+  },
+  {
+    q: "Do you work with agencies?",
+    a: "Sometimes, as the build half of a design and build pair. Say so in your first message so I can tell you quickly whether it is a fit.",
+  },
+  {
+    q: "Who owns the work?",
+    a: "You do, once the final invoice is paid. The code, the domain and the hosting accounts go in your name, not mine.",
+  },
 ]
 
-// ── FAQs ─────────────────────────────────────────────────────────────────────
-export type Faq = { q: string; a: string }
+// ── Writing ─────────────────────────────────────────────────────────────────
 
-export const faqs: Faq[] = [
+/**
+ * Static fallback for /resources.
+ *
+ * The live source is the `posts` table through server/blog.php; see
+ * src/marketing/data/blog.ts. This array is what renders when the endpoint is
+ * unreachable, so it must stay true on its own.
+ *
+ * `readMins` was previously asserted per post with no basis. It is gone. The
+ * claim "I build to WCAG 2.1 AA as a matter of course" was also removed from
+ * the accessibility piece: the project's own accessibility position is
+ * measured and recorded in qa/ACCESSIBILITY-AUDIT.md, and the article now says
+ * what is actually true.
+ */
+export type Insight = {
+  slug: string
+  title: string
+  excerpt: string
+  date: string
+  body: string[]
+}
+
+export const insights: Insight[] = [
   {
-    q: "Do the same people design and build my site?",
-    a: "Yes. That is the whole point of GAkinz. The people who decide how your site looks are the people who make it work, so the version you approve is the version you get.",
+    slug: "why-one-team-design-and-build",
+    title: "Why one person designing and building beats a handover",
+    excerpt:
+      "Most web projects lose time and quality in the gap between the designer and the developer. Here is what closing it actually changes.",
+    date: "2026-05-12",
+    body: [
+      "The usual web project splits in two. A designer draws the screens, signs them off, and hands a file to a developer who was not in any of the client meetings. What gets built is a translation, and translations lose things.",
+      "When the same person designs and builds, there is no handover document to misread. The decisions made while drawing carry straight into the code, and the parts that are expensive to build get caught while they are still cheap to change.",
+      "It also means one place for the blame to land. You are not refereeing between two suppliers when something looks wrong. Whoever drew it built it, and owns the result.",
+    ],
   },
   {
-    q: "Are these prices final?",
-    a: "They are starting points, not final quotes. After a short discovery call we send a fixed price for your project, so you know the number before any work begins.",
+    slug: "what-makes-a-site-fast",
+    title: "What actually makes a website fast",
+    excerpt: "Speed is not a setting. It is several dozen small decisions, most of them made before anything is built.",
+    date: "2026-04-03",
+    body: [
+      "Clients often ask for a fast site as though speed were a switch somewhere. It is not. A fast site is the sum of decisions: how images are sized, how much code ships, how fonts load, how the server answers.",
+      "I treat performance as a budget set at the start and checked as I go. Every feature costs something, and the cost gets weighed against what the visitor gets for it.",
+      "The payoff is not theoretical. A site that appears quickly keeps more of the people who asked for it, and it feels trustworthy before a single word has been read.",
+    ],
   },
   {
-    q: "Can I update the site myself afterwards?",
-    a: "Growth and Commerce projects include a content management system, so you can change text and images without calling us every time. We hand over a site you can actually run.",
-  },
-  {
-    q: "What happens after launch?",
-    a: "Launch is the start, not the end. We test, fix, and stay on hand. An optional care plan covers hosting checks, updates, and small changes as your business grows.",
-  },
-  {
-    q: "How long does a project take?",
-    a: "It depends on size and how quickly we get content and feedback. A Starter site is usually a few weeks; larger and ecommerce builds run longer. You always know what stage you are at.",
+    slug: "accessibility-is-not-optional",
+    title: "Accessibility is not a final check",
+    excerpt: "What it costs to retrofit, and why I now price it as part of the build rather than as an extra.",
+    date: "2026-02-18",
+    body: [
+      "Accessibility is usually the line item that goes when a budget tightens. That gets it backwards. A site that locks people out is a site that does not work for part of the audience it was paid to reach.",
+      "The practical parts are unglamorous: keyboard support that actually works, contrast you can measure, headings in a sensible order, focus you can see. None of it shows off, which is exactly why it gets cut.",
+      "It is also far cheaper before the build than after it. Retrofitting means reopening layout decisions that have already been signed off, so I price the pass into the build and write down what was checked and what was found.",
+    ],
   },
 ]

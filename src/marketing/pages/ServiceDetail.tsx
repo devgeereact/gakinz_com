@@ -1,117 +1,151 @@
 import { Link, useParams } from "react-router-dom"
-import { ArrowLeft, ArrowRight, Check } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import Seo from "@/marketing/components/Seo"
+import { Action, CtaBand, Label, PageHero, Section, Split } from "@/marketing/components/primitives"
+import FadeIn from "@/marketing/components/FadeIn"
 import { services, processStages, alwaysIncluded } from "@/marketing/data/site"
-import FadeIn from "../components/FadeIn"
-import SiteMockup, { variantForService } from "../components/SiteMockup"
-import { PageHero, Section, Split, RuleEyebrow, CtaBand } from "../components/primitives"
 import NotFound from "./NotFound"
+
+/**
+ * /services/:slug: one service in full.
+ *
+ * An unknown slug renders NotFound, as it did before, but now with its own Seo
+ * carrying noIndex. Without it the 404 branch inherited whatever metadata the
+ * previous route had left in the head, and a client-rendered SPA has no server
+ * status code to fall back on, so the only signal a crawler gets that this is
+ * not a real page is the robots meta.
+ *
+ * The retired SiteMockup wireframe that opened this page is not replaced by a
+ * Placeholder: the page reads as a document without an image, and a labelled
+ * empty frame at the top of every service page would be four honest gaps where
+ * none is needed.
+ */
 
 export default function ServiceDetail() {
   const { slug } = useParams()
   const service = services.find((s) => s.slug === slug)
-  if (!service) return <NotFound />
+
+  if (!service) {
+    return (
+      <>
+        <Seo
+          title="Page not found"
+          description="This service page does not exist. The four things I do are listed on the services index."
+          path={`/services/${slug ?? ""}`}
+          noIndex
+        />
+        <NotFound />
+      </>
+    )
+  }
 
   const others = services.filter((s) => s.slug !== service.slug)
 
   return (
     <>
-      <PageHero eyebrow="Service" title={service.title} intro={service.summary} breadcrumb={service.title} />
+      <Seo title={service.title} description={service.summary} path={`/services/${service.slug}`} />
+
+      <PageHero
+        eyebrow="What I do"
+        breadcrumb={service.title}
+        title={service.title}
+        intro={service.summary}
+      />
+
       <Section>
         <Link
           to="/services"
-          className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground"
+          className="inline-flex min-h-[2.75rem] items-center font-data text-label uppercase text-gk-ink-mute hover:text-gk-ink"
         >
-          <ArrowLeft className="mr-1 h-4 w-4" /> All services
+          All services
         </Link>
-        <FadeIn>
-          <div className="relative mt-6 overflow-hidden rounded-2xl border border-[hsl(var(--gk-indigo)/0.08)] shadow-xl shadow-[hsl(var(--gk-violet)/0.12)]">
-            <div className="aspect-[16/7] w-full">
-              <SiteMockup variant={variantForService(service.slug)} url={`${service.slug.replace(/-/g, "")}.example`} />
-            </div>
-          </div>
-        </FadeIn>
-        <div className="mt-10 grid gap-12 lg:grid-cols-[1.5fr_1fr]">
-          <FadeIn>
-            <p className="text-lg text-muted-foreground">{service.detail}</p>
-            <h2 className="mt-8 text-lg font-semibold">What you get</h2>
-            <ul className="mt-4 space-y-3">
+
+        <div className="mt-6 grid gap-12 lg:grid-cols-[1.5fr_1fr] lg:gap-16">
+          <FadeIn className="min-w-0">
+            <p className="max-w-2xl text-lede text-gk-ink-soft">{service.detail}</p>
+
+            <h2 className="mt-12 font-display text-t3 text-gk-ink">What you get</h2>
+            <ul className="mt-6 border-t border-gk-edge">
               {service.deliverables.map((d) => (
-                <li key={d} className="flex items-start gap-3">
-                  <span className="mt-0.5 inline-flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-[hsl(var(--gk-violet)/0.12)] text-[hsl(var(--gk-violet))]">
-                    <Check className="h-3.5 w-3.5" />
-                  </span>
-                  <span className="text-sm text-foreground">{d}</span>
+                <li key={d} className="border-b border-gk-edge py-4 text-body text-gk-ink">
+                  {d}
                 </li>
               ))}
             </ul>
-            <Button asChild className="gk-shine mt-8 shadow-md shadow-primary/20">
-              <Link to="/contact">
-                Talk to us about {service.title.toLowerCase()} <ArrowRight className="ml-1 h-4 w-4" />
-              </Link>
-            </Button>
+
+            <div className="mt-10">
+              <Action to="/contact" variant="strong">
+                Talk to me about {service.title.toLowerCase()}
+              </Action>
+            </div>
           </FadeIn>
-          <FadeIn delay={0.1}>
-            <div className="lg:sticky lg:top-24">
-              <RuleEyebrow>Other services</RuleEyebrow>
-              <div className="mt-5 border-t border-[hsl(var(--gk-indigo)/0.14)]">
+
+          <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
+            <nav aria-label="Other services">
+              <Label>Other services</Label>
+              <ul className="mt-4 border-t border-gk-edge">
                 {others.map((o) => (
-                  <Link
-                    key={o.slug}
-                    to={`/services/${o.slug}`}
-                    className="group flex items-center justify-between gap-3 border-b border-[hsl(var(--gk-indigo)/0.14)] py-4 transition-colors hover:text-[hsl(var(--gk-violet))]"
-                  >
-                    <span className="font-serif text-base font-bold">{o.title}</span>
-                    <ArrowRight className="h-4 w-4 text-[hsl(var(--gk-violet))] transition-transform group-hover:translate-x-1" />
-                  </Link>
+                  <li key={o.slug} className="border-b border-gk-edge">
+                    <Link
+                      to={`/services/${o.slug}`}
+                      className="flex min-h-[2.75rem] items-center py-3 font-display text-t4 text-gk-ink hover:underline"
+                    >
+                      {o.title}
+                    </Link>
+                  </li>
                 ))}
-              </div>
+              </ul>
+            </nav>
 
-              <div className="mt-10">
-                <RuleEyebrow>Pricing</RuleEyebrow>
-                <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
-                  Every project is fixed-price after a short discovery call, so you know the number before
-                  any work begins.
-                </p>
-                <Button asChild variant="outline" className="mt-4">
-                  <Link to="/pricing">
-                    See packages <ArrowRight className="ml-1 h-4 w-4" />
-                  </Link>
-                </Button>
+            <div className="mt-12">
+              <Label>Pricing</Label>
+              <p className="mt-4 text-body text-gk-ink-soft">
+                The figures on the pricing page are indicative starting points, in GBP and excluding
+                VAT. A fixed price follows a short discovery call, so you have the number in writing
+                before any work starts.
+              </p>
+              <div className="mt-6">
+                <Action to="/pricing">See what it costs</Action>
               </div>
             </div>
-          </FadeIn>
+          </div>
         </div>
       </Section>
 
-      {/* How we work */}
-      <Section muted>
-        <RuleEyebrow>How we work</RuleEyebrow>
-        <h2 className="mt-4 max-w-2xl font-serif text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.05]">
-          A simple path from first call to a live site
-        </h2>
-        <div className="mt-12 grid grid-cols-1 border-t border-[hsl(var(--gk-indigo)/0.14)] lg:grid-cols-5">
-          {processStages.map((stage) => (
-            <div
-              key={stage.n}
-              className="border-b border-[hsl(var(--gk-indigo)/0.14)] py-7 lg:border-b-0 lg:px-6 lg:[&:not(:first-child)]:border-l lg:[&:not(:first-child)]:border-[hsl(var(--gk-indigo)/0.14)] lg:first:pl-0"
+      {/* ── Process ──────────────────────────────────────────────────── */}
+      <Section tone="sunk">
+        <div className="grid gap-6 pb-10 md:grid-cols-[1fr_24rem] md:items-end">
+          <h2 className="font-display text-t2 text-gk-ink">How a project runs</h2>
+          <p className="text-body text-gk-ink-soft">
+            The same five stages whichever service you are buying.
+          </p>
+        </div>
+        <ol className="grid border-t border-gk-edge lg:grid-cols-5">
+          {processStages.map((stage, i) => (
+            <li
+              key={stage.title}
+              className="border-b border-gk-edge py-7 lg:border-b-0 lg:px-6 lg:first:pl-0 lg:[&:not(:first-child)]:border-l lg:[&:not(:first-child)]:border-gk-edge"
             >
-              <span className="font-serif text-4xl font-extrabold text-[hsl(var(--gk-indigo)/0.12)]">{stage.n}</span>
-              <h3 className="mt-3 text-base font-semibold">{stage.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{stage.what}</p>
-            </div>
+              <span className="font-data text-label text-gk-ink-mute">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <h3 className="mt-3 font-display text-t4 text-gk-ink">{stage.title}</h3>
+              <p className="mt-2 text-body text-gk-ink-soft">{stage.detail}</p>
+            </li>
           ))}
-        </div>
+        </ol>
       </Section>
 
-      {/* Always included */}
+      {/* ── Always included ──────────────────────────────────────────── */}
       <Section>
-        <Split label="Every project" title="What's always included" sticky>
-          <ul className="grid border-t border-[hsl(var(--gk-indigo)/0.14)] sm:grid-cols-2 sm:gap-x-12">
+        <Split
+          label="Every project"
+          title="What comes with every project"
+          intro="These are in the price rather than quoted as extras afterwards."
+        >
+          <ul className="grid border-t border-gk-edge sm:grid-cols-2 sm:gap-x-12">
             {alwaysIncluded.map((item) => (
-              <li key={item} className="flex items-start gap-3 border-b border-[hsl(var(--gk-indigo)/0.14)] py-5">
-                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-[hsl(var(--gk-violet))]" />
-                <span className="text-sm text-foreground">{item}</span>
+              <li key={item} className="border-b border-gk-edge py-5 text-body text-gk-ink">
+                {item}
               </li>
             ))}
           </ul>
@@ -119,8 +153,8 @@ export default function ServiceDetail() {
       </Section>
 
       <CtaBand
-        title={`Ready to talk ${service.title.toLowerCase()}?`}
-        intro="Tell us what you are building. We will come back with a clear next step and a fixed price."
+        title={`Ready to talk about ${service.title.toLowerCase()}?`}
+        intro="Tell me what you are building and what it has to do. I will come back with a clear next step and, after a short call, a fixed price."
       />
     </>
   )

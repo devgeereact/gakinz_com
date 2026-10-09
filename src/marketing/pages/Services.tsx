@@ -1,123 +1,137 @@
 import { Link } from "react-router-dom"
-import { ArrowRight, Check, PenTool, Code2, ShoppingCart, LifeBuoy } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import Seo from "@/marketing/components/Seo"
+import { Action, CtaBand, Label, PageHero, Section, Split } from "@/marketing/components/primitives"
+import FadeIn from "@/marketing/components/FadeIn"
 import { services, processStages, alwaysIncluded } from "@/marketing/data/site"
-import FadeIn from "../components/FadeIn"
-import SiteMockup, { variantForService } from "../components/SiteMockup"
-import { PageHero, Section, Split, FeatureRow, RuleEyebrow, CtaBand } from "../components/primitives"
 
-const serviceIcons: Record<string, typeof PenTool> = {
-  "web-design": PenTool,
-  "web-development": Code2,
-  ecommerce: ShoppingCart,
-  "care-and-support": LifeBuoy,
-}
+/**
+ * /services: the four things, and what each one includes.
+ *
+ * What this page carried before and no longer does:
+ *
+ *   - a generated SiteMockup wireframe in every FeatureRow's media slot. The
+ *     mockups are retired. There is no photograph of this work to put in their
+ *     place, so the spread is composed to need no image: the deliverables list
+ *     occupies the second column, which is what a reader wanted from that side
+ *     of the page anyway.
+ *   - an h1 -> h3 level skip. The four services are the first headings under
+ *     the page title, so they are h2, and the process stages beneath the
+ *     process h2 are h3.
+ *   - two type sizes invented outside the nine-value scale, one of them a
+ *     ghost numeral, plus gradient icon chips, rounded cards and drop shadows.
+ *   - first person plural. The work is done by one person and now says so.
+ */
 
 export default function Services() {
   return (
     <>
-      <PageHero
-        eyebrow="Services"
-        title="Everything your website needs, from one studio"
-        intro="You don't have to coordinate a designer and a developer. We do both, and we do them together — from the first sketch through to launch and the care that follows."
-        breadcrumb="Services"
+      <Seo
+        title="What I do"
+        description="Web design, development, ecommerce and care, with what each one includes and what happens at every stage of a project."
+        path="/services"
       />
 
-      {/* Service feature spreads */}
+      <PageHero
+        eyebrow="What I do"
+        breadcrumb="Services"
+        title="Four things, and what each one actually includes."
+        intro="I design the site and then I build it, so nothing is lost explaining one to the other. After launch I stay on, because a live site always needs small changes and somebody has to make them."
+      />
+
+      {/* ── The four ─────────────────────────────────────────────────── */}
       <Section>
-        {services.map((s, i) => {
-          const Icon = serviceIcons[s.slug] ?? Code2
-          return (
-            <FadeIn key={s.slug}>
-              <FeatureRow
-                index={String(i + 1).padStart(2, "0")}
-                eyebrow={s.title}
-                flip={i % 2 === 1}
-                title={s.title}
-                media={
-                  <div className="relative overflow-hidden rounded-2xl border border-[hsl(var(--gk-indigo)/0.1)] shadow-xl shadow-[hsl(var(--gk-violet)/0.12)]">
-                    <div className="aspect-[16/10] w-full">
-                      <SiteMockup variant={variantForService(s.slug)} url={`${s.slug.replace(/-/g, "")}.example`} />
+        <ol className="border-t border-gk-edge">
+          {services.map((s, i) => (
+            <li key={s.slug} className="border-b border-gk-edge">
+              <FadeIn>
+                <article className="grid gap-8 py-12 lg:grid-cols-[1fr_22rem] lg:gap-16">
+                  <div className="min-w-0">
+                    <div className="flex items-baseline gap-4">
+                      <span className="font-data text-label text-gk-ink-mute">
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <h2 className="font-display text-t3 text-gk-ink">
+                        <Link to={`/services/${s.slug}`} className="hover:underline">
+                          {s.title}
+                        </Link>
+                      </h2>
                     </div>
-                    <span className="absolute left-5 top-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[hsl(var(--gk-violet))] to-[hsl(var(--gk-sky))] text-white shadow-lg">
-                      <Icon className="h-5 w-5" />
-                    </span>
+                    <p className="mt-5 max-w-2xl text-lede text-gk-ink-soft">{s.summary}</p>
+                    <p className="mt-4 max-w-2xl text-body text-gk-ink-soft">{s.detail}</p>
+                    <div className="mt-8">
+                      <Action to={`/services/${s.slug}`}>{s.title} in detail</Action>
+                    </div>
                   </div>
-                }
-                footer={
-                  <Button asChild variant="outline">
-                    <Link to={`/services/${s.slug}`}>
-                      {s.title} in detail <ArrowRight className="ml-1 h-4 w-4" />
-                    </Link>
-                  </Button>
-                }
-              >
-                <p className="mt-4 leading-relaxed text-muted-foreground">{s.detail}</p>
-                <ul className="mt-5 grid gap-x-6 gap-y-2 sm:grid-cols-2">
-                  {s.deliverables.map((d) => (
-                    <li key={d} className="flex items-start gap-2 text-sm">
-                      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-[hsl(var(--gk-violet))]" />
-                      <span className="text-foreground">{d}</span>
-                    </li>
-                  ))}
-                </ul>
-              </FeatureRow>
-            </FadeIn>
-          )
-        })}
-      </Section>
 
-      {/* Process — horizontal steps */}
-      <Section muted>
-        <RuleEyebrow>How we work</RuleEyebrow>
-        <h2 className="mt-4 max-w-2xl font-serif text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.05]">
-          A simple path from first call to a live site
-        </h2>
-        <p className="mt-4 max-w-xl text-muted-foreground">
-          Five clear stages. You always know what stage you're at and what happens next.
-        </p>
-        <div className="mt-12 grid grid-cols-1 border-t border-[hsl(var(--gk-indigo)/0.14)] lg:grid-cols-5">
-          {processStages.map((stage) => (
-            <div
-              key={stage.n}
-              className="border-b border-[hsl(var(--gk-indigo)/0.14)] py-7 lg:border-b-0 lg:px-6 lg:[&:not(:first-child)]:border-l lg:[&:not(:first-child)]:border-[hsl(var(--gk-indigo)/0.14)] lg:first:pl-0"
-            >
-              <span className="font-serif text-4xl font-extrabold text-[hsl(var(--gk-indigo)/0.12)]">{stage.n}</span>
-              <h3 className="mt-3 text-base font-semibold">{stage.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{stage.what}</p>
-              <p className="mt-3 text-xs font-semibold uppercase tracking-[0.1em] text-[hsl(var(--gk-violet))]">
-                {stage.get}
-              </p>
-            </div>
+                  <div className="min-w-0">
+                    <Label>What you get</Label>
+                    <ul className="mt-4 border-t border-gk-rule">
+                      {s.deliverables.map((d) => (
+                        <li
+                          key={d}
+                          className="border-b border-gk-rule py-3 text-body text-gk-ink-soft"
+                        >
+                          {d}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </article>
+              </FadeIn>
+            </li>
           ))}
-        </div>
+        </ol>
       </Section>
 
-      {/* What's always included */}
+      {/* ── Process ──────────────────────────────────────────────────── */}
+      <Section tone="sunk">
+        <div className="grid gap-6 pb-10 md:grid-cols-[1fr_24rem] md:items-end">
+          <h2 className="font-display text-t2 text-gk-ink">How a project runs</h2>
+          <p className="text-body text-gk-ink-soft">
+            Five stages. You always know which one you are in, and what has to happen before the
+            next one starts.
+          </p>
+        </div>
+        <ol className="grid border-t border-gk-edge lg:grid-cols-5">
+          {processStages.map((stage, i) => (
+            <li
+              key={stage.title}
+              className="border-b border-gk-edge py-7 lg:border-b-0 lg:px-6 lg:first:pl-0 lg:[&:not(:first-child)]:border-l lg:[&:not(:first-child)]:border-gk-edge"
+            >
+              <span className="font-data text-label text-gk-ink-mute">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <h3 className="mt-3 font-display text-t4 text-gk-ink">{stage.title}</h3>
+              <p className="mt-2 text-body text-gk-ink-soft">{stage.detail}</p>
+            </li>
+          ))}
+        </ol>
+      </Section>
+
+      {/* ── Always included ──────────────────────────────────────────── */}
       <Section>
         <Split
           label="Every project"
-          title="What's always included"
-          intro="Whichever service you choose, these come as standard — not as extras."
-          sticky
-          aside={
-            <Button asChild>
-              <Link to="/pricing">See packages &amp; pricing <ArrowRight className="ml-1 h-4 w-4" /></Link>
-            </Button>
-          }
+          title="What comes with every project"
+          intro="Whichever of the four you need, these are in the price rather than quoted as extras afterwards."
         >
-          <ul className="grid border-t border-[hsl(var(--gk-indigo)/0.14)] sm:grid-cols-2 sm:gap-x-12">
+          <ul className="grid border-t border-gk-edge sm:grid-cols-2 sm:gap-x-12">
             {alwaysIncluded.map((item) => (
-              <li key={item} className="flex items-start gap-3 border-b border-[hsl(var(--gk-indigo)/0.14)] py-5">
-                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-[hsl(var(--gk-violet))]" />
-                <span className="text-sm text-foreground">{item}</span>
+              <li key={item} className="border-b border-gk-edge py-5 text-body text-gk-ink">
+                {item}
               </li>
             ))}
           </ul>
+          <div className="mt-8">
+            <Action to="/pricing">What it costs</Action>
+          </div>
         </Split>
       </Section>
 
-      <CtaBand title="Not sure which you need?" intro="Book a short call and we'll point you the right way." />
+      <CtaBand
+        title="Not sure which of these you need?"
+        intro="Tell me what the site has to do. If it is not something I should take on, I will say so and point you somewhere better."
+      />
     </>
   )
 }
