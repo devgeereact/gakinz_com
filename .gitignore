@@ -30,3 +30,6 @@ config.php
 
 # Uploaded files (server runtime, never committed)
 server/uploads/
+
+# Screenshots and traces written by browser tooling during QA runs.
+.playwright-mcp/
