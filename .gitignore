@@ -30,3 +30,8 @@ config.php
 
 # Uploaded files (server runtime, never committed)
 server/uploads/
+
+# Local environment files may contain credentials. Keep only the example public.
+.env
+.env.*
+!.env.example

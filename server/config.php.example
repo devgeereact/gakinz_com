@@ -20,11 +20,13 @@ ini_set('log_errors', '1');
 error_reporting(E_ALL);
 
 // ── Database (cPanel / MySQL) ───────────────────────────────────────────────
-// Host stays "localhost" on Namecheap. cPanel prefixes the account name, so
-// the database and its user are both devgeereact_gakinz_com.
+// Host stays "localhost" on shared cPanel hosting. cPanel prefixes every
+// database and database user with the account name, so both values take the
+// form <cpanel_user>_<database>. Read the real ones from cPanel; they are not
+// recorded in this repository.
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'devgeereact_gakinz_com');
-define('DB_USER', 'devgeereact_gakinz_com');
+define('DB_NAME', 'REPLACE_db_name');   // e.g. <cpanel_user>_<database>
+define('DB_USER', 'REPLACE_db_user');   // usually the same as DB_NAME
 define('DB_PASS', 'REPLACE_db_password');
 
 // ── OpenRouter (server-side AI — read only by ai.php; never sent to the browser)
@@ -56,13 +58,17 @@ define('OPENWEATHER_UNITS', 'metric'); // 'metric' (°C) or 'imperial' (°F)
 // On a fresh install auth.php creates one super-admin. Set a strong password
 // here; if left blank a random one is generated and written to
 // server/seed_admin_password.txt (delete that file after first login).
-$SEED_ADMIN_EMAIL    = 'dev@gakinz.com';
+$SEED_ADMIN_EMAIL    = 'REPLACE_seed_admin_email';
 $SEED_ADMIN_PASSWORD = '';   // '' → random, written to seed_admin_password.txt
 
 // ── Outgoing mail (SMTP) ── read by mail.php ──────────────────────────────────
-// Leave $SMTP_HOST blank to fall back to PHP mail(). On cPanel use the mail
-// server (often the domain or localhost) with a real mailbox + password.
-$SMTP_HOST      = 'premium152.web-hosting.com';  // e.g. 'mail.gakinz.com' or 'localhost'
+// Leave $SMTP_HOST blank to fall back to PHP mail(). Use the hosting account's
+// real mail server hostname with a real mailbox + password.
+// The correct hostname is a hosting fact and is NOT recorded in this repository
+// (see docs/DECISIONS.md D-018). Read it from the operator's hosting notes.
+// A stale hostname here fails SILENTLY: a retired host can still resolve and
+// still answer on 465, so mail appears to send and never arrives.
+$SMTP_HOST      = 'REPLACE_smtp_host';   // hosting account mail server, or '' for PHP mail()
 $SMTP_PORT      = 465;                   // 465 = SSL, 587 = STARTTLS
 $SMTP_SECURE    = 'ssl';                 // 'ssl' | 'tls' | ''  (must match the port)
 $SMTP_USER      = 'hello@gakinz.com';
@@ -72,7 +78,8 @@ $SMTP_FROM_NAME = 'GAKINZ LTD';
 
 // ── Incoming mail (IMAP) for the in-app inbox ── read by mail.php ─────────────
 // Requires the PHP imap extension. Leave $IMAP_HOST blank to disable the inbox.
-$IMAP_HOST = 'premium152.web-hosting.com';       // e.g. 'mail.gakinz.com' or 'localhost'
+// Same hostname as $SMTP_HOST above, and the same warning applies.
+$IMAP_HOST = 'REPLACE_imap_host';        // hosting account mail server, or '' to disable
 $IMAP_PORT = 993;                        // 993 = IMAP over SSL
 $IMAP_USER = 'hello@gakinz.com';
 $IMAP_PASS = 'REPLACE_mailbox_password';

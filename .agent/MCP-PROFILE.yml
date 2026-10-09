@@ -1,0 +1,42 @@
+mcp_profile:
+  project: "GAkinz (gakinz.com)"
+
+  permitted_read_capabilities:
+    - "local filesystem and git within this worktree"
+    - "package registry and library documentation lookup"
+    - "headless browsing of the public site for dogfooding and accessibility checks"
+
+  permitted_write_capabilities:
+    - "local file edits within this worktree"
+
+  production_capabilities: []
+
+  explicitly_excluded:
+    - "hosting, DNS and registrar control panels (cPanel, Cloudflare, Namecheap) by any route"
+    - "database mutation against the live MySQL instance"
+    - "sending real email, SMS or WhatsApp through the studio transports"
+    - "creating Stripe or PayPal charges, links or webhooks"
+    - "desktop control for anything reachable by browser, IDE or shell"
+
+  environments:
+    local:
+      - "vite dev server on port 5102 (calls the LIVE API; there is no local PHP or MySQL)"
+    staging: []
+    production:
+      - "https://gakinz.com (read-only observation only, and only when asked)"
+
+  data_classification: "sensitive"
+
+  required_approvals:
+    - "any request that reaches the live server, database, mailbox or payment provider"
+    - "any change to server/*.php that is intended to be uploaded"
+    - "any schema change"
+    - "any write performed through the dev server, because it writes to production data"
+
+  evidence_requirements:
+    - "record the exact command and its result, not a summary"
+    - "state NOT TESTED for anything depending on live server, database, mail or DNS state"
+    - "state UNVERIFIED for any claim about deployed state"
+
+  fallbacks:
+    - "when live evidence is unavailable, inspect the tracked source and label the finding as source inspection only"
