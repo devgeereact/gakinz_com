@@ -40,10 +40,68 @@ describe("canAccess", () => {
     expect(canAccess("manager", "platform")).toBe(false)
   })
 
-  it("treats an unknown (ungated) module as open to any signed-in user", () => {
-    expect(canAccess("employee", "totally-unknown-module")).toBe(true)
-    expect(canAccess("client", "totally-unknown-module")).toBe(true)
-    expect(canAccess(undefined, "totally-unknown-module")).toBe(false)
+  // Fails CLOSED. A route added without a MODULE_ROLES entry must be invisible
+  // until someone maps it, not open to every signed-in user including a client.
+  it("denies an unmapped module key to every role", () => {
+    for (const role of [...STAFF_ROLES, "client" as Role, undefined]) {
+      expect(canAccess(role, "totally-unknown-module")).toBe(false)
+    }
+  })
+
+  it("has a MODULE_ROLES entry for every path moduleKeyForPath can return", () => {
+    // Guards the fail-closed rule: an unmapped key would silently hide a real
+    // module from everyone, which is loud but still a bug.
+    const paths = [
+      "/app",
+      ...Object.keys(MODULE_ROLES).map((k) => `/app/${k}`),
+    ]
+    for (const path of paths) {
+      const key = moduleKeyForPath(path)
+      expect(key, `no module key for ${path}`).not.toBeNull()
+      expect(MODULE_ROLES[key as string], `no MODULE_ROLES entry for ${path}`).toBeDefined()
+    }
+  })
+})
+
+describe("work (the 24th module)", () => {
+  it("mirrors the EDITORS list in server/work.php", () => {
+    expect(MODULE_ROLES.work).toEqual(["super_admin", "admin", "manager", "editor"])
+  })
+
+  it("lets the four editor roles in and keeps everyone else out", () => {
+    for (const role of ["super_admin", "admin", "manager", "editor"] as Role[]) {
+      expect(canAccess(role, "work")).toBe(true)
+    }
+    for (const role of ["trainer", "employee", "client"] as Role[]) {
+      expect(canAccess(role, "work")).toBe(false)
+    }
+  })
+
+  it("maps /app/work (and deeper segments) to the work module", () => {
+    expect(moduleKeyForPath("/app/work")).toBe("work")
+    expect(moduleKeyForPath("/app/work/42")).toBe("work")
+  })
+})
+
+describe("recorded access mismatches", () => {
+  it("no longer offers Files to a trainer (server/files.php STAFF omits it)", () => {
+    expect(MODULE_ROLES.files).not.toContain("trainer")
+    expect(canAccess("trainer", "files")).toBe(false)
+    expect(canAccess("employee", "files")).toBe(true)
+  })
+
+  it("keeps trainer and employee off the dashboard they could not load", () => {
+    expect(canAccess("trainer", "dashboard")).toBe(false)
+    expect(canAccess("employee", "dashboard")).toBe(false)
+    expect(canAccess("manager", "dashboard")).toBe(true)
+  })
+
+  it("lands every role somewhere it can actually open", () => {
+    for (const role of [...STAFF_ROLES, "client" as Role]) {
+      const key = moduleKeyForPath(defaultPathForRole(role))
+      expect(key, `no module for ${role}'s landing`).not.toBeNull()
+      expect(canAccess(role, key as string), `${role} bounced off its own landing`).toBe(true)
+    }
   })
 })
 
@@ -71,9 +129,38 @@ describe("defaultPathForRole", () => {
     expect(defaultPathForRole("client")).toBe("/app/portal")
   })
 
-  it("sends staff to the dashboard (a real route, not a 404)", () => {
-    for (const role of STAFF_ROLES) {
+  it("sends dashboard-capable staff to the /app index (a real route, not a 404)", () => {
+    for (const role of ["super_admin", "admin", "manager", "editor"] as Role[]) {
       expect(defaultPathForRole(role)).toBe("/app")
     }
+  })
+
+  it("sends trainer and employee to a module they hold", () => {
+    expect(defaultPathForRole("trainer")).toBe("/app/time")
+    expect(defaultPathForRole("employee")).toBe("/app/projects")
+  })
+})
+
+describe("portal is narrowed to match server/portal.php", () => {
+  // Regression guard for the 2026-09-22 fix. server/portal.php previously
+  // called require_auth($conn) with no role list, so an employee, editor or
+  // trainer reached the staff branch, passed an arbitrary ?client_id, and read
+  // invoice data that server/invoices.php restricts to super_admin, admin and
+  // manager. The server branch is now gated on PORTAL_PREVIEW_ROLES and this
+  // list must not drift back.
+  it("admits only the three roles the server admits, plus client", () => {
+    for (const role of ["super_admin", "admin", "manager", "client"] as Role[]) {
+      expect(canAccess(role, "portal"), `${role} should reach the portal`).toBe(true)
+    }
+    for (const role of ["editor", "employee", "trainer"] as Role[]) {
+      expect(canAccess(role, "portal"), `${role} must not see the portal`).toBe(false)
+    }
+  })
+
+  it("keeps the client's own landing page reachable", () => {
+    // A client has exactly one route. If portal ever stops admitting them,
+    // they are locked out of the product entirely.
+    expect(defaultPathForRole("client")).toBe("/app/portal")
+    expect(canAccess("client", "portal")).toBe(true)
   })
 })
