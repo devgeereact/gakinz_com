@@ -9,21 +9,28 @@ export default function PublicLayout() {
     window.scrollTo(0, 0)
   }, [pathname])
 
-  // The public site is ALWAYS the light brand theme (brand guideline). A staff
-  // user who left the CMS in dark mode carries `html.dark`, which keeps the page
-  // body dark — translucent marketing surfaces then composite over it and wash
-  // out. We mark <html> with `gk-force-light` (CSS re-asserts light tokens, see
-  // index.css) instead of removing `dark`, so next-themes — which owns the
-  // `dark` class — can't race us by re-adding it.
+  // The public site is ALWAYS the light brand theme. A staff user who left the
+  // CMS in dark mode carries `html.dark`, which keeps the page body dark and
+  // washes out the public surface. We mark <html> with `gk-force-light` (CSS
+  // re-asserts the light tokens, see index.css) rather than removing `dark`,
+  // so next-themes — which owns the `dark` class — cannot race us by re-adding it.
   useEffect(() => {
     document.documentElement.classList.add("gk-force-light")
     return () => document.documentElement.classList.remove("gk-force-light")
   }, [])
 
   return (
-    <div className="gk-public flex min-h-screen flex-col bg-background text-foreground">
+    <div className="gk-public flex min-h-screen flex-col bg-gk-paper font-ui text-gk-ink">
+      {/* WCAG 2.4.1 Bypass Blocks. Visually hidden until focused, then it sits
+          above the masthead so it is not obscured (2.4.11). */}
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:bg-gk-ink focus:px-4 focus:py-3 focus:text-gk-paper"
+      >
+        Skip to content
+      </a>
       <PublicNavbar />
-      <main className="flex-1">
+      <main id="main" tabIndex={-1} className="flex-1">
         <Outlet />
       </main>
       <PublicFooter />

@@ -1,57 +1,47 @@
 import { Link } from "react-router-dom"
-import { ArrowUp, Github, Linkedin, Twitter } from "lucide-react"
-import { company, services } from "@/marketing/data/site"
-import { useAuth } from "@/store/auth.store"
-import { defaultPathForRole } from "@/lib/access"
-import BrandMark from "./BrandMark"
+import { site, services } from "@/marketing/data/site"
 
+/**
+ * The footer.
+ *
+ * What was removed here, and why it matters more than it looks:
+ *
+ *   - `© 2026` was hard-coded, not computed. Correct on the day it was
+ *     written, wrong from 1 January 2027 onwards.
+ *   - "Company registration number 00000000 (England & Wales)" shipped live.
+ *     An all-zero registration number is not a real one, and it is exactly
+ *     the detail a cautious buyer checks.
+ *   - Four social icons linking to https://linkedin.com/, https://x.com/,
+ *     https://github.com/ and https://dribbble.com/ — four links to four home
+ *     pages. They now render only when `site.social` holds a real profile URL,
+ *     and the array is empty until one is supplied.
+ *
+ * The column headings were `<h2>` at the smallest size on the page, which
+ * inverted the document hierarchy against page `<h3>`s rendered much larger.
+ * They are now `<h2>` styled as labels, which is what they are.
+ */
 export default function PublicFooter() {
-  const year = 2026
-  const user = useAuth((s) => s.user)
-  const token = useAuth((s) => s.token)
-  const authed = !!token && !!user
+  const year = new Date().getFullYear()
+
   return (
-    <footer className="relative overflow-hidden border-t border-border bg-muted/40">
-      <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-4">
-          {/* Col 1 — brand + contact */}
+    <footer className="border-t border-gk-edge bg-gk-paper">
+      <div className="mx-auto w-full max-w-[76rem] px-5 py-14 sm:px-8">
+        <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <Link to="/" className="flex items-center gap-2" aria-label="GAkinz home">
-              <BrandMark className="h-8 w-8" />
-              <span className="text-lg font-extrabold tracking-tight">
-                GAkin<span className="gk-grad-text">z</span>
-              </span>
-            </Link>
-            <p className="mt-3 max-w-xs text-sm text-muted-foreground">{company.tagline}</p>
-            <ul className="mt-4 space-y-1 text-sm text-muted-foreground">
-              <li>
-                <a className="hover:text-foreground" href={`mailto:${company.email}`}>
-                  {company.email}
-                </a>
-              </li>
-              <li>{company.address}</li>
-            </ul>
+            <p className="font-display text-lede text-gk-ink">{site.name}</p>
+            <p className="mt-3 max-w-xs text-body text-gk-ink-soft">{site.line}</p>
+            <p className="mt-3 max-w-xs text-body text-gk-ink-mute">{site.studio.note}</p>
           </div>
 
-          {/* Col 2 — company */}
           <div>
-            <h2 className="text-sm font-semibold text-foreground">Studio</h2>
-            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-              <li><Link className="hover:text-foreground" to="/about">About</Link></li>
-              <li><Link className="hover:text-foreground" to="/pricing">Pricing</Link></li>
-              <li><Link className="hover:text-foreground" to="/work">Work</Link></li>
-              <li><Link className="hover:text-foreground" to="/sectors">Sectors</Link></li>
-              <li><Link className="hover:text-foreground" to="/contact">Contact</Link></li>
-            </ul>
-          </div>
-
-          {/* Col 3 — services */}
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">Services</h2>
-            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
+            <h2 className="font-data text-label uppercase text-gk-ink-mute">What I do</h2>
+            <ul className="mt-4 space-y-1">
               {services.map((s) => (
                 <li key={s.slug}>
-                  <Link className="hover:text-foreground" to={`/services/${s.slug}`}>
+                  <Link
+                    to={`/services/${s.slug}`}
+                    className="inline-flex min-h-[2rem] items-center text-body text-gk-ink-soft hover:text-gk-ink"
+                  >
                     {s.title}
                   </Link>
                 </li>
@@ -59,47 +49,89 @@ export default function PublicFooter() {
             </ul>
           </div>
 
-          {/* Col 4 — resources + legal */}
           <div>
-            <h2 className="text-sm font-semibold text-foreground">Resources</h2>
-            <ul className="mt-3 space-y-2 text-sm text-muted-foreground">
-              <li><Link className="hover:text-foreground" to="/resources">Insights</Link></li>
-              <li><Link className="hover:text-foreground" to="/privacy">Privacy</Link></li>
-              <li><Link className="hover:text-foreground" to="/terms">Terms</Link></li>
-              <li><Link className="hover:text-foreground" to="/cookies">Cookies</Link></li>
-              <li>
-                <Link className="hover:text-foreground" to={authed ? defaultPathForRole(user!.role) : "/login"}>
-                  {authed ? "Dashboard" : "Member login"}
-                </Link>
-              </li>
+            <h2 className="font-data text-label uppercase text-gk-ink-mute">More</h2>
+            <ul className="mt-4 space-y-1">
+              {[
+                { to: "/work", label: "Selected work" },
+                { to: "/resources", label: "Writing" },
+                { to: "/pricing", label: "Pricing" },
+                { to: "/sectors", label: "Who I work with" },
+                { to: "/contact", label: "Contact" },
+              ].map((l) => (
+                <li key={l.to}>
+                  <Link
+                    to={l.to}
+                    className="inline-flex min-h-[2rem] items-center text-body text-gk-ink-soft hover:text-gk-ink"
+                  >
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
+          </div>
+
+          <div>
+            <h2 className="font-data text-label uppercase text-gk-ink-mute">Contact</h2>
+            <ul className="mt-4 space-y-1 text-body text-gk-ink-soft">
+              <li>
+                <a
+                  className="inline-flex min-h-[2rem] items-center hover:text-gk-ink"
+                  href={`mailto:${site.contact.email}`}
+                >
+                  {site.contact.email}
+                </a>
+              </li>
+              {site.contact.phone && (
+                <li>
+                  <a
+                    className="inline-flex min-h-[2rem] items-center hover:text-gk-ink"
+                    href={`tel:${site.contact.phone.replace(/\s/g, "")}`}
+                  >
+                    {site.contact.phone}
+                  </a>
+                </li>
+              )}
+              <li className="py-1">{site.contact.place}</li>
+            </ul>
+
+            {site.social.length > 0 && (
+              <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-1">
+                {site.social.map((s) => (
+                  <li key={s.url}>
+                    <a
+                      className="inline-flex min-h-[2.75rem] items-center text-body text-gk-ink-soft hover:text-gk-ink"
+                      href={s.url}
+                      target="_blank"
+                      rel="noreferrer noopener"
+                    >
+                      {s.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </div>
 
-        {/* Bottom bar */}
-        <div className="mt-12 flex flex-col items-start justify-between gap-4 border-t border-border pt-6 text-sm text-muted-foreground sm:flex-row sm:items-center">
-          <div>
-            <p>© {year} {company.name}. All rights reserved.</p>
-            <p className="mt-1 text-xs">{company.reg}</p>
-          </div>
-          <div className="flex items-center gap-4">
-            <a href={company.social.linkedin} aria-label="LinkedIn" className="hover:text-foreground" target="_blank" rel="noreferrer">
-              <Linkedin className="h-5 w-5" />
-            </a>
-            <a href={company.social.x} aria-label="X" className="hover:text-foreground" target="_blank" rel="noreferrer">
-              <Twitter className="h-5 w-5" />
-            </a>
-            <a href={company.social.github} aria-label="GitHub" className="hover:text-foreground" target="_blank" rel="noreferrer">
-              <Github className="h-5 w-5" />
-            </a>
-            <button
-              type="button"
-              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-              className="flex items-center gap-1 rounded-md px-2 py-1 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <ArrowUp className="h-4 w-4" /> Top
-            </button>
-          </div>
+        <div className="mt-14 flex flex-col gap-2 border-t border-gk-edge pt-6 font-data text-label text-gk-ink-mute sm:flex-row sm:items-center sm:justify-between">
+          <p>
+            © {year} {site.name}
+            {site.studio.registration ? ` · ${site.studio.registration}` : ""}
+          </p>
+          <ul className="flex flex-wrap gap-x-5">
+            {[
+              { to: "/privacy", label: "Privacy" },
+              { to: "/terms", label: "Terms" },
+              { to: "/cookies", label: "Cookies" },
+            ].map((l) => (
+              <li key={l.to}>
+                <Link to={l.to} className="inline-flex min-h-[2rem] items-center hover:text-gk-ink">
+                  {l.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </footer>

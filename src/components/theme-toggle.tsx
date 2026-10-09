@@ -10,7 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
-import { useUIThemeStore } from "@/store/ui-theme.store"   // ✅ ADD THIS
+import { useUIThemeStore } from "@/store/ui-theme.store"
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme()

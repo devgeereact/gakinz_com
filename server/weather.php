@@ -1,7 +1,7 @@
 <?php
 /**
  * Server-side OpenWeather proxy. The API key never reaches the browser (same
- * rule as ai.php — brief §2). Auth-gated: any signed-in CMS user may read it.
+ * rule as ai.php — brief §2). Auth-gated: any signed-in staff user may read it.
  *
  *   GET /weather.php?city=London   (Bearer)   → { city, country, temp,
  *       feels_like, description, icon, humidity, wind, units, updated }
@@ -11,7 +11,11 @@
  */
 require __DIR__ . '/_bootstrap.php';
 
-require_auth($conn); // any authenticated user
+// Staff only. The widget lives on the staff dashboard, and a `client`-role
+// portal user has no reason to spend the studio's OpenWeather quota. Trainer
+// is kept, matching the STAFF list in time.php.
+const STAFF = ['super_admin', 'admin', 'manager', 'trainer', 'editor', 'employee'];
+require_auth($conn, STAFF);
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') fail('Method not allowed.', 405);
 
@@ -54,7 +58,10 @@ $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $err  = curl_error($ch);
 curl_close($ch);
 
-if ($res === false) fail('Weather request failed: ' . $err, 502);
+if ($res === false) {
+  error_log('GAkinz weather request (transport): ' . $err);
+  fail('Could not reach the weather provider. Please try again.', 502);
+}
 if ($code === 404)  fail('City not found.', 404);
 if ($code >= 400)   fail('Weather provider error.', 502);
 

@@ -108,7 +108,7 @@ export default function DevPipeline() {
 }
 
 function ProjectPipeline({ project, onChanged }: { project: DevProjectRow; onChanged: () => void }) {
-  const [meta, setMeta] = useState<DevMeta | null>(null)
+  const [, setMeta] = useState<DevMeta | null>(null)
   const [deploys, setDeploys] = useState<Deploy[]>([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)

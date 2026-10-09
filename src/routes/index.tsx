@@ -10,6 +10,7 @@ import ServiceDetail from "@/marketing/pages/ServiceDetail"
 import Pricing from "@/marketing/pages/Pricing"
 import Sectors from "@/marketing/pages/Sectors"
 import Work from "@/marketing/pages/Work"
+import WorkDetail from "@/marketing/pages/WorkDetail"
 import Resources from "@/marketing/pages/Resources"
 import ResourceDetail from "@/marketing/pages/ResourceDetail"
 import Contact from "@/marketing/pages/Contact"
@@ -54,6 +55,8 @@ export const router = createBrowserRouter([
       { path: "pricing", element: <Pricing /> },
       { path: "sectors", element: <Sectors /> },
       { path: "work", element: <Work /> },
+      // The one public route this relaunch adds.
+      { path: "work/:slug", element: <WorkDetail /> },
       { path: "resources", element: <Resources /> },
       { path: "resources/:slug", element: <ResourceDetail /> },
       { path: "contact", element: <Contact /> },
@@ -96,6 +99,7 @@ export const router = createBrowserRouter([
       { path: "content", lazy: lz(() => import("@/app/modules/Content")) },
       { path: "blog", lazy: lz(() => import("@/app/modules/Blog")) },
       { path: "testimonials", lazy: lz(() => import("@/app/modules/Testimonials")) },
+      { path: "work", lazy: lz(() => import("@/app/modules/Work")) },
       { path: "files", lazy: lz(() => import("@/app/modules/Files")) },
       { path: "careplan", lazy: lz(() => import("@/app/modules/CarePlan")) },
       { path: "platform", lazy: lz(() => import("@/app/modules/Platform")) },

@@ -1,148 +1,190 @@
-import { Link } from "react-router-dom"
-import { Check, Star } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import Seo from "@/marketing/components/Seo"
+import { Action, CtaBand, Label, PageHero, Section, Split } from "@/marketing/components/primitives"
+import FadeIn from "@/marketing/components/FadeIn"
 import { packages, addOns, alwaysIncluded, paymentTerms, faqs } from "@/marketing/data/site"
-import FadeIn from "../components/FadeIn"
-import { PageHero, Section, Split, RuleEyebrow, GradientText, CtaBand } from "../components/primitives"
+
+/**
+ * /pricing: real money.
+ *
+ * Every figure on this page is reproduced from src/marketing/data/site.ts
+ * exactly as the owner wrote it. Nothing is rounded, reformatted, converted,
+ * discounted or compared. The only mark of distinction is `featured: true`,
+ * which exists in the data; no other badge is invented.
+ *
+ * Fixed here:
+ *
+ *   - plan names were <h2> set at the smallest heading size on a page whose
+ *     largest element was a gradient-filled price. The document
+ *     hierarchy and the visual hierarchy disagreed. The packages section now
+ *     has its own h2 and each package is an h3 at text-t3, larger than the
+ *     price beside it.
+ *   - the FAQ keeps native <details>/<summary>, as it should: the browser's
+ *     own disclosure widget is correct by default and an ARIA accordion built
+ *     on divs is not. The summary was a 28px text target with no stated hit
+ *     area; it is now at least 56px tall and carries a visible focus outline
+ *     of its own rather than relying on the lavender global ring that the
+ *     relaunch retired everywhere else.
+ *   - the "Popular" star, the gradient price, the rounded card tiles and the
+ *     shadow on the featured one are gone.
+ */
 
 export default function Pricing() {
   return (
     <>
-      <PageHero
-        eyebrow="Services & pricing"
-        title="Clear packages, no surprises"
-        intro="Every site is a little different, so these are starting points, not final quotes. After a short discovery call we send a fixed price for your project, so you know the number before any work begins. Prices are in GBP and exclude VAT."
-        breadcrumb="Pricing"
+      <Seo
+        title="Pricing"
+        description="Indicative starting points for a website build, in GBP and excluding VAT. A fixed price follows a short discovery call."
+        path="/pricing"
       />
 
-      {/* Packages — flat editorial tiles */}
+      <PageHero
+        eyebrow="Pricing"
+        breadcrumb="Pricing"
+        title="What a site costs, before you have to ask."
+        intro="These are indicative starting points, in GBP and excluding VAT. They are not quotes. A fixed price follows a short discovery call, and you have that number in writing before any work starts."
+      />
+
+      {/* ── Packages ─────────────────────────────────────────────────── */}
       <Section>
-        <div className="grid gap-5 lg:grid-cols-4 lg:items-stretch">
-          {packages.map((p, i) => (
-            <FadeIn key={p.name} delay={i * 0.05} className="h-full">
-              <div
-                className={cn(
-                  "relative flex h-full flex-col rounded-2xl border bg-background p-6",
-                  p.featured
-                    ? "border-[hsl(var(--gk-violet)/0.5)] shadow-xl shadow-[hsl(var(--gk-violet)/0.15)]"
-                    : "border-[hsl(var(--gk-indigo)/0.12)]",
-                )}
-              >
-                {p.featured && (
-                  <span className="absolute inset-x-0 top-0 h-1 rounded-t-2xl bg-gradient-to-r from-[hsl(var(--gk-violet))] to-[hsl(var(--gk-sky))]" aria-hidden />
-                )}
-                <div className="flex items-center justify-between">
-                  <h2 className="font-serif text-lg font-bold">{p.name}</h2>
-                  {p.featured && (
-                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-[hsl(var(--gk-violet))]">
-                      <Star className="h-3 w-3 fill-current" /> Popular
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1 text-sm text-muted-foreground">{p.best}</p>
-                <div className="mt-5 flex items-baseline gap-1 border-b border-[hsl(var(--gk-indigo)/0.12)] pb-5">
-                  {p.price !== "Quoted" && <span className="text-sm font-medium text-muted-foreground">from</span>}
-                  <span className="font-serif text-4xl font-extrabold">
-                    <GradientText>{p.price}</GradientText>
-                  </span>
-                </div>
-                <ul className="mt-5 flex-1 space-y-2.5">
-                  {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2 text-sm">
-                      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-[hsl(var(--gk-violet))]" />
-                      <span className="text-foreground">{f}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  asChild
-                  className={cn("mt-6 w-full", p.featured && "gk-shine shadow-md shadow-primary/20")}
-                  variant={p.featured ? "default" : "outline"}
-                >
-                  <Link to="/contact">{p.price === "Quoted" ? "Request a quote" : "Start a project"}</Link>
-                </Button>
-              </div>
-            </FadeIn>
-          ))}
+        <div className="grid gap-6 pb-4 md:grid-cols-[1fr_24rem] md:items-end">
+          <h2 className="font-display text-t2 text-gk-ink">Packages</h2>
+          <p className="text-body text-gk-ink-soft">
+            Four shapes of project. If yours does not sit neatly in one of them, say so in your
+            first message and I will scope it properly instead of forcing a fit.
+          </p>
         </div>
-        <p className="mt-6 text-sm text-muted-foreground">
-          Every package includes design and development by one team, a preview link to review before
-          launch, launch testing, and a short post-launch settling-in period.
+
+        <p className="mt-6 max-w-2xl border-l border-gk-edge pl-5 text-body text-gk-ink">
+          Every figure below is a starting point rather than a quote. Prices are in GBP and exclude
+          VAT. The fixed price for your own project follows a discovery call.
         </p>
+
+        <ol className="mt-10 border-t border-gk-edge">
+          {packages.map((p, i) => (
+            <li key={p.name} className="border-b border-gk-edge">
+              <FadeIn>
+                <div className="grid gap-8 py-10 lg:grid-cols-[3rem_1fr_15rem] lg:gap-10">
+                  <span className="font-data text-label text-gk-ink-mute">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-baseline gap-x-5 gap-y-2">
+                      <h3 className="font-display text-t3 text-gk-ink">{p.name}</h3>
+                      {p.featured && <Label className="text-gk-set">Recommended</Label>}
+                    </div>
+                    <p className="mt-3 max-w-2xl text-lede text-gk-ink-soft">{p.best}</p>
+                    <ul className="mt-6 grid border-t border-gk-rule sm:grid-cols-2 sm:gap-x-10">
+                      {p.features.map((f) => (
+                        <li
+                          key={f}
+                          className="border-b border-gk-rule py-3 text-body text-gk-ink-soft"
+                        >
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div className="lg:text-right">
+                    <Label>{p.price === "Quoted" ? "Price" : "Starting point"}</Label>
+                    <p className="mt-2 font-data text-t4 text-gk-ink">{p.price}</p>
+                    <div className="mt-6">
+                      <Action to="/contact" variant={p.featured ? "strong" : "plain"}>
+                        {p.price === "Quoted" ? "Ask for a quote" : "Start a project"}
+                      </Action>
+                    </div>
+                  </div>
+                </div>
+              </FadeIn>
+            </li>
+          ))}
+        </ol>
       </Section>
 
-      {/* Always included */}
-      <Section muted>
-        <Split label="Every project" title="What's always included" sticky>
-          <ul className="grid border-t border-[hsl(var(--gk-indigo)/0.14)] sm:grid-cols-2 sm:gap-x-12">
+      {/* ── Always included ──────────────────────────────────────────── */}
+      <Section tone="sunk">
+        <Split
+          label="Every project"
+          title="What comes with every package"
+          intro="These are in the price. None of them is an extra that appears on the invoice later."
+        >
+          <ul className="grid border-t border-gk-edge sm:grid-cols-2 sm:gap-x-12">
             {alwaysIncluded.map((item) => (
-              <li key={item} className="flex items-start gap-3 border-b border-[hsl(var(--gk-indigo)/0.14)] py-5">
-                <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-[hsl(var(--gk-violet))]" />
-                <span className="text-sm text-foreground">{item}</span>
+              <li key={item} className="border-b border-gk-edge py-5 text-body text-gk-ink">
+                {item}
               </li>
             ))}
           </ul>
         </Split>
       </Section>
 
-      {/* Add-ons */}
+      {/* ── Add-ons ──────────────────────────────────────────────────── */}
       <Section>
         <Split
           label="Add-ons"
-          title="Extend a package when you need to"
-          intro="Optional extras you can bolt onto any project, priced the same plain way as everything else."
-          sticky
+          title="Extras, priced the same plain way"
+          intro="Optional. Add them at the start or later, and each one is priced before it is agreed."
         >
-          <div className="border-t border-[hsl(var(--gk-indigo)/0.14)]">
+          <ul className="border-t border-gk-edge">
             {addOns.map((a) => (
-              <div key={a.name} className="flex items-baseline justify-between gap-6 border-b border-[hsl(var(--gk-indigo)/0.14)] py-5">
-                <div>
-                  <div className="font-serif text-base font-bold">{a.name}</div>
-                  <div className="mt-0.5 text-sm text-muted-foreground">{a.what}</div>
-                </div>
-                <div className="flex-shrink-0 font-serif text-base font-bold text-[hsl(var(--gk-violet))]">{a.price}</div>
-              </div>
+              <li
+                key={a.name}
+                className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-1 border-b border-gk-edge py-5"
+              >
+                <span className="text-body text-gk-ink">{a.name}</span>
+                <span className="font-data text-body text-gk-ink">{a.price}</span>
+              </li>
             ))}
-          </div>
+          </ul>
         </Split>
       </Section>
 
-      {/* Payment terms */}
-      <Section muted>
+      {/* ── Payment ──────────────────────────────────────────────────── */}
+      <Section tone="sunk">
         <Split
           label="Payment"
-          title="Simple, staged terms"
-          intro="No long invoices to decode. Payment is split across the project so it tracks the work."
-          sticky
-          aside={<p className="text-sm text-muted-foreground">Full terms are set out in the service agreement before work starts.</p>}
+          title="Staged payments"
+          intro="Payment tracks the work rather than arriving in one lump at the end."
         >
-          <ol className="border-t border-[hsl(var(--gk-indigo)/0.14)]">
+          <ol className="border-t border-gk-edge">
             {paymentTerms.map((t, i) => (
-              <li key={t} className="flex items-start gap-5 border-b border-[hsl(var(--gk-indigo)/0.14)] py-5">
-                <span className="font-serif text-2xl font-extrabold tabular-nums text-[hsl(var(--gk-violet))]">
-                  {String(i + 1).padStart(2, "0")}
+              <li
+                key={t.stage}
+                className="flex items-baseline justify-between gap-6 border-b border-gk-edge py-5"
+              >
+                <span className="flex items-baseline gap-4">
+                  <span className="font-data text-label text-gk-ink-mute">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span className="text-body text-gk-ink">{t.stage}</span>
                 </span>
-                <span className="pt-1 text-sm text-foreground">{t}</span>
+                <span className="font-data text-t4 text-gk-ink">{t.share}</span>
               </li>
             ))}
           </ol>
+          <p className="mt-6 max-w-2xl text-body text-gk-ink-soft">
+            The full terms are set out in the service agreement, which you see before work starts.
+          </p>
         </Split>
       </Section>
 
-      {/* FAQs */}
+      {/* ── Questions ────────────────────────────────────────────────── */}
       <Section>
-        <Split label="Questions" title="Common questions" sticky>
-          <div className="border-t border-[hsl(var(--gk-indigo)/0.14)]">
+        <Split label="Questions" title="Common questions">
+          <div className="border-t border-gk-edge">
             {faqs.map((f) => (
-              <details key={f.q} className="group border-b border-[hsl(var(--gk-indigo)/0.14)] py-5">
-                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-serif text-lg font-bold text-foreground">
+              <details key={f.q} className="group border-b border-gk-edge">
+                <summary className="flex min-h-[3.5rem] cursor-pointer list-none items-center justify-between gap-6 py-4 font-display text-t4 text-gk-ink hover:bg-gk-sunk focus-visible:bg-gk-sunk focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gk-ink [&::-webkit-details-marker]:hidden">
                   {f.q}
-                  <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full border border-[hsl(var(--gk-violet)/0.3)] text-lg text-[hsl(var(--gk-violet))] transition-transform group-open:rotate-45">
+                  <span
+                    aria-hidden
+                    className="font-data text-label text-gk-ink-mute transition-transform group-open:rotate-45"
+                  >
                     +
                   </span>
                 </summary>
-                <p className="mt-3 max-w-2xl leading-relaxed text-muted-foreground">{f.a}</p>
+                <p className="max-w-2xl pb-6 text-body text-gk-ink-soft">{f.a}</p>
               </details>
             ))}
           </div>
@@ -151,7 +193,7 @@ export default function Pricing() {
 
       <CtaBand
         title="Not sure which package fits?"
-        intro="Book a short discovery call. We will point you the right way and send a fixed price — no pushy follow-ups."
+        intro="Tell me what the site has to do and I will say which one it looks like, or that none of them fits and why."
       />
     </>
   )

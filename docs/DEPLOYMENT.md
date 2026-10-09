@@ -159,6 +159,106 @@ for each PHP file, compare the server copy with the repository copy, and for eac
 check whether the column or table exists. Until that is done, this section stays marked
 UNVERIFIED and no release note should claim otherwise.
 
+## 5.1 The 2026-09-22 public relaunch
+
+Everything in this section is committed and **none of it is live**. It is one upload plus
+three SQL statements, and the order matters.
+
+**Status of the live server: UNVERIFIED.** No server, database or FTP account was contacted
+while this work was done.
+
+### Operator actions, in order
+
+1. **Delete `seed_admin_password.txt` from the live document root if it is there.** This is
+   the urgent one and it comes before everything else. `auth.php` used to write a generated
+   super-admin password into that file, and the old deny list in `.htaccess` covered only
+   `.md`, `.sql` and `.log`, so the file was fetchable over the web by anyone who guessed the
+   name. If it was there, treat that password as public: sign in, change it, and revoke the
+   account's sessions from the sessions screen.
+2. **Upload `server/.htaccess` first**, so the new `.txt` deny is in force before anything
+   else lands. The rule exempts `robots.txt` by name, which the public site needs.
+3. **Run the SQL below**, in the order given.
+4. **Upload the changed PHP**, listed below.
+5. **Push the branch** so the client deploy ships `dist/`.
+6. **Walk the post-upload checks** at the end of this section.
+
+### SQL to run
+
+Statements are at the foot of `server/schema.sql`. There is no migration runner; nothing is
+applied until someone runs it (`docs/DECISIONS.md` D-008).
+
+| # | Statement | Notes |
+|---|---|---|
+| 1 | `SELECT share_token, COUNT(*) c FROM files WHERE share_token IS NOT NULL GROUP BY share_token HAVING c > 1;` | A pre-check, not a change. It must return **zero rows**. If it returns any, stop and resolve the duplicates, because statement 2 will fail and a duplicate token is already a live bug: the public lookup in `files.php` uses `LIMIT 1` and would serve the wrong file. |
+| 2 | `ALTER TABLE files ADD UNIQUE KEY uk_file_share (share_token);` | Matches the constraint `proposals.share_token` already has. `files.share_token` is the sole credential on an unauthenticated download and had no uniqueness guarantee. |
+| 3 | `CREATE TABLE IF NOT EXISTS work (...)` | The work ledger. Safe to run twice. |
+| 4 | `CREATE TABLE IF NOT EXISTS work_images (...)` | Must run **after** `work`; it carries a foreign key to it. |
+
+No existing table is modified and no data is migrated.
+
+### PHP to upload
+
+Upload the whole set together. Several changes interact, and the `.htaccess` deny list, the
+`auth.php` seeding change and the `files.php` upload allowlist in particular must not be left
+half applied.
+
+```
+.htaccess        _bootstrap.php   _monitor.php     api.php
+ai.php           auth.php         comms.php        contact.php
+design.php       figma.php        files.php        invoices.php
+mail.php         oauth.php        payments.php     portal.php
+support.php      time.php         weather.php      work.php   (new)
+```
+
+`README.md` and `config.php.example` stay out of the document root as always.
+
+### Configuration this adds or now requires
+
+| Key | Why it matters now |
+|---|---|
+| `$SEED_ADMIN_EMAIL` | `auth.php` no longer falls back to a hard-coded address. With this unset, a first run against an empty `users` table creates **no account at all** and nobody can sign in. |
+| PHP `fileinfo` extension | `files.php` now sniffs the real type of an upload with `finfo_file()`. Without the extension, uploads return 503 rather than silently accepting anything. |
+
+### Behaviour changes to expect
+
+- **Care-plan monitoring may start reporting sites as down.** TLS peer verification is now on
+  for the status request, so a monitored site with an expired or misconfigured certificate
+  fails where it previously returned a status code. Redirects are also no longer followed, so
+  a redirecting site reports its own 301 rather than the destination's 200. Check a site's
+  certificate first if it turns red after this upload. The TLS expiry reading is unaffected.
+- **A monitored URL pointing at an internal address stops being checked.** Intended: that was
+  a server-side request forgery path.
+- **`employee`, `editor` and `trainer` lose the Portal screen.** They could previously pass an
+  arbitrary `?client_id` to `portal.php` and read any client's invoice data, which
+  `invoices.php` restricts to `super_admin`, `admin` and `manager`. Both the endpoint and the
+  navigation now agree.
+- **`api.php` returns a different shape.** It was an `items` listing with an unauthenticated
+  POST that inserted rows. It is now a read-only health check returning
+  `{"ok":true,"php":"8.x.y","db":true}`. Nothing in the SPA reads it.
+- **Attaching an image to a work record makes that file permanently publicly reachable** and
+  clears any expiry an earlier Files share had set. That is deliberate: a portfolio image that
+  404s six months after launch is the failure being designed out. Detaching does not revoke
+  the link; revoke it in the Files module.
+- **Existing file rows keep whatever MIME their uploader's browser claimed.** The download path
+  filters them through the allowlist, so an old row with an unusual stored type downloads as
+  `application/octet-stream`. Nothing scans or removes files already in `uploads/` whose
+  extension the new allowlist would reject; that needs a manual review.
+
+### Post-upload checks
+
+1. `https://gakinz.com/api.php` returns `{"ok":true,...,"db":true}`. A 500 or a missing `db`
+   means `config.php` cannot reach the database.
+2. `https://gakinz.com/robots.txt` is served, not 403. A mistake here is invisible until
+   search engines notice.
+3. `https://gakinz.com/sitemap.xml` is served.
+4. An invented `.txt` name in the document root returns 403.
+5. `GET /work.php?action=list` returns `[]` from a signed-out browser. A 500 means the tables
+   were not created.
+6. After publishing a work record with an image, **open its public page in a signed-out
+   browser and confirm the image loads.** A 404 on the image with a 200 on the page is
+   invisible from inside the CMS, where every file is reachable through the authenticated
+   download route.
+
 ## 6. Rollback
 
 | Track | Rollback |

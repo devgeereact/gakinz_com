@@ -208,7 +208,7 @@ if ($method === 'GET' && $action === 'message') {
 
 // ── Mark seen / unseen ───────────────────────────────────────────────────────
 if ($method === 'POST' && $action === 'seen') {
-  require_auth($conn, MAIL_ROLES);
+  $user = require_auth($conn, MAIL_ROLES);
   $in = body();
   $uid = (int)($in['uid'] ?? 0);
   if ($uid <= 0) fail('A message id is required.');
@@ -217,6 +217,7 @@ if ($method === 'POST' && $action === 'seen') {
   if ($seen) imap_setflag_full($imap, (string)$uid, '\\Seen', ST_UID);
   else       imap_clearflag_full($imap, (string)$uid, '\\Seen', ST_UID);
   imap_close($imap);
+  audit($conn, $user['id'], 'mail_seen', "uid $uid → " . ($seen ? 'seen' : 'unseen'));
   ok(['ok' => true]);
 }
 

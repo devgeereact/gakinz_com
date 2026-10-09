@@ -1,224 +1,187 @@
-import { ComponentType, ReactNode } from "react"
+import type { ReactNode, ElementType } from "react"
 import { Link } from "react-router-dom"
-import { ArrowRight, ArrowUpRight } from "lucide-react"
-import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import FadeIn from "./FadeIn"
-import CountUp from "./CountUp"
 
-const HAIR = "border-[hsl(var(--gk-indigo)/0.14)]"
+/**
+ * The public design system.
+ *
+ * Direction C with direction A's colour, per
+ * docs/design/2026-09-22-directions/direction-approved.md.
+ *
+ * The governing idea is that the page is a document, not a landing page.
+ * Typography, spacing and rules carry the hierarchy. What was removed, and
+ * must not come back:
+ *
+ *   - the aurora-and-grid hero that ran on all eight pages
+ *   - the animated indigo-to-lavender-to-rose gradient, which was the only
+ *     brand gesture the old site had
+ *   - ghost numerals standing in for hierarchy
+ *   - the HAIR hairline literal, inlined roughly forty times
+ *   - blur blobs, glow, shine sweeps and the rounded-3xl card idiom
+ *
+ * TYPE: every size comes from the nine-value scale in tailwind.config.js —
+ * label, body, lede, t4, t3, t2, t1, display, hero. There is no arbitrary
+ * size anywhere in this file and there must not be one in a page either. The
+ * old site's eight ad-hoc heading sizes were the clearest signal that it had
+ * been assembled rather than designed.
+ *
+ * COLOUR: two chromatics, each with a job. `gk-set` (navy) marks what is
+ * settled. `gk-come` (red oxide) marks a gap awaiting real material. Neither
+ * is decoration.
+ */
 
-// Brand accent helpers — in the public theme `--primary` is near-black ink, so
-// the *colour* identity lives in the lavender (--gk-violet) + rose (--gk-sky)
-// pair. These read better than `text-primary` for the Oxybuild accent moments.
-const ACCENT_TEXT = "text-[hsl(var(--gk-violet))]"
-const ACCENT_BAR = "bg-gradient-to-r from-[hsl(var(--gk-violet))] to-[hsl(var(--gk-sky))]"
+// ── Layout ──────────────────────────────────────────────────────────────────
 
+/** The one horizontal measure. Every band uses it; nothing sets its own. */
+export function Measure({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn("mx-auto w-full max-w-[76rem] px-5 sm:px-8", className)}>{children}</div>
+}
+
+/**
+ * A horizontal band of the document.
+ *
+ * `tone` replaces the old `muted` boolean. "paper" is the page, "sunk" is a
+ * half-step down for a quiet interlude, "ink" is the dark band used once or
+ * twice per page at most.
+ */
 export function Section({
   children,
   className,
-  muted = false,
+  tone = "paper",
+  muted,
   id,
 }: {
   children: ReactNode
   className?: string
+  tone?: "paper" | "sunk" | "ink"
+  /** @deprecated Use `tone="sunk"`. Kept so existing pages keep compiling. */
   muted?: boolean
   id?: string
 }) {
+  const resolved = muted ? "sunk" : tone
   return (
-    <section id={id} className={cn("relative", muted && "bg-muted/40", className)}>
-      <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">{children}</div>
+    <section
+      id={id}
+      className={cn(
+        "py-16 sm:py-24",
+        resolved === "sunk" && "bg-gk-sunk",
+        resolved === "ink" && "bg-gk-ink text-gk-on-dark",
+        className,
+      )}
+    >
+      <Measure>{children}</Measure>
     </section>
   )
 }
 
-// Pill eyebrow (rounded chip) — kept for spots that want a badge look.
-export function Eyebrow({ children }: { children: ReactNode }) {
-  return <span className="gk-pill">{children}</span>
+/** A full-width rule. Structural, so it uses the 3.29:1 edge colour, not the hairline. */
+export function Rule({ className }: { className?: string }) {
+  return <hr className={cn("border-0 border-t border-gk-edge", className)} />
 }
 
-// Oxybuild signature eyebrow — a short gradient rule followed by tracked caps.
+// ── Micro type ──────────────────────────────────────────────────────────────
+
+/**
+ * The small uppercase label that names a section or a field.
+ * Mono, because these sit beside record data and should align with it.
+ */
+export function Label({
+  children,
+  className,
+  as: As = "p",
+}: {
+  children: ReactNode
+  className?: string
+  as?: ElementType
+}) {
+  return (
+    <As className={cn("font-data text-label uppercase text-gk-ink-mute", className)}>{children}</As>
+  )
+}
+
+/** @deprecated Use `Label`. Kept for pages not yet migrated. */
 export function RuleEyebrow({
   children,
-  center = false,
+  center,
   className,
 }: {
   children: ReactNode
   center?: boolean
   className?: string
 }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-3 text-xs font-bold uppercase tracking-[0.2em]",
-        ACCENT_TEXT,
-        center && "justify-center",
-        className,
-      )}
-    >
-      <span className={cn("h-[2px] w-8 rounded-full", ACCENT_BAR)} aria-hidden />
-      {children}
-    </span>
-  )
+  return <Label className={cn(center && "text-center", className)}>{children}</Label>
 }
 
-export function GradientText({
-  children,
-  soft = false,
-  className,
-}: {
-  children: ReactNode
-  soft?: boolean
-  className?: string
-}) {
-  return <span className={cn(soft ? "gk-grad-text-soft" : "gk-grad-text", className)}>{children}</span>
+/**
+ * @deprecated The animated gradient did not survive the relaunch. This renders
+ * plain ink and exists only so call sites outside the marketing tree keep
+ * compiling. Delete it once nothing imports it.
+ */
+export function GradientText({ children, className }: { children: ReactNode; soft?: boolean; className?: string }) {
+  return <span className={className}>{children}</span>
 }
 
-export function SectionHeading({
-  eyebrow,
-  title,
-  intro,
-  center = false,
-}: {
-  eyebrow?: string
-  title: ReactNode
-  intro?: string
-  center?: boolean
-}) {
-  return (
-    <div className={cn("max-w-2xl", center && "mx-auto text-center")}>
-      {eyebrow && <RuleEyebrow center={center}>{eyebrow}</RuleEyebrow>}
-      <h2 className="mt-5 font-serif text-3xl font-bold tracking-tight sm:text-[2.7rem] sm:leading-[1.08]">
-        {title}
-      </h2>
-      {intro && <p className="mt-5 text-lg leading-relaxed text-muted-foreground">{intro}</p>}
-    </div>
-  )
-}
+// ── Actions ─────────────────────────────────────────────────────────────────
 
-// ── Editorial system ────────────────────────────────────────────────────────
-// Asymmetric spread: a sticky label/heading column on the left, free content on
-// the right. The backbone of the Swiss layout (replaces "heading then grid").
-export function Split({
-  label,
-  title,
-  intro,
-  children,
-  sticky = false,
-  aside,
-}: {
-  label?: string
-  title?: ReactNode
-  intro?: string
-  children: ReactNode
-  sticky?: boolean
-  aside?: ReactNode
-}) {
-  return (
-    <div className="grid gap-10 lg:grid-cols-[19rem_1fr] lg:gap-16">
-      <div className={cn(sticky && "lg:sticky lg:top-24 lg:self-start")}>
-        {label && <RuleEyebrow>{label}</RuleEyebrow>}
-        {title && (
-          <h2 className="mt-4 font-serif text-3xl font-bold tracking-tight sm:text-[2.5rem] sm:leading-[1.05]">
-            {title}
-          </h2>
-        )}
-        {intro && <p className="mt-5 max-w-sm leading-relaxed text-muted-foreground">{intro}</p>}
-        {aside && <div className="mt-7">{aside}</div>}
-      </div>
-      <div className="min-w-0">{children}</div>
-    </div>
-  )
-}
-
-// Numbered hairline index — the signature device that replaces card grids.
-export function IndexList({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("border-t", HAIR, className)}>{children}</div>
-}
-
-export function IndexRow({
-  index,
-  title,
-  children,
+/**
+ * A typographic action. Not a pill, not a shadow, not a gradient.
+ *
+ * "strong" is a filled navy block for the one primary action on a page.
+ * "plain" is a ruled link. Both are ≥44px tall, clearing WCAG 2.5.8 twice
+ * over, and both get the global focus ring from index.css.
+ */
+export function Action({
   to,
-  meta,
-}: {
-  index: string | number
-  title: ReactNode
-  children?: ReactNode
-  to?: string
-  meta?: ReactNode
-}) {
-  const inner = (
-    <div
-      className={cn(
-        "group grid grid-cols-[2.5rem_1fr] items-baseline gap-x-5 gap-y-1 border-b py-7 transition-colors sm:grid-cols-[4rem_1fr_auto] sm:gap-x-8 sm:py-8",
-        HAIR,
-        to && "hover:bg-[hsl(var(--gk-violet)/0.04)]",
-      )}
-    >
-      <span className="font-serif text-xl font-bold tabular-nums text-[hsl(var(--gk-violet))] sm:text-2xl">
-        {typeof index === "number" ? String(index).padStart(2, "0") : index}
-      </span>
-      <div>
-        <h3 className="font-serif text-xl font-bold tracking-tight sm:text-[1.7rem] sm:leading-tight">
-          {title}
-        </h3>
-        {children && <p className="mt-2 max-w-xl leading-relaxed text-muted-foreground">{children}</p>}
-        {meta && (
-          <div className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{meta}</div>
-        )}
-      </div>
-      {to && (
-        <ArrowUpRight className="col-start-2 mt-2 h-6 w-6 text-muted-foreground transition-all group-hover:translate-x-1 group-hover:text-[hsl(var(--gk-violet))] sm:col-start-3 sm:mt-0 sm:self-center" />
-      )}
-    </div>
-  )
-  return to ? (
-    <Link to={to} className="block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
-      {inner}
-    </Link>
-  ) : (
-    inner
-  )
-}
-
-// Full-width alternating feature spread (media + editorial text).
-export function FeatureRow({
-  index,
-  eyebrow,
-  title,
-  media,
-  flip = false,
+  href,
   children,
-  footer,
+  variant = "plain",
+  className,
+  onDark = false,
 }: {
-  index: string
-  eyebrow: string
-  title: ReactNode
-  media: ReactNode
-  flip?: boolean
-  children?: ReactNode
-  footer?: ReactNode
+  to?: string
+  href?: string
+  children: ReactNode
+  variant?: "strong" | "plain"
+  className?: string
+  onDark?: boolean
 }) {
-  return (
-    <div className={cn("grid items-center gap-8 border-t py-12 first:border-t-0 first:pt-0 lg:grid-cols-2 lg:gap-16", HAIR)}>
-      <div className={cn("min-w-0", flip ? "lg:order-2" : "lg:order-1")}>{media}</div>
-      <div className={cn("min-w-0", flip ? "lg:order-1" : "lg:order-2")}>
-        <div className="flex items-baseline gap-4">
-          <span className="font-serif text-2xl font-bold text-[hsl(var(--gk-indigo)/0.18)]">{index}</span>
-          <RuleEyebrow>{eyebrow}</RuleEyebrow>
-        </div>
-        <h3 className="mt-4 font-serif text-2xl font-bold tracking-tight sm:text-3xl">{title}</h3>
+  const base =
+    "inline-flex min-h-[2.75rem] items-center gap-2 px-5 py-2.5 text-body font-medium transition-colors"
+  const look =
+    variant === "strong"
+      ? onDark
+        ? "bg-gk-paper text-gk-ink hover:bg-gk-on-dark-soft"
+        : "bg-gk-set text-gk-paper hover:bg-gk-ink"
+      : onDark
+        ? "border border-gk-on-dark-soft text-gk-on-dark hover:bg-gk-paper hover:text-gk-ink"
+        : "border border-gk-edge text-gk-ink hover:border-gk-ink hover:bg-gk-sunk"
+  const cls = cn(base, look, className)
+
+  if (href) {
+    const external = /^https?:/.test(href)
+    return (
+      <a className={cls} href={href} {...(external ? { target: "_blank", rel: "noreferrer noopener" } : {})}>
         {children}
-        {footer && <div className="mt-6">{footer}</div>}
-      </div>
-    </div>
+      </a>
+    )
+  }
+  return (
+    <Link className={cls} to={to ?? "/"}>
+      {children}
+    </Link>
   )
 }
 
-// Banner-style page header for inner pages — aurora + grid + grain backdrop,
-// rule eyebrow, oversized title, optional breadcrumb trail (Oxybuild page-banner).
+// ── Page header ─────────────────────────────────────────────────────────────
+
+/**
+ * The masthead for an inner page.
+ *
+ * No backdrop of any kind. The old PageHero stacked an aurora, a grid and a
+ * grain overlay behind every one of eight pages, which is why they all read
+ * as the same page.
+ */
 export function PageHero({
   eyebrow,
   title,
@@ -233,178 +196,238 @@ export function PageHero({
   breadcrumb?: string
 }) {
   return (
-    <section className="relative overflow-hidden border-b border-border bg-background">
-      <div className="gk-aurora" aria-hidden />
-      <div className="absolute inset-0 gk-grid" aria-hidden />
-      <span className="gk-grain" aria-hidden />
-      <div className="relative mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28">
-        <FadeIn>
-          <RuleEyebrow>{eyebrow}</RuleEyebrow>
-          <h1 className="mt-5 max-w-4xl font-serif text-[2.6rem] font-bold leading-[1.03] tracking-tight sm:text-6xl lg:text-[4.1rem]">
-            {title}
-          </h1>
-          {intro && (
-            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-muted-foreground sm:text-xl">{intro}</p>
-          )}
-          {children && <div className="mt-8">{children}</div>}
-          {breadcrumb && (
-            <nav
-              className="mt-9 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.15em] text-muted-foreground"
-              aria-label="Breadcrumb"
+    <header className="border-b border-gk-edge">
+      <Measure className="pb-12 pt-12 sm:pb-16 sm:pt-20">
+        {breadcrumb && (
+          <nav aria-label="Breadcrumb" className="mb-8">
+            <ol className="flex items-center gap-2 font-data text-label uppercase text-gk-ink-mute">
+              <li>
+                <Link to="/" className="hover:text-gk-ink">
+                  Home
+                </Link>
+              </li>
+              <li aria-hidden>/</li>
+              <li aria-current="page" className="text-gk-ink">
+                {breadcrumb}
+              </li>
+            </ol>
+          </nav>
+        )}
+        <Label>{eyebrow}</Label>
+        <h1 className="mt-5 max-w-4xl font-display text-t2 font-normal text-gk-ink lg:text-t1">{title}</h1>
+        {intro && <p className="mt-6 max-w-2xl text-lede text-gk-ink-soft">{intro}</p>}
+        {children && <div className="mt-8">{children}</div>}
+      </Measure>
+    </header>
+  )
+}
+
+// ── Contents ────────────────────────────────────────────────────────────────
+
+/**
+ * The numbered contents list that stands in for a navigation bar on the first
+ * screen, per direction C. A real ordered list of real links, so it is
+ * navigable by keyboard and by landmark without any ARIA.
+ */
+export function Contents({ items }: { items: { href: string; title: string; note?: string }[] }) {
+  return (
+    <nav aria-label="Contents">
+      <ol className="border-t border-gk-edge">
+        {items.map((item, i) => (
+          <li key={item.href} className="border-b border-gk-edge">
+            <a
+              href={item.href}
+              className="group grid grid-cols-[2.5rem_1fr] items-baseline gap-4 py-4 hover:bg-gk-sunk sm:grid-cols-[3.5rem_1fr_auto] sm:gap-6"
             >
-              <Link to="/" className="transition-colors hover:text-foreground">
-                Home
-              </Link>
-              <span className={ACCENT_TEXT}>/</span>
-              <span className="text-foreground">{breadcrumb}</span>
-            </nav>
-          )}
-        </FadeIn>
-      </div>
-    </section>
+              <span className="font-data text-label text-gk-ink-mute">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <span className="font-display text-t4 text-gk-ink group-hover:underline">{item.title}</span>
+              {item.note && (
+                <span className="col-start-2 font-data text-label text-gk-ink-mute sm:col-start-3">
+                  {item.note}
+                </span>
+              )}
+            </a>
+          </li>
+        ))}
+      </ol>
+    </nav>
   )
 }
 
-// Stat tile.
-export function Stat({ value, label }: { value: ReactNode; label: string }) {
-  return (
-    <div className="gk-card p-6">
-      <div className="font-serif text-3xl font-bold">
-        <GradientText>{value}</GradientText>
-      </div>
-      <div className="mt-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
-    </div>
-  )
+// ── Index list ──────────────────────────────────────────────────────────────
+
+export function IndexList({ children, className }: { children: ReactNode; className?: string }) {
+  return <ul className={cn("border-t border-gk-edge", className)}>{children}</ul>
 }
 
-// Animated counter with a ghost-stroke number behind (Oxybuild counter device).
-export function CounterStat({
-  to,
-  label,
-  suffix = "",
-  prefix = "",
-}: {
-  to: number
-  label: string
-  suffix?: string
-  prefix?: string
-}) {
-  return (
-    <div className="relative px-2 text-center">
-      <span
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 z-0 -translate-x-1/2 -translate-y-[56%] font-serif text-[5.5rem] font-extrabold leading-none text-transparent [-webkit-text-stroke:1.5px_hsl(var(--gk-indigo)/0.09)] sm:text-[7rem]"
-      >
-        {prefix}
-        {to}
-        {suffix}
-      </span>
-      <div className="relative">
-        <div className="font-serif text-4xl font-extrabold sm:text-5xl">
-          <GradientText>
-            <CountUp to={to} suffix={suffix} prefix={prefix} />
-          </GradientText>
-        </div>
-        <div className="mt-2.5 text-sm font-medium text-muted-foreground">{label}</div>
-      </div>
-    </div>
-  )
-}
-
-// Service/feature tile with a dark action bar (Oxybuild service card).
-export function ServiceTile({
-  to,
-  title,
-  summary,
-  icon: Icon,
+export function IndexRow({
   index,
+  title,
+  children,
+  to,
+  meta,
+  as: As = "h3",
 }: {
-  to: string
-  title: string
-  summary: string
-  icon: ComponentType<{ className?: string }>
-  index: number
+  index: string | number
+  title: ReactNode
+  children?: ReactNode
+  to?: string
+  meta?: ReactNode
+  /** Set to "h2" where this row is the first heading under the page h1. */
+  as?: "h2" | "h3"
 }) {
+  const body = (
+    <div className="grid grid-cols-[2.5rem_1fr] items-baseline gap-4 sm:grid-cols-[3.5rem_1fr_auto] sm:gap-6">
+      <span className="font-data text-label text-gk-ink-mute">{index}</span>
+      <div className="min-w-0">
+        <As className="font-display text-t4 text-gk-ink">{title}</As>
+        {children && <div className="mt-2 max-w-2xl text-body text-gk-ink-soft">{children}</div>}
+      </div>
+      {meta && <div className="col-start-2 font-data text-label text-gk-ink-mute sm:col-start-3">{meta}</div>}
+    </div>
+  )
   return (
-    <Link
-      to={to}
-      className="group relative block overflow-hidden rounded-2xl border border-[hsl(var(--gk-indigo)/0.08)] bg-white shadow-[0_1px_2px_hsl(var(--gk-indigo)/0.05),0_10px_30px_-18px_hsl(var(--gk-indigo)/0.18)] transition-all duration-300 hover:-translate-y-1 hover:shadow-[0_22px_44px_-20px_hsl(var(--gk-violet)/0.45)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <div className="relative h-36 overflow-hidden bg-gradient-to-br from-[hsl(var(--gk-violet)/0.16)] via-[hsl(var(--gk-sky)/0.07)] to-transparent">
-        <div className="absolute inset-0 gk-dots" aria-hidden />
-        <span className="absolute left-5 top-5 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-white/70 text-[hsl(var(--gk-violet))] shadow-sm ring-1 ring-[hsl(var(--gk-violet)/0.15)] backdrop-blur">
-          <Icon className="h-5 w-5" />
-        </span>
-        <span className="pointer-events-none absolute right-5 top-3 font-serif text-6xl font-extrabold text-[hsl(var(--gk-indigo)/0.06)]">
-          {String(index).padStart(2, "0")}
-        </span>
-      </div>
-      <div className="flex items-center justify-between gap-3 bg-foreground px-5 py-4 text-background">
-        <div className="min-w-0">
-          <h3 className="font-serif text-lg font-bold">{title}</h3>
-          <p className="mt-0.5 truncate text-xs text-background/60">{summary}</p>
-        </div>
-        <span
-          className={cn(
-            "inline-flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg text-white transition-transform group-hover:translate-x-0.5",
-            ACCENT_BAR,
-          )}
-        >
-          <ArrowRight className="h-4 w-4" />
-        </span>
-      </div>
-    </Link>
+    <li className="border-b border-gk-edge">
+      {to ? (
+        <Link to={to} className="block py-6 hover:bg-gk-sunk">
+          {body}
+        </Link>
+      ) : (
+        <div className="py-6">{body}</div>
+      )}
+    </li>
   )
 }
 
-// Faux browser window — wraps any preview content.
-export function BrowserFrame({ url = "gakinz.com", children }: { url?: string; children: ReactNode }) {
+// ── Feature row ─────────────────────────────────────────────────────────────
+
+export function FeatureRow({
+  index,
+  eyebrow,
+  title,
+  media,
+  flip = false,
+  children,
+  footer,
+  as: As = "h2",
+}: {
+  index: string
+  eyebrow: string
+  title: ReactNode
+  media: ReactNode
+  flip?: boolean
+  children?: ReactNode
+  footer?: ReactNode
+  /**
+   * Defaults to h2. The old default of h3 produced an h1 → h3 level skip on
+   * Services, Resources, Home and Contact, because these rows are the first
+   * heading under the page title.
+   */
+  as?: "h2" | "h3"
+}) {
   return (
-    <div className="gk-ring overflow-hidden shadow-2xl shadow-primary/10">
-      <div className="flex items-center gap-2 border-b border-border/60 bg-muted/60 px-4 py-3">
-        <span className="gk-browser-dot bg-red-400/80" />
-        <span className="gk-browser-dot bg-amber-400/80" />
-        <span className="gk-browser-dot bg-emerald-400/80" />
-        <div className="ml-3 flex-1">
-          <div className="mx-auto w-fit rounded-md bg-background/70 px-3 py-1 text-xs text-muted-foreground">
-            {url}
-          </div>
+    <div className="grid items-start gap-8 border-t border-gk-edge py-12 first:border-t-0 first:pt-0 lg:grid-cols-2 lg:gap-16">
+      <div className={cn("min-w-0", flip ? "lg:order-2" : "lg:order-1")}>{media}</div>
+      <div className={cn("min-w-0", flip ? "lg:order-1" : "lg:order-2")}>
+        <div className="flex items-baseline gap-4">
+          <span className="font-data text-label text-gk-ink-mute">{index}</span>
+          <Label>{eyebrow}</Label>
         </div>
+        <As className="mt-4 font-display text-t3 text-gk-ink">{title}</As>
+        {children && <div className="mt-4 max-w-2xl text-body text-gk-ink-soft">{children}</div>}
+        {footer && <div className="mt-6">{footer}</div>}
       </div>
-      <div className="bg-background">{children}</div>
     </div>
   )
 }
 
-// Brand pull-quote band with an oversized quotation mark (Oxybuild testimonial
-// device, used for the studio's own words — no fabricated client quotes).
+// ── Split ───────────────────────────────────────────────────────────────────
+
+export function Split({
+  label,
+  title,
+  intro,
+  children,
+  sticky = true,
+}: {
+  label?: string
+  title?: ReactNode
+  intro?: string
+  children: ReactNode
+  sticky?: boolean
+}) {
+  return (
+    <div className="grid gap-10 lg:grid-cols-[22rem_1fr] lg:gap-16">
+      <div className={cn(sticky && "lg:sticky lg:top-24 lg:self-start")}>
+        {label && <Label>{label}</Label>}
+        {title && <h2 className="mt-4 font-display text-t3 text-gk-ink">{title}</h2>}
+        {intro && <p className="mt-4 text-body text-gk-ink-soft">{intro}</p>}
+      </div>
+      <div className="min-w-0">{children}</div>
+    </div>
+  )
+}
+
+// ── Honest gaps ─────────────────────────────────────────────────────────────
+
+/**
+ * A designed, labelled placeholder for material the owner has not supplied.
+ *
+ * This is deliberately a visible, composed element rather than a grey box with
+ * an image icon, because it ships to real visitors and should read as a
+ * deliberate state. It carries the red oxide that means "awaiting material".
+ *
+ * Nothing invented ever goes in this slot. A labelled gap is honest; a stock
+ * photograph of a stranger on a personal site, or an invented client on a
+ * portfolio, is not.
+ */
+export function Placeholder({
+  label,
+  detail,
+  ratio = "4 / 5",
+  className,
+}: {
+  label: string
+  detail?: string
+  ratio?: string
+  className?: string
+}) {
+  return (
+    <div
+      className={cn(
+        "flex flex-col items-center justify-center gap-2 border border-dashed border-gk-come/60 bg-gk-sunk p-6 text-center",
+        className,
+      )}
+      style={{ aspectRatio: ratio }}
+    >
+      <span className="font-data text-label uppercase text-gk-come">{label}</span>
+      {detail && <span className="max-w-[24ch] text-body text-gk-ink-mute">{detail}</span>}
+    </div>
+  )
+}
+
+/** An inline "to supply" marker for a missing value inside a line of text. */
+export function Gap({ children }: { children: ReactNode }) {
+  return (
+    <span className="font-data text-label uppercase text-gk-come">[{children}]</span>
+  )
+}
+
+// ── Quote ───────────────────────────────────────────────────────────────────
+
 export function QuoteBand({ quote, attribution }: { quote: ReactNode; attribution: string }) {
   return (
-    <section className="relative overflow-hidden">
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6">
-        <div className="relative overflow-hidden rounded-3xl border border-[hsl(var(--gk-indigo)/0.07)] bg-muted/40 px-6 py-14 text-center sm:px-16 sm:py-20">
-          <span
-            aria-hidden
-            className="pointer-events-none absolute left-6 top-1 font-serif text-[8rem] leading-none text-[hsl(var(--gk-violet)/0.16)] sm:left-12"
-          >
-            &ldquo;
-          </span>
-          <FadeIn>
-            <blockquote className="relative mx-auto max-w-3xl font-serif text-2xl font-bold leading-snug tracking-tight sm:text-[2rem]">
-              {quote}
-            </blockquote>
-            <div className="relative mt-6 text-sm font-semibold uppercase tracking-[0.15em] text-muted-foreground">
-              {attribution}
-            </div>
-          </FadeIn>
-        </div>
-      </div>
-    </section>
+    <figure className="border-y border-gk-edge py-14">
+      <blockquote className="max-w-4xl font-display text-t3 text-gk-ink">{quote}</blockquote>
+      <figcaption className="mt-6 font-data text-label uppercase text-gk-ink-mute">{attribution}</figcaption>
+    </figure>
   )
 }
 
-// Full-width call-to-action band — dark ink panel with grain + lavender/rose
-// glow, big heading left of a divider, action right (Oxybuild newsletter band).
+// ── Closing action ──────────────────────────────────────────────────────────
+
 export function CtaBand({
   title,
   intro,
@@ -417,27 +440,20 @@ export function CtaBand({
   to?: string
 }) {
   return (
-    <section className="relative overflow-hidden">
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
-        <div className="gk-glow relative overflow-hidden rounded-3xl bg-foreground px-6 py-14 text-background sm:px-12 sm:py-16">
-          <span className="gk-grain" aria-hidden />
-          <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-[hsl(var(--gk-violet)/0.40)] blur-3xl" aria-hidden />
-          <div className="absolute -bottom-20 -left-10 h-64 w-64 rounded-full bg-[hsl(var(--gk-sky)/0.30)] blur-3xl" aria-hidden />
-          <FadeIn>
-            <div className="relative flex flex-col items-start gap-8 md:flex-row md:items-center md:justify-between">
-              <div className="md:max-w-xl md:border-r md:border-background/15 md:pr-10">
-                <h2 className="font-serif text-3xl font-bold sm:text-4xl">{title}</h2>
-                <p className="mt-4 text-background/70">{intro}</p>
-              </div>
-              <Button asChild size="lg" variant="secondary" className="gk-shine flex-shrink-0 shadow-xl">
-                <Link to={to}>
-                  {cta} <ArrowRight className="ml-1 h-4 w-4" />
-                </Link>
-              </Button>
+    <section className="bg-gk-ink text-gk-on-dark">
+      <Measure className="py-16 sm:py-24">
+        <FadeIn>
+          <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-end">
+            <div className="max-w-2xl">
+              <h2 className="font-display text-t2 text-gk-on-dark">{title}</h2>
+              <p className="mt-5 text-lede text-gk-on-dark-soft">{intro}</p>
             </div>
-          </FadeIn>
-        </div>
-      </div>
+            <Action to={to} variant="strong" onDark>
+              {cta}
+            </Action>
+          </div>
+        </FadeIn>
+      </Measure>
     </section>
   )
 }

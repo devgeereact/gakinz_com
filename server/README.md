@@ -21,7 +21,10 @@ Full deploy detail, including the outstanding-upload list and the outstanding SQ
 4. Create `uploads/` in the document root and make it writable. `files.php` creates it and
    drops a deny-all `.htaccess` on first use, but pre-creating it avoids a permissions
    surprise.
-5. Confirm `https://gakinz.com/api.php` returns `[]`.
+5. Confirm `https://gakinz.com/api.php` returns `{"ok":true,"php":"...","db":true}`. That single
+   GET proves PHP is running and `config.php` reaches the database. It is read-only and writes
+   nothing, so it is safe to call at any time. A `db` of anything other than `true`, or a 500,
+   means the credentials in `config.php` are wrong or the database is unreachable.
 
 > The old step 6, "visit `https://gakinz.com/smoke`", has been removed. That route and its
 > page no longer exist; they were deleted with the rest of the demo surface.
@@ -39,7 +42,7 @@ own.
 | `_sms.php` | Twilio transport for SMS and WhatsApp |
 | `_slack.php` | Slack incoming webhook, best effort |
 | `_monitor.php` | HTTP status and TLS expiry check for the care plan |
-| `api.php` | Smoke test over `items`. **Its POST is currently unauthenticated**, see `docs/KNOWN-ISSUES.md` K-004 |
+| `api.php` | Unauthenticated read-only health check: confirms PHP runs and the database answers. No writes, no application tables |
 | `contact.php` | Public enquiry form, writes to `enquiries` |
 | `verify.php` | Public certificate verification |
 | `book.php` | Public. Returns the configured Calendly URL, or empty |
@@ -51,8 +54,8 @@ own.
 | `invoices.php`, `payments.php`, `reports.php` | Money |
 | `portal.php`, `support.php`, `comms.php`, `mail.php` | Client-facing |
 | `blog.php`, `testimonials.php`, `content.php`, `knowledge.php`, `announcements.php` | Content |
-| `ai.php` | OpenRouter proxy. Authenticated and capped per role. The key stays server-side |
-| `weather.php` | OpenWeather proxy. Authenticated, cached 10 minutes. The key stays server-side |
+| `ai.php` | OpenRouter proxy. Staff roles only, capped per role per day. The key stays server-side |
+| `weather.php` | OpenWeather proxy. Staff roles only, cached 10 minutes. The key stays server-side |
 | `github.php`, `figma.php`, `slack.php` | External connectors |
 | `cron.php` | Scheduled jobs. Gated by `$CRON_KEY`, not by a user session |
 | `schema.sql` | All 31 tables, plus the migration statements as comments from line 291 |

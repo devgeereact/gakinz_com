@@ -14,8 +14,12 @@ const ALL_STAFF: Role[] = ["super_admin", "admin", "manager", "trainer", "editor
 
 // Module key → roles allowed to open that module. Kept in sync with server.
 export const MODULE_ROLES: Record<string, Role[]> = {
-  // server/api: dashboard is staff-only overview
-  dashboard: ALL_STAFF,
+  // The dashboard aggregates leads.php, clients.php, projects.php, invoices.php,
+  // support.php, time.php and announcements.php. `trainer` and `employee` could
+  // reach almost none of those, so they landed on a page of 403s and empty KPIs.
+  // Narrowed to the roles that can actually load the overview; both of those
+  // roles now land on a module they own (see defaultPathForRole).
+  dashboard: ["super_admin", "admin", "manager", "editor"],
   // leads.php / clients.php / proposals.php STAFF
   leads: ["super_admin", "admin", "manager", "editor"],
   clients: ["super_admin", "admin", "manager", "editor"],
@@ -47,14 +51,25 @@ export const MODULE_ROLES: Record<string, Role[]> = {
   content: ["super_admin", "admin", "manager", "editor"],
   blog: ["super_admin", "admin", "manager", "editor"],
   testimonials: ["super_admin", "admin", "manager", "editor"],
-  // files.php — all staff
-  files: ALL_STAFF,
+  // work.php EDITORS — the portfolio record type behind the public /work pages
+  work: ["super_admin", "admin", "manager", "editor"],
+  // files.php STAFF — no `trainer`; the server list omits it, so showing the
+  // nav item only walked a trainer into a 403.
+  files: ["super_admin", "admin", "manager", "editor", "employee"],
   // careplan.php — management view
   careplan: ["super_admin", "admin", "manager"],
   // users.php / audit.php ADMINS
   platform: ["super_admin", "admin"],
-  // client portal — the external client's home, plus staff who manage it
-  portal: [...ALL_STAFF, "client"],
+  // Client portal — the external client's own home, plus the staff who manage
+  // it. Narrowed from ALL_STAFF on 2026-09-22 to match the server:
+  // server/portal.php previously called require_auth($conn) with no role list,
+  // so employee, editor and trainer could pass an arbitrary ?client_id and read
+  // any client's invoice data, which server/invoices.php restricts to these
+  // three roles. The server branch is now gated on PORTAL_PREVIEW_ROLES, and
+  // this list mirrors it so those roles no longer see a nav item that 403s.
+  // The client branch is unchanged and remains the security boundary: it
+  // derives the client id from the token and ignores any supplied parameter.
+  portal: ["super_admin", "admin", "manager", "client"],
 }
 
 // Map a /app/* pathname to its module key. Returns null for paths with no
@@ -85,6 +100,7 @@ export function moduleKeyForPath(pathname: string): string | null {
     content: "content",
     blog: "blog",
     testimonials: "testimonials",
+    work: "work",
     files: "files",
     careplan: "careplan",
     platform: "platform",
@@ -95,16 +111,25 @@ export function moduleKeyForPath(pathname: string): string | null {
 export function canAccess(role: Role | undefined, moduleKey: string): boolean {
   if (!role) return false
   const allowed = MODULE_ROLES[moduleKey]
-  if (!allowed) return true // ungated module → any authenticated user
+  // Fail CLOSED. An unmapped key used to return true, so a route added without
+  // a MODULE_ROLES entry was reachable by every signed-in user, `client`
+  // included. Now a missing entry hides the module until someone maps it.
+  // (moduleKeyForPath returns null — never an unmapped key — for a genuinely
+  // ungated path such as account settings, and RequireAuth skips the gate on
+  // null, so ungated pages are unaffected.)
+  if (!allowed) return false
   return allowed.includes(role)
 }
 
 // Where a role lands when it has no business on the page it tried to open.
 export function defaultPathForRole(role: Role | undefined): string {
   if (role === "client") return "/app/portal"
-  // "/app" index → "dashboard" module, allowed for every staff role, so this
-  // never re-triggers the gate. (Must be a real route — there is no
-  // "/app/dashboard/analytics".)
+  // Every landing here must be a real route the role can actually open, or
+  // RequireAuth bounces a user to a page it then bounces them off again.
+  // `trainer` and `employee` no longer hold `dashboard` (the "/app" index), so
+  // they land on a module that is theirs. Everyone else keeps "/app".
+  if (role === "trainer") return "/app/time"
+  if (role === "employee") return "/app/projects"
   return "/app"
 }
 

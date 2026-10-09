@@ -1,169 +1,120 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { Link, NavLink, useLocation } from "react-router-dom"
-import { Menu, X, ChevronDown, LayoutDashboard } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Menu, X } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { services } from "@/marketing/data/site"
-import { useAuth } from "@/store/auth.store"
-import { defaultPathForRole } from "@/lib/access"
-import BrandMark from "./BrandMark"
-import ServicesMenu from "./ServicesMenu"
+import { site } from "@/marketing/data/site"
 
-const primary = [
-  { to: "/about", label: "About" },
-  { to: "/pricing", label: "Pricing" },
+/**
+ * The masthead.
+ *
+ * A ruled line of type, not a floating pill bar. The old navbar carried a
+ * Services mega-menu that declared role="menu" and role="menuitem" on
+ * navigation links: that overrode the native link role, so assistive
+ * technology announced "menu item" and lost the URL, and it promised the ARIA
+ * menu keyboard pattern — roving tabindex, arrow keys, typeahead — which was
+ * never implemented. It has been removed rather than completed. The four
+ * services are a short list on /services, which is one click away and needs
+ * no keyboard pattern of its own.
+ *
+ * The mobile panel is a disclosure, not a modal: no focus trap, because a
+ * disclosure should not have one. It does close on Escape and it does return
+ * focus to its trigger, both of which were missing.
+ */
+
+const LINKS = [
   { to: "/work", label: "Work" },
-  { to: "/sectors", label: "Sectors" },
-  { to: "/resources", label: "Resources" },
+  { to: "/services", label: "What I do" },
+  { to: "/resources", label: "Writing" },
+  { to: "/about", label: "About" },
 ]
 
 export default function PublicNavbar() {
-  const [scrolled, setScrolled] = useState(false)
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [mobileServices, setMobileServices] = useState(false)
-  const location = useLocation()
-  const user = useAuth((s) => s.user)
-  const token = useAuth((s) => s.token)
-  const authed = !!token && !!user
-  const dashPath = user ? defaultPathForRole(user.role) : "/app"
+  const [open, setOpen] = useState(false)
+  const { pathname } = useLocation()
+  const triggerRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => setOpen(false), [pathname])
 
   useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8)
-    onScroll()
-    window.addEventListener("scroll", onScroll)
-    return () => window.removeEventListener("scroll", onScroll)
-  }, [])
-
-  // Close menus on route change
-  useEffect(() => {
-    setMobileOpen(false)
-    setMobileServices(false)
-  }, [location.pathname])
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false)
+        triggerRef.current?.focus()
+      }
+    }
+    document.addEventListener("keydown", onKey)
+    return () => document.removeEventListener("keydown", onKey)
+  }, [open])
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      "rounded-md px-3 py-2 text-sm font-medium transition-colors",
-      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-      isActive
-        ? "bg-[hsl(var(--gk-violet)/0.1)] text-[hsl(var(--gk-violet))]"
-        : "text-foreground/70 hover:bg-muted hover:text-foreground",
+      "inline-flex min-h-[2.75rem] items-center text-body text-gk-ink-soft hover:text-gk-ink",
+      isActive && "text-gk-ink underline underline-offset-[6px]",
     )
 
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-50 w-full transition-all",
-        scrolled
-          ? "border-b border-border bg-background/80 shadow-sm shadow-primary/5 backdrop-blur-xl"
-          : "border-b border-transparent bg-background/60 backdrop-blur",
-      )}
-    >
-      <nav className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6" aria-label="Primary">
-        <Link
-          to="/"
-          className="flex items-center gap-2 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          aria-label="GAkinz home"
-        >
-          <BrandMark className="h-8 w-8" />
-          <span className="text-lg font-extrabold tracking-tight">
-            GAkin<span className="gk-grad-text">z</span>
-          </span>
-        </Link>
+    <header className="border-b border-gk-edge bg-gk-paper">
+      <div className="mx-auto w-full max-w-[76rem] px-5 sm:px-8">
+        <div className="flex items-center justify-between gap-6 py-4">
+          <Link to="/" className="group min-w-0 py-1">
+            <span className="block font-display text-lede leading-none text-gk-ink">{site.name}</span>
+            <span className="mt-1 block font-data text-label uppercase text-gk-ink-mute">
+              {site.role} · {site.location}
+            </span>
+          </Link>
 
-        {/* Desktop nav */}
-        <div className="hidden items-center gap-1 lg:flex">
-          <ServicesMenu />
-
-          {primary.map((l) => (
-            <NavLink key={l.to} to={l.to} className={linkClass}>
-              {l.label}
-            </NavLink>
-          ))}
-        </div>
-
-        <div className="hidden items-center gap-2 lg:flex">
-          {authed ? (
-            <Button asChild variant="ghost" size="sm">
-              <Link to={dashPath}>
-                <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
-              </Link>
-            </Button>
-          ) : (
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/login">Login</Link>
-            </Button>
-          )}
-          <Button asChild size="sm" className="gk-shine shadow-md shadow-primary/20">
-            <Link to="/contact">Start a project</Link>
-          </Button>
-        </div>
-
-        {/* Mobile toggle */}
-        <button
-          type="button"
-          className="rounded-md p-2 text-foreground lg:hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          aria-label={mobileOpen ? "Close menu" : "Open menu"}
-          aria-expanded={mobileOpen}
-          onClick={() => setMobileOpen((v) => !v)}
-        >
-          {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-        </button>
-      </nav>
-
-      {/* Mobile menu */}
-      {mobileOpen && (
-        <div className="border-t border-border bg-background lg:hidden">
-          <div className="space-y-1 px-4 py-4">
-            <button
-              type="button"
-              className="flex w-full items-center justify-between rounded-md px-3 py-2 text-base font-medium text-foreground"
-              aria-expanded={mobileServices}
-              onClick={() => setMobileServices((v) => !v)}
-            >
-              Services
-              <ChevronDown className={cn("h-5 w-5 transition-transform", mobileServices && "rotate-180")} />
-            </button>
-            {mobileServices && (
-              <div className="space-y-1 pl-3">
-                {services.map((s) => (
-                  <NavLink
-                    key={s.slug}
-                    to={`/services/${s.slug}`}
-                    className="block rounded-md px-3 py-2 text-sm text-foreground/70 hover:text-foreground"
-                  >
-                    {s.title}
-                  </NavLink>
-                ))}
-              </div>
-            )}
-            {primary.map((l) => (
-              <NavLink
-                key={l.to}
-                to={l.to}
-                className="block rounded-md px-3 py-2 text-base font-medium text-foreground/70 hover:text-foreground"
-              >
+          <nav aria-label="Primary" className="hidden items-center gap-8 md:flex">
+            {LINKS.map((l) => (
+              <NavLink key={l.to} to={l.to} className={linkClass}>
                 {l.label}
               </NavLink>
             ))}
-            <div className="flex flex-col gap-2 pt-3">
-              {authed ? (
-                <Button asChild variant="outline">
-                  <Link to={dashPath}>
-                    <LayoutDashboard className="mr-2 h-4 w-4" /> Dashboard
-                  </Link>
-                </Button>
-              ) : (
-                <Button asChild variant="outline">
-                  <Link to="/login">Login</Link>
-                </Button>
-              )}
-              <Button asChild>
-                <Link to="/contact">Start a project</Link>
-              </Button>
-            </div>
-          </div>
+            <Link
+              to="/contact"
+              className="inline-flex min-h-[2.75rem] items-center bg-gk-set px-5 text-body font-medium text-gk-paper hover:bg-gk-ink"
+            >
+              Start a project
+            </Link>
+          </nav>
+
+          <button
+            ref={triggerRef}
+            type="button"
+            onClick={() => setOpen((v) => !v)}
+            aria-expanded={open}
+            aria-controls="primary-menu"
+            aria-label={open ? "Close menu" : "Open menu"}
+            className="-mr-2 inline-flex h-11 w-11 items-center justify-center text-gk-ink md:hidden"
+          >
+            {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+          </button>
         </div>
-      )}
+      </div>
+
+      <div
+        id="primary-menu"
+        hidden={!open}
+        className="border-t border-gk-edge bg-gk-paper md:hidden"
+      >
+        <nav aria-label="Primary" className="mx-auto w-full max-w-[76rem] px-5 py-2 sm:px-8">
+          <ul>
+            {LINKS.map((l) => (
+              <li key={l.to} className="border-b border-gk-rule last:border-b-0">
+                <NavLink to={l.to} className="flex min-h-[3rem] items-center text-body text-gk-ink">
+                  {l.label}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+          <Link
+            to="/contact"
+            className="my-4 inline-flex min-h-[2.75rem] w-full items-center justify-center bg-gk-set px-5 text-body font-medium text-gk-paper"
+          >
+            Start a project
+          </Link>
+        </nav>
+      </div>
     </header>
   )
 }

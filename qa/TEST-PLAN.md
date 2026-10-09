@@ -8,17 +8,18 @@ the gaps are worth closing.
 
 ## 1. What runs today
 
-| Layer | Tool | Coverage | Result on 2026-09-04 |
+| Layer | Tool | Coverage | Result on 2026-09-22 |
 |---|---|---|---|
-| Types | `tsc -b`, inside `npm run build` | Whole client | PASS |
-| Unit | Vitest, `npm test` | `src/lib/access.ts` only | PASS, 11 tests, 87 ms |
-| PHP syntax | `php -l` | All 44 server files | PASS |
-| Lint | ESLint, `npm run lint` | Whole client | **FAIL**, 60 errors, 7 warnings |
-| Component | none | | |
-| Endpoint | none | | |
-| End-to-end | none | | |
-| Accessibility | none | | **NOT TESTED** |
-| Performance | build output only | | |
+| Types | `tsc -b`, inside `npm run build` | Whole client | **PASS** |
+| Unit | Vitest, `npm test` | `src/lib/access.ts` only | **PASS**, 21 tests, up from 11 |
+| PHP syntax | `php -l` | All 45 server files | **PASS** |
+| Lint | ESLint, `npm run lint` | Whole client | **FAIL**, 47 errors and 2 warnings, down from 60 and 7 |
+| Accessibility | axe-core 4.10.2 in Chrome, plus computed contrast, focus, reflow and target-size sweeps | All 16 public routes | **PASS**, 0 violations. `qa/ACCESSIBILITY-AUDIT.md` |
+| Performance | Chrome DevTools trace and Lighthouse, production build served locally | Public surface | **PARTIAL.** Lab only, no field data. `qa/PERFORMANCE-AUDIT.md` |
+| Component | none | — | **NOT TESTED** |
+| Endpoint | none | — | **NOT TESTED**. `work.php` has never run against a database |
+| End-to-end | none | — | **NOT TESTED** |
+| Screen reader | none | — | **NOT TESTED**. The largest remaining accessibility gap |
 
 `src/lib/access.test.ts` covers `canAccess`, `moduleKeyForPath` and `defaultPathForRole`,
 with the client-isolation rules asserted explicitly. It is deliberately narrow: role gating is
@@ -35,7 +36,7 @@ npm run lint                                               # must not add a new 
 find server -name '*.php' -print0 | xargs -0 -n1 php -l     # any touched PHP
 ```
 
-The lint backlog of 60 errors does not block, but it **must not grow**. See
+The lint backlog of 47 errors does not block, but it **must not grow**. See
 `docs/KNOWN-ISSUES.md` K-002.
 
 ## 3. What cannot be tested from this repository

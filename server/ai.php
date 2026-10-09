@@ -15,8 +15,12 @@ require __DIR__ . '/_bootstrap.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') fail('Method not allowed.', 405);
 
-// Any signed-in staff member may use AI; an anonymous caller cannot burn the key.
-$user = require_auth($conn);
+// Staff only. A `client`-role portal user has no AI feature in the interface
+// and must not be able to spend the studio's paid LLM key by calling this
+// directly. Trainer is kept, matching the STAFF list in time.php, so no
+// existing staff role loses a feature it already had.
+const STAFF = ['super_admin', 'admin', 'manager', 'trainer', 'editor', 'employee'];
+$user = require_auth($conn, STAFF);
 
 // Per-role daily cap so a single signed-in account can't run up the OpenRouter
 // bill. Counted from audit_log (no extra table); resets at midnight server time.
@@ -80,7 +84,10 @@ $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $err  = curl_error($ch);
 curl_close($ch);
 
-if ($res === false)  fail('AI request failed: ' . $err, 502);
+if ($res === false) {
+  error_log('GAkinz AI request (transport): ' . $err);
+  fail('Could not reach the AI provider. Please try again.', 502);
+}
 if ($code >= 400)    fail('AI provider error.', 502);
 
 $data = json_decode($res, true);

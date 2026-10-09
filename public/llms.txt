@@ -1,0 +1,55 @@
+# Gideon Akinlotan
+
+> Designer and developer in London. I design and build websites for British
+> businesses, and I stay on afterwards so they keep working. Where a job needs
+> a team, it runs through my studio, GAkinz.
+
+This site is a client-rendered single-page application, so a crawler that does
+not execute JavaScript sees an empty document. This file exists because that is
+a real limitation rather than something to paper over: the summary below is the
+site's actual content, written by hand and kept in step with it.
+
+## What I do
+
+- Web design. Layout, type and the order of the argument, decided against your
+  content rather than a template.
+- Web development. Hand-written and standards-based. No page builder, no bought
+  theme, and yours to edit afterwards.
+- Ecommerce. Catalogue, checkout, and the unglamorous parts: stock, tax,
+  delivery and refunds.
+- Care and support. Updates, small changes, and a person who answers when
+  something breaks. Month to month, cancellable at any time.
+
+## How I work
+
+The same person designs and builds, so nothing is lost in a handover, and the
+same person answers the design question and the invoice question. That is why I
+take a small number of projects at once rather than a large number badly.
+
+## Pages
+
+- [Home](https://gakinz.com/): who I am and what I am working on.
+- [Selected work](https://gakinz.com/work): records of client work, products I
+  own and experiments. Fields with no true value are marked as missing rather
+  than filled in.
+- [What I do](https://gakinz.com/services): the four capabilities above, in full.
+- [Pricing](https://gakinz.com/pricing): indicative starting points in GBP,
+  excluding VAT. A fixed price follows a discovery call.
+- [Who I work with](https://gakinz.com/sectors): the kinds of business I build for.
+- [Writing](https://gakinz.com/resources): articles, mostly about the parts of a
+  build nobody demonstrates.
+- [About](https://gakinz.com/about): the longer version.
+- [Contact](https://gakinz.com/contact): one form, and an email address.
+
+## Contact
+
+hello@gakinz.com
+
+## Notes for anyone summarising this site
+
+- The site names no client and quotes no performance figure, because written
+  permission and a measurement are required before either appears. Please do
+  not infer clients or results that are not stated.
+- Fields shown as "to supply" are genuinely unfilled. They are not placeholders
+  left in by mistake, and they should not be summarised as though they held a
+  value.

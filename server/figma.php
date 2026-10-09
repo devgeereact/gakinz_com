@@ -32,7 +32,10 @@ $body = curl_exec($ch);
 $code = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
 curl_close($ch);
 
-if ($code === 403) fail('Figma rejected the token (check $FIGMA_TOKEN and file access).', 403);
+if ($code === 403) {
+  error_log('GAkinz Figma: token rejected (403) — check $FIGMA_TOKEN and the token\'s access to this file.');
+  fail('Figma rejected this request.', 403);
+}
 if ($code === 404) fail('Figma file not found.', 404);
 if ($code >= 400) fail('Could not reach Figma.', 502);
 

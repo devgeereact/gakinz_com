@@ -11,8 +11,10 @@
  *   POST /auth.php?action=reset   {token, password}      → { ok: true }
  *
  * On an empty users table a seed super-admin is created from
- * $SEED_ADMIN_EMAIL / $SEED_ADMIN_PASSWORD in config.php; if no password is
- * configured a random one is generated and written to seed_admin_password.txt.
+ * $SEED_ADMIN_EMAIL / $SEED_ADMIN_PASSWORD in config.php. With no
+ * $SEED_ADMIN_EMAIL nothing is seeded. If no password is configured a random
+ * one is generated and written to the PHP error log, never to a file in the
+ * document root.
  */
 require __DIR__ . '/_bootstrap.php';
 
@@ -49,11 +51,13 @@ function login(mysqli $conn): void {
   if ($email === '' || $pass === '') fail('Email and password are required.');
 
   // Brute-force throttle: block after too many recent failures for this email
-  // or IP. Reuses audit_log (login_failed rows store the email in `detail`).
+  // or IP. Reuses audit_log (failure rows store the email in `detail`). Counts
+  // failed second-factor attempts too, so TOTP guessing is throttled as well.
   $ip = $_SERVER['REMOTE_ADDR'] ?? '';
   $stmt = $conn->prepare(
     "SELECT COUNT(*) AS c FROM audit_log
-     WHERE action = 'login_failed' AND created_at > (NOW() - INTERVAL 15 MINUTE)
+     WHERE action IN ('login_failed', 'login_2fa_failed')
+       AND created_at > (NOW() - INTERVAL 15 MINUTE)
        AND (detail = ? OR ip = ?)"
   );
   $stmt->bind_param('ss', $email, $ip);
@@ -131,9 +135,17 @@ function me(mysqli $conn): void {
 function logout(mysqli $conn): void {
   $token = bearer_token();
   if ($token !== '') {
+    // Read the owner first so the audit row can be attributed, then drop it.
+    $stmt = $conn->prepare('SELECT user_id FROM auth_tokens WHERE token = ? LIMIT 1');
+    $stmt->bind_param('s', $token);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $uid = $row ? (int)$row['user_id'] : null;
+
     $stmt = $conn->prepare('DELETE FROM auth_tokens WHERE token = ?');
     $stmt->bind_param('s', $token);
     $stmt->execute();
+    if ($uid !== null) audit($conn, $uid, 'logout', '');
   }
   ok(['ok' => true]);
 }
@@ -290,12 +302,29 @@ function gk_totp_verify(string $secretB32, string $code): bool {
 
 function twofa_setup(mysqli $conn): void {
   $u = require_auth($conn);
-  $secret = gk_base32_encode(random_bytes(20));
   $uid = $u['id'];
+
+  // Re-enrolling replaces the secret and drops the account back to disabled, so
+  // on an account that already has two-factor on this needs a current code.
+  // Without it a stolen bearer token could silently switch two-factor off.
+  $stmt = $conn->prepare('SELECT totp_secret, totp_enabled FROM users WHERE id = ? LIMIT 1');
+  $stmt->bind_param('i', $uid);
+  $stmt->execute();
+  $row = $stmt->get_result()->fetch_assoc();
+  if ($row && !empty($row['totp_enabled'])) {
+    $code = (string)(body()['code'] ?? '');
+    if (!gk_totp_verify((string)$row['totp_secret'], $code)) {
+      audit($conn, $uid, '2fa_setup_denied', '');
+      fail('Enter a current code to replace your two-factor setup.');
+    }
+  }
+
+  $secret = gk_base32_encode(random_bytes(20));
   // Store the pending secret but DON'T enable until a code is verified.
   $stmt = $conn->prepare('UPDATE users SET totp_secret = ?, totp_enabled = 0 WHERE id = ?');
   $stmt->bind_param('si', $secret, $uid);
   $stmt->execute();
+  audit($conn, $uid, '2fa_setup', '');
   $label = rawurlencode('GAkinz:' . $u['email']);
   $issuer = rawurlencode('GAkinz');
   $otpauth = "otpauth://totp/$label?secret=$secret&issuer=$issuer&period=30&digits=6";
@@ -480,18 +509,21 @@ function ensure_seed(mysqli $conn): void {
   $row = $res ? $res->fetch_assoc() : ['c' => 1];
   if ((int)$row['c'] > 0) return;
 
+  // No configured address means no seeding. Never invent one: a guessed
+  // address would create a live super-admin nobody owns.
+  $email = strtolower(trim((string)($GLOBALS['SEED_ADMIN_EMAIL'] ?? '')));
+  if ($email === '') return;
+
   $name = 'GAkinz Admin';
-  $email = $GLOBALS['SEED_ADMIN_EMAIL'] ?? 'dev@gakinz.com';
   $role = 'super_admin';
   // Never ship a known default password. Use the configured one, else generate
-  // a strong random password and write it once to a 0600 file beside config so
-  // the operator can retrieve it and then delete it.
+  // a strong random password and write it to the PHP error log only. It is
+  // never written to a file under the document root, where a web request could
+  // fetch it.
   $plain = (string)($GLOBALS['SEED_ADMIN_PASSWORD'] ?? '');
   if ($plain === '') {
     $plain = bin2hex(random_bytes(12)); // 24 random hex chars
-    $note = "GAkinz seed super-admin\nemail:    $email\npassword: $plain\n\nDelete this file after your first login.\n";
-    @file_put_contents(__DIR__ . '/seed_admin_password.txt', $note);
-    @chmod(__DIR__ . '/seed_admin_password.txt', 0600);
+    error_log("GAkinz seed super-admin created for $email with generated password: $plain — sign in, change it immediately, then set \$SEED_ADMIN_PASSWORD in config.php.");
   }
   $hash = password_hash($plain, PASSWORD_BCRYPT);
   $stmt = $conn->prepare('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)');

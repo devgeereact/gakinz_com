@@ -1,106 +1,187 @@
 # Performance audit
 
-**Verdict: PARTIAL.** Bundle composition is measured. Everything a user actually experiences
-is unmeasured.
-
-**Date:** 2026-09-04 · **Target:** `chore/gee-os-adoption` at `065a234`
-**Method:** one local production build. No browser measurement, no Lighthouse run, no field
-data, no server timing.
+**Scope:** the public surface at `/`.
+**Date of this run:** 2026-09-22
+**Result: large, measured improvements to what ships. Core Web Vitals are
+measured only in a local lab, and that is not the same as field performance.**
 
 ---
 
-## 1. What was measured
+## 1. What was measured, and the caveat that governs the rest
 
-`npm run build`, completed in 2.83 s. The chunks worth watching:
+Everything below was taken against the production build (`npm run build`) served by
+`npm run preview` on `127.0.0.1:5102`, in Chrome, with **no CPU throttling and no
+network throttling**.
 
-| Chunk | Raw | Gzip | Loaded |
+That makes the byte counts real and the timings optimistic. A local preview over
+loopback has no latency, no bandwidth ceiling and no contention. The LCP and CLS
+figures in section 4 are therefore a floor, not a prediction. **No field data exists**,
+the site has no CrUX entry, and nothing has been measured against the deployed host.
+
+Treat section 2 as fact and section 4 as a lab reading.
+
+## 2. What ships, before and after
+
+| Measure | Before | After | Change |
 |---|---|---|---|
-| `index` (marketing entry) | 556.94 kB | 173.79 kB | Eagerly, on the public site |
-| `jspdf.es.min` | 386.00 kB | 124.94 kB | On demand |
-| `card` | 384.82 kB | 105.84 kB | On demand |
-| `csv` (xlsx) | 283.25 kB | 94.21 kB | On demand |
-| `html2canvas.esm` | 201.04 kB | 47.07 kB | On demand |
-| `index.es` | 158.83 kB | 52.93 kB | On demand |
-| `AppLayout` | 92.46 kB | 26.93 kB | On CMS entry |
-| `Invoicing` | 43.74 kB | 14.25 kB | On demand |
-| `Analytics` | 37.68 kB | 10.79 kB | On demand |
-| `Dashboard` | 35.58 kB | 10.84 kB | On demand |
+| Entry chunk | 556.94 kB | **181.76 kB** | −67% |
+| `dist/` total | 43 MB | **2.6 MB** | −94% |
+| `public/` | 36.1 MB | **96 KB** | −35.92 MiB |
+| JS chunks emitted | 67 | 46 | −21 |
+| Direct npm dependencies | 56 | **29** | −27 |
+| npm audit findings | 33 | **7** | −26 |
+| Render-blocking third-party CSS | 2 CDNs | **0** | both removed |
 
-Vite warns that chunks exceed 500 kB.
+### Where the entry chunk went
 
-## 2. What that means
+The 556.94 kB entry was the public site, the router and the framework in one
+undifferentiated blob, re-downloaded whenever any of it changed. It is now split:
 
-**The code splitting is doing its job.** Every heavy library sits in its own chunk behind a
-lazy route: the PDF generator, the spreadsheet writer, the canvas rasteriser, the charts and
-the calendar. A visitor to the marketing site downloads none of them. Individual CMS modules
-are 8 to 44 kB each. This is the right shape.
+| Chunk | Size | Why |
+|---|---|---|
+| `index` | 181.76 kB | Application code |
+| `vendor` | 284.16 kB | react, react-dom, react-router, scheduler. Changes rarely, so it stays in cache across deploys |
+| `icons` | 24.75 kB | lucide-react, which ships one module per glyph and was previously emitted as roughly 30 chunks of 150 to 500 bytes, each one its own HTTP request |
 
-**The problem is the eager entry.** 556.94 kB raw and 173.79 kB gzipped is what a first-time
-visitor to the public site pays before anything renders. Previous documentation recorded 539
-kB, so it has grown, which suggests it will keep growing unless someone watches it.
+### The 35.92 MiB
 
-The public routes are eager by deliberate choice, to keep first paint fast. That choice puts
-14 page components, the layout, the navigation, the footer, the mockup component and all of
-`src/marketing/data/site.ts` into one chunk. Several of those pages are rarely the entry
-point.
+`public/` held 76 unreferenced files: two byte-identical copies of the same 19 card
+images, 15 carousel images, eight country flags, 14 product images and the Vite
+scaffold logo. Every one was copied into `dist/` at build and uploaded by FTP on every
+deploy. None was referenced by any source file. Verified by scanning each full basename
+against `src/` and `index.html` before deletion.
 
-## 3. Other observed costs
+### The 27 packages
 
-**Render-blocking third-party fonts.** `index.html` loads two icon-font stylesheets, Bootstrap
-Icons from `cdn.jsdelivr.net` and Boxicons from `cdn.boxicons.com`, in the document head with
-no `preconnect`, no `media` trick and no local fallback. `src/index.css` then imports three
-Google Font families with `display=swap`. That is five third-party requests on the critical
-path, across three hosts, before the page can paint. Impact is **NOT MEASURED**.
+Eleven had zero references anywhere in the repository: `@tabler/icons-react`,
+`date-fns`, `apexcharts`, `react-apexcharts`, `react-phone-number-input`, `zod`,
+`framer-motion`, `@tiptap/react`, `@tiptap/starter-kit`, `react-simple-wysiwyg`,
+`@hookform/resolvers`. Removing the two tiptap packages alone cleared 25 of the 33 npm
+audit findings. A further 16 became orphaned once 27 dead source files were removed.
 
-**Server-side cost.** Not measured at all. Two observations from reading the code, both
-unmeasured:
+Three retired duplicate stacks: two charting libraries where one was unused, two rich
+text editors where neither was used, and two calendar implementations where both were
+orphaned.
 
-- Several list endpoints compute invoice totals with a correlated subquery over
-  `invoice_items` per row. Fine at current data volumes, and it will not stay fine.
-- `weather.php` caches per city for 10 minutes in the system temp directory, which is the
-  right instinct. No other endpoint caches anything.
+## 3. Requests removed from the critical path
 
-**Images.** `public/` holds `cards/`, `illustrations/`, `images/` and `products/`. Their sizes,
-formats and whether they are appropriately dimensioned have **NOT** been examined.
+`index.html` loaded two icon webfonts from two separate CDNs, both render-blocking:
+`bootstrap-icons` from jsdelivr and `boxicons` from `cdn.boxicons.com`. Neither had a
+single `bi-` or `bx-` usage anywhere in `src/`. Both are gone.
 
-## 4. Not measured
+`index.html` now carries `preconnect` for both Google Fonts origins, a real per-page
+title and description, Open Graph and Twitter Card tags, a `theme-color`, and a
+`<noscript>` block that tells a visitor without JavaScript what the site is and how to
+make contact.
 
-Everything a user experiences:
+**The font stylesheet itself is still `@import`-ed from `src/index.css`, and that is now
+a measured decision rather than an oversight.** Moving it into `index.html` as a
+`<link>`, which is the textbook advice and does start the request earlier, was tried and
+reverted:
 
-- Largest Contentful Paint, Interaction to Next Paint, Cumulative Layout Shift. No lab run and
-  no field data.
-- Time to first byte from the live host.
-- Real-world load on a slow connection or a mid-range device.
-- API response times.
-- Database query performance under real data volume.
-- Whether the host applies gzip or Brotli to the served assets. The gzip figures above are
-  Vite's estimate, not what the server actually sends.
-- Image weight and format.
+| Fonts loaded via | CLS on `/` | Lighthouse Agentic Browsing |
+|---|---|---|
+| `@import` in the bundled CSS | **0.00** | 100 |
+| `<link>` in `index.html` | **0.151** | 92 |
 
-## 5. If this is worth acting on
+The link version pushes CLS past the 0.1 threshold, because text paints in a fallback
+face and reflows when Newsreader arrives. On a site whose whole argument is its
+typography, trading a measurable layout shift for a small improvement in discovery time
+is the wrong way round.
 
-In order of value per unit of effort. None of it should start before a baseline measurement
-exists, because otherwise there is no way to know whether it helped.
+Doing it properly needs `size-adjust` and the other fallback metric overrides on an
+`@font-face` for the fallback family, so the swap moves nothing. That is a real piece of
+work with its own verification, and it is item 2 in section 6 rather than something half
+done here. The `preconnect` stays either way and still shortens the handshake.
 
-1. **Measure first.** Run Lighthouse against the live site. Everything below is speculation
-   without it.
-2. **Self-host or drop the two icon fonts.** They are two third-party hosts on the critical
-   path, and this also closes a supply-chain exposure noted in `qa/SECURITY-AUDIT.md` S-005.
-3. **Lazy-load the rarely-entered public routes.** Legal, Verify and the resource detail page
-   are unlikely first landings and would come out of the eager entry.
-4. **Split `src/marketing/data/site.ts`** so a page loads only its own content.
-5. **Set a size budget** in the build so the entry chunk cannot drift upward unnoticed.
-6. **Audit the images in `public/`** for dimensions and format.
+## 4. Core Web Vitals, lab only
 
-## 6. Statuses
+Chrome DevTools performance trace, production build, local preview, no throttling.
 
-| Area | Status |
+| Page | LCP | CLS | TTFB | Render delay |
+|---|---|---|---|---|
+| `/` | 91 ms | **0.00** | 2 ms | 90 ms |
+| `/services` | 67 ms | **0.00** | 1 ms | 65 ms |
+
+CLS of exactly zero on both is the figure worth keeping. It is a property of the
+design rather than of the network: the layout reserves its space, the work ledger's
+image slots have a declared aspect ratio whether or not an image exists, and nothing
+animates position on load.
+
+LCP is dominated by render delay rather than resource loading, which is the expected
+shape for a client-rendered application with no server-rendered markup. On a real
+connection that delay is added to, not replaced by, network time.
+
+**Lighthouse, mobile emulation, production build, local:**
+
+| Category | Score |
 |---|---|
-| Bundle composition and code splitting | PASS. Measured, and the shape is right |
-| Eager entry chunk size | PARTIAL. Measured at 556.94 kB, above the warning threshold |
-| Core Web Vitals | NOT TESTED |
-| Third-party request cost | NOT TESTED |
-| Image optimisation | NOT TESTED |
-| API response time | NOT TESTED |
-| Database performance | NOT TESTED |
-| Server compression and caching headers | NOT TESTED |
+| Accessibility | 100 |
+| Best Practices | 100 |
+| SEO | 100 |
+| Agentic Browsing | 100 |
+
+54 audits passed, 0 failed. The Lighthouse **performance** category was not run, because
+a performance score from an unthrottled loopback preview would be meaningless.
+
+## 5. Still true, and still a limitation
+
+**The site is client-rendered with no prerender step.** A crawler or client that does
+not execute JavaScript receives `<div id="root"></div>` and nothing else, on every URL.
+Googlebot renders; most social scrapers and most LLM crawlers do not.
+
+Three things were done about it. None is a fix, and together they reduce the blast
+radius rather than removing it:
+
+- **The served `index.html` now describes the site correctly on its own.** It previously
+  carried the old studio title, "GAkinz — Web Design & Development Studio", and the old
+  studio description, which is what every non-rendering client saw. It now carries the
+  correct title, description, canonical, Open Graph and Twitter Card tags, a
+  `theme-color`, and a real `og.png` at 1200x630. A social scraper that never runs
+  JavaScript now gets an accurate card instead of a stale one.
+- **A `<noscript>` block** tells a visitor with JavaScript disabled who this is and gives
+  them an email address, rather than showing them an empty page.
+- **`public/llms.txt`** states the site's actual content in Markdown, for crawlers that
+  read it.
+
+What none of that fixes: the per-page content of the other fourteen routes. A scraper
+still sees the home page's metadata on every URL, because the per-route tags are written
+by React at runtime.
+
+The real fix is prerendering the public routes at build time. It is recorded in
+`docs/KNOWN-ISSUES.md` rather than attempted here, because it changes the build and the
+deploy and deserves its own decision.
+
+## 6. Remaining work, in order of likely benefit
+
+| # | Item | Why it matters |
+|---|---|---|
+| 1 | Prerender or statically render the public routes | Removes the empty-shell problem and most of the render delay in section 4 |
+| 2 | Move the fonts to a `<link>` **with `size-adjust` fallback metrics** | The naive move costs CLS 0.151, measured. It only pays off once the fallback face matches Newsreader's metrics so the swap moves nothing |
+| 3 | Subset the fonts, or drop a family | Four families for two surfaces. The CMS pair is downloaded on the public site only if a shared component pulls it |
+| 4 | Decide on `xlsx` | The only direct dependency with a HIGH advisory and no fix available. Used at `src/lib/csv.ts:5` |
+| 5 | Measure against the deployed host | Everything here is local. Compression, caching headers and TLS on the real host are UNVERIFIED |
+| 6 | Add `Cache-Control` and compression to `server/.htaccess` | It sets neither today |
+
+## 7. What is NOT TESTED
+
+- **No field data.** No real-user measurement, no CrUX entry.
+- **No measurement against the deployed site.** No server was contacted.
+- **No throttled run.** Every timing here is loopback with no CPU or network limit.
+- **No Lighthouse performance score**, deliberately, for the reason in section 4.
+- **No measurement of the CMS at `/app/*`.** Out of scope.
+- Compression, caching and HTTP protocol version on the live host are **UNVERIFIED**.
+  `server/.htaccess` configures none of them.
+
+## 8. How to re-run this
+
+```bash
+npm run build      # prints the chunk table
+npm run preview    # port 5102
+du -sh dist public
+npm audit
+```
+
+Then trace `http://127.0.0.1:5102/` in Chrome DevTools and record LCP, CLS and the
+breakdown, noting the throttling settings used. If you throttle, say so in the table:
+an unlabelled timing is worse than none.

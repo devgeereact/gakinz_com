@@ -16,6 +16,13 @@ header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Content-Type: application/json; charset=utf-8');
 
+// Baseline security headers on every API response. Deliberately no
+// Content-Security-Policy: the SPA has not been audited for one and a wrong
+// policy would break the site.
+header('X-Content-Type-Options: nosniff');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+header('X-Frame-Options: DENY');
+
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
   http_response_code(204);
   exit;

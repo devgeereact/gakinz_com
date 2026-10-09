@@ -84,7 +84,10 @@ if ($method === 'POST' && $action === 'link') {
   $cerr = curl_error($ch);
   curl_close($ch);
 
-  if ($res === false) fail('Payment request failed: ' . $cerr, 502);
+  if ($res === false) {
+    error_log('GAkinz Stripe link (transport): ' . $cerr);
+    fail('Could not reach the payment provider. Please try again.', 502);
+  }
   $data = json_decode($res, true) ?: [];
   if ($code >= 400) {
     error_log('GAkinz Stripe link: ' . ($data['error']['message'] ?? $res));

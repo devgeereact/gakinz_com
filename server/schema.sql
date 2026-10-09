@@ -514,3 +514,67 @@ CREATE TABLE IF NOT EXISTS content_drafts (
   deleted_at  TIMESTAMP NULL DEFAULT NULL,
   CONSTRAINT fk_draft_author FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Work / portfolio (public relaunch). New tables only — safe to run as-is on
+-- the live DB (CREATE TABLE IF NOT EXISTS). Served by work.php: published rows
+-- go to the public site, drafts stay inside the CMS.
+--
+-- `kind` and `status` are VARCHAR with their legal values in a trailing comment,
+-- matching the rest of this schema (no ENUM, no CHECK anywhere); work.php
+-- validates them with in_array(..., true). Images live in a child table rather
+-- than a JSON column, as proposal_items and invoice_items do, because the
+-- host's MySQL version is unverified. `alt` is not optional in practice: the
+-- public site must have real alt text for every image, and work.php refuses an
+-- addImage without it.
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS work (
+  id             INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  slug           VARCHAR(160)  NOT NULL UNIQUE,
+  kind           VARCHAR(20)   NOT NULL DEFAULT 'case_study',  -- case_study | product | experiment | writing
+  title          VARCHAR(200)  NOT NULL,
+  client_name    VARCHAR(160)  NULL,
+  client_consent TINYINT(1)    NOT NULL DEFAULT 0,
+  sector         VARCHAR(80)   NULL,
+  summary        VARCHAR(400)  NULL,
+  problem        TEXT          NULL,
+  built          TEXT          NULL,
+  outcome        TEXT          NULL,
+  live_url       VARCHAR(500)  NULL,
+  repo_url       VARCHAR(500)  NULL,
+  post_id        INT UNSIGNED  NULL,
+  started_on     DATE          NULL,
+  completed_on   DATE          NULL,
+  cover_file_id  INT UNSIGNED  NULL,
+  featured       TINYINT(1)    NOT NULL DEFAULT 0,
+  sort_order     INT           NOT NULL DEFAULT 0,
+  status         VARCHAR(10)   NOT NULL DEFAULT 'draft',       -- draft | published
+  created_at     TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at     TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_public (status, kind, sort_order),
+  KEY idx_slug (slug)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS work_images (
+  id          INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  work_id     INT UNSIGNED NOT NULL,
+  file_id     INT UNSIGNED NOT NULL,
+  caption     VARCHAR(300) NULL,
+  alt         VARCHAR(300) NULL,
+  sort_order  INT NOT NULL DEFAULT 0,
+  KEY idx_work (work_id, sort_order),
+  CONSTRAINT fk_work_images_work FOREIGN KEY (work_id) REFERENCES work(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Work images reuse the existing `files` share-token mechanism for public
+-- delivery (files.php?token=…). work.php issues a token, with no expiry, when
+-- an image is attached to a work record, so the owner never hand-issues a link
+-- per picture. files.share_token has no UNIQUE constraint, unlike
+-- proposals.share_token above, and the public lookup in files.php uses LIMIT 1,
+-- so a duplicate would silently serve the WRONG FILE. work.php checks a token is
+-- unused before writing it; this index is the second guard, turning a race into
+-- a loud error. Run it once against the live DB, AFTER checking for existing
+-- duplicates (see docs/DEPLOYMENT.md) — the ALTER fails if any exist:
+--   SELECT share_token, COUNT(*) c FROM files
+--     WHERE share_token IS NOT NULL GROUP BY share_token HAVING c > 1;   -- expect 0 rows
+--   ALTER TABLE files ADD UNIQUE KEY uk_file_share (share_token);  -- NULLs allowed; guards token collisions

@@ -1,23 +1,41 @@
 import { useEffect, useState } from "react"
 import { blog, type BlogSummary, type BlogPost } from "@/lib/api"
 import { insights, type Insight } from "./site"
-import type { MockVariant } from "../components/SiteMockup"
 
-// One normalised shape the marketing pages render, whether a post comes from the
-// CMS Blog module (live) or the curated static fallback in site.ts (pre-deploy).
+/**
+ * One normalised shape the writing pages render, whether a post comes from the
+ * CMS Blog module (live) or the curated static fallback in site.ts (pre-deploy).
+ *
+ * TWO FIELDS WERE REMOVED IN THE 2026-09-22 RELAUNCH.
+ *
+ * `readMins`. The static `Insight` type dropped it upstream because the figure
+ * was asserted per post with no basis. It has gone from here too rather than
+ * being kept as an optional CMS-only value, and the reason is that the CMS
+ * figure is not a measurement either: `posts.read_mins` is `INT NOT NULL
+ * DEFAULT 4` (server/schema.sql), the admin form opens at 4
+ * (src/app/modules/Blog.tsx) and server/blog.php clamps whatever arrives to
+ * 1..60 without ever deriving it from the body. So a post that no one edited
+ * would have printed "4 min read" as though someone had timed it. The date is
+ * real and is what the list now carries. If read_mins is later computed from
+ * the body, adding it back is a two-line change.
+ *
+ * `cover`. It held a `MockVariant` naming one of the generated SVG wireframes
+ * in SiteMockup, which is retired. Nothing replaced it: the writing index and
+ * the article page are designed to need no image, so an article without a real
+ * cover photograph is not a hole in the layout.
+ *
+ * `category` stays. It is a real editor-entered string on the CMS post, and
+ * the writing index uses the set of categories actually present as its filter
+ * list rather than inventing a fixed list of topics.
+ */
 export type MarketingPost = {
   slug: string
   title: string
   excerpt: string
   date: string
-  readMins: number
-  cover: MockVariant
   category: string
   bodyParas: string[]
 }
-
-const COVERS: MockVariant[] = ["article", "studio", "retail", "pro", "health"]
-const asCover = (s: string): MockVariant => (COVERS.includes(s as MockVariant) ? (s as MockVariant) : "article")
 
 function fromStatic(p: Insight): MarketingPost {
   return {
@@ -25,8 +43,6 @@ function fromStatic(p: Insight): MarketingPost {
     title: p.title,
     excerpt: p.excerpt,
     date: p.date,
-    readMins: p.readMins,
-    cover: "article",
     category: "Insight",
     bodyParas: p.body,
   }
@@ -38,8 +54,6 @@ function fromSummary(p: BlogSummary): MarketingPost {
     title: p.title,
     excerpt: p.excerpt ?? "",
     date: p.published_at ?? "",
-    readMins: p.read_mins,
-    cover: asCover(p.cover),
     category: p.category,
     bodyParas: [],
   }
@@ -54,7 +68,7 @@ function fromPost(p: BlogPost): MarketingPost {
 
 const staticPosts = insights.map(fromStatic)
 
-// List hook — CMS posts when available, otherwise the curated fallback.
+// List hook: CMS posts when available, otherwise the curated fallback.
 export function useMarketingBlog() {
   const [posts, setPosts] = useState<MarketingPost[]>(staticPosts)
   const [loading, setLoading] = useState(true)
@@ -80,7 +94,7 @@ export function useMarketingBlog() {
   return { posts, loading, fromCms }
 }
 
-// Single-post hook — CMS post by slug, falling back to a static insight.
+// Single-post hook: CMS post by slug, falling back to a static insight.
 export function useMarketingPost(slug: string | undefined) {
   const fallback = staticPosts.find((p) => p.slug === slug) ?? null
   const [post, setPost] = useState<MarketingPost | null>(fallback)

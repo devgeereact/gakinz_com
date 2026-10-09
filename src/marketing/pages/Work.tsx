@@ -1,117 +1,90 @@
-import { Check } from "lucide-react"
-import { work, processStages } from "@/marketing/data/site"
-import FadeIn from "../components/FadeIn"
-import SiteMockup, { variantForSector } from "../components/SiteMockup"
-import { PageHero, Section, FeatureRow, RuleEyebrow, CtaBand } from "../components/primitives"
+import Seo from "@/marketing/components/Seo"
+import { PageHero, Section, Label } from "@/marketing/components/primitives"
+import Ledger from "@/marketing/components/Ledger"
+import { KIND_LABELS, useWork, type WorkKind } from "@/marketing/data/work"
+import { useState } from "react"
+import { cn } from "@/lib/utils"
 
-const stats = [
-  { v: "One team", k: "Design + build" },
-  { v: "WCAG 2.1 AA", k: "Accessibility" },
-  { v: "Real devices", k: "Tested on" },
-  { v: "Fixed price", k: "Before work starts" },
-]
+/**
+ * /work — the full ledger.
+ *
+ * What the old page carried and no longer does: a four-cell statistics row
+ * whose contents were "One team", "WCAG 2.1 AA", "Real devices" and "Fixed
+ * price". Four slogans in a grid built for numbers. It is gone rather than
+ * restyled.
+ *
+ * The filters are real <button> elements that filter real state. The old
+ * /resources page rendered topic chips as inert <span>s styled to look like
+ * filters, which is worse than having none.
+ */
+
+const ORDER: WorkKind[] = ["case_study", "product", "experiment", "writing"]
 
 export default function Work() {
+  const { records, loading } = useWork()
+  const [kind, setKind] = useState<WorkKind | "all">("all")
+
+  const present = ORDER.filter((k) => records.some((r) => r.kind === k))
+  const shown = kind === "all" ? records : records.filter((r) => r.kind === kind)
+
   return (
     <>
+      <Seo
+        title="Selected work"
+        description="Records of client work, products I own and experiments, with what was built, what it solved and what came of it."
+        path="/work"
+      />
+
       <PageHero
-        eyebrow="Our work"
-        title="Sites we have designed and built"
-        intro="A selection of projects. Each was designed and built by the same team, from first sketch to launch — and each is a site the client can run, not one that needs us forever."
+        eyebrow="Selected work"
         breadcrumb="Work"
+        title="A record of what I have built, and what it was for."
+        intro="Four kinds of record: client work, things I built and own, experiments, and writing. Every field is either true or marked as missing. Nothing here is filled in to make the page look busier."
       />
 
-      {/* Stat row */}
       <Section>
-        <div className="grid border-t border-[hsl(var(--gk-indigo)/0.14)] sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map((s) => (
-            <FadeIn key={s.k}>
-              <div className="border-b border-[hsl(var(--gk-indigo)/0.14)] py-8 sm:px-7 lg:border-b-0 lg:[&:not(:first-child)]:border-l lg:[&:not(:first-child)]:border-[hsl(var(--gk-indigo)/0.14)] lg:first:pl-0">
-                <div className="font-serif text-2xl font-bold sm:text-[1.7rem]">{s.v}</div>
-                <div className="mt-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">{s.k}</div>
-              </div>
-            </FadeIn>
-          ))}
-        </div>
-      </Section>
-
-      {/* Case studies */}
-      <Section muted>
-        <RuleEyebrow>Selected work</RuleEyebrow>
-        <h2 className="mt-4 max-w-2xl font-serif text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.05]">
-          The challenge, the approach, the result
-        </h2>
-        <div className="mt-12">
-          {work.map((w, i) => (
-            <FadeIn key={w.title}>
-              <FeatureRow
-                index={String(i + 1).padStart(2, "0")}
-                eyebrow={w.sector}
-                flip={i % 2 === 1}
-                title={w.title}
-                media={
-                  <div className="relative overflow-hidden rounded-2xl border border-[hsl(var(--gk-indigo)/0.1)] shadow-xl shadow-[hsl(var(--gk-violet)/0.12)]">
-                    <div className="aspect-[16/10] w-full">
-                      <SiteMockup variant={variantForSector(w.sector)} />
-                    </div>
-                  </div>
-                }
-              >
-                <p className="mt-4 max-w-md leading-relaxed text-muted-foreground">{w.summary}</p>
-                <dl className="mt-6 space-y-4 border-t border-[hsl(var(--gk-indigo)/0.14)] pt-5">
-                  <div className="grid grid-cols-[6.5rem_1fr] gap-3">
-                    <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Challenge</dt>
-                    <dd className="text-sm text-foreground">{w.challenge}</dd>
-                  </div>
-                  <div className="grid grid-cols-[6.5rem_1fr] gap-3">
-                    <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Approach</dt>
-                    <dd className="text-sm text-foreground">{w.approach}</dd>
-                  </div>
-                  <div className="grid grid-cols-[6.5rem_1fr] gap-3">
-                    <dt className="text-xs font-semibold uppercase tracking-[0.12em] text-[hsl(var(--gk-violet))]">Result</dt>
-                    <dd className="flex items-start gap-2 text-sm font-medium text-foreground">
-                      <Check className="mt-0.5 h-4 w-4 flex-shrink-0 text-emerald-500" /> {w.result}
-                    </dd>
-                  </div>
-                </dl>
-                <div className="mt-5 flex flex-wrap gap-2">
-                  {w.services.map((s) => (
-                    <span key={s} className="rounded-full border border-[hsl(var(--gk-violet)/0.25)] px-2.5 py-1 text-xs font-medium text-[hsl(var(--gk-violet))]">
-                      {s}
-                    </span>
-                  ))}
-                </div>
-              </FeatureRow>
-            </FadeIn>
-          ))}
-        </div>
-      </Section>
-
-      {/* Process recap */}
-      <Section>
-        <RuleEyebrow>How every project runs</RuleEyebrow>
-        <h2 className="mt-4 max-w-2xl font-serif text-3xl font-bold tracking-tight sm:text-[2.6rem] sm:leading-[1.05]">
-          A clear path, every time
-        </h2>
-        <div className="mt-12 grid grid-cols-1 border-t border-[hsl(var(--gk-indigo)/0.14)] lg:grid-cols-5">
-          {processStages.map((stage) => (
-            <div
-              key={stage.n}
-              className="border-b border-[hsl(var(--gk-indigo)/0.14)] py-7 lg:border-b-0 lg:px-6 lg:[&:not(:first-child)]:border-l lg:[&:not(:first-child)]:border-[hsl(var(--gk-indigo)/0.14)] lg:first:pl-0"
-            >
-              <span className="font-serif text-4xl font-extrabold text-[hsl(var(--gk-indigo)/0.12)]">{stage.n}</span>
-              <h3 className="mt-3 text-base font-semibold">{stage.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{stage.what}</p>
+        {present.length > 1 && (
+          <div className="pb-10">
+            <Label as="h2" className="mb-4">
+              Filter by kind
+            </Label>
+            <div className="flex flex-wrap gap-2">
+              {(["all", ...present] as const).map((k) => {
+                const active = kind === k
+                const label = k === "all" ? "Everything" : KIND_LABELS[k].name
+                const count = k === "all" ? records.length : records.filter((r) => r.kind === k).length
+                return (
+                  <button
+                    key={k}
+                    type="button"
+                    onClick={() => setKind(k)}
+                    aria-pressed={active}
+                    className={cn(
+                      "inline-flex min-h-[2.75rem] items-center gap-2 border px-4 text-body",
+                      active
+                        ? "border-gk-set bg-gk-set text-gk-paper"
+                        : "border-gk-edge text-gk-ink-soft hover:border-gk-ink hover:text-gk-ink",
+                    )}
+                  >
+                    {label}
+                    <span className="font-data text-label">{count}</span>
+                  </button>
+                )
+              })}
             </div>
-          ))}
+          </div>
+        )}
+
+        <div aria-live="polite" aria-busy={loading}>
+          {shown.length > 0 ? (
+            <Ledger records={shown} headingLevel="h3" />
+          ) : (
+            <p className="border-y border-gk-edge py-12 text-lede text-gk-ink-soft">
+              Nothing of that kind yet.
+            </p>
+          )}
         </div>
       </Section>
-
-      <CtaBand
-        title="Want a project like one of these?"
-        intro="Tell us about your business and where you want it to go. We'll show you what a site built by one team can do."
-        cta="Get in touch"
-      />
     </>
   )
 }

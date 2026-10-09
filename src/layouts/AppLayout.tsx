@@ -26,8 +26,6 @@ export default function AppLayout() {
 
   const isExpanded = open || hovered
 
-  const [themesopen, themessetOpen] = useState(false)
-
   // Handle header background on scroll
   useEffect(() => {
     const onScroll = () => {

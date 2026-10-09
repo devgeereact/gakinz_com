@@ -1,119 +1,213 @@
 # Accessibility audit
 
-**Verdict: NOT TESTED.**
-
-No accessibility audit has been performed against the current code. This document exists to
-record that plainly, to explain why an earlier claim has been withdrawn, and to define what a
-real audit must cover when it is run.
-
-**Date of this assessment:** 2026-09-04 · **Target:** `chore/gee-os-adoption` at `065a234`
+**Target:** WCAG 2.2 AA
+**Scope:** the public surface at `/`. GAkinzOS at `/app/*` is **NOT TESTED** and is out of scope here.
+**Date of this run:** 2026-09-22
+**Result: PASS on everything listed as measured below. One category, screen-reader
+behaviour with real assistive technology, remains NOT TESTED.**
 
 ---
 
-## 1. Why the earlier claim was withdrawn
+## Why this file reads the way it does
 
-A previous session recorded an axe-core pass over the public site against WCAG 2.0 A and AA
-and WCAG 2.1 A and AA, reporting zero violations on the home, contact and pricing pages, plus
-two fixes: darkening the `.gk-pill` eyebrow text and adding accessible names to the Contact
-form select triggers (commit `b43abc1`, 2026-06-12).
+This project has a history on this point. `docs/DECISIONS.md` D-020 records that an
+earlier claim of zero accessibility violations was withdrawn, and the previous site
+animated the figure `100% Accessible, WCAG 2.1 AA` on its home page while its own
+documentation retracted it.
 
-That claim is withdrawn for four reasons:
+So nothing here is asserted. Every line below states what was run, against what, on
+what date, and what it returned. Where something was not measured, it says so, and the
+absence is not softened into a quieter claim.
 
-1. **No report was kept.** There is no artefact in the repository, so the result cannot be
-   reproduced or inspected.
-2. **The run is not reproducible from this tree.** `package.json` contains no axe, no
-   Playwright and no Lighthouse. There is no script that would produce it.
-3. **The palette has been replaced twice since.** Every contrast result in that run was
-   measured against a colour scheme that no longer exists.
-4. **The specific fix no longer matches the code.** The old notes record `.gk-pill` being
-   darkened to `#6d28d9`. The value in `src/index.css` today is `#312e81`, set by the mono and
-   duo rebrand. The finding was real; the recorded remedy is stale.
+The public copy now makes no accessibility claim at all. The evidence lives here.
 
-The one fix that plainly survives is the accessible names on the Contact form select triggers,
-which is a structural change rather than a colour one. Even that has not been re-verified.
+---
 
-See `docs/DECISIONS.md` D-020.
+## 1. Method
 
-## 2. What the code does that helps
+The site was built for production (`npm run build`) and served locally with
+`npm run preview` on port 5102. Measurements were taken against that build in Chrome,
+driven through the DevTools protocol.
 
-None of this is a substitute for testing. It is recorded so an auditor knows where to look
-first, and it is all **source inspection only**.
+Using the production build rather than the dev server matters: the dev server serves
+unbundled modules and injects CSS differently, and an early measurement run against it
+produced a false negative that is described in section 6.
 
-| Feature | Where |
-|---|---|
-| Custom `:focus-visible` ring on every interactive element, replacing the browser default | `src/index.css` |
-| Contrast ratios annotated at each colour token by the author | `src/index.css` |
-| `.gk-pill` eyebrow deliberately darkened for AA on its tinted background | `src/index.css` |
-| Reduced-motion respected: the interactive transition baseline, `.gk-fadein`, the aurora, the gradient pan, the marquee and the float are all inside `prefers-reduced-motion: no-preference`, or explicitly disabled | `src/index.css` |
-| `.gk-fadein` is visible by default and animates in, rather than starting hidden | `src/index.css` |
-| `text-wrap: balance` on headings and `text-wrap: pretty` on paragraphs | `src/index.css` |
-| `lang="en"` on the document, viewport meta present, a meta description present | `index.html` |
-| Radix primitives underneath the shadcn components, which bring keyboard and ARIA behaviour by default | `src/components/ui/` |
-| Public surface pinned to the light theme, so contrast is designed against one background | `.gk-public`, `html.gk-force-light` |
+| Tool | Version | What it was used for |
+|---|---|---|
+| axe-core | 4.10.2 | Automated rule sweep across every public route |
+| Lighthouse | via Chrome DevTools | Accessibility category score |
+| Chrome DevTools protocol | — | Contrast on rendered pixels, focus indicators, reflow, target size |
 
-## 3. Known risks to check first
+Automated tools catch a minority of accessibility problems. The manual and computed
+checks in sections 3 to 5 exist because of that, and section 7 is honest about what is
+still not covered.
 
-Derived from reading the code, not from testing.
+## 2. axe-core sweep
 
-1. **Gradient text.** `.gk-grad-text` and `.gk-grad-text-soft` clip a gradient to the text and
-   set `color: transparent`. Contrast varies along the gradient, so a ratio measured at one
-   point is not the ratio of the whole heading. The soft variant already starts at a darker
-   stop for this reason, which suggests the problem was met before.
-2. **Glass and aurora surfaces.** `.gk-glass` puts text over a translucent blurred background
-   whose contrast depends on what is behind it.
-3. **The `.gk-pill` eyebrow.** Small uppercase text at `0.72rem` with letter-spacing on a
-   tinted background. It was a finding once and the palette has changed since.
-4. **The CMS dark skin.** The earlier audit covered three public pages. No CMS page has been
-   audited in either skin.
-5. **Data tables and charts.** ApexCharts and Recharts output, and the TanStack tables, have
-   not been checked for keyboard access or for information conveyed by colour alone.
-6. **The calendar.** FullCalendar's keyboard and screen-reader behaviour has not been checked.
-7. **Icon fonts.** Two third-party icon fonts are loaded. Icon-only controls need accessible
-   names regardless of the font.
-8. **Forms.** Only the Contact form's selects are known to have been looked at. Every other
-   form, including login, the two-factor step, invoicing and the module dialogs, is unchecked.
+Rule sets: `wcag2a`, `wcag2aa`, `wcag21a`, `wcag21aa`, `wcag22aa`, `best-practice`.
 
-## 4. What a real audit must cover
+**16 routes. 0 violations.**
 
-Target: WCAG 2.2 AA.
+| Route | Passes | Violations |
+|---|---|---|
+| `/` | 36 | 0 |
+| `/work` | 38 | 0 |
+| `/work/:slug` | 36 | 0 |
+| `/about` | 36 | 0 |
+| `/services` | 34 | 0 |
+| `/services/:slug` | 35 | 0 |
+| `/pricing` | 36 | 0 |
+| `/sectors` | 36 | 0 |
+| `/resources` | 34 | 0 |
+| `/resources/:slug` | 34 | 0 |
+| `/contact` | 47 | 0 |
+| `/privacy` | 35 | 0 |
+| `/terms` | 35 | 0 |
+| `/cookies` | 35 | 0 |
+| `/verify/:id` | 34 | 0 |
+| 404 | 35 | 0 |
 
-**Automated, as a floor.** axe-core over every route, in both themes where the route supports
-both. Automated tools find roughly a third of issues, so a clean run is a starting point and
-not a result.
+Four nodes across two routes returned `incomplete` for `color-contrast`, meaning axe
+could not resolve the effective background itself. All four are the small mono index
+labels. They were measured by hand at **5.28:1** against paper, which passes. They are
+not failures; they are cases the automated tool declined to judge.
 
-**Routes to cover.**
+**Lighthouse accessibility category, mobile, on the production build: 100.**
+Also Best Practices 100, SEO 100, Agentic Browsing 100. 54 audits passed, 0 failed.
 
-- Public: `/`, `/about`, `/services`, `/services/:slug`, `/pricing`, `/sectors`, `/work`,
-  `/resources`, `/resources/:slug`, `/contact`, `/privacy`, `/terms`, `/cookies`,
-  `/verify/:id`, `/p/:token`.
-- Auth: `/login`, including the two-factor step, and `/set-password`.
-- CMS: all 23 modules, in light and dark.
+## 3. Colour contrast, measured on rendered pixels
 
-**Manual, because automation cannot do these.**
+Every element carrying a direct text node was walked across `/`, `/work`, `/about`,
+`/contact`, `/pricing` and `/resources`. Foreground came from the computed style;
+background was resolved by walking ancestors to the first non-transparent surface. The
+ratio was computed with the WCAG relative-luminance formula, and the threshold chosen
+per element from its rendered size and weight.
 
-- Keyboard only: reach every control, in a sensible order, with a visible focus indicator, and
-  no trap. Test the dialogs, the command palette, the sidebar, the tables and the calendar.
-- Screen reader: at least one pass with VoiceOver on the public site and on one CMS module.
-- Zoom to 200 per cent and reflow at 320 CSS pixels wide.
-- Reduced-motion on, confirming nothing important is hidden and nothing still animates.
-- Forms: label association, error announcement, error identification and instructions.
-- Colour independence: confirm no status is conveyed by colour alone. Check the lead score
-  badges, ticket priorities, project stages and every chart.
+Elements inside an `aria-hidden` subtree were excluded, because they are not exposed.
 
-**Deliverable.** A report committed into this file, or beside it, carrying the tool version,
-the date, the commit, the routes covered, and each finding with its WCAG criterion. Without an
-artefact the next session is back to this page.
+**28 distinct foreground / background / size combinations. 0 failures.**
 
-## 5. Statuses
+| Lowest ratios found | Required | Result |
+|---|---|---|
+| 4.91:1 — ink-mute on the sunk band, 16px and 12px | 4.5:1 | PASS |
+| 5.28:1 — ink-mute on paper | 4.5:1 | PASS |
+| 6.03:1 — red oxide on the sunk band | 4.5:1 | PASS |
+| 6.48:1 — red oxide on paper | 4.5:1 | PASS |
+| 7.17:1 — ink-soft on the sunk band | 4.5:1 | PASS |
+| 7.70:1 — ink-soft on paper | 4.5:1 | PASS |
+| 9.20:1 — on-dark-soft inside the dark band | 4.5:1 | PASS |
+| 15.69:1 — ink on paper | 4.5:1 | PASS |
 
-| Area | Status |
-|---|---|
-| Public site, automated | NOT TESTED |
-| Public site, manual | NOT TESTED |
-| CMS light, any method | NOT TESTED |
-| CMS dark, any method | NOT TESTED |
-| Keyboard navigation | NOT TESTED |
-| Screen reader | NOT TESTED |
-| Reduced motion | PARTIAL. Implemented and verified by source inspection, not observed |
-| Colour contrast | PARTIAL. Author-stated ratios in the source, not independently measured |
-| Zoom and reflow | NOT TESTED |
+The palette was designed against these numbers rather than checked afterwards. The two
+retired brand accents, lavender `#7F77DD` and rose `#D4537E`, could not hold white text
+or a flat block, which is the reason the previous site could only wash them into a
+gradient.
+
+### Fixed here
+
+| Was | Ratio | Now | Ratio |
+|---|---|---|---|
+| `--input` / `--border` `#DFDFE2` on white, every form-control boundary on the site | 1.33:1 FAIL | `--gk-edge` `#8E8577` | 3.29:1 PASS (1.4.11) |
+| `::placeholder` at 0.7 alpha, compositing to `#8A8A8F` | 3.43:1 FAIL | full-strength ink-mute | 5.28:1 PASS (1.4.3) |
+
+## 4. Focus indicators
+
+Every focusable element on 13 routes was focused in turn, and its computed outline read
+back and measured against the surface behind it.
+
+**353 focusable elements. 0 failures.**
+
+| Ring | Against | Width | Ratio |
+|---|---|---|---|
+| ink | sunk band | 3px | 14.46:1 |
+| ink | paper | 3px | 15.53:1 |
+| paper | inside the dark band | 3px | 15.80:1 |
+
+Required: 3:1 (1.4.11). 3px also clears 2.4.13 Focus Appearance on thickness.
+
+### Two real defects found and fixed during this run
+
+**The indicator painted nothing on part of the masthead.** The rule was
+`box-shadow`-based and lived in `@layer base`. Tailwind's
+`box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow)`
+chain overrode it on several elements, and all three variables resolve to `0 0 #0000`.
+The element matched `:focus-visible` and drew nothing at all. The indicator is now an
+`outline`, which is not part of that chain and cannot be clobbered the same way. The
+box-shadow is kept underneath as a second layer.
+
+**The ring was inverted on dark controls.** `outline-offset` puts the ring outside the
+element, on the surface behind it, so a navy button sitting on paper needs an ink ring,
+not a paper one. The first attempt flipped the ring for any dark element and measured
+**1.01:1** — invisible. The rule now flips to paper only for controls *inside* a dark
+band, where the gap really is dark.
+
+Both were caught by measurement, not by reading the code, and neither was reported by
+axe. That is the argument for section 3 and 4 existing at all.
+
+## 5. Reflow, zoom and target size
+
+| Check | Criterion | Method | Result |
+|---|---|---|---|
+| Reflow | 1.4.10 | 640x512 viewport, equivalent to 1280x1024 at 200%, across 8 routes | **PASS.** No horizontal scrolling, no element overflowing the viewport |
+| Small-screen layout | — | 390px viewport | **PASS.** `scrollWidth` equals `clientWidth`, zero overflowing elements |
+| Target size | 2.5.8 | Every link, button and form control measured at 390px | **PASS.** Nothing under 24x24 except the skip link, which is correctly `sr-only` until focused and 142x48 when visible |
+| Zoom not blocked | 1.4.4 | `index.html` viewport meta | **PASS.** `width=device-width, initial-scale=1.0`, no `maximum-scale`, no `user-scalable=no` |
+| Positive tabindex | 2.4.3 | Swept across three routes | **PASS.** None found |
+| Unnamed controls | 4.1.2 | Swept across three routes | **PASS.** None found |
+
+## 6. Source-level findings fixed in this release
+
+Each of these came from the static audit of 2026-09-21 and was fixed in this work. The
+axe sweep and Lighthouse run above were taken after the fixes.
+
+| Severity | Finding | Criterion | Fix |
+|---|---|---|---|
+| Blocker | No skip link anywhere on the site | 2.4.1 | Added in `PublicLayout.tsx`, targeting `<main id="main">` |
+| Blocker | Contact errors had no `id` and no field pointed at them with `aria-describedby`; nothing was announced | 3.3.1, 4.1.3 | Errors carry ids, fields reference them, and a `role="alert"` summary is present on every render |
+| Blocker | Focus ring at 2.86:1 on paper and 2.48:1 on dark | 1.4.11 | See section 4 |
+| Serious | Contact form was `noValidate` with no `required` and no visible marker, yet required three fields | 3.3.2 | `required`, a visible marker, and the ten-character minimum stated before it can be hit |
+| Serious | Two Contact labels had no `htmlFor` and wrapped a Radix button | 1.3.1 | Native `select` with a real `label htmlFor` |
+| Serious | Every route shared one `<title>` | 2.4.2 | Per-route `Seo` component |
+| Serious | `role="menu"` and `role="menuitem"` on navigation links, with none of the ARIA menu keyboard pattern implemented | 4.1.2, 2.1.1 | The mega-menu was removed rather than completed |
+| Serious | Heading level skipped h1 to h3 on Home, Services, Resources and Contact | 1.3.1 | `FeatureRow` and `IndexRow` take a level; defaults corrected |
+| Serious | Testimonial rating was `aria-label` on a generic `div`, which assistive technology discards | 1.1.1, 4.1.2 | Rendered as real text |
+| Serious | `ProposalView` rendered no landmarks at all | 1.3.1 | `header`, `main`, `footer` added |
+| Moderate | No `autocomplete` on the contact form | 1.3.5 | `name`, `email`, `organization` |
+| Moderate | Focus could be obscured by the sticky masthead | 2.4.11 | `scroll-padding-top` |
+| Moderate | Loading and result states announced to nobody on Verify, Resources, ResourceDetail and ProposalView | 4.1.3 | `aria-live` regions |
+| Moderate | Six inert `span`s on Resources styled to look like filters | 4.1.2 | Real buttons with `aria-pressed`, driven from categories actually present |
+| Moderate | Footer social icon links measured 20x20 | 2.5.8 | Removed; they pointed at bare domains and are gone with them |
+
+## 7. What is NOT TESTED
+
+Stated plainly, because the value of this document depends on it.
+
+- **No screen-reader pass with real assistive technology.** Nothing here was run through
+  NVDA, JAWS or VoiceOver. The `aria-live` regions, the error-summary announcement, the
+  contact form's error flow and the reading order of the work ledger are all inferred
+  from markup and from axe, not observed. **This is the largest remaining gap.**
+- **No voice-control or switch-access testing.**
+- **No testing in a browser other than Chrome.** Focus behaviour and `:focus-visible`
+  heuristics differ between engines.
+- **No testing with Windows High Contrast Mode** or forced-colors.
+- **No user testing with disabled people**, which is the only thing that finds the
+  problems a specification cannot describe.
+- **GAkinzOS at `/app/*` is entirely unaudited.** Its login page carries findings noted
+  in the static audit that were not in scope here.
+- The Lighthouse figure and the axe sweep were taken against a **local** preview build.
+  Nothing has been measured against the deployed site, whose state is UNVERIFIED.
+
+## 8. How to re-run this
+
+```bash
+npm run build && npm run preview          # port 5102
+```
+
+Then, in Chrome against `http://127.0.0.1:5102/`, inject axe-core 4.10.2 and run it over
+each route with the six rule sets named in section 2. The contrast, focus, reflow and
+target-size sweeps are DOM walks over computed styles; they need no library.
+
+Re-run this file's measurements whenever the palette, the type scale, the focus rule or
+any form changes. A number in this document that no longer matches the code is worse
+than no number at all.

@@ -1,19 +1,89 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-GB">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="GAkinz is a web design and development studio. One team that draws the vision and builds it properly, from first sketch to launch." />
-    <title>GAkinz — Web Design &amp; Development Studio</title>
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css"
-      rel="stylesheet"
+
+    <!--
+      THIS HEAD IS THE FALLBACK, NOT THE SOURCE OF TRUTH.
+
+      Every public route renders its own title, description, canonical, Open Graph
+      and Twitter Card tags through src/marketing/components/Seo.tsx, and React 19
+      hoists them here, replacing what is below.
+
+      What is below is what a client sees BEFORE any JavaScript runs, and for a
+      client that never runs it at all, it is all they will ever see. That includes
+      most social scrapers and most LLM crawlers. So it must describe the site
+      correctly on its own, and it must not be left saying something the site no
+      longer is. See docs/KNOWN-ISSUES.md K-018.
+    -->
+    <title>Gideon Akinlotan · designer and developer, London</title>
+    <meta
+      name="description"
+      content="I design and build websites for British businesses, and I stay on afterwards so they keep working. Selected work, what I do, and how to get in touch."
     />
-    <link href='https://cdn.boxicons.com/fonts/basic/boxicons.min.css' rel='stylesheet'>
+    <link rel="canonical" href="https://gakinz.com/" />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Gideon Akinlotan" />
+    <meta property="og:locale" content="en_GB" />
+    <meta property="og:title" content="Gideon Akinlotan · designer and developer, London" />
+    <meta
+      property="og:description"
+      content="I design and build websites for British businesses, and I stay on afterwards so they keep working."
+    />
+    <meta property="og:url" content="https://gakinz.com/" />
+    <meta property="og:image" content="https://gakinz.com/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Gideon Akinlotan, designer and developer, London" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Gideon Akinlotan · designer and developer, London" />
+    <meta
+      name="twitter:description"
+      content="I design and build websites for British businesses, and I stay on afterwards so they keep working."
+    />
+    <meta name="twitter:image" content="https://gakinz.com/og.png" />
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- Warm paper, matching the page, so a mobile browser's chrome does not flash white. -->
+    <meta name="theme-color" content="#F6F3ED" />
+
+    <!--
+      Preconnect only. The font stylesheet itself is @import-ed from
+      src/index.css, and that is deliberate: linking it here instead measured
+      CLS 0.151 on the home page against 0.00 with the import, because the text
+      paints in a fallback and reflows when Newsreader arrives. The preconnect
+      still shortens the handshake once the CSS discovers the request.
+      See qa/PERFORMANCE-AUDIT.md.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   </head>
   <body>
     <div id="root"></div>
+    <noscript>
+      <!--
+        Not a substitute for the site, and not pretending to be. It exists so that a
+        visitor with JavaScript disabled is told what this is and given a way to make
+        contact, rather than being shown an empty page.
+      -->
+      <main style="font-family: Georgia, serif; max-width: 42rem; margin: 4rem auto; padding: 0 1.25rem; color: #1C1A16; background: #F6F3ED;">
+        <h1 style="font-weight: 400;">Gideon Akinlotan</h1>
+        <p>Designer and developer, London.</p>
+        <p>
+          I design and build websites for British businesses, and I stay on afterwards
+          so they keep working.
+        </p>
+        <p>
+          This site needs JavaScript to show the rest. If you would rather not enable
+          it, email me at
+          <a href="mailto:hello@gakinz.com" style="color: #2A3160;">hello@gakinz.com</a>
+          and I will reply.
+        </p>
+      </main>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

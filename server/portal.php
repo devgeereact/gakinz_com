@@ -14,14 +14,20 @@ require __DIR__ . '/_bootstrap.php';
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') fail('Method not allowed.', 405);
 $user = require_auth($conn);
 
+// Staff who may preview an arbitrary client's portal. This response carries
+// invoice data, which invoices.php restricts to these three roles, so the
+// preview branch must match it — otherwise an employee, editor or trainer
+// reads billing they are not allowed to see anywhere else.
+const PORTAL_PREVIEW_ROLES = ['super_admin', 'admin', 'manager'];
+
 // Isolation guarantee: a `client`-role user can ONLY ever see their own portal.
 // We derive the client_id from their account and IGNORE any query param, so one
 // client can never read another's projects/invoices/tickets by changing the URL.
-// Staff (any other role) may pass ?client_id to preview a given client's portal.
 if ($user['role'] === 'client') {
   $clientId = (int)($user['client_id'] ?? 0);
   if ($clientId <= 0) fail('Your account is not linked to a client.', 403);
 } else {
+  if (!in_array($user['role'], PORTAL_PREVIEW_ROLES, true)) fail('Not allowed.', 403);
   $clientId = (int)($_GET['client_id'] ?? 0);
   if ($clientId <= 0) fail('A client_id is required.');
 }

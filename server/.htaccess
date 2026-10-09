@@ -27,7 +27,15 @@ RewriteRule ^ index.html [L]
   Require all denied
 </FilesMatch>
 
-# Never serve docs, SQL, logs, or deploy state from the doc root
-<FilesMatch "\.(md|sql|log)$|^(error_log|\.ftp-deploy-sync-state\.json|\.ftpquota)$">
+# Never serve docs, SQL, logs, plain-text notes, or deploy state from the doc
+# root. `.txt` is covered because a generated seed password once landed there.
+# robots.txt and llms.txt are the two plain-text files the site must serve, so
+# the leading negative lookahead exempts both by name. llms.txt ships in dist/
+# to this same document root and would otherwise return 403. The exemption is inside the pattern
+# rather than in a later <Files "robots.txt"> allow block on purpose: one rule
+# decides the outcome, with no dependence on how the server merges overlapping
+# <Files>/<FilesMatch> sections. sitemap.xml is not matched by either branch
+# and is served normally.
+<FilesMatch "^(?!robots\.txt$|llms\.txt$).*\.(md|sql|log|txt)$|^(error_log|\.ftp-deploy-sync-state\.json|\.ftpquota)$">
   Require all denied
 </FilesMatch>
