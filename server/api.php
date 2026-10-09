@@ -1,40 +1,22 @@
 <?php
 /**
- * Smoke-test endpoint (build order step 1).
- * Proves React → PHP → MySQL works before any features are built.
- *   GET  /api.php        → list items  (returns [] on an empty table)
- *   POST /api.php {name} → insert one item, returns it
+ * Health check (build order step 1). Unauthenticated and read-only: it proves
+ * PHP runs and the database connection works, and nothing else.
+ *
+ *   GET /api.php → { ok: true, php: "8.x.y", db: true }
+ *
+ * It used to list and INSERT rows in `items`, which let anyone write to the
+ * production database. Both branches were removed; the endpoint now touches no
+ * application table and never mutates anything.
  */
 require __DIR__ . '/_bootstrap.php';
 
-$method = $_SERVER['REQUEST_METHOD'];
+if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') fail('Method not allowed.', 405);
 
-if ($method === 'GET') {
-  $rows = [];
-  if ($res = $conn->query('SELECT id, name, created_at FROM items ORDER BY id DESC LIMIT 100')) {
-    while ($r = $res->fetch_assoc()) {
-      $r['id'] = (int)$r['id'];
-      $rows[] = $r;
-    }
-  }
-  ok($rows);
+$db = false;
+if ($res = $conn->query('SELECT 1 AS ping')) {
+  $db = (int)($res->fetch_assoc()['ping'] ?? 0) === 1;
 }
+if (!$db) fail('Database connection failed.', 500);
 
-if ($method === 'POST') {
-  $name = str_field(body(), 'name', 200);
-  if ($name === '') fail('Name is required.');
-
-  $stmt = $conn->prepare('INSERT INTO items (name) VALUES (?)');
-  $stmt->bind_param('s', $name);
-  if (!$stmt->execute()) fail('Insert failed.', 500);
-
-  $id = $conn->insert_id;
-  $sel = $conn->prepare('SELECT id, name, created_at FROM items WHERE id = ?');
-  $sel->bind_param('i', $id);
-  $sel->execute();
-  $item = $sel->get_result()->fetch_assoc();
-  $item['id'] = (int)$item['id'];
-  ok($item, 201);
-}
-
-fail('Method not allowed.', 405);
+ok(['ok' => true, 'php' => PHP_VERSION, 'db' => true]);
