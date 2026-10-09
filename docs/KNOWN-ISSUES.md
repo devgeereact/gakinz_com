@@ -7,20 +7,31 @@ Severity is judged on impact to the live business, not on how hard it is to fix.
 
 | ID | Issue | Severity | Status |
 |---|---|---|---|
-| K-001 | A live super-admin credential is in git history | Critical | Open, rotation UNVERIFIED |
-| K-002 | Lint fails: 60 errors, 7 warnings | Medium | Open, recorded not fixed |
-| K-003 | `config.php.example` named a retired mail host | Medium | **Fixed in the template.** Server value UNVERIFIED |
-| K-004 | `api.php` accepts an unauthenticated POST | Medium | Open |
-| K-005 | `contact.php` has no spam protection | Medium | Open |
-| K-006 | Deployed server state is unknown | Medium | Open, needs server access |
-| K-007 | No MIME allowlist on upload | Low to medium | Open |
-| K-008 | Accessibility is unmeasured | Medium | Open, NOT TESTED |
-| K-009 | Marketing entry chunk is 556.94 kB | Low | Open |
-| K-010 | No backup procedure is known to exist | High | Open, outside this repository |
-| K-011 | `access.ts` can drift from the server role lists | Low | Open, no automated check |
-| K-012 | Stale design residue in `src/index.css` | Cosmetic | Open |
+| K-001 | A live super-admin credential is in git history | Critical | **Open. Rotation UNVERIFIED. Blocks launch** |
+| K-002 | Lint fails | Medium | Open. Now 47 errors, 2 warnings, down from 60 and 7 |
+| K-003 | `config.php.example` named a retired mail host | Medium | Fixed in the template. Server value UNVERIFIED |
+| K-004 | `api.php` accepts an unauthenticated POST | Medium | **Fixed 2026-09-22.** Not uploaded |
+| K-005 | `contact.php` has no spam protection | Medium | **Fixed 2026-09-22.** Not uploaded |
+| K-006 | Deployed server state is unknown | Medium | Open. Needs server access |
+| K-007 | No MIME allowlist on upload | Low to medium | **Fixed 2026-09-22.** Not uploaded |
+| K-008 | Accessibility is unmeasured | Medium | **Closed 2026-09-22.** Measured. See `qa/ACCESSIBILITY-AUDIT.md` |
+| K-009 | Marketing entry chunk is 556.94 kB | Low | **Closed 2026-09-22.** Now 181.76 kB |
+| K-010 | No backup procedure is known to exist | High | Open. Outside this repository |
+| K-011 | `access.ts` can drift from the server role lists | Low | **Mostly closed 2026-09-22.** Three mismatches fixed, tests added |
+| K-012 | Stale design residue in `src/index.css` | Cosmetic | **Closed 2026-09-22** |
 | K-013 | Four shared includes are outside the `.htaccess` deny rule | Informational | Open |
-| K-014 | `auth.php` hard-codes a fallback seed-admin address | Low | Open |
+| K-014 | `auth.php` hard-codes a fallback seed-admin address | Low | **Fixed 2026-09-22.** Not uploaded |
+| K-015 | A seed super-admin password was written to a web-served file | **Critical** | **Fixed in code 2026-09-22.** Operator must delete the live file |
+| K-016 | Editing a draft blog post silently destroys its body | High | Open. Data loss |
+| K-017 | `xlsx` carries a HIGH advisory with no fix available | Medium | Open. Owner decision |
+| K-018 | The public site is an empty shell to any client that does not run JavaScript | Medium | Open. Partly mitigated |
+| K-019 | `sitemap.xml` is hand-maintained and omits database-driven URLs | Low | Open |
+| K-020 | `tsc -b` does not use the strict project configs | Low | Open |
+| K-021 | The legal pages have no review date and several compliance gaps | Medium | Open. Owner decision |
+| K-022 | `SidebarMenuSub` drops its forwarded ref | Low | Open |
+| K-023 | Two CMS account links point at routes that do not exist | Low | Open |
+| K-024 | Non-admin roles cannot enable two-factor or revoke their own sessions | Medium | Open |
+
 
 ---
 
@@ -110,7 +121,18 @@ the values.
 ---
 
 ## K-004 · `api.php` accepts an unauthenticated POST
-**Severity:** medium · **Status:** open
+**Severity:** medium · **Status:** **fixed in code on 2026-09-22. NOT UPLOADED.**
+
+`server/api.php` was rewritten as a read-only health check: a `SELECT 1` and a JSON
+reply. The `items` listing and the anonymous `INSERT` are both gone, and
+`server/README.md`'s post-install step was updated to match. The endpoint is still
+unauthenticated, which is intended for a health check, but it no longer writes.
+
+The repository copy is fixed. Whether the live document root still serves the old file
+is **UNVERIFIED**.
+
+**The original finding, for the record.**
+
 
 `server/api.php` is the original smoke test. `GET` lists rows from `items`; `POST {name}`
 inserts one. Neither calls `require_auth`.
@@ -126,7 +148,17 @@ returning `[]` as the post-install check, so removing it means replacing that st
 ---
 
 ## K-005 · `contact.php` has no spam protection
-**Severity:** medium · **Status:** open
+**Severity:** medium · **Status:** **fixed in code on 2026-09-22. NOT UPLOADED.**
+
+An IP throttle was added, modelled on the login counter already in `auth.php`: more than
+five `enquiry_submit` rows from one address within fifteen minutes returns 429. Each
+accepted enquiry also writes an `audit()` row, which it did not before.
+
+No captcha and no new dependency. Note that the throttle counts rows in `audit_log`, so
+purging that table resets it.
+
+**The original finding, for the record.**
+
 
 The public enquiry endpoint validates a name, an email format and a message of at least 10
 characters, then inserts into `enquiries` with the caller IP. There is no rate limit, no
@@ -153,7 +185,20 @@ up to date.
 ---
 
 ## K-007 · No MIME allowlist on upload
-**Severity:** low to medium · **Status:** open
+**Severity:** low to medium · **Status:** **fixed in code on 2026-09-22. NOT UPLOADED.**
+
+`server/files.php` now checks the extension against an allowlist and cross-checks the
+real type with `finfo_file()` before the file is stored. The browser-supplied
+`Content-Type` is no longer stored, and the download path sends only an allowlisted
+type.
+
+Two residuals, both recorded rather than fixed. Existing rows keep whatever MIME their
+uploader's browser claimed, though the download filter now neutralises them. And nothing
+scans `uploads/` for files already there whose extension the new allowlist would reject.
+The host must have the PHP `fileinfo` extension enabled or uploads return 503.
+
+**The original finding, for the record.**
+
 
 `files.php` caps size at 20 MB, generates a random stored name and sanitises the extension to
 alphanumerics, but accepts any file type.
@@ -170,7 +215,23 @@ host is **NOT TESTED**.
 ---
 
 ## K-008 · Accessibility is unmeasured
-**Severity:** medium · **Status:** open, NOT TESTED
+**Severity:** medium · **Status:** **closed on 2026-09-22.** Measured.
+
+The public surface was measured at runtime rather than declared. axe-core 4.10.2 across
+16 routes returned 0 violations; Lighthouse's accessibility category scored 100; contrast
+was computed on rendered pixels across 28 distinct combinations with 0 failures; 353
+focusable elements were checked for a visible indicator with 0 failures; reflow at 200%
+and target size at 390px both pass.
+
+Two real defects were found by that measurement and fixed: the focus indicator painted
+nothing on part of the masthead, and the ring colour was inverted on dark controls.
+Neither was reported by axe.
+
+Full method, figures and the list of what remains NOT TESTED are in
+`qa/ACCESSIBILITY-AUDIT.md`. The largest remaining gap is that **no screen-reader pass
+with real assistive technology has been done**, and GAkinzOS at `/app/*` is unaudited.
+
+**The original finding, for the record.**
 
 A previous session recorded an axe run with zero violations on three pages. That claim is
 withdrawn: no report was kept, the run is not reproducible from this tree, there is no
@@ -181,7 +242,17 @@ See `qa/ACCESSIBILITY-AUDIT.md` and `docs/DECISIONS.md` D-020.
 ---
 
 ## K-009 · The marketing entry chunk is over the warning threshold
-**Severity:** low · **Status:** open
+**Severity:** low · **Status:** **closed on 2026-09-22.**
+
+The entry chunk is 181.76 kB, down from 556.94 kB, and Vite no longer emits the 500 kB
+warning. `vite.config.ts` gained a `manualChunks` rule that splits the framework into a
+long-cacheable `vendor` chunk and folds roughly 30 lucide micro-chunks into one.
+
+`dist/` fell from 43 MB to 2.6 MB, almost all of it from removing 35.92 MiB of
+unreferenced images in `public/`. Figures in `qa/PERFORMANCE-AUDIT.md`.
+
+**The original finding, for the record.**
+
 
 556.94 kB raw, 173.79 kB gzipped, against Vite's 500 kB warning. The heavy libraries are
 already lazy; this is the eager public-site entry.
@@ -203,7 +274,28 @@ solved problem.
 ---
 
 ## K-011 · `access.ts` can drift from the server role lists
-**Severity:** low · **Status:** open
+**Severity:** low · **Status:** **mostly closed on 2026-09-22.**
+
+Three real mismatches were found and fixed. `files` granted `trainer` where
+`server/files.php` does not. `dashboard` granted `trainer` and `employee` a page whose
+panels mostly 403. `portal` granted every staff role, and the matching server branch had
+no role list at all, so an `employee` could pass an arbitrary `?client_id` and read any
+client's invoice data that `invoices.php` restricts to three roles. Both ends are now
+narrowed and agree.
+
+`canAccess` also **failed open**: a path with no entry in the module map returned `true`,
+so a future route added without a map entry would have been reachable by every
+authenticated user including `client`. It now fails closed.
+
+The test suite grew from 11 to 21 cases and now asserts the role lists against the
+server's, that every module key round-trips through `moduleKeyForPath`, that every role's
+landing page is a module it can open, and the `portal` narrowing specifically.
+
+**Still open:** there is no automated check that the TypeScript list and the PHP constant
+agree. The tests encode the server's lists by hand, so a change to a PHP role constant
+still has to be mirrored by a person.
+
+**The original finding, for the record.**
 
 `src/lib/access.ts` duplicates the per-endpoint role constants by hand. Nothing checks the two
 against each other. Drift shows up as a module a user can open but every request inside it
@@ -214,14 +306,28 @@ returning 403, or as a hidden module the user could actually use.
 ---
 
 ## K-012 · Stale design residue in `src/index.css`
-**Severity:** cosmetic · **Status:** open
+**Severity:** cosmetic · **Status:** **closed on 2026-09-22.**
+
+Both commented-out gradient blocks are gone, including the committed keyboard-mash
+(`=-09876543567987654321`, `200014b0f2a,456895e//`, `#111a3,a,`) that was sitting inside
+one of them, and the leftover URL pointing at a third-party template demo site. The
+FullCalendar reset went with FullCalendar. The five unused custom properties and the
+misnamed `--gk-violet` / `--gk-indigo` / `--gk-sky` override on `.gk-public` are gone.
+
+The effect classes themselves (`.gk-aurora`, `.gk-grid`, `.gk-shine`, `.gk-grad-text`)
+remain, because `src/app/Login.tsx` and `SetPassword.tsx` still use them. They must not
+appear on a public page.
+
+**The original finding, for the record.**
 
 - A Pulse-kit block of `gradient-red` through `gradient-cyan` helpers and a `.dark-blue`,
   `.gaussian-black`, `.classic-light` scrollbar rule, none of which belongs to this brand.
 - Two section comments still say "Forest Editorial", and one points at `DESIGN-SYSTEM.md §5`.
   The rules under them are current; only the labels are stale.
 
-Not fixed because this migration does not touch application code.
+Those two items were part of the original finding. The gradient helpers and the
+scrollbar rule remain, because the CMS themes still use them; the stale section labels
+were corrected with the rest of the block.
 
 ---
 
@@ -242,7 +348,17 @@ every real file through.
 ---
 
 ## K-014 · `auth.php` hard-codes a fallback seed-admin address
-**Severity:** low · **Status:** open
+**Severity:** low · **Status:** **fixed in code on 2026-09-22. NOT UPLOADED.**
+
+The `'dev@gakinz.com'` fallback is gone. `ensure_seed()` now returns early when
+`$GLOBALS['SEED_ADMIN_EMAIL']` is not set, rather than inventing an address.
+
+**This changes first-run behaviour.** With the key unset, a first run against an empty
+`users` table now creates no account at all and nobody can sign in. `$SEED_ADMIN_EMAIL`
+must be set in the live `config.php`.
+
+**The original finding, for the record.**
+
 
 `server/auth.php` line 484:
 
@@ -261,3 +377,229 @@ operator may not control.
 **Not fixed here** because it is application code, and this documentation migration does not
 change behaviour. The fix is one line: fail with a clear message when `$SEED_ADMIN_EMAIL` is
 unset or still a placeholder, rather than defaulting.
+
+---
+
+## K-015 · A seed super-admin password was written to a web-served file
+**Severity:** critical · **Status:** **fixed in code on 2026-09-22. An operator action is
+still outstanding on the live server.**
+
+`server/auth.php` generated a random super-admin password on first run and wrote it, in
+plaintext, to `server/seed_admin_password.txt`. `__DIR__` there is the document root,
+and the `.htaccess` deny list covered only `.md`, `.sql` and `.log`. A `.txt` file in the
+document root was served to anyone who requested it by name.
+
+The empty-password path was the documented default: `config.php.example` says
+`$SEED_ADMIN_PASSWORD = '';   // '' → random, written to seed_admin_password.txt`. The
+`chmod 0600` on the file did not help, because Apache runs as the same cPanel user.
+
+**Fixed in code:** the file write is gone and the generated password goes to the PHP
+error log instead. The `.htaccess` deny pattern now covers `.txt`, with `robots.txt`
+exempted by a negative lookahead so the public site still works.
+
+**Outstanding, and it is the operator's:** check whether
+`https://gakinz.com/seed_admin_password.txt` exists on the live server and delete it. If
+it was there, treat that password as public: change it and revoke that account's
+sessions. Whether the file exists is **UNVERIFIED** from this repository.
+
+This is related to K-001 but is a separate exposure with a separate fix.
+
+---
+
+## K-016 · Editing a draft blog post silently destroys its body
+**Severity:** high · **Status:** open. This is data loss.
+
+In `server/blog.php` the staff list branch (`?all=1`) selects `id, slug, title, category,
+cover, read_mins, status, published_at, updated_at`. It does not select `body` or
+`excerpt`. The only branch that returns `body` is the public single-post read, which
+filters on `status = "published"`.
+
+So a **draft** post has no endpoint that returns its body, and `blog.php?action=update`
+rewrites `excerpt` and `body` unconditionally. Opening a draft in the CMS and saving it
+writes back the empty fields the form was given, wiping whatever was there. No error, no
+trace, and it looks to the author like the text was never saved in the first place.
+
+Published posts are safe, because the public read can supply the body. Drafts are the
+posts nobody misses until they open them, which is why this has gone unnoticed.
+
+**The same bug existed in `work.php` and was fixed there** on 2026-09-22: the narrative
+columns were added to `listAll`, and an EDITORS-gated `getAdmin` returns a full record
+whatever its status. The same shape of fix applies here.
+
+**Not fixed** because `blog.php` was outside the scope of this work and a change to it
+needs its own verification. Recorded so it is not lost.
+
+---
+
+## K-017 · `xlsx` carries a HIGH advisory with no fix available
+**Severity:** medium · **Status:** open. Owner decision.
+
+`npm audit` reports 7 findings, down from 33. Six have fixes upstream. One does not.
+
+`xlsx` is a **direct** dependency with two HIGH advisories, Prototype Pollution
+(GHSA-4r6h-8v6p-xvw6) and ReDoS (GHSA-5pgg-2g8v-p4x9), and `fixAvailable: false`. It is
+genuinely used at `src/lib/csv.ts:5` for workbook export in the CMS.
+
+It does not touch the public site, and the input it parses is generated by this
+application rather than uploaded by a visitor, which lowers the practical risk. That is
+a mitigation, not a fix.
+
+**The options, none of which should be chosen by an agent:** accept the risk and record
+that decision; pin to the vendor's own CDN build, which is where the maintained version
+now lives; or migrate the export to a maintained alternative such as `exceljs`.
+
+---
+
+## K-018 · The public site is an empty shell to any client that does not run JavaScript
+**Severity:** medium · **Status:** open. Partly mitigated.
+
+The site is a client-rendered single-page application with no prerender step. The served
+body is `<div id="root"></div>` and nothing else, for every URL. There is no SSR, no
+static fallback and no `<noscript>` content.
+
+Googlebot renders JavaScript and will see the pages. Most social scrapers, Bing, and most
+LLM crawlers do not, so a shared link or a training crawl sees one generic title and an
+empty document.
+
+**Mitigated, not fixed.** Three things reduce the damage:
+
+- The served `index.html` now carries the correct title, description, canonical, Open
+  Graph and Twitter Card tags, a `theme-color` and a real 1200x630 `og.png`. Until
+  2026-09-22 it carried the **old studio title and description**, so every non-rendering
+  client, including every social scraper, saw a stale description of a business that no
+  longer describes the site.
+- A `<noscript>` block gives a visitor without JavaScript the identity and an email
+  address rather than a blank page.
+- `public/llms.txt` states the site's content in Markdown for crawlers that read it.
+
+**What remains broken:** the other fourteen routes still serve the home page's metadata
+to anything that does not render, because the per-route tags are written by React at
+runtime.
+
+**The fix is prerendering the public routes at build time.** That changes the build and
+the deploy, so it is recorded here rather than attempted.
+
+Related: `server/.htaccess` rewrites every unknown URL to `index.html` with a 200, so
+`/anything-at-all` is a soft 404. The SPA renders a 404 page client-side and that page is
+now `noindex`, but the status code is still 200.
+
+---
+
+## K-019 · `sitemap.xml` is hand-maintained and omits database-driven URLs
+**Severity:** low · **Status:** open.
+
+`public/sitemap.xml` is a static file listing the 15 routes whose content is known at
+build time. Work records at `/work/:slug` and articles at `/resources/:slug` come from
+the database and are **not** listed, because there is no generator and guessing slugs
+would be worse than omitting them.
+
+Its `lastmod` dates are also hand-set and will drift.
+
+**The fix** is either a build step that reads the endpoints, or a server-rendered
+`sitemap.php`. The second fits this project better, since the data already lives behind
+PHP. Either way it wants a decision rather than a quiet addition.
+
+---
+
+## K-020 · `tsc -b` does not use the strict project configs
+**Severity:** low · **Status:** open.
+
+`tsconfig.json` declares no `references` array, so `tsc -b` type-checks with the root
+config alone and never applies `tsconfig.app.json`'s `noUnusedLocals`,
+`noUnusedParameters` or `noFallthroughCasesInSwitch`. The two files also disagree on
+`target` and `lib` while otherwise duplicating each other.
+
+**This is the root cause of the dead code that accumulated unnoticed**: 27 orphaned
+source files and 27 unused packages were removed on 2026-09-22, and none of them was ever
+going to be caught by a build that does not look.
+
+Enabling project references surfaced 41 errors when probed, which was past the threshold
+set for that task, so it was not applied. Two trivial unused locals outside the marketing
+tree were fixed. The remaining count should be far lower now that the marketing surface
+has been rebuilt, and this is worth re-probing.
+
+---
+
+## K-021 · The legal pages have no review date and several compliance gaps
+**Severity:** medium · **Status:** open. Owner decision, and arguably a solicitor's.
+
+The hard-coded "Last updated 1 June 2026" was removed because nobody set it and nobody
+reviewed on it. Each policy now declares `reviewed: null` and the page renders a visible
+labelled gap until a real date is supplied. That is deliberate, and it is visible to
+visitors: a fabricated review date on a legal page is worse than an admitted absence.
+
+Gaps identified while rewriting the copy, none of which were changed, because the
+substance of a legal notice is not an agent's to draft:
+
+1. **No identified data controller and no company registration.** UK GDPR Article
+   13(1)(a) requires the controller's identity. `site.studio.registration` is `null`, so
+   the site names no legal entity.
+2. **No lawful basis stated** (Article 13(1)(c)).
+3. **Retention is not a period.** "A reasonable period after" does not satisfy Article
+   13(2)(a).
+4. **The rights list is incomplete.** It offers access, rectification and erasure, and
+   omits restriction, objection, portability, and the right to complain to the ICO.
+5. **"Without warranty" may be unenforceable as written.** UCTA 1977 and, for consumers,
+   the Consumer Rights Act 2015 limit a blanket exclusion, and liability for death or
+   personal injury from negligence cannot be excluded at all.
+6. **No governing law or jurisdiction clause** in the terms.
+7. **The cookie claim is unverified.** "Only the cookies needed to make it work" is
+   probably true today, since no `document.cookie`, `localStorage` or `sessionStorage`
+   use was found on the public surface, but PECR expects cookies to be named individually
+   and the deployed site has not been audited.
+8. **No processors are named**, which becomes a live gap the moment a mail relay or
+   analytics is added.
+
+---
+
+## K-022 · `SidebarMenuSub` drops its forwarded ref
+**Severity:** low · **Status:** open.
+
+`src/components/ui/sidebar.tsx:698`. `SidebarMenuSub` is a `React.forwardRef` whose `ref`
+is destructured but never attached to the `<ul>`, so any ref passed to it is silently
+discarded.
+
+Nothing currently passes one, so nothing is broken today. Attaching it is a behaviour
+change rather than a pure fix, which is why it was reported rather than done during the
+dead-code removal.
+
+CMS only. The public surface does not use this component.
+
+---
+
+## K-023 · Two CMS account links point at routes that do not exist
+**Severity:** low · **Status:** open.
+
+`src/components/nav-user.tsx:122` and `:128` link to `/app/account/profile` and
+`/app/account/notifications`. Neither route is declared in `src/routes/index.tsx`, so
+both fall through to the catch-all and render the 404 page.
+
+These are in the user dropdown, which every signed-in person sees. Either declare the
+routes and build the two screens, or remove the menu entries. Removing them is the
+smaller change and is honest about what exists.
+
+CMS only. The public surface is unaffected.
+
+---
+
+## K-024 · Non-admin roles cannot enable two-factor or revoke their own sessions
+**Severity:** medium · **Status:** open.
+
+The two-factor setup, the recovery codes and the "my sessions" list all live in the
+`Platform` module, which `src/lib/access.ts` gates to `super_admin` and `admin`.
+
+The endpoints behind them do not have that restriction: `auth.php`'s `twofa_setup`,
+`twofa_enable`, `twofa_disable`, `twofa_recodes`, `sessions` and `revoke` all call
+`require_auth($conn)` with no role list, because they act on the caller's own account.
+
+So a `manager`, `trainer`, `editor`, `employee` or `client` **cannot turn on two-factor
+authentication at all**, and cannot see or revoke their own sessions, even though the
+server would let them. On a system whose tokens last 30 days and live in `localStorage`,
+that is the wrong group of people to deny.
+
+The fix is a small self-service account screen reachable by every authenticated role,
+rather than widening access to the whole Platform module. Note it pairs with **K-023**:
+the dropdown already links to an account area that does not exist, and this is what
+belongs in it.
+
+CMS only, and not touched by this relaunch.
