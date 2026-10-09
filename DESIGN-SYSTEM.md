@@ -8,9 +8,17 @@
 > styling. The decision record, including what survived this document and what did not, is
 > `docs/DECISIONS.md` entry D-006.
 >
-> This file is kept because it explains why several global interface details exist: the custom
-> focus ring, branded selection, themed scrollbars, the radius ladder, the motion baseline and
-> the themed empty states are all still live. Its colour and typography tables are not.
+> **Two rebrands separate this document from the site.** The mono and duo palette that
+> replaced it (D-006) now describes **GAkinzOS at `/app/*` only**. The public surface at `/`
+> was rebuilt again on 2026-09-22 on a third system: warm paper and ink with a navy and a red
+> oxide, a closed nine-value type scale, and Newsreader over Instrument Sans. See
+> `docs/DECISIONS.md` D-023 and D-024.
+>
+> This file is kept because it explains why several global interface details exist: branded
+> selection, themed scrollbars, the motion baseline and the themed empty states are all still
+> live. The radius ladder survives in the CMS only; the public surface now has square corners.
+> The custom focus ring has been reimplemented as an outline for a reason given in
+> `docs/DESIGN-SYSTEM.md` section 7. Its colour and typography tables are not live anywhere.
 >
 > Nothing below has been altered. The banner is the only addition.
 
