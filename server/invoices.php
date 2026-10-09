@@ -170,7 +170,10 @@ if ($method === 'POST' && $action === 'chase') {
         . "If you have already paid, thank you — please disregard this note.\n\nKind regards,\nGAkinz";
   require_once __DIR__ . '/_smtp.php';
   $sent = gk_send_email(['to' => $inv['email'], 'subject' => "Payment reminder — invoice $num", 'body' => $body]);
-  if (empty($sent['ok'])) fail('Could not send the reminder: ' . ($sent['error'] ?? 'unknown error'), 502);
+  if (empty($sent['ok'])) {
+    error_log('GAkinz invoice chase (smtp): ' . ($sent['error'] ?? 'unknown error'));
+    fail('Could not send the reminder. Please try again.', 502);
+  }
   audit($conn, $user['id'], 'invoice_chase', "$num → {$inv['email']}");
   ok(['ok' => true, 'sent_to' => $inv['email']]);
 }
