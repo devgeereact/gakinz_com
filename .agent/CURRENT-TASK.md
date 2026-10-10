@@ -15,7 +15,7 @@ than asserted, and 35.92 MiB of dead assets plus 27 unused packages were removed
 
 **Direction chosen, and why:** the recorded approval was "direction C with direction A's
 colour", but the A, B and C artefacts are missing from `docs/design/` and only
-`direction-approved.md` survives. Three newer mockups in `docs/design/2026-09-22-round-2/`
+`direction-approved.md` survives. Three newer mockups (once in `docs/design/2026-09-22-round-2/`, removed 2026-10-10)
 each declare themselves an inspired interpretation of another company's published design
 language. For a personal site whose stated test is that it does not read as templated,
 building one of those would have failed the brief. Direction C was reconstructed from the
