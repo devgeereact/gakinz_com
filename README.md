@@ -91,7 +91,7 @@ Read `AGENTS.md` first if you are an agent. It is the shared contract.
 | `docs/ARCHITECTURE.md` | Shape, client, server, request lifecycle, the two deploy tracks |
 | `docs/DATA-MODEL.md` | The tables, ownership, share tokens, and the migration situation |
 | `docs/API-SPEC.md` | The endpoints, their actions and their role gates |
-| `docs/DESIGN-SYSTEM.md` | The design system **as implemented** (sections 1 to 9) and the decided target system, not yet built (section 10) |
+| `docs/DESIGN-SYSTEM.md` | The design system **as implemented** (sections 1 to 9, public surface on D-037) and the implementation status of the D-037 target (section 10) |
 | `docs/DESIGN-REFERENCE-MASTERCARD.md` | The preserved, unedited third-party design reference behind the target system. Do not edit |
 | `docs/CONTENT-AND-GROWTH.md` | Resources standard, affiliate and AdSense pilots, measurement and the social profile kit |
 | `docs/SECURITY.md` | Authentication, roles, client isolation, secrets, known gaps |

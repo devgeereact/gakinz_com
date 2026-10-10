@@ -3,7 +3,7 @@
 // and `npm run lint` can be the gate on its own.
 import { execFileSync } from "node:child_process"
 
-const MAX_ERRORS = 47
+const MAX_ERRORS = 46
 const MAX_WARNINGS = 2
 
 let out

@@ -7,23 +7,18 @@
    Linking them from index.html with preconnect is the textbook advice, and it
    does start the request earlier. It also took Cumulative Layout Shift on the
    home page from 0.00 to 0.151, past the 0.1 threshold, because the text then
-   paints in a fallback face and reflows when Newsreader arrives. On a site
-   whose entire argument is its typography that is the wrong trade.
+   paints in a fallback face and reflows when Newsreader arrives.
 
-   Keeping the @import holds CLS at 0.00. `preconnect` in index.html still
-   shortens the handshake. Moving the link out properly needs `size-adjust`
-   fallback metrics so the swap does not move anything, and that is recorded as
-   remaining work in qa/PERFORMANCE-AUDIT.md rather than half done here.
-
-   PUBLIC SURFACE: Newsreader for display, exploiting its optical-size axis so
-   one family carries both 120px and 21px without a second display voice;
-   Instrument Sans for interface text; IBM Plex Mono confined to record data,
-   where tabular figures matter.
-   CMS: Manrope and JetBrains Mono, unchanged. The public rebrand does not
-   propagate into GAkinzOS.
-   Space Grotesk is gone. It was mapped to `font-serif`, so `font-serif`
-   silently rendered a sans-serif with no serif fallback. */
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+   PUBLIC SURFACE (D-037): Sofia Sans, self-hosted from
+   @fontsource-variable/sofia-sans (OFL-1.1) and imported once in
+   src/main.tsx. It is the open stand-in for the reference's proprietary
+   MarkForMC, so no public font is fetched from a third party. Manrope, loaded
+   below for the CMS, is its fallback.
+   CMS: Manrope and JetBrains Mono, unchanged. Newsreader stays only because
+   `font-serif` still sets three CMS headings (Login, SetPassword, Portal).
+   Instrument Sans and IBM Plex Mono left with the September public type.
+   Space Grotesk is gone from both surfaces. */
+@import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
 @layer base {
   /* GAkinz brand — LIGHT skin (white bg / near-black ink / lavender accent).
@@ -95,42 +90,51 @@
      inside .gk-public inherits the public palette rather than the CMS one.
      Scoped to the wrapper, so GAkinzOS is untouched. */
   .gk-public {
-    --gk-paper: 40 33% 95%;       /* #F6F3ED */
-    --gk-sunk: 42 29% 91%;        /* #EFEBE2 */
-    --gk-ink: 40 12% 10%;         /* #1C1A16 */
-    --gk-ink-soft: 40 10% 29%;    /* #514C42 */
-    --gk-ink-mute: 37 9% 38%;     /* #6B6459 */
-    --gk-set: 232 39% 27%;        /* #2A3160 */
-    --gk-come: 8 52% 38%;         /* #933C2F */
-    --gk-rule: 40 19% 81%;        /* #D8D2C6 — decorative hairline only */
-    --gk-edge: 37 9% 51%;         /* #8E8577 — structural rule, form borders */
+    /* D-037: the reference palette (docs/DESIGN-REFERENCE-MASTERCARD.md)
+       under the token names the pages already use. Ratios are against canvas
+       cream. Every text pairing clears WCAG 2.2 AA at the reference hex, so
+       no hue had to be darkened. Signal orange is the one that would fail as
+       small text (4.11:1), so it is confined to non-text eyebrow dots. */
+    --gk-paper: 24 17% 94%;       /* #F3F0EE canvas cream */
+    --gk-sunk: 30 25% 98%;        /* #FCFBFA lifted cream, the alternate band */
+    --gk-white: 0 0% 100%;        /* #FFFFFF nav pill, secondary action, inputs */
+    --gk-ink: 60 3% 8%;           /* #141413 warm ink, 16.25:1 */
+    --gk-ink-soft: 0 0% 33%;      /* #555555 granite, 6.57:1 */
+    --gk-ink-mute: 0 0% 41%;      /* #696969 slate, 4.84:1 */
+    --gk-set: 60 3% 8%;           /* #141413 the primary action is warm black */
+    --gk-come: 20 88% 32%;        /* #9A3A0A clay, "awaiting material", 6.20:1 */
+    --gk-rule: 36 10% 80%;        /* #D1CDC7 dust taupe, decorative hairline only */
+    --gk-edge: 34 7% 52%;         /* #8C857C structural rule, form borders, 3.21:1 */
+    --gk-orange: 19 89% 59%;      /* #F37338 decorative orbit only, never text */
+    --gk-signal: 20 100% 41%;     /* #CF4500 eyebrow dots only, 4.11:1 non-text */
 
     --background: var(--gk-paper);
     --foreground: var(--gk-ink);
-    --card: var(--gk-paper);
+    --card: var(--gk-sunk);
     --card-foreground: var(--gk-ink);
-    --popover: var(--gk-paper);
+    --popover: var(--gk-white);
     --popover-foreground: var(--gk-ink);
-    --primary: var(--gk-set);
+    --primary: var(--gk-ink);
     --primary-foreground: var(--gk-paper);
-    --secondary: var(--gk-sunk);
+    --secondary: var(--gk-white);
     --secondary-foreground: var(--gk-ink);
     --muted: var(--gk-sunk);
     --muted-foreground: var(--gk-ink-mute);
     --accent: var(--gk-sunk);
-    --accent-foreground: var(--gk-set);
-    --destructive: 8 52% 38%;
+    --accent-foreground: var(--gk-ink);
+    --destructive: var(--gk-come);
     --destructive-foreground: var(--gk-paper);
-    /* --border and --input were 240 6% 88% (#DFDFE2), which is 1.33:1 against
-       the page. Every form-control boundary on the site failed WCAG 1.4.11.
-       The structural edge colour is 3.29:1 and passes. */
+    /* Every form-control boundary takes the 3.21:1 edge, WCAG 1.4.11. */
     --border: var(--gk-edge);
     --input: var(--gk-edge);
     --ring: var(--gk-ink);
-    /* The document has square corners. The 0.75rem radius belonged to the
-       card idiom that direction C replaces. */
-    --radius: 0rem;
-    font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+    /* The reference skips the 8 to 12px middle: 20px actions, 40px media,
+       full pills. Shared shadcn controls inherit the 20px step. */
+    --radius: 1.25rem;
+    /* One strong ease-out for every entrance and hover. */
+    --gk-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    font-family: 'Sofia Sans Variable', Manrope, ui-sans-serif, system-ui, sans-serif;
+    font-weight: 450;
     color-scheme: light;
   }
 
@@ -646,15 +650,80 @@
   }
 }
 
-/* Marketing entrance animation — visible by default, animates in when allowed. */
+/* ── Public motion (DESIGN-SYSTEM 10.5) ───────────────────────────────────
+   CSS and SVG only. Every rule that moves anything sits inside
+   `prefers-reduced-motion: no-preference`, so with reduced motion each
+   element simply rests in its final state. Nothing loops, nothing animates
+   layout, and no base class is ever `opacity: 0`.
+
+   .gk-fadein is visible by default. Outside a reduced-motion preference it
+   plays a single entrance on mount. FadeIn upgrades it to a viewport
+   reveal by marking an element `data-reveal="pending"` only at the moment it
+   starts observing it, and only if it is below the fold; so without
+   JavaScript, or without an observer, nothing is ever hidden. */
 @keyframes gk-fade-in {
-  from { opacity: 0; transform: translateY(24px); }
+  from { opacity: 0; transform: translateY(14px); }
   to   { opacity: 1; transform: none; }
 }
+@keyframes gk-media-in {
+  from { opacity: 0; transform: scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes gk-orbit-draw {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
 @media (prefers-reduced-motion: no-preference) {
-  .gk-fadein {
-    animation: gk-fade-in 0.5s ease-out both;
+  .gk-fadein:not([data-reveal]) {
+    animation: gk-fade-in 450ms var(--gk-ease-out, ease-out) both;
     animation-delay: var(--gk-delay, 0s);
+  }
+  .gk-fadein[data-reveal="pending"] {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  .gk-fadein[data-reveal="in"] {
+    transition: opacity 450ms var(--gk-ease-out), transform 450ms var(--gk-ease-out);
+    transition-delay: var(--gk-delay, 0s);
+  }
+
+  /* Hero copy: heading, supporting line, actions, 80ms apart. */
+  .gk-rise {
+    animation: gk-fade-in 550ms var(--gk-ease-out) both;
+    animation-delay: var(--gk-delay, 0s);
+  }
+  /* Hero media: the frame reserves its box; only scale and opacity move. */
+  .gk-media-in {
+    animation: gk-media-in 700ms var(--gk-ease-out) both;
+    animation-delay: var(--gk-delay, 120ms);
+  }
+  /* One orbit path, drawn once after the content has arrived. The path
+     carries pathLength="1" so the dash maths is size independent. */
+  .gk-orbit-path {
+    stroke-dasharray: 1;
+    animation: gk-orbit-draw 1000ms cubic-bezier(0.77, 0, 0.175, 1) both;
+    animation-delay: 650ms;
+  }
+  /* The mobile menu panel, entering only. Leaving is instant. */
+  .gk-menu-panel {
+    transition: opacity 200ms var(--gk-ease-out), transform 200ms var(--gk-ease-out);
+  }
+  @starting-style {
+    .gk-menu-panel {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+  }
+}
+
+/* Desktop hover only: a touch tap must never trigger it, and nothing moves
+   while a control is being activated. */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .gk-hover-zoom > * {
+    transition: transform 220ms var(--gk-ease-out);
+  }
+  .gk-hover-zoom:hover > * {
+    transform: scale(1.03);
   }
 }
 
@@ -713,23 +782,19 @@
    --gk-sky held rose) and the audit named that as a standing source of error.
    ──────────────────────────────────────────────────────────────────────── */
 
-/* Headings set in Newsreader. Tracking comes from the type scale in
-   tailwind.config.js, so it is not repeated here; this only adds the wrapping
-   behaviour, which no utility covers. */
+/* One family, Sofia Sans. Headings at the reference's medium 500, body at
+   its half-step 450 (set on .gk-public). The -2% headline tracking lives in
+   the type scale in tailwind.config.js, so it is not repeated here. A page
+   that writes `font-normal` on a heading still gets 500: the reference has
+   no lighter display weight. */
+.gk-public :is(h1, h2, h3, h4, blockquote) {
+  font-weight: 500;
+}
 .gk-public :is(h1, h2, h3, h4) {
   text-wrap: balance;
 }
 .gk-public p {
   text-wrap: pretty;
-}
-
-/* Optical sizing. This is the whole reason Newsreader was chosen: one family
-   carries a 120px masthead and a 21px standfirst without a second display
-   face, because the axis adjusts contrast and detail to the size it is set
-   at. Left to `auto` browsers do this already, but stating it keeps the
-   intent legible. */
-.gk-public :is(h1, h2, h3, h4, blockquote) {
-  font-optical-sizing: auto;
 }
 
 /* Record data aligns in columns, so figures must be tabular. */
@@ -928,10 +993,10 @@
    Uses --primary token so it adapts to the active CMS theme.
    ──────────────────────────────────────────────────────────────────────── */
 
-/* CMS page title — Space Grotesk display + gradient from foreground → lavender
-   accent (so titles read on dark workspace where --primary is the lavender). */
+/* CMS page title: gradient from foreground to lavender accent (so titles read
+   on dark workspace where --primary is the lavender). The family is inherited;
+   the stray Space Grotesk named here was never loaded. */
 .gk-app-grad {
-  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
   letter-spacing: -0.01em;
   background-image: linear-gradient(110deg,
     hsl(var(--foreground)) 0%,
