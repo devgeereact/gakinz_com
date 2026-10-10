@@ -4,9 +4,10 @@ name: CI
 # so the first thing to notice a broken build was the live site. Nothing ran on
 # a pull request at all.
 
+# Every pull request is checked, including PRs stacked on another feature
+# branch, so each section is verified before it reaches main.
 on:
   pull_request:
-    branches: [main]
   push:
     branches: [main]
 
