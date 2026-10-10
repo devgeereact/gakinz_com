@@ -1,25 +1,27 @@
 # Test plan
 
-**Status of the suite today:** 11 unit tests, one file, covering access control. Everything
-else is unmeasured. This document records what exists, what does not, and the order in which
-the gaps are worth closing.
+**Status of the suite on 2026-10-10:** 29 unit tests and 35 server integration tests, the
+latter against a throwaway local database. This document records what exists, what does not,
+the order in which the gaps are worth closing, and the acceptance scenarios a release must
+pass (section 7).
 
 ---
 
 ## 1. What runs today
 
-| Layer | Tool | Coverage | Result on 2026-09-22 |
+| Layer | Tool | Coverage | Result |
 |---|---|---|---|
-| Types | `tsc -b`, inside `npm run build` | Whole client | **PASS** |
-| Unit | Vitest, `npm test` | `src/lib/access.ts` only | **PASS**, 21 tests, up from 11 |
-| PHP syntax | `php -l` | All 45 server files | **PASS** |
-| Lint | ESLint, `npm run lint` | Whole client | **FAIL**, 47 errors and 2 warnings, down from 60 and 7 |
-| Accessibility | axe-core 4.10.2 in Chrome, plus computed contrast, focus, reflow and target-size sweeps | All 16 public routes | **PASS**, 0 violations. `qa/ACCESSIBILITY-AUDIT.md` |
-| Performance | Chrome DevTools trace and Lighthouse, production build served locally | Public surface | **PARTIAL.** Lab only, no field data. `qa/PERFORMANCE-AUDIT.md` |
-| Component | none | — | **NOT TESTED** |
-| Endpoint | none | — | **NOT TESTED**. `work.php` has never run against a database |
-| End-to-end | none | — | **NOT TESTED** |
-| Screen reader | none | — | **NOT TESTED**. The largest remaining accessibility gap |
+| Types | `tsc -b`, inside `npm run build` | Whole client | **PASS**, 2026-10-10 |
+| Unit | Vitest, `npm test` | `src/lib/access.ts` and `src/lib/csv.ts` | **PASS**, 29 tests, 2026-10-10 |
+| Server integration | Vitest, `npm run test:server` | Sign-in, payments, quote acceptance, blog editing and create ids, against a local `*_test` database (D-036) | **PASS**, 35 tests, 2026-10-10 |
+| PHP syntax | `php -l` | All 46 server files | **PASS**, 2026-10-10 |
+| Lint | ESLint, `npm run lint`, held by `npm run lint:ratchet` | Whole client | **FAIL**, 47 errors and 2 warnings; the ratchet passes |
+| Accessibility | axe-core 4.10.2 in Chrome, plus computed contrast, focus, reflow and target-size sweeps | All 16 public routes | **PASS**, 0 violations, 2026-09-22. `qa/ACCESSIBILITY-AUDIT.md` |
+| Performance | Chrome DevTools trace and Lighthouse, production build served locally | Public surface | **PARTIAL.** Lab only, no field data, 2026-09-22. `qa/PERFORMANCE-AUDIT.md` |
+| Component | none | n/a | **NOT TESTED** |
+| Other endpoints | none | Everything outside the server suite, including `work.php` | **NOT TESTED** |
+| End-to-end | none | n/a | **NOT TESTED** |
+| Screen reader | none | n/a | **NOT TESTED**. The largest remaining accessibility gap |
 
 `src/lib/access.test.ts` covers `canAccess`, `moduleKeyForPath` and `defaultPathForRole`,
 with the client-isolation rules asserted explicitly. It is deliberately narrow: role gating is
@@ -27,12 +29,14 @@ where a mistake is silent and expensive. See `docs/DECISIONS.md` D-016.
 
 ## 2. Gates before any change is complete
 
-Run all four. Report the real output, including a failure.
+Run them all. Report the real output, including a failure. CI runs the same set and the deploy
+waits for it (`docs/DEPLOYMENT.md` section 2).
 
 ```bash
 npm run build                                              # tsc -b then vite build
-npm test                                                   # vitest run
-npm run lint                                               # must not add a new error
+npm test                                                   # unit tests
+npm run test:server                                        # PHP endpoints, local *_test database
+npm run lint:ratchet                                       # the lint backlog must not grow
 find server -name '*.php' -print0 | xargs -0 -n1 php -l     # any touched PHP
 ```
 
@@ -43,16 +47,15 @@ The lint backlog of 47 errors does not block, but it **must not grow**. See
 
 Stated plainly so nobody claims otherwise.
 
-- Any runtime behaviour of the PHP API. `php -l` proves syntax and nothing more. There is no
-  local PHP, no local MySQL and no fixture database.
+- Any PHP behaviour outside the server suite. `php -l` proves syntax and nothing more. The
+  rules for the synthetic test path are in `docs/OPERATIONS.md` section 8.
 - Anything depending on the live server, database, mailbox, DNS or configuration.
 - Every external integration: OpenRouter, OpenWeather, SMTP, IMAP, Twilio, Stripe, PayPal,
   Google, GitHub, Figma, Slack, Calendly. None is configured locally, and none should be
   exercised without approval, because several of them send real messages or move real money.
-- Browser rendering of any page.
+  The server suite uses a fake payment provider and a mail stub instead.
 
-Development calls the **live** API. There is no safe environment in which to run a
-write-path test.
+The dev server calls the **live** API, so no write-path test runs through it.
 
 ## 4. Risk-ranked gaps
 
@@ -93,6 +96,11 @@ Errors here are visible to clients and hard to reverse.
   `checkout.session.completed` that is not `payment_status = paid`, and a repeat of an event
   for an already-paid invoice.
 
+Since 2026-10-10 the server suite covers the VAT-inclusive Stripe amount, amount and currency
+mismatch, event de-duplication and the PayPal switch (`tests/server/payments.test.ts`), and
+sent-only, single-use quote acceptance (`tests/server/proposals.test.ts`). The cross-endpoint
+VAT agreement and the remaining webhook cases are still open.
+
 ### Priority 4 · Public entry points
 
 `contact.php`, `verify.php`, `blog.php`, `testimonials.php`, and the two token endpoints. For
@@ -101,7 +109,8 @@ a deleted target.
 
 ### Priority 5 · Accessibility
 
-See `qa/ACCESSIBILITY-AUDIT.md`. Nothing is measured today.
+See `qa/ACCESSIBILITY-AUDIT.md`. The public surface was measured on 2026-09-22; the CMS and
+real assistive technology are not measured at all.
 
 ### Priority 6 · Component behaviour
 
@@ -127,7 +136,33 @@ than no smoke test.
 
 ## 6. Adding a test
 
-Vitest runs with the project defaults; there is no `vitest.config`. A `*.test.ts` file beside
-the unit under test is picked up automatically and is not bundled into `dist/`.
+`vitest.config.ts` picks up any `src/**/*.test.{ts,tsx}` file beside the unit under test; it is
+not bundled into `dist/`. Server tests live in `tests/server/` and run under
+`vitest.server.config.ts`. A money, sign-in or ownership change adds a server case.
 
-Keep tests free of network calls. Nothing in the suite should be able to reach the live API.
+Keep tests free of network calls. Nothing in either suite should be able to reach the live API.
+
+## 7. Release acceptance scenarios
+
+These supplement the module acceptance criteria in `docs/PRODUCT-SPEC.md` section 5.5 and the
+production gates in `docs/OPERATIONS.md` section 9. They are checks, not twelve new modules,
+and none has passed at runtime unless its status says so. Phases are the delivery phases in
+`docs/STATUS.md` section 2. Before coding, each approved batch names its endpoints and screens,
+its acceptance cases, its rollback and its remaining owner inputs.
+
+| ID | Scenario | Phase and proof | Status on 2026-10-10 |
+|---|---|---|---|
+| J01 | The owner handles a new enquiry, follow-up, confirmed call and one conversion without duplicate records | Phase 2; a synthetic journey plus retry | NOT TESTED |
+| J02 | A reference alone, or with the wrong email, discloses no customer record or account existence | Phases 1 and 2; response and throttling checks | NOT TESTED. The reference flow is not built |
+| J03 | A link expires, re-use fails, concurrent consumption allows at most one redemption, and privileged two-factor cannot be skipped | Phase 1; isolated authentication tests | PARTIAL. Magic-link single use under concurrency and the two-factor rule pass in `tests/server/auth.test.ts`; the reference and email link is not built |
+| J04 | Client A cannot read or write Client B's projects, tickets, messages, files, invoices or feedback by changing identifiers | Phase 2; endpoint tests with two fake clients | NOT TESTED |
+| J05 | A customer message survives a failed send; a retry creates no duplicate, and the owner sees the notification failure | Phase 2; transport fixtures | NOT TESTED |
+| J06 | Permitted customer updates work; financial and internal fields and unverified email changes are rejected | Phase 2; positive and negative endpoint cases | NOT TESTED |
+| J07 | Private feedback stays private; publication needs recorded permission and approval | Phases 2 to 4; publish, unpublish and response inspection | NOT TESTED |
+| J08 | The project brief stays client-linked, shared milestones exclude owner notes, and the export omits restricted information | Phases 2 and 3; record and sanitised export checks | NOT TESTED |
+| J09 | The enquiry-to-handover task works on phone and desktop with keyboard, zoom and reduced motion | Phases 3 and 4; observable owner and client usability checks | NOT TESTED |
+| J10 | Accurate quote, invoice and payment evidence, backup restoration, and publish and edit checks pass | Phases 1 to 4; the production gates | NOT TESTED |
+| J11 | A draft or declined quote cannot be accepted or converted; a sent quote converts exactly once under double-click and concurrent requests | Phase 1; endpoint tests | PASS locally, `tests/server/proposals.test.ts` (K-028). Not on the live server |
+| J12 | The Stripe charge equals the invoice's payable total including VAT; a mismatched amount or currency is rejected and not marked paid | Phase 1; sandbox fixtures | PASS locally against a fake provider, `tests/server/payments.test.ts` (K-025). Not on the live server |
+
+No credible schedule exists until the deployed state and recovery have been established.

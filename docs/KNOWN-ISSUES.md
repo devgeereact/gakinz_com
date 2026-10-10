@@ -1,14 +1,16 @@
 # Known issues
 
-Open problems, each with evidence and a status. **Nothing in this list was fixed during the
-documentation migration**, by decision: that work does not touch application code.
+Open problems, each with evidence and a status. Fixed entries stay, marked, so their history
+is not lost. "Fixed" means fixed in the repository; anything under `server/` is not live until
+it is uploaded (`docs/DEPLOYMENT.md`).
 
-Severity is judged on impact to the live business, not on how hard it is to fix.
+Severity is judged on impact to the live business, not on how hard it is to fix. Entries
+K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` section 1.
 
 | ID | Issue | Severity | Status |
 |---|---|---|---|
 | K-001 | A live super-admin credential is in git history | Critical | **Open. Rotation UNVERIFIED. Blocks launch** |
-| K-002 | Lint fails | Medium | Open. Now 47 errors, 2 warnings, down from 60 and 7 |
+| K-002 | Lint fails | Medium | Open. Now 46 errors, 2 warnings, down from 60 and 7; ratchet in CI |
 | K-003 | `config.php.example` named a retired mail host | Medium | Fixed in the template. Server value UNVERIFIED |
 | K-004 | `api.php` accepts an unauthenticated POST | Medium | **Fixed 2026-09-22.** Not uploaded |
 | K-005 | `contact.php` has no spam protection | Medium | **Fixed 2026-09-22.** Not uploaded |
@@ -38,6 +40,18 @@ Severity is judged on impact to the live business, not on how hard it is to fix.
 | K-029 | Create endpoints returned the audit-log id instead of the new record's id | High | **Fixed 2026-10-10.** Not uploaded |
 | K-030 | CSV exports could run spreadsheet formulas from enquiry text | Medium | **Fixed 2026-10-10** |
 | K-031 | Dashboard showed £0 and "All on time" when data failed; two CMS screens overflowed phones | Medium | **Fixed 2026-10-10** |
+| K-032 | The CMS navigation is one flat list of 24 entries | Medium | Open. In progress |
+| K-033 | The bearer token lives in `localStorage`, and unlocking the lock screen issues a second token | Medium | Open. Unlock now revokes the old token (2026-10-10, not deployed) |
+| K-034 | A contract "signature" is a staff-typed name, not client signing | Medium | Open |
+| K-035 | CI ran no tests and the deploy did not wait for CI | High | **Fixed 2026-10-10** |
+| K-036 | Public pages bring back unpublished posts and work from the static fallback | Medium | Open. In progress |
+| K-037 | The article renderer has no links or lists | Medium | Open. In progress |
+| K-038 | Public fallback copy shows engineering counts and internal file paths | Medium | Open. In progress |
+| K-039 | Clients cannot message the owner from the portal | High | Open. In progress |
+| K-040 | `stored` is a MySQL 8 reserved word, so the schema failed on MySQL | High | **Fixed 2026-10-10.** Not uploaded |
+| K-041 | `npm audit` reports 15 affected packages, ten of them high | Medium | Open. Owner decision |
+| K-042 | The Google Fonts `@import` still blocks rendering on public pages that no longer use those fonts | Low | Open |
+| K-043 | A static canonical in `index.html` conflicts with the per-route canonical | Low | Open |
 
 
 ---
@@ -190,6 +204,9 @@ have been applied, cannot be determined from here. See `docs/DEPLOYMENT.md` sect
 in this repository will say so. It also means no release note can honestly claim the system is
 up to date.
 
+**What closes it:** compare the approved file versions, schema and configuration on the host
+with the repository, and record each result and its rollback in `docs/DEPLOYMENT.md`.
+
 ---
 
 ## K-007 · No MIME allowlist on upload
@@ -278,6 +295,10 @@ Nothing in the repository defines or performs a database or uploads backup.
 Backup arrangements belong to the hosting account, not to this repository, so this entry is a
 pointer rather than a task. It is recorded because the absence is easy to mistake for a
 solved problem.
+
+**What closes it:** restore the database and the uploaded files into an isolated environment
+and check their relationships and permissions. The proposed recovery targets are in
+`docs/OPERATIONS.md` section 10, and this is a production acceptance gate (section 9 there).
 
 ---
 
@@ -459,7 +480,9 @@ a mitigation, not a fix.
 
 **The options, none of which should be chosen by an agent:** accept the risk and record
 that decision; pin to the vendor's own CDN build, which is where the maintained version
-now lives; or migrate the export to a maintained alternative such as `exceljs`.
+now lives; migrate the export to a maintained alternative such as `exceljs`; or drop XLSX
+and keep CSV only, if nobody needs workbooks. The 7-finding count above is the 2026-09-22
+figure; the 2026-10-10 audit is K-041.
 
 ---
 
@@ -686,4 +709,135 @@ A failed source showed as £0 and "All on time"; it now shows "—" with a retry
 and Platform widened a 390px screen to 448px and 642px; header actions now wrap and the shared
 tab list scrolls inside itself. Checked in an isolated local preview with every API call
 stubbed: all 24 CMS routes fit at 320px and 390px. Data-filled tables NOT TESTED.
+
+## K-032 · The CMS navigation is one flat list of 24 entries
+**Severity:** medium · **Status:** open, in progress.
+
+`src/components/app-sidebar.tsx` renders one flat, ungrouped list of 24 entries, filtered per
+role by `canAccess`. A sole owner has to choose between 24 destinations to find the next
+action, and the supporting tools sit beside the core journeys rather than inside the records
+they serve. Resolution: the seven destinations in D-040 (`docs/PRODUCT-SPEC.md` section 5.2),
+with existing URLs kept until the migration is verified.
+
+## K-033 · The bearer token lives in `localStorage`, and unlocking issues a second token
+**Severity:** medium · **Status:** open.
+
+`src/store/auth.store.ts` persists the bearer token in `localStorage` under `gk-auth`, where
+any script running on the same origin can read it, and public and private pages share that
+origin. The idle lock screen (`src/app/components/LockScreen.tsx`) is a `sessionStorage` flag.
+Unlocking calls the real login, two-factor included, but issues a second token and leaves the
+first one valid. Resolution: review token lifetime, revocation and the CSP; revoke or reuse
+the existing token on unlock; never describe the lock as a sign-out. This must be settled
+before any third-party script reaches a public page (`docs/CONTENT-AND-GROWTH.md` section 3).
+
+**Progress 2026-10-10 (client only, not deployed):** after a successful unlock the lock
+screen sends the previous token to `auth.php?action=logout` through `auth.revokeToken` in
+`src/lib/api.ts`, so the server deletes it. `revokePreviousToken` in
+`src/lib/session-revoke.ts` retries three times with a doubling delay and writes a console
+warning on every failure; it never throws, so a failed revoke cannot lock the user out, and
+the old session can still be ended from the active sessions list. Unit tests in
+`src/lib/session-revoke.test.ts`. The `localStorage` exposure, token lifetime and CSP review
+remain open.
+
+## K-034 · A contract "signature" is a staff-typed name, not client signing
+**Severity:** medium · **Status:** open.
+
+`server/contracts.php` restricts signing to STAFF and stores the typed `signed_name` and the
+caller's IP. The person typing is a member of staff, so the record cannot show that a client
+agreed. Resolution: label it as an internal acknowledgement, and use an externally signed
+document at first (`docs/PRODUCT-SPEC.md` section 5.5, "Contracts and agreements").
+
+## K-035 · CI ran no tests and the deploy did not wait for CI
+**Severity:** high · **Status:** **fixed 2026-10-10.**
+
+`.github/workflows/ci.yml` ran the type check, an advisory lint (`continue-on-error: true`) and
+the build only: no `npm test` and no `php -l`. `deploy.yml` deployed `dist/` on every push to
+`main` with no dependency on CI, so a failing build could ship. Fix: CI runs unit tests, the
+server tests, `php -l` and the lint ratchet, and `deploy.yml` runs only after CI succeeds on a
+push to `main` (D-036, `docs/DEPLOYMENT.md` section 2). The new server-test job found K-040.
+
+## K-036 · Public pages bring back unpublished posts and work from the static fallback
+**Severity:** medium · **Status:** open, in progress.
+
+At the 2026-10-10 audit, `src/marketing/data/blog.ts` and `src/marketing/data/work.ts` started
+with static content and kept it both on failure and on a **successful empty** response, and
+`useMarketingPost` still served a static post by slug. So unpublishing a record in the CMS
+does not remove it from the public site if a static copy exists. Resolution: treat
+success-empty differently from failure, so unpublishing never brings fallback content back,
+and give the owner a private content-health warning (`docs/PRODUCT-SPEC.md` section 4.4).
+
+## K-037 · The article renderer has no links or lists
+**Severity:** medium · **Status:** open, in progress.
+
+`src/marketing/pages/ResourceDetail.tsx` renders only `h2`, `h3` and plain paragraphs: no
+links, lists or emphasis. Articles cannot cite sources, and affiliate recommendations cannot
+be published at all. Resolution: a small safe format for links, lists and recommendation
+blocks, with no raw HTML, before any affiliate content (`docs/CONTENT-AND-GROWTH.md` section
+4).
+
+## K-038 · Public fallback copy shows engineering counts and internal file paths
+**Severity:** medium · **Status:** open, in progress.
+
+At the 2026-10-10 audit the visible fallback text included "twenty-four modules … Forty
+server endpoints" and a `qa/ACCESSIBILITY-AUDIT.md` path (`work.ts`), "Portrait, to supply"
+(`Home.tsx`, `About.tsx`), "Biography, to supply" (`About.tsx`), "Screenshot, to supply"
+(`WorkDetail.tsx`) and "review date to supply" (`Legal.tsx`). With the API unreachable, the
+home page rendered project gaps, the portrait placeholder and technical build commentary. A
+buyer reads that as an unfinished business. Resolution: replace it with buyer-relevant proof
+and complete content, and unpublish incomplete entries rather than invent replacements (D-039
+narrows D-027).
+
+## K-039 · Clients cannot message the owner from the portal
+**Severity:** high · **Status:** open, in progress.
+
+The portal aggregates projects, invoices and tickets, but Comms is staff-only and
+`server/support.php` requires STAFF for creating a ticket and replying, with no client branch.
+`server/testimonials.php` requires editors, so a client cannot leave feedback either. Do not
+promise client messaging, assets or approvals until they are delivered and isolation is shown.
+Resolution: an ownership-checked client branch in `support.php`, and private feedback with a
+separate publication consent (`docs/PRODUCT-SPEC.md` sections 6.2 and 6.3).
+
+## K-040 · `stored` is a MySQL 8 reserved word, so the schema failed on MySQL
+**Severity:** high · **Status:** **fixed 2026-10-10, not uploaded.**
+
+The `files` table has a column named `stored`, which is a reserved word in MySQL 8 but not in
+MariaDB. `server/schema.sql` therefore failed to install on MySQL, and `files.php` queries
+would fail there. Found by the new CI server-test job (K-035). Fix: the column name is quoted
+with backticks in `schema.sql` and `files.php`, which works on both engines (`9db80b2`).
+`files.php` is in the batch-1 upload set (`docs/DEPLOYMENT.md` 5.2).
+
+## K-041 · `npm audit` reports 15 affected packages, ten of them high
+**Severity:** medium · **Status:** open. Owner decision.
+
+`npm audit --json` on 2026-10-10 reported 15 affected packages: ten high, four moderate, one
+low, none critical. The 2026-09-22 figure of seven findings is historical; advisory counts can
+change without any code change. `xlsx` still has no automatic fix (K-017), and several
+suggested fixes involve a Tailwind major upgrade, which must not be applied blindly.
+Resolution: separate runtime exposure from development and build exposure, check each advisory
+individually, and update compatible versions in small batches with a fresh build and test run
+(`docs/DEPLOYMENT.md` section 2, "Release policy"). Never `npm audit fix --force`.
+
+## K-042 · The Google Fonts `@import` still blocks rendering on public pages
+**Severity:** low · **Status:** open.
+
+Since the D-037 public rebuild (2026-10-10) the public surface sets Sofia Sans, self-hosted
+from `@fontsource-variable/sofia-sans`. The `@import` at the top of `src/index.css` now loads
+only Newsreader, Manrope and JetBrains Mono, which the public pages do not use (Manrope is only
+Sofia Sans's fallback). It is still in the one shared stylesheet, so every public page waits
+for it. Lighthouse 12.8.2, mobile, against the production build served by `vite preview` on
+2026-10-10: render-blocking resources, estimated saving 450 ms, on both `/` and `/contact`;
+first contentful paint 2.1 s, performance 96. Fix: load those three families only for the CMS
+(for example from the CMS layout), then measure CLS again, because the comment above the
+`@import` records that moving fonts once raised CLS.
+
+## K-043 · A static canonical in `index.html` conflicts with the per-route canonical
+**Severity:** low · **Status:** open.
+
+`index.html` declares `<link rel="canonical" href="https://gakinz.com/" />` and `Seo.tsx`
+renders a per-route canonical as well. On any route other than `/` the page then carries two
+different canonical URLs. Lighthouse 12.8.2, mobile, 2026-10-10, against the production build:
+`/contact` scored SEO 92 with `Multiple conflicting URLs (https://gakinz.com/,
+https://gakinz.com/contact)`; `/` scored 100 because both values agree there. Fix: remove the
+static canonical from `index.html` or have `Seo.tsx` replace it, then re-run the audit on
+several routes. Not caused by the D-037 rebuild.
 

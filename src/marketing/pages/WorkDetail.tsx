@@ -1,6 +1,6 @@
 import { useParams } from "react-router-dom"
 import Seo, { SITE_URL } from "@/marketing/components/Seo"
-import { Action, Gap, Label, Measure, Placeholder, Section } from "@/marketing/components/primitives"
+import { Action, Gap, Label, Measure, MediaFrame, Placeholder, Section } from "@/marketing/components/primitives"
 import NotFound from "./NotFound"
 import { KIND_LABELS, spineFor, useWorkRecord } from "@/marketing/data/work"
 import { cn } from "@/lib/utils"
@@ -139,7 +139,9 @@ export default function WorkDetail() {
           <div className="lg:pt-1">
             {record.cover ? (
               <figure>
-                <img src={record.cover.src} alt={record.cover.alt} className="w-full" loading="lazy" />
+                <MediaFrame>
+                  <img src={record.cover.src} alt={record.cover.alt} loading="lazy" />
+                </MediaFrame>
                 {record.cover.caption && (
                   <figcaption className="mt-2 font-data text-label text-gk-ink-mute">
                     {record.cover.caption}
@@ -163,7 +165,9 @@ export default function WorkDetail() {
               {record.images.map((img) => (
                 <li key={img.src}>
                   <figure>
-                    <img src={img.src} alt={img.alt} className="w-full" loading="lazy" />
+                    <MediaFrame>
+                      <img src={img.src} alt={img.alt} loading="lazy" />
+                    </MediaFrame>
                     {img.caption && (
                       <figcaption className="mt-2 font-data text-label text-gk-ink-mute">
                         {img.caption}
@@ -177,13 +181,13 @@ export default function WorkDetail() {
         )}
       </Section>
 
-      <section className="bg-gk-ink text-gk-on-dark">
-        <Measure className="py-16 sm:py-24">
-          <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-end">
-            <h2 className="max-w-2xl font-display text-t2 text-gk-on-dark">
+      <section className="pb-16 md:pb-24">
+        <Measure>
+          <div className="grid gap-8 rounded-media bg-gk-sunk px-6 py-12 sm:px-12 sm:py-16 md:grid-cols-[1fr_auto] md:items-end">
+            <h2 className="max-w-2xl font-display text-t2 text-gk-ink">
               Something like this, for you?
             </h2>
-            <Action to="/contact" variant="strong" onDark>
+            <Action to="/contact" variant="strong">
               Start a project
             </Action>
           </div>

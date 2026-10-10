@@ -90,8 +90,9 @@ the other. See `docs/DESIGN-SYSTEM.md`.
 
 ## 3. Server
 
-45 PHP files in `server/`. Five are shared includes with no route of their own. The
-forty-fifth routed file is `work.php`, added on 2026-09-22.
+46 PHP files in `server/`. Six are shared includes with no route of their own, all denied to
+direct requests by `.htaccess` (K-013). `work.php` was added on 2026-09-22 and `_money.php` on
+2026-10-10.
 
 | Include | Role |
 |---|---|
@@ -100,6 +101,7 @@ forty-fifth routed file is `work.php`, added on 2026-09-22.
 | `_sms.php` | Twilio REST for SMS and WhatsApp |
 | `_slack.php` | Slack incoming webhook, best effort, never throws |
 | `_monitor.php` | HTTP status and TLS expiry check for the care plan |
+| `_money.php` | The single VAT-inclusive payable-total calculation, used for payment providers (D-034) |
 
 Every routed endpoint follows the same shape: require the bootstrap, read
 `$_SERVER['REQUEST_METHOD']` and `$_GET['action']`, call `require_auth($conn, ROLES)`, use

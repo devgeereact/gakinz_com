@@ -1,49 +1,45 @@
-import type { ReactNode, ElementType } from "react"
+import type { ReactNode, ElementType, CSSProperties } from "react"
 import { Link } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import FadeIn from "./FadeIn"
+import { actionClass } from "./action-class"
 
 /**
  * The public design system.
  *
- * Direction C with direction A's colour, per
- * docs/design/2026-09-22-directions/direction-approved.md.
+ * D-037: the Mastercard-inspired GetDesign reference
+ * (docs/DESIGN-REFERENCE-MASTERCARD.md), followed as closely as possible with
+ * only the substitutions in docs/DESIGN-SYSTEM.md section 10.2. Warm cream
+ * canvas, one geometric sans, warm-black 20px actions, 40px media frames,
+ * circular portraits, a floating pill navigation and a sparse orange orbit.
  *
- * The governing idea is that the page is a document, not a landing page.
- * Typography, spacing and rules carry the hierarchy. What was removed, and
- * must not come back:
- *
- *   - the aurora-and-grid hero that ran on all eight pages
- *   - the animated indigo-to-lavender-to-rose gradient, which was the only
- *     brand gesture the old site had
- *   - ghost numerals standing in for hierarchy
- *   - the HAIR hairline literal, inlined roughly forty times
- *   - blur blobs, glow, shine sweeps and the rounded-3xl card idiom
+ * What must never appear: the Mastercard mark colours #EB001B and #F79E1B,
+ * any pair of interlocking or overlapping circles, card or payment imagery,
+ * and any stock image standing in for real work.
  *
  * TYPE: every size comes from the nine-value scale in tailwind.config.js —
  * label, body, lede, t4, t3, t2, t1, display, hero. There is no arbitrary
- * size anywhere in this file and there must not be one in a page either. The
- * old site's eight ad-hoc heading sizes were the clearest signal that it had
- * been assembled rather than designed.
+ * size anywhere in this file and there must not be one in a page either.
  *
- * COLOUR: two chromatics, each with a job. `gk-set` (navy) marks what is
- * settled. `gk-come` (red oxide) marks a gap awaiting real material. Neither
- * is decoration.
+ * COLOUR: ink carries the action. Clay (`gk-come`) still marks a gap
+ * awaiting real material. Orange is decoration only: the orbit line and the
+ * eyebrow dot, never text and never meaning.
  */
 
 // ── Layout ──────────────────────────────────────────────────────────────────
 
 /** The one horizontal measure. Every band uses it; nothing sets its own. */
 export function Measure({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("mx-auto w-full max-w-[76rem] px-5 sm:px-8", className)}>{children}</div>
+  return <div className={cn("mx-auto w-full max-w-[76rem] px-4 sm:px-8 lg:px-12", className)}>{children}</div>
 }
 
 /**
- * A horizontal band of the document.
+ * A horizontal band of the page.
  *
- * `tone` replaces the old `muted` boolean. "paper" is the page, "sunk" is a
- * half-step down for a quiet interlude, "ink" is the dark band used once or
- * twice per page at most.
+ * "paper" is the canvas cream, "sunk" is the lifted cream laid on it like
+ * paper on paper, "ink" is the warm-black band used once or twice per page
+ * at most. Vertical rhythm is the reference's: 64px on phones, 96px, then
+ * 128px on desktop.
  */
 export function Section({
   children,
@@ -64,7 +60,7 @@ export function Section({
     <section
       id={id}
       className={cn(
-        "py-16 sm:py-24",
+        "py-16 md:py-24 lg:py-32",
         resolved === "sunk" && "bg-gk-sunk",
         resolved === "ink" && "bg-gk-ink text-gk-on-dark",
         className,
@@ -75,7 +71,7 @@ export function Section({
   )
 }
 
-/** A full-width rule. Structural, so it uses the 3.29:1 edge colour, not the hairline. */
+/** A full-width rule. Structural, so it uses the 3.21:1 edge colour. */
 export function Rule({ className }: { className?: string }) {
   return <hr className={cn("border-0 border-t border-gk-edge", className)} />
 }
@@ -83,20 +79,33 @@ export function Rule({ className }: { className?: string }) {
 // ── Micro type ──────────────────────────────────────────────────────────────
 
 /**
- * The small uppercase label that names a section or a field.
- * Mono, because these sit beside record data and should align with it.
+ * The small uppercase label: 14px, bold, +4% tracking, the only uppercase
+ * the reference allows. With `dot` it becomes the section eyebrow, led by
+ * the small signal-orange dot the reference treats as its identity. The dot
+ * is decorative and hidden from assistive technology.
  */
 export function Label({
   children,
   className,
   as: As = "p",
+  dot = false,
 }: {
   children: ReactNode
   className?: string
   as?: ElementType
+  dot?: boolean
 }) {
   return (
-    <As className={cn("font-data text-label uppercase text-gk-ink-mute", className)}>{children}</As>
+    <As
+      className={cn(
+        "font-data text-label font-bold uppercase text-gk-ink-mute",
+        dot && "inline-flex items-center gap-2",
+        className,
+      )}
+    >
+      {dot && <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full bg-gk-signal" />}
+      {children}
+    </As>
   )
 }
 
@@ -124,13 +133,7 @@ export function GradientText({ children, className }: { children: ReactNode; sof
 
 // ── Actions ─────────────────────────────────────────────────────────────────
 
-/**
- * A typographic action. Not a pill, not a shadow, not a gradient.
- *
- * "strong" is a filled navy block for the one primary action on a page.
- * "plain" is a ruled link. Both are ≥44px tall, clearing WCAG 2.5.8 twice
- * over, and both get the global focus ring from index.css.
- */
+/** The one action on a public page. Styling lives in ./action-class. */
 export function Action({
   to,
   href,
@@ -146,17 +149,7 @@ export function Action({
   className?: string
   onDark?: boolean
 }) {
-  const base =
-    "inline-flex min-h-[2.75rem] items-center gap-2 px-5 py-2.5 text-body font-medium transition-colors"
-  const look =
-    variant === "strong"
-      ? onDark
-        ? "bg-gk-paper text-gk-ink hover:bg-gk-on-dark-soft"
-        : "bg-gk-set text-gk-paper hover:bg-gk-ink"
-      : onDark
-        ? "border border-gk-on-dark-soft text-gk-on-dark hover:bg-gk-paper hover:text-gk-ink"
-        : "border border-gk-edge text-gk-ink hover:border-gk-ink hover:bg-gk-sunk"
-  const cls = cn(base, look, className)
+  const cls = actionClass({ variant, onDark, className })
 
   if (href) {
     const external = /^https?:/.test(href)
@@ -173,14 +166,85 @@ export function Action({
   )
 }
 
+// ── Media ───────────────────────────────────────────────────────────────────
+
+/**
+ * The 40px rounded media frame, the reference's most recognisable gesture.
+ * It clips its child and reserves its own box, so the image area holds its
+ * size before the picture loads. Portfolio screenshots stay rectangular
+ * inside it so interface evidence is readable (DESIGN-SYSTEM 10.4).
+ */
+export function MediaFrame({
+  children,
+  className,
+  ratio,
+}: {
+  children: ReactNode
+  className?: string
+  ratio?: string
+}) {
+  return (
+    <div
+      className={cn(
+        "gk-hover-zoom overflow-hidden rounded-media bg-gk-sunk [&>img]:h-full [&>img]:w-full [&>img]:object-cover",
+        className,
+      )}
+      style={ratio ? { aspectRatio: ratio } : undefined}
+    >
+      {children}
+    </div>
+  )
+}
+
+/** A circular portrait frame. Square source, cropped to a perfect circle. */
+export function Portrait({ src, alt, className }: { src: string; alt: string; className?: string }) {
+  return (
+    <div className={cn("gk-hover-zoom aspect-square overflow-hidden rounded-full bg-gk-sunk", className)}>
+      <img src={src} alt={alt} width={800} height={800} className="h-full w-full object-cover" />
+    </div>
+  )
+}
+
+/**
+ * The orbit: one thin orange arc that sweeps over the top of a circular
+ * portrait, drawn once after the content arrives. Decorative only:
+ * `aria-hidden`, no meaning, no loop. It is a single open line, slightly
+ * off-centre and elliptical so it reads as a trajectory, never a second
+ * circle, and never a pair of circles. Removed below 768px, where the
+ * reference drops its arcs.
+ *
+ * Place it inside the `relative` square that holds the portrait; it
+ * overhangs that square by a fifth on each side and ignores the pointer, so
+ * it can never cover a control.
+ */
+export function Orbit({ className, style }: { className?: string; style?: CSSProperties }) {
+  return (
+    <svg
+      aria-hidden
+      focusable="false"
+      viewBox="0 0 100 100"
+      fill="none"
+      className={cn("pointer-events-none absolute -inset-[20%] hidden h-[140%] w-[140%] md:block", className)}
+      style={style}
+    >
+      <path
+        className="gk-orbit-path"
+        pathLength={1}
+        d="M4 70 A 47 43 -10 0 1 96 36"
+        stroke="hsl(var(--gk-orange))"
+        strokeWidth="0.25"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
 // ── Page header ─────────────────────────────────────────────────────────────
 
 /**
- * The masthead for an inner page.
- *
- * No backdrop of any kind. The old PageHero stacked an aurora, a grid and a
- * grain overlay behind every one of eight pages, which is why they all read
- * as the same page.
+ * The masthead for an inner page: eyebrow, one heading, the purpose, and an
+ * optional action. No backdrop and no media, so every inner page reads as
+ * itself rather than as a copy of the home hero.
  */
 export function PageHero({
   eyebrow,
@@ -196,13 +260,13 @@ export function PageHero({
   breadcrumb?: string
 }) {
   return (
-    <header className="border-b border-gk-edge">
-      <Measure className="pb-12 pt-12 sm:pb-16 sm:pt-20">
+    <header>
+      <Measure className="pb-12 pt-10 sm:pb-16 sm:pt-16 lg:pt-20">
         {breadcrumb && (
           <nav aria-label="Breadcrumb" className="mb-8">
-            <ol className="flex items-center gap-2 font-data text-label uppercase text-gk-ink-mute">
+            <ol className="flex flex-wrap items-center gap-2 font-data text-label font-bold uppercase text-gk-ink-mute">
               <li>
-                <Link to="/" className="hover:text-gk-ink">
+                <Link to="/" className="inline-flex min-h-[1.5rem] items-center hover:text-gk-ink">
                   Home
                 </Link>
               </li>
@@ -213,10 +277,28 @@ export function PageHero({
             </ol>
           </nav>
         )}
-        <Label>{eyebrow}</Label>
-        <h1 className="mt-5 max-w-4xl font-display text-t2 font-normal text-gk-ink lg:text-t1">{title}</h1>
-        {intro && <p className="mt-6 max-w-2xl text-lede text-gk-ink-soft">{intro}</p>}
-        {children && <div className="mt-8">{children}</div>}
+        <div className="gk-rise">
+          <Label dot>{eyebrow}</Label>
+        </div>
+        <h1
+          className="gk-rise mt-5 max-w-4xl font-display text-t2 text-gk-ink sm:text-t1"
+          style={{ "--gk-delay": "80ms" } as CSSProperties}
+        >
+          {title}
+        </h1>
+        {intro && (
+          <p
+            className="gk-rise mt-6 max-w-2xl text-lede text-gk-ink-soft"
+            style={{ "--gk-delay": "160ms" } as CSSProperties}
+          >
+            {intro}
+          </p>
+        )}
+        {children && (
+          <div className="gk-rise mt-8" style={{ "--gk-delay": "240ms" } as CSSProperties}>
+            {children}
+          </div>
+        )}
       </Measure>
     </header>
   )
@@ -225,8 +307,7 @@ export function PageHero({
 // ── Contents ────────────────────────────────────────────────────────────────
 
 /**
- * The numbered contents list that stands in for a navigation bar on the first
- * screen, per direction C. A real ordered list of real links, so it is
+ * A numbered contents list. A real ordered list of real links, so it is
  * navigable by keyboard and by landmark without any ARIA.
  */
 export function Contents({ items }: { items: { href: string; title: string; note?: string }[] }) {
@@ -237,12 +318,14 @@ export function Contents({ items }: { items: { href: string; title: string; note
           <li key={item.href} className="border-b border-gk-edge">
             <a
               href={item.href}
-              className="group grid grid-cols-[2.5rem_1fr] items-baseline gap-4 py-4 hover:bg-gk-sunk sm:grid-cols-[3.5rem_1fr_auto] sm:gap-6"
+              className="group grid grid-cols-[2.5rem_1fr] items-baseline gap-4 py-4 sm:grid-cols-[3.5rem_1fr_auto] sm:gap-6"
             >
               <span className="font-data text-label text-gk-ink-mute">
                 {String(i + 1).padStart(2, "0")}
               </span>
-              <span className="font-display text-t4 text-gk-ink group-hover:underline">{item.title}</span>
+              <span className="font-display text-t4 text-gk-ink underline-offset-4 group-hover:underline">
+                {item.title}
+              </span>
               {item.note && (
                 <span className="col-start-2 font-data text-label text-gk-ink-mute sm:col-start-3">
                   {item.note}
@@ -333,7 +416,7 @@ export function FeatureRow({
       <div className={cn("min-w-0", flip ? "lg:order-1" : "lg:order-2")}>
         <div className="flex items-baseline gap-4">
           <span className="font-data text-label text-gk-ink-mute">{index}</span>
-          <Label>{eyebrow}</Label>
+          <Label dot>{eyebrow}</Label>
         </div>
         <As className="mt-4 font-display text-t3 text-gk-ink">{title}</As>
         {children && <div className="mt-4 max-w-2xl text-body text-gk-ink-soft">{children}</div>}
@@ -360,8 +443,8 @@ export function Split({
 }) {
   return (
     <div className="grid gap-10 lg:grid-cols-[22rem_1fr] lg:gap-16">
-      <div className={cn(sticky && "lg:sticky lg:top-24 lg:self-start")}>
-        {label && <Label>{label}</Label>}
+      <div className={cn(sticky && "lg:sticky lg:top-28 lg:self-start")}>
+        {label && <Label dot>{label}</Label>}
         {title && <h2 className="mt-4 font-display text-t3 text-gk-ink">{title}</h2>}
         {intro && <p className="mt-4 text-body text-gk-ink-soft">{intro}</p>}
       </div>
@@ -375,9 +458,10 @@ export function Split({
 /**
  * A designed, labelled placeholder for material the owner has not supplied.
  *
- * This is deliberately a visible, composed element rather than a grey box with
- * an image icon, because it ships to real visitors and should read as a
- * deliberate state. It carries the red oxide that means "awaiting material".
+ * It takes the shape the real material will have: the 40px media frame by
+ * default, or a circle for a portrait. It reserves the final aspect ratio so
+ * nothing moves when the real image arrives, and it carries the clay that
+ * means "awaiting material".
  *
  * Nothing invented ever goes in this slot. A labelled gap is honest; a stock
  * photograph of a stranger on a personal site, or an invented client on a
@@ -387,23 +471,27 @@ export function Placeholder({
   label,
   detail,
   ratio = "4 / 5",
+  shape = "frame",
   className,
 }: {
   label: string
   detail?: string
   ratio?: string
+  shape?: "frame" | "circle"
   className?: string
 }) {
+  const circle = shape === "circle"
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-2 border border-dashed border-gk-come/60 bg-gk-sunk p-6 text-center",
+        "flex flex-col items-center justify-center gap-2 border-[1.5px] border-dashed border-gk-come/60 bg-gk-sunk text-center",
+        circle ? "rounded-full px-10 py-8 sm:px-14" : "rounded-media p-6 sm:p-8",
         className,
       )}
-      style={{ aspectRatio: ratio }}
+      style={{ aspectRatio: circle ? "1 / 1" : ratio }}
     >
-      <span className="font-data text-label uppercase text-gk-come">{label}</span>
-      {detail && <span className="max-w-[24ch] text-body text-gk-ink-mute">{detail}</span>}
+      <span className="font-data text-label font-bold uppercase text-gk-come">{label}</span>
+      {detail && <span className="max-w-[26ch] text-body text-gk-ink-mute">{detail}</span>}
     </div>
   )
 }
@@ -411,7 +499,7 @@ export function Placeholder({
 /** An inline "to supply" marker for a missing value inside a line of text. */
 export function Gap({ children }: { children: ReactNode }) {
   return (
-    <span className="font-data text-label uppercase text-gk-come">[{children}]</span>
+    <span className="font-data text-label font-bold uppercase text-gk-come">[{children}]</span>
   )
 }
 
@@ -421,13 +509,18 @@ export function QuoteBand({ quote, attribution }: { quote: ReactNode; attributio
   return (
     <figure className="border-y border-gk-edge py-14">
       <blockquote className="max-w-4xl font-display text-t3 text-gk-ink">{quote}</blockquote>
-      <figcaption className="mt-6 font-data text-label uppercase text-gk-ink-mute">{attribution}</figcaption>
+      <figcaption className="mt-6 font-data text-label font-bold uppercase text-gk-ink-mute">{attribution}</figcaption>
     </figure>
   )
 }
 
 // ── Closing action ──────────────────────────────────────────────────────────
 
+/**
+ * The closing action band. Lifted cream inside a 40px frame rather than a
+ * second warm-black slab, because the footer below it is now the ink
+ * surface and two dark bands back to back would read as one.
+ */
 export function CtaBand({
   title,
   intro,
@@ -440,15 +533,15 @@ export function CtaBand({
   to?: string
 }) {
   return (
-    <section className="bg-gk-ink text-gk-on-dark">
-      <Measure className="py-16 sm:py-24">
+    <section className="pb-16 md:pb-24">
+      <Measure>
         <FadeIn>
-          <div className="grid gap-8 md:grid-cols-[1fr_auto] md:items-end">
+          <div className="grid gap-8 rounded-media bg-gk-sunk px-6 py-12 sm:px-12 sm:py-16 md:grid-cols-[1fr_auto] md:items-end">
             <div className="max-w-2xl">
-              <h2 className="font-display text-t2 text-gk-on-dark">{title}</h2>
-              <p className="mt-5 text-lede text-gk-on-dark-soft">{intro}</p>
+              <h2 className="font-display text-t2 text-gk-ink">{title}</h2>
+              <p className="mt-5 text-lede text-gk-ink-soft">{intro}</p>
             </div>
-            <Action to={to} variant="strong" onDark>
+            <Action to={to} variant="strong">
               {cta}
             </Action>
           </div>

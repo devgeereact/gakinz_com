@@ -43,10 +43,10 @@ import BrandMark from "@/marketing/components/BrandMark"
 import { useAuth } from "@/store/auth.store"
 import { canAccess } from "@/lib/access"
 
-// GAkinzOS modules (GAkinzOS.html), grouped under the seven main destinations
-// in docs/Plans 2026/02-APP-PLAN.md. Each item maps to a /app/* route that is
-// unchanged by the grouping; only some labels changed. `key` ties the item to
-// its role gate in src/lib/access.ts so the nav only shows modules the
+// GAkinzOS modules (docs/PRODUCT-SPEC.md), grouped under the seven main
+// destinations (D-040). Each item maps to a /app/* route that is unchanged by
+// the grouping; only some labels changed. `key` ties the item to its role gate
+// in src/lib/access.ts so the nav only shows modules the
 // signed-in role can actually open (server enforces the same lists).
 const navGroups = [
   {

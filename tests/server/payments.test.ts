@@ -1,5 +1,5 @@
 /**
- * Plan findings A04, A05, A25: the amount sent to Stripe must be the
+ * K-025: the amount sent to Stripe must be the
  * VAT-inclusive payable total, and the webhook must only mark an invoice paid
  * when Stripe reports that exact amount and currency, once per event.
  */
@@ -98,7 +98,7 @@ describe("Stripe webhook", () => {
   })
 })
 
-describe("PayPal checkout (A26)", () => {
+describe("PayPal checkout (K-026)", () => {
   it("is switched off until it can confirm payment without the browser returning", async () => {
     resetDb()
     createUser({ email: "owner@example.test", role: "super_admin" })

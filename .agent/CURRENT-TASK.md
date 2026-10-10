@@ -2,7 +2,7 @@
 
 ## Outcome
 
-The first implementation batch of the 2026 production plan (`docs/Plans 2026/05-DELIVERY-AND-HOUSEKEEPING.md`, "First implementation batch") is built on a branch, one concern per commit, each with evidence. At the end, money and sign-in defects A22, A23, A25, A26, A27 and A12 are fixed in source and covered by tests against a local synthetic database. The blog edit (A06), dashboard zeros (A08) and mobile overflow (A07) are fixed. CI runs tests and PHP syntax, and deploy waits for CI (A15). Project contract files match the GEE OS templates.
+The first implementation batch of the 2026 production plan (the local half of delivery phase 1, `docs/STATUS.md` sections 2 and 4) is built on a branch, one concern per commit, each with evidence. At the end, the money and sign-in defects K-025, K-026, K-027 and K-028 are fixed in source and covered by tests against a local synthetic database. The blog edit (K-016), dashboard zeros and mobile overflow (K-031) are fixed. CI runs tests and PHP syntax, and deploy waits for CI (K-035). Project contract files match the GEE OS templates.
 
 Started 10 October 2026 on the owner's instruction "Lets Build now And make sure files and packages are Matching the GEE OS".
 
@@ -17,12 +17,13 @@ Existing Application (GEE OS `modes/EXISTING-APPLICATION.md`, workflow `workflow
   - Server fixes in `auth.php`, `payments.php` and `proposals.php`, plus the schema additions they need. Schema changes are commented at the foot of `server/schema.sql` and recorded in `docs/DEPLOYMENT.md`.
   - Client fixes in `Blog.tsx`, `Dashboard.tsx`, Invoicing and Platform layout, and `csv.ts` if time allows.
   - The `.github/workflows` gating.
-  - Correcting the stale facts in agent and contract files (plan document 01, A28).
+  - Correcting the stale facts in agent and contract files.
+  - Moving the approved plan into the canonical documents (D-043) and retiring superseded documents (D-044).
 - Out of scope:
-  - The design-system rebuild and the six-service public content (plan phases 3 and 4). These wait for the owner's document 10 inputs.
+  - The design-system rebuild and the six-service public content (delivery phases 3 and 4). These wait for the owner inputs in `docs/STATUS.md` section 5.
   - Customer messaging and feedback (phase 2).
   - Monetisation and social.
-  - Deleting the plan folder.
+  - Deleting the temporary plan folder, which the owner does separately.
   - DNS, TLS, mail hosting.
   - Git history rewriting.
 
@@ -42,7 +43,7 @@ Existing Application (GEE OS `modes/EXISTING-APPLICATION.md`, workflow `workflow
 
 - Risk level: production (money and sign-in code).
 - Affected areas: `server/auth.php`, `server/payments.php`, `server/proposals.php`, `server/schema.sql`, `src/app/modules/Blog.tsx`, `src/app/modules/Dashboard.tsx`, `src/app/modules/Invoicing.tsx`, `src/app/modules/Platform.tsx`, `.github/workflows/*.yml`, `docs/DEPLOYMENT.md`, `docs/KNOWN-ISSUES.md`.
-- Required decisions still open (plan document 10): owner-side K-001, K-006, K-010 and K-015 actions; payment provider choice (the recommendation of Stripe only is applied by hiding PayPal links, which is reversible).
+- Required decisions still open (`docs/STATUS.md` section 5): owner-side K-001, K-006, K-010 and K-015 actions; payment provider choice (the recommendation of Stripe only is applied by hiding PayPal links, which is reversible).
 
 ## Evidence
 
