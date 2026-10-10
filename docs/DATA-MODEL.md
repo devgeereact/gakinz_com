@@ -1,14 +1,15 @@
 # Data model
 
-**Status:** current for the tracked schema as at 2026-09-22. Whether the live database
+**Status:** current for the tracked schema as at 2026-10-10. Whether the live database
 matches it is **UNVERIFIED**, because no live database was contacted.
 
-Authority: `server/schema.sql`. 34 tables, the 34th being `payment_events`, added on
-2026-10-10 and not applied to any live database. MySQL, InnoDB, `utf8mb4`.
+Authority: `server/schema.sql`. MySQL or MariaDB, InnoDB, `utf8mb4`; the table count is in
+`docs/STATUS.md` section 0.
 
-Two of those tables, `work` and `work_images`, were added on 2026-09-22 and **do not exist
-on any database**. That is not an inference from a failed check; nothing was checked. They
-were written into the file and never run. See section 4.
+Not applied to any live database, because they were written into the file and never run:
+`work` and `work_images` (2026-09-22), `payment_events` and the three enquiry follow-up
+columns (2026-10-10). That is not an inference from a failed check; nothing was checked. See
+section 4.
 
 ---
 
@@ -47,7 +48,7 @@ were written into the file and never run. See section 4.
 
 | Table | Purpose | Notes |
 |---|---|---|
-| `enquiries` | Public contact form, the top of the leads pipeline | `status` moves through new, contacted, proposal, won, lost. `tags`, `score`, `lost_reason` added later |
+| `enquiries` | Public contact form, the top of the leads pipeline | `status` moves through new, contacted, proposal, won, lost. `tags`, `score`, `lost_reason` added later. Follow-ups, 2026-10-10: `next_action_at` (DATE, null), `next_action_note` (VARCHAR 300, null) and `priority` (TINYINT, 0 none to 3 high, the owner's choice and separate from `score`) |
 | `clients` | CRM record, created when a lead is won | `tag` is one of retainer, one-off, vip, dormant. `retainer_amount` drives recurring billing and care-plan revenue |
 | `proposals`, `proposal_items` | Quotes with line items | `vat_rate`. `share_token` is unique and powers the public `/p/:token` view; `views` and `last_viewed_at` track opens |
 
@@ -68,14 +69,14 @@ were written into the file and never run. See section 4.
 | Table | Purpose | Notes |
 |---|---|---|
 | `invoices`, `invoice_items` | Invoicing | `vat_rate` on the parent. Totals are computed from items at read time in several endpoints |
-| `payment_events` | One row per payment-provider event processed | Unique on provider and event id, so a redelivery is a no-op; keeps the amount and currency the provider reported and the outcome (K-025) |
+| `payment_events` | One row per payment-provider event processed, added 2026-10-10 | `provider`, `event_id`, `invoice_id`, `amount_minor` (pence as reported, -1 if absent), `currency`, `outcome` (marked_paid, already_paid, amount_mismatch, unknown_invoice, ignored). Unique on provider and event id, so a redelivery is a no-op (K-025) |
 | `contracts` | Contracts and NDAs with typed-name e-signature | Stores signer name, IP and timestamp. NDA triage is a green, amber or red tag |
 
 ### Client-facing
 
 | Table | Purpose | Notes |
 |---|---|---|
-| `tickets`, `ticket_replies` | Support | status open, in_progress, resolved; priority urgent, high, normal, low |
+| `tickets`, `ticket_replies` | Support, and since 2026-10-10 client messages | status open, in_progress, resolved; priority urgent, high, normal, low. A client-created ticket takes `client_id` from the token and priority `normal`. `ticket_replies` has no internal-note flag, so every reply is client facing |
 | `comm_threads`, `comm_messages` | Conversation log tied to a client or project | `channel` is email, sms, whatsapp, call, meeting, client or internal. `direction` is out, in or note. Most messages are **recorded**, not sent. Email, SMS and WhatsApp can genuinely send |
 | `files` | File metadata | Binary lives on disk under `server/uploads/`, which is gitignored. Optional `share_token`, expiring when issued by `files.php?action=share` and **non-expiring** when issued by `work.php?action=addImage`. See section 7 |
 | `certificates` | Publicly verifiable certificates | `public_id` is the reference used by `/verify/:id`. `revoked_at` hides a revoked one |
@@ -133,13 +134,15 @@ users.client_id  ->  clients.id  ->  projects.client_id
 
 `portal.php` derives `client_id` from the authenticated token whenever the role is `client`
 and ignores any `?client_id` parameter. Staff may pass the parameter to preview a portal.
-This is the only place a client-role account reaches its data. Every other resource endpoint
-is staff only.
+Since 2026-10-10 the client branch of `support.php` does the same for `tickets` and
+`ticket_replies`, repeating the `client_id` condition in every query. Those two files, plus a
+client's own account actions in `auth.php`, are the only places a client-role account reaches
+data. Every other resource endpoint is staff only.
 
 ## 4. Migrations
 
-**There is no migration runner.** Schema changes live as commented `ALTER TABLE` statements
-from line 291 of `server/schema.sql`. They are documentation, not something the application
+**There is no migration runner.** Schema changes live as commented `ALTER TABLE` statements in
+the `MIGRATIONS` block of `server/schema.sql` and in dated blocks at its foot. They are documentation, not something the application
 applies. A fresh install gets the columns from the `CREATE TABLE` blocks; an existing database
 needs the statements run by hand.
 
@@ -159,11 +162,13 @@ Outstanding statements, grouped as they appear in the file:
 | Later module tables | `design_reviews`, `project_dev`, `deploys`, `leave_entries`, `contracts`, `files`, `announcements`, `kb_articles`, `posts`, `testimonials`, `content_drafts` |
 | Work ledger, 2026-09-22 | `work`, `work_images`. Both are `CREATE TABLE IF NOT EXISTS`, so they are safe to run as they stand |
 | Share-token collision guard, 2026-09-22 | `ALTER TABLE files ADD UNIQUE KEY uk_file_share (share_token)` |
+| Payment event log, 2026-10-10 | `CREATE TABLE IF NOT EXISTS payment_events`. Safe to run twice |
+| Enquiry follow-ups, 2026-10-10 | `ALTER TABLE enquiries ADD COLUMN next_action_at`, `next_action_note`, `priority`. Run once; a second run fails on the duplicate column |
 
 Which of the older statements have already been applied to the live database is
-**UNVERIFIED**. The two 2026-09-22 groups are a different case: they are known **not** to
-have been applied, because they were written in this working tree and no database has been
-contacted since.
+**UNVERIFIED**. The 2026-09-22 and 2026-10-10 groups are known **not** to have been applied by
+this work, because no database has been contacted since they were written. Their order is in
+`docs/DEPLOYMENT.md` section 5.2.
 
 **The unique key has a precondition.** `files.share_token` currently has no unique
 constraint, so duplicates may already exist, and the `ALTER` fails if any do. Check first:
@@ -191,7 +196,10 @@ Truncating `audit_log` therefore resets both the brute-force throttle and every 
 
 Several endpoints prepare a statement with the newer columns, and fall back to a narrower
 query if the prepare fails. `auth.php` does this for the TOTP columns and for the session
-device columns; `require_auth()` does it for `last_seen_at`. The effect is that an
+device columns, and its `me` action answers `totp_enabled: null` without the column;
+`require_auth()` does it for `last_seen_at`. `leads.php` lists enquiries without the follow-up
+columns and answers `followup: false` on `meta` when they are missing (tested in
+`tests/server/leads.test.ts`). The effect is that an
 un-migrated database keeps working with the older feature set rather than returning a 500.
 This is verified by source inspection. Runtime behaviour against a real un-migrated database
 is **NOT TESTED**.

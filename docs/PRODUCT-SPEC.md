@@ -136,13 +136,16 @@ an unmeasured revenue increase.
 
 Defined in `src/routes/index.tsx`. Public copy lives in `src/marketing/data/site.ts`; blog
 content and work records are fetched from the API through `src/marketing/data/blog.ts` and
-`src/marketing/data/work.ts`, each with a static fallback.
+`src/marketing/data/work.ts`. Since 2026-10-10 a successful API answer, empty included,
+decides what shows, and the static fallback is used only when the request fails (K-036). The
+public surface is styled on the D-037 system (`docs/DESIGN-SYSTEM.md`). None of the 2026-10-10
+changes is deployed yet.
 
 | Route | Page | Content source |
 |---|---|---|
 | `/` | Home | `site.ts`, live blog and work |
 | `/about` | About | `site.ts` |
-| `/services`, `/services/:slug` | Services index and detail | `site.ts` `services` (four today) |
+| `/services`, `/services/:slug` | Services index and detail | `site.ts` `services` (four today; six approved, D-038) |
 | `/pricing` | Pricing | `site.ts` `packages`, `addOns`, `alwaysIncluded`, `paymentTerms`, `faqs` |
 | `/sectors` | Sectors | `site.ts` `sectors` |
 | `/work`, `/work/:slug` | Work index and detail | `work.php`, static fallback in `work.ts` |
@@ -220,7 +223,8 @@ month, 40/30/30 terms) await the owner's confirmation and a stated VAT basis.
 | Social publication | Approved article or case-study URL plus a manual platform post | Store the destination URL and date if useful; never claim automatic cross-posting |
 
 Static fallback content must be an intentional policy, not invisible resurrection of
-unpublished records (K-036). The owner receives a private API and content-health warning.
+unpublished records. Built 2026-10-10 (K-036): fallback only on failure. Still to build: the
+owner's private API and content-health warning.
 Private project records need a separate approved publication record: changing a private
 milestone never publishes client information. Public forms create an enquiry once, with a
 clear acknowledgement and abuse controls. Marketing subscriptions need consent separate from
@@ -258,8 +262,9 @@ are in section 6.
 
 ### 5.1 Modules as built
 
-`src/app/modules/` holds 24 module components, each wired into `src/routes/index.tsx`,
-`src/lib/access.ts`, the sidebar and global search.
+`src/app/modules/` holds the module components below, each wired into
+`src/routes/index.tsx`, `src/lib/access.ts`, the sidebar and global search. The count of routed
+screens is in `docs/STATUS.md` section 0.
 
 | Module key | Route | Component | In the original brief? |
 |---|---|---|---|
@@ -287,13 +292,18 @@ are in section 6.
 | `work` | `/app/work` | `Work.tsx` | No. The public work ledger |
 | `files` | `/app/files` | `Files.tsx` | No. Per-project and per-client file storage |
 | `careplan` | `/app/careplan` | `CarePlan.tsx` | No. Uptime, TLS expiry, care-plan revenue |
+| `account` | `/app/account` | `Account.tsx` | No. My account for every role, client included: profile, two-factor, own sessions (2026-10-10) |
 
 Module presence is verified. Feature completeness inside each module is **NOT TESTED** except
 where `docs/STATUS.md` records a test.
 
 ### 5.2 Navigation: seven destinations
 
-Decided in D-040. The sidebar today is one flat list of 24 entries (K-032).
+Decided in D-040. **As built on 2026-10-10 (not deployed):** the sidebar groups its entries
+under these seven headings, relabels Dashboard, Leads, Proposals and Platform as Today,
+Enquiries, Quotes and Settings, hides a group the role cannot use, and keeps every URL
+(K-032). A client sees Client Portal and My account. Moving supporting tools inside their
+records, and record search, are not built.
 
 | Destination | Contents | Default view |
 |---|---|---|
@@ -378,6 +388,12 @@ concurrent behaviour need testing.
 
 Acceptance: the full message is readable, one next action is visible, a status change rolls
 back honestly on failure, and repeated conversion creates no duplicate.
+
+**As built on 2026-10-10 (not deployed):** each enquiry carries a next-action date, a short
+note and an owner priority (0 none to 3 high, separate from the AI score). The board marks
+overdue and due-today items and filters to follow-ups due; Today has a follow-ups card that
+shows unavailable, never zero, on failure. Needs the enquiries `ALTER` in `docs/DEPLOYMENT.md`
+section 5.2. Conversion integrity is still untested.
 
 #### Bookings, inside Enquiries
 
@@ -522,6 +538,12 @@ Acceptance: a reply keeps its draft on failure, status and priority changes are 
 client ownership is checked on create, list, detail and reply. SLA engines, AI triage and
 omnichannel bots are deferred.
 
+**As built on 2026-10-10 (not deployed or uploaded):** the client branch exists (K-039). A
+client lists, reads, starts and replies to its own tickets from the portal's Messages area,
+which keeps typed text on a failed send and guards double submits. Ownership is checked on
+list, detail, create and reply with two synthetic clients. Attachments, project linking and
+"Need help?" inside a project are not built.
+
 #### Comms and Mailbox
 
 Keep one project and client conversation history. Distinguish "Record note", "Record call" and
@@ -573,6 +595,12 @@ Acceptance: a save and edit round trip keeps the body, a duplicate slug is rejec
 cannot expose another client's data, unpublish removes discovery links, and a website refresh
 shows the latest published record.
 
+**As built on 2026-10-10 (not deployed):** the blog edit keeps the body (K-016); unpublishing
+removes a post or work record from the public site (K-036); articles support `##` and `###`
+headings, bullet and numbered lists, bold and safe links, with `{sponsored}` for affiliate
+links (K-037). Preview, recommendation blocks and the grouping into Portfolio, Articles,
+Testimonials and Draft ideas are not built.
+
 #### Platform to Settings and My account
 
 Separate owner business settings from user account settings. Business: trading identity,
@@ -587,6 +615,12 @@ logging message bodies or passwords.
 Acceptance: every signed-in role can manage its own sessions and security through
 independently checked ownership; none can manage another user's; the owner sees no unusable
 account links.
+
+**As built on 2026-10-10 (not deployed):** My account at `/app/account` for every role, client
+included, with a read-only profile, two-factor setup and recovery codes, and signed-in devices
+with revoke; the user menu links there (K-023, K-024). Server tests confirm each action
+touches only the caller. Name and password changes from My account, and the business-settings
+split of Platform, are not built.
 
 #### Analytics and Time
 
@@ -757,16 +791,16 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 |---|---|---|---|---|---|
 | Today screen: replies due, calls, deadlines, waiting client material, overdue invoices | One place to start the day; each item opens its record | Dashboard exists, chart-led | 3 | M | Unavailable states |
 | "Unavailable, retry" instead of £0 when a source fails | Stops false reassurance such as "All on time" | Fixed in source 2026-10-10 (K-031) | 1 | S | None |
-| Seven-item navigation | Fewer decisions; other tools sit inside records | Flat 24-item sidebar (K-032) | 3 | M | None; URLs kept |
+| Seven-item navigation | Fewer decisions; other tools sit inside records | Grouped into seven, 2026-10-10 (K-032); tools not yet inside records | 3 | M | None; URLs kept |
 | Record search across clients and projects | Find a client quickly from a phone | Menu search only | 3 | M | Safe search endpoint |
-| My account for every role: profile, password, two-factor, own sessions | Fixes two dead links and admin-only security (K-023, K-024) | Missing | 2 | M | Ownership checks |
+| My account for every role: profile, password, two-factor, own sessions | Fixes two dead links and admin-only security (K-023, K-024) | Built 2026-10-10 without name or password change | 2 | M | Ownership checks |
 
 ### Enquiries and bookings
 
 | Feature | Why it helps | Today | Phase | Size | Depends on |
 |---|---|---|---|---|---|
-| Next-action date and short note on each enquiry | Nothing goes cold unnoticed | Missing | 2 | S | None |
-| Simple priority set by the owner | Replaces AI scoring | Missing | 2 | S | None |
+| Next-action date and short note on each enquiry | Nothing goes cold unnoticed | Built 2026-10-10; needs the SQL step | 2 | S | None |
+| Simple priority set by the owner | Replaces AI scoring | Built 2026-10-10; needs the SQL step | 2 | S | None |
 | Call record: requested or confirmed time, time zone, link, outcome | Bookings tracked against the enquiry | `book.php` returns a Calendly link only | 2 | M | None |
 | Optional calendar file (ICS) for a confirmed call | Adds to any calendar without OAuth | Missing | Later | S | Call record |
 | Convert enquiry to client once, matching existing email or company | No duplicate clients | Exists, untested for duplicates | 2 | S | Synthetic tests |
@@ -779,7 +813,7 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 | One client timeline: enquiries, calls, quotes, projects, invoices, messages | Answers "what happened with this client?" | Spread across modules | 2 | M | None |
 | Private owner notes kept apart from client-visible information | Nothing internal leaks | Partly | 2 | S | None |
 | Client portal: project summary, next step, invoices, shared files | Clients help themselves | Read-only portal exists | 2 | M | Isolation tests |
-| Client messages through support tickets | Two-way conversation without a new chat system | Staff-only (K-039) | 2 | M | Client branch in `support.php` |
+| Client messages through support tickets | Two-way conversation without a new chat system | Built 2026-10-10 (K-039) | 2 | M | Client branch in `support.php` |
 | Request an update, request a call, supply assets | Fewer chasing emails | Missing | 2 | M | Client messages |
 | Private delivery feedback, with separate permission to publish | Honest feedback and lawful testimonials | Missing | 2 | S | Client messages |
 | Project reference on documents; reference plus email link sign-in | Access without another password | Missing | After J03 | M | K-027 fixed and J03 passing |
@@ -813,14 +847,14 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 
 | Feature | Why it helps | Today | Phase | Size | Depends on |
 |---|---|---|---|---|---|
-| Target design on both surfaces (D-037), Sofia Sans, one light and one dark CMS theme | One consistent look (`docs/DESIGN-SYSTEM.md` section 10) | September design | 3 to 4 | M | Font licence confirmed |
-| Hero and section motion with a reduced-motion fallback | An original feel without hurting speed | `FadeIn` only | 4 | M | Design tokens |
+| Target design on both surfaces (D-037), Sofia Sans, one light and one dark CMS theme | One consistent look (`docs/DESIGN-SYSTEM.md` section 10) | Public surface built 2026-10-10; CMS not started | 3 to 4 | M | Font licence confirmed |
+| Hero and section motion with a reduced-motion fallback | An original feel without hurting speed | Built on the public surface 2026-10-10 | 4 | M | Design tokens |
 | Six service pages with buyer hooks, scope, exclusions and price basis | Services up front for companies | Four pages | 4 | M | Prices approved |
 | Blog edit that keeps the body | Safe content editing | Fixed in source 2026-10-10 (K-016) | 1 | S | None |
-| Safe article format: links, lists, recommendation blocks | Needed for affiliate links | Headings and paragraphs only (K-037) | 4 | S | None |
-| Publish and unpublish that really removes content | Fallback no longer resurrects posts | Defective (K-036) | 4 | S | None |
+| Safe article format: links, lists, recommendation blocks | Needed for affiliate links | Links, lists and bold built 2026-10-10 (K-037); recommendation blocks not built | 4 | S | None |
+| Publish and unpublish that really removes content | Fallback no longer resurrects posts | Fixed 2026-10-10 (K-036) | 4 | S | None |
 | Route-specific metadata and a sitemap from published records | Search and share previews | Static (K-018, K-019) | 4 | M | Rendering choice |
-| Replace "to supply" gaps and engineering counts with real content | A professional public site | Gaps visible (K-038) | 4 | M | Owner content |
+| Replace "to supply" gaps and engineering counts with real content | A professional public site | Engineering counts removed 2026-10-10; "to supply" gaps remain (K-038) | 4 | M | Owner content |
 | Business and social links held in one settings record | Header, footer and structured data stay consistent | Hard-coded in `site.ts` | 4 | S | Profiles created |
 | "Already working with us?" link in header and footer | Client access without competing with the enquiry | Missing | 4 | S | Portal |
 

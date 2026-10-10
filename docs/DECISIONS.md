@@ -727,7 +727,8 @@ engineering counts or internal paths, and absent material stays unpublished (K-0
 honest that one person does the work.
 
 ## D-040 · The CMS centres on seven destinations, and optional modules stay quiet
-**Date:** 2026-10-10 · **Status:** approved with the 2026 plan. In progress (K-032)
+**Date:** 2026-10-10 · **Status:** approved with the 2026 plan. Sidebar grouping built 2026-10-10,
+not deployed (K-032); tools inside records still to do
 
 The owner's navigation is Today, Enquiries, Clients, Projects, Money, Website and Settings.
 Supporting tools live inside the relevant record rather than in a flat 24-item sidebar. This
@@ -791,3 +792,18 @@ superseded design file to explain global details, but D-006 already does that, a
 out-of-date file in the tree is read as current by people and agents alike. The documentation
 now follows the GEE OS standard-application layout (`docs/GEE-OS.md`).
 
+## D-045 · Documents change in the same pull request as the code, and CI checks it
+**Date:** 2026-10-10 · **Status:** active
+
+A change is not complete until the documents it affects are updated in the same pull request.
+The change-to-document map is in `AGENTS.md`, "Keeping documents current". Measured counts
+live only in `docs/STATUS.md` section 0, and server work not yet uploaded lives only in
+`docs/DEPLOYMENT.md` section 5. `npm run docs:check` (`scripts/docs-check.mjs`) runs in CI on
+every pull request: relative links must resolve, the owner's temporary planning folder must not
+be referenced, a server PHP or `.htaccess` change must touch `docs/DEPLOYMENT.md`, and a schema
+change must touch `docs/DATA-MODEL.md` and `docs/DEPLOYMENT.md`.
+**Why:** by 2026-10-10 counts had drifted between documents, three partial upload lists
+competed in `docs/DEPLOYMENT.md`, and several fixed defects were still listed as open. A check
+that a document changed cannot prove it changed correctly; review still has to.
+**Evidence:** `npm run docs:check -- --base refs/remotes/origin/chore/codebase-hygiene` passes
+on the branch, and fails, naming `docs/DEPLOYMENT.md`, when a server file is touched alone.

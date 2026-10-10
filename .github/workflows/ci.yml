@@ -22,12 +22,14 @@ permissions:
 
 jobs:
   verify:
-    name: typecheck + lint + unit tests + build
+    name: typecheck + lint + docs + unit tests + build
     runs-on: ubuntu-latest
     steps:
+      # Full history, so the docs check can diff a pull request against its base.
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - uses: actions/setup-node@v5
         with:
@@ -43,12 +45,26 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      # Lint is a RATCHET: the existing backlog (47 errors, 2 warnings on
-      # 2026-10-10) is tolerated, but any new problem fails the build. Lower the
-      # limits in scripts/lint-ratchet.mjs as the backlog falls, then switch
-      # this step to `npm run lint` once it reaches zero.
+      # Lint is a RATCHET: the existing backlog (the limits in
+      # scripts/lint-ratchet.mjs) is tolerated, but any new problem fails the
+      # build. Lower the limits as the backlog falls, then switch this step to
+      # `npm run lint` once it reaches zero.
       - name: Lint (ratchet)
         run: npm run lint:ratchet
+
+      # Documents stay current (AGENTS.md, "Keeping documents current"): links
+      # resolve, and on a pull request a server or schema change must update
+      # the documents that record it. The base ref goes through env, not
+      # straight into the script.
+      - name: Docs check (pull request)
+        if: github.event_name == 'pull_request'
+        run: npm run docs:check -- --base "origin/$BASE_REF"
+        env:
+          BASE_REF: ${{ github.base_ref }}
+
+      - name: Docs check
+        if: github.event_name != 'pull_request'
+        run: npm run docs:check
 
       - name: Unit tests
         run: npm test

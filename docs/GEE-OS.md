@@ -53,4 +53,4 @@ differences (D-044):
 
 ## Maintenance
 
-Update this file only when the GEE route changes. Update project facts in their canonical documents rather than duplicating them here.
+Update this file only when the GEE route changes. Update project facts in their canonical documents rather than duplicating them here, as `AGENTS.md`, "Keeping documents current", sets out; `npm run docs:check` checks links and the server-to-document rule in CI.

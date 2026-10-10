@@ -49,7 +49,9 @@ tested" requires actual testing. Nothing is recommended only because it pays a c
 copied reviews, retailer descriptions or AI-generated product claims. A commercial
 relationship is marked clearly before the relevant content.
 
-The article format needed for this (safe links, lists and recommendation blocks) is K-037.
+The article format needed for this exists since 2026-10-10 (K-037, not deployed): safe links,
+lists, bold, and `[text](url){sponsored}` for an affiliate link, which adds `rel="sponsored"`.
+Recommendation blocks are not built.
 
 ## 3. AdSense pilot
 

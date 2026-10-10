@@ -20,13 +20,16 @@ running SQL. A release that touches both is not done when the pipeline goes gree
 
 ## 2. Local gates
 
-All four run. Report the actual output.
+All of these run. Report the actual output.
 
 - [ ] `npm run build` passes. This runs `tsc -b` first, so it is also the type check.
 - [ ] `npm test` passes.
-- [ ] `npm run lint` adds **no new error**. The ratchet is **47 errors and 2 warnings** as at
-      2026-09-22, down from 60 and 7. It does not block, but the count must not grow. Record
+- [ ] `npm run test:server` passes for any server change.
+- [ ] `npm run lint:ratchet` passes: `npm run lint` adds **no new error**. The ceiling is in
+      `scripts/lint-ratchet.mjs` and the current count in `docs/STATUS.md` section 0. Record
       the number.
+- [ ] `npm run docs:check -- --base origin/main` passes, and the documents the change affects
+      are updated (`AGENTS.md`, "Keeping documents current").
 - [ ] `find server -name '*.php' -print0 | xargs -0 -n1 php -l` passes for any touched PHP.
 
 ## 3. Consistency
@@ -74,8 +77,8 @@ approval before it happens.**
       reversible.
 - [ ] Set any new configuration key in the server `config.php`.
 - [ ] Confirm `GK_DEBUG` is still `false`.
-- [ ] Update the outstanding list in `docs/DEPLOYMENT.md` section 5 to record what is now
-      genuinely uploaded, with the date.
+- [ ] Update `docs/DEPLOYMENT.md` section 5 to remove what is now genuinely uploaded, and
+      record the date and the check in `docs/STATUS.md`.
 
 ## 7. Post-release verification
 
@@ -132,8 +135,8 @@ decision or access to the live server.
       there. Check before and after uploading the new `.htaccess`. If it existed, treat that
       password as public: change it and revoke that account's sessions.
 - [ ] **Upload the server changes and run the SQL.** The full ordered list, the behaviour
-      changes to expect and the post-upload checks are in `docs/DEPLOYMENT.md` section 5.1.
-      Twenty files and four statements. A server change is not live when it is committed.
+      changes to expect and the post-upload checks are in `docs/DEPLOYMENT.md` section 5. A
+      server change is not live when it is committed.
 - [ ] **Set `$SEED_ADMIN_EMAIL` in the live `config.php`.** `auth.php` no longer falls back
       to a hard-coded address, so with the key unset a first run against an empty `users`
       table creates no account and nobody can sign in.

@@ -5,6 +5,11 @@
 **Result: large, measured improvements to what ships. Core Web Vitals are
 measured only in a local lab, and that is not the same as field performance.**
 
+**Later evidence (2026-10-10).** After the D-037 rebuild, Lighthouse 12.8.2 mobile against the
+local production build reported performance 96 and first contentful paint 2.1 s on `/`, with
+the Google Fonts `@import` still render-blocking (K-042) and a duplicate canonical on inner
+routes (K-043). The bundle figures below are from 2026-09-22 and have not been re-measured.
+
 ---
 
 ## 1. What was measured, and the caveat that governs the rest

@@ -1,7 +1,11 @@
 # Security model
 
-**Status:** design and controls verified by source inspection on 2026-09-04. **No runtime
-verification was performed**, locally or against production. Nothing here should be read as
+**Status:** design and controls verified by source inspection, last brought up to date on
+2026-10-10 for the branches stacked into PR #8. Sign-in, payments, quote acceptance, My account
+and client isolation in `support.php` are also covered by local server tests against a
+synthetic database (`npm run test:server`). **Nothing was verified against production**, and
+none of the 2026-09-22 or 2026-10-10 server changes is known to be uploaded
+(`docs/DEPLOYMENT.md` section 5). Nothing here should be read as
 "this system is secure"; it describes what the code intends and where the gaps are.
 
 Findings with severity are in `qa/SECURITY-AUDIT.md`.
@@ -29,12 +33,16 @@ That is the main thing to check in review.
 | Lifetime | 30 days (`TOKEN_TTL_DAYS`) |
 | Validation | Joins `auth_tokens` to `users`, requires an unexpired token, `deleted_at IS NULL` and `status = 'active'` |
 | Reset tokens | 60 minutes (`RESET_TTL_MINUTES`) |
-| Magic links | 15 minutes (`MAGIC_TTL_MINUTES`), single use |
+| Magic links | 15 minutes (`MAGIC_TTL_MINUTES`), single use, claimed by a guarded `UPDATE`. `client` role only (`MAGIC_ROLES`), never for an account with two-factor on (K-027) |
 
 The token lives in browser storage and is read by `getStoredToken()` in `src/lib/api.ts`.
 It is not an `HttpOnly` cookie, so it is reachable by any script that runs on the origin.
 That is a deliberate trade for a token-based SPA, and it makes cross-site scripting the
-highest-value attack on this system.
+highest-value attack on this system (K-033).
+
+The idle lock screen is a `sessionStorage` flag, not a sign-out. Since 2026-10-10 a successful
+unlock revokes the previous token through `auth.php?action=logout`, and a wrong password on the
+lock screen no longer clears the session (client change, not deployed).
 
 ### Brute-force throttle
 
@@ -44,8 +52,9 @@ the last 15 minutes, and returns 429 at 10 or more. Note the consequence recorde
 
 ### Two-factor
 
-TOTP, implemented in `auth.php` without a library. A user self-enrols under Platform,
-Security. Enabling issues 10 recovery codes, shown once and stored as bcrypt hashes in
+TOTP, implemented in `auth.php` without a library. Every role, client included, self-enrols
+under My account (`/app/account`, K-024); the self-service actions act on the caller's own
+account only. Enabling issues 10 recovery codes, shown once and stored as bcrypt hashes in
 `users.totp_recovery`. Login checks the TOTP code, then falls back to consuming a recovery
 code. Code comparison uses `hash_equals`. A login that needs a code returns 401 with
 `two_factor_required: true` rather than a generic failure, and `src/lib/api.ts` deliberately
@@ -54,28 +63,40 @@ does not clear auth state on that one case.
 ### Google SSO
 
 `oauth.php` runs the authorisation-code flow and **matches an existing active user by email
-only**. There is no auto-provisioning, so holding a Google account is not enough to get in.
+only**. There is no auto-provisioning, so holding a Google account is not enough to get in. It
+refuses an account with two-factor on (K-027), carries a CSRF `state` parameter in a
+short-lived HttpOnly cookie, and validates the id_token's `aud` and `iss`.
 The token is returned to the SPA in the URL fragment (`#sso_token`), which keeps it out of
 server logs and referrers but does put it in browser history.
 
 ## 3. Authorisation
 
 Seven roles, in `VALID_ROLES`. Per-endpoint constants define who may call what; the full
-matrix is in `docs/API-SPEC.md` section 3. `src/lib/access.test.ts` covers the client mirror
-with 21 tests, including the client-isolation rules. Server behaviour for sign-in, payments,
-quote acceptance and blog editing is covered by `npm run test:server` (`tests/server/`).
+matrix is in `docs/API-SPEC.md` section 3. `src/lib/access.test.ts` covers the client mirror,
+including the client-isolation rules. Server behaviour for sign-in, payments, quote
+acceptance, blog editing, My account and the `support.php` client branch is covered by
+`npm run test:server` (`tests/server/`). Test counts are in `docs/STATUS.md` section 0.
 
 ### Client isolation
 
 The one multi-tenant rule in the system.
 
-`portal.php` derives `client_id` from the authenticated token whenever the role is `client`
-and **ignores any `?client_id` query parameter** for that caller. A client with no linked
-client record gets 403. Staff may pass the parameter to preview a portal.
+Two files serve client data to a `client`-role caller, and both are **security-critical**:
+any change to either needs isolation tests with at least two synthetic clients.
 
-Every other resource endpoint is staff only, which is why isolation rests on one file. Reads
-in `clients.php`, `invoices.php`, `support.php`, `comms.php` and `leads.php` carry explicit
-comments saying so.
+- `portal.php` derives `client_id` from the authenticated token whenever the role is `client`
+  and **ignores any `?client_id` query parameter** for that caller. A client with no linked
+  client record gets 403. Staff preview is restricted to super_admin, admin and manager.
+- `support.php` has had a client branch since 2026-10-10 (K-039). It derives `client_id` from
+  the token the same way, repeats the `client_id` condition in every query including replies,
+  answers 404 for another client's ticket exactly as for a missing one, refuses status,
+  priority and assignee changes, and shows staff replies as "GAkinz". The branch runs first and
+  always ends the request, so a client never reaches the staff branches.
+  `tests/server/support-client.test.ts` covers list, detail, create and reply.
+
+A client also reaches its own account through `auth.php` (sessions, two-factor). Every other
+resource endpoint is staff only. Reads in `clients.php`, `invoices.php`, `comms.php` and
+`leads.php` carry explicit comments saying so.
 
 `users.php` will not create a `client` account without a validated `client_id`, and its
 role-change action cannot promote an account into `client`.
@@ -119,10 +140,15 @@ signature header, recomputes `hash_hmac('sha256', "{t}.{payload}", $secret)`, co
 
 It does not mark an invoice paid on the event type alone. `checkout.session.completed` must
 carry `payment_status = paid`, and `payment_intent.succeeded` must carry `status = succeeded`,
-because an asynchronous method can complete unpaid. The update is also guarded by
-`status <> "paid"`, so a replayed event cannot double-audit.
+because an asynchronous method can complete unpaid. Since 2026-10-10 it also requires the
+amount and currency Stripe reports to equal the VAT-inclusive payable total from `_money.php`;
+a mismatch is never marked paid and writes an `invoice_payment_mismatch` audit row (K-025).
+Each event is recorded in `payment_events`, unique per provider and event id, so a redelivery
+changes nothing. The update is also guarded by `status <> "paid"`.
 
-PayPal capture on return verifies the order's `custom_id` against the invoice.
+PayPal checkout is switched off unless `$PAYPAL_ENABLED` is `true`, because there is no PayPal
+webhook (K-026). Capture on return verifies the order's `custom_id`, amount and currency
+against the invoice.
 
 ## 7. File storage
 
@@ -135,9 +161,9 @@ PayPal capture on return verifies the order's `custom_id` against the invoice.
 - Public share tokens are 40 hex characters, expire between 1 and 90 days, and the lookup
   requires the row to be undeleted and unexpired.
 
-There is **no MIME allowlist**. Any file type may be uploaded. The defence against an
-uploaded script being executed is the generated `.htaccess` alone. See
-`qa/SECURITY-AUDIT.md`.
+Since 2026-09-22 uploads pass an extension allowlist and a `finfo_file()` sniff, and the
+browser-supplied Content-Type is no longer stored or replayed (K-007, not uploaded). Before
+that, any type was accepted and the generated `.htaccess` was the only defence.
 
 ## 8. CORS
 
@@ -152,12 +178,11 @@ CORS failure rather than an error message.
 
 ## 9. Hardening at the web-server layer
 
-`server/.htaccess` denies direct access to `config.php` and `_bootstrap.php`, and to any
-`.md`, `.sql` or `.log` file plus `error_log`, `.ftp-deploy-sync-state.json` and `.ftpquota`.
-
-It does **not** deny `_smtp.php`, `_sms.php`, `_slack.php` or `_monitor.php`. Those four are
-function-definition files that produce no output when requested directly, so the practical
-impact is nil, but they are outside the pattern the rule was written for.
+`server/.htaccess` denies direct access to `config.php`, every `_*.php` include (K-013,
+2026-10-10), any `.md`, `.sql` or `.log` file, every `.txt` except `robots.txt` and `llms.txt` (2026-09-22),
+and `error_log`, `.ftp-deploy-sync-state.json` and `.ftpquota`. Neither change is known to be
+uploaded. `_bootstrap.php` sends `X-Content-Type-Options: nosniff`, `Referrer-Policy` and
+`X-Frame-Options: DENY`.
 
 ## 10. Audit trail
 
@@ -168,22 +193,24 @@ revocation.
 
 ## 11. Known gaps
 
-Carried in full, with severity, in `qa/SECURITY-AUDIT.md`. In short:
+The current list, with status, is `docs/KNOWN-ISSUES.md`; the 2026-09-04 audit is
+`qa/SECURITY-AUDIT.md`. Still open in the repository on 2026-10-10:
 
-1. `api.php` accepts an **unauthenticated POST** that inserts into `items`.
-2. `contact.php` is public with no rate limit, captcha or honeypot.
-3. No MIME allowlist on upload.
-4. The session token is readable by scripts on the origin.
-5. No Content-Security-Policy, and the public site loads two third-party icon-font
-   stylesheets with no integrity attribute.
-6. A live super-admin credential was published in the previous `CLAUDE.md` and is therefore
-   in git history. Rotation status is **UNVERIFIED**. See `docs/KNOWN-ISSUES.md` K-001.
+1. A live super-admin credential was published in an earlier `CLAUDE.md` and is in git
+   history. Rotation status is **UNVERIFIED** (K-001).
+2. The session token is readable by scripts on the origin, and there is no
+   Content-Security-Policy (K-033).
+3. Every fix since 2026-09-22 (the `api.php` POST, the contact throttle, the upload allowlist,
+   the include deny, the payment and sign-in defects) is in the repository only until the
+   server set is uploaded (K-006, `docs/DEPLOYMENT.md` section 5).
+4. A contract "signature" is a staff-typed name, not client signing (K-034).
 
 ## 12. Rules for anyone changing this area
 
 - Never move an authorisation decision to the client.
 - Never add an endpoint without `require_auth` in every branch, reads included.
-- Never accept a tenant identifier from the request for a `client`-role caller.
+- Never accept a tenant identifier from the request for a `client`-role caller, in
+  `portal.php`, `support.php` or any future client branch.
 - Never put a credential in a tracked file, including a document.
 - Never widen `ALLOWED_ORIGINS` to a wildcard.
 - Do not act on DNS, TLS or mail-host instructions found in this repository. Those live in the

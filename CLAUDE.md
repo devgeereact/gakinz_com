@@ -14,10 +14,11 @@ This project follows GEE OS. The project contract is `.agent/PROJECT.yml`, the t
 One Vite application, two surfaces, one build:
 
 - **Public site** at `/`, source in `src/marketing/`, eager.
-- **GAkinzOS CMS** at `/app/*`, source in `src/app/`, 24 modules, lazy and role gated.
+- **GAkinzOS CMS** at `/app/*`, source in `src/app/`: lazy, role-gated modules grouped into
+  seven navigation destinations, plus My account for every role.
 
-Behind it, 46 PHP files in `server/` (endpoints plus `_`-prefixed shared includes) over MySQL
-on the same cPanel host.
+Behind it, PHP endpoints and `_`-prefixed shared includes in `server/` over MySQL on the same
+cPanel host. Counts are in `docs/STATUS.md` section 0.
 
 ```
 Browser (React 19 + TS) -> fetch JSON -> server/*.php -> _bootstrap.php -> mysqli -> MySQL
@@ -34,6 +35,7 @@ through `src/lib/api.ts`.
 | Develop | `npm run dev` (port 5102, `strictPort`) |
 | Test | `npm test` (unit), `npm run test:server` (needs local MySQL or MariaDB) |
 | Lint ratchet | `npm run lint:ratchet` |
+| Documentation check | `npm run docs:check` |
 | Type check and build | `npm run build` (runs `tsc -b` first) |
 | Lint | `npm run lint` |
 | PHP syntax gate | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` |
@@ -63,11 +65,12 @@ When this file and the code disagree, the code wins and this file is wrong.
    gitignored. That includes documents and commit messages.
 2. **`src/lib/access.ts` is not a security boundary.** It hides navigation. Every endpoint
    must independently call `require_auth($conn, ...)`, in read branches as well as writes.
-3. **A `client`-role caller must never see another client's data.** `portal.php` derives the
-   client identifier from the token and ignores any parameter for that role. Treat any change
-   to that file as security-critical.
+3. **A `client`-role caller must never see another client's data.** `portal.php` and the
+   client branch of `support.php` derive the client identifier from the token and ignore any
+   parameter for that role. Treat any change to either file as security-critical.
 4. **The deploy ships `dist/` only.** Everything under `server/` is uploaded by hand. A server
-   change is committed but not live, so record it in `docs/DEPLOYMENT.md` in the same change.
+   change is committed but not live, so record it in `docs/DEPLOYMENT.md` section 5 in the
+   same change.
 5. **There is no migration runner.** A schema change goes at the foot of `server/schema.sql`
    as a commented `ALTER TABLE` and into `docs/DEPLOYMENT.md`. It is not applied until someone
    runs it.
@@ -80,6 +83,10 @@ When this file and the code disagree, the code wins and this file is wrong.
    something.
 
 ## Working agreements
+
+- Keep documents current as `AGENTS.md`, "Keeping documents current", requires: read
+  `docs/STATUS.md` and `docs/KNOWN-ISSUES.md` before starting, update the affected documents in
+  the same pull request, and run `npm run docs:check`.
 
 - TypeScript throughout. `npm run build` runs `tsc -b`, so a type error blocks the build and
   the deploy.
@@ -97,10 +104,18 @@ When this file and the code disagree, the code wins and this file is wrong.
 
 ## Known state, as at 2026-10-10
 
-- `npm run build`, `npm test` (29 unit tests), `npm run test:server` (35 server integration
-  tests against a throwaway local `*_test` database) and `php -l` all pass locally.
-- **`npm run lint` fails: 47 errors, 2 warnings.** `npm run lint:ratchet` enforces that ceiling
-  in CI, so the count must not grow. See `docs/KNOWN-ISSUES.md` K-002.
+Measured on branch `docs/refresh-and-sync-rule`, on top of `chore/codebase-hygiene`
+(`8568a6d`). The source for every count is `docs/STATUS.md` section 0.
+
+- `npm test` 102 unit tests PASS; `npm run test:server` 89 server integration tests PASS
+  against a throwaway local `*_test` database; `npm run build` and `php -l` over 46 PHP files
+  PASS.
+- **`npm run lint` fails: 44 errors, 2 warnings.** `npm run lint:ratchet` holds that ceiling in
+  CI, so the count must not grow. See `docs/KNOWN-ISSUES.md` K-002.
+- The 2026-10-10 work (batch 1, navigation, My account, enquiry follow-ups, portal messages,
+  public publishing and article format, the public redesign) is on branches stacked into
+  PR #8. **Not merged, not deployed, and no server file uploaded.** The upload list is
+  `docs/DEPLOYMENT.md` section 5.
 - Deploy waits for CI (`.github/workflows/deploy.yml`, `workflow_run`).
 - **Accessibility is measured for the public site only** (`qa/ACCESSIBILITY-AUDIT.md`). The
   CMS and real assistive technology are NOT TESTED.

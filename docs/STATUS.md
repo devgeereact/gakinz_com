@@ -1,19 +1,45 @@
 # Status
 
-**As at:** 2026-10-10, branch `feat/plan-2026-batch-1` (`9db80b2`) on top of `c57eb4a`
-(`main`). The 2026-09-22 relaunch is merged (`f67f05b`). The owner approved the 2026 plan on
-2026-10-10 (`docs/DECISIONS.md` D-043). Batch 1, the local half of delivery phase 1, is
-committed on the branch and **not merged, not deployed, not uploaded**.
+**As at:** 2026-10-10. `main` is `c57eb4a`. All later work sits on branches stacked into
+PR #8, ending at `chore/codebase-hygiene` (`8568a6d`): batch 1 (the local half of delivery
+phase 1), the seven-destination navigation, My account, enquiry follow-ups, client portal
+messages, public publishing and the article format, the lock-screen token fix, the public
+redesign on D-037, the favicon and share image, and dead-code removal. **None of it is merged,
+deployed or uploaded.** The owner approved the 2026 plan on 2026-10-10 (`docs/DECISIONS.md`
+D-043).
 
-**Method:** local test, build, lint and PHP syntax runs; an isolated browser preview with every
+**Method:** local test, build, lint and PHP syntax runs; isolated browser previews with every
 API call stubbed; source inspection for everything else. **No live server, database, mailbox,
 payment provider or DNS record was contacted.** Section 6 is the 2026-09-22 record, accurate
-except where sections 1 to 4 say otherwise.
+except where sections 0 to 4 say otherwise.
 
-This is the file that changes often. Anything about the deployed system is UNVERIFIED unless
-someone with server access has checked it.
+This is the file that changes often, and the one home for measured counts: other documents
+point here rather than repeat a number. Anything about the deployed system is UNVERIFIED
+unless someone with server access has checked it.
 
 ---
+
+## 0. Current measurements
+
+Measured on 2026-10-10 against commit `8568a6d` plus the documentation refresh. Re-measure and
+update this table when a count changes.
+
+| Measure | Command | Result |
+|---|---|---|
+| Unit tests | `npm test` | **PASS.** 102 tests in 6 files |
+| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 89 tests in 8 files |
+| Type check and build | `npm run typecheck`, `npm run build` | **PASS** |
+| Lint | `npm run lint:ratchet` | 44 errors, 2 warnings, at the ratchet ceiling. **`npm run lint` still fails** (K-002) |
+| Documentation | `npm run docs:check` | **PASS** |
+| PHP files | `ls server/*.php \| wc -l` | 46: 40 endpoints and 6 `_`-prefixed includes, all passing `php -l` |
+| Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 34 |
+| CMS screens | `src/routes/index.tsx` under `/app` | 25: Today (the index), 23 module routes and My account, in seven navigation groups |
+| Client API groups | `src/lib/api.ts` | 36 exported groups over one `request()` helper |
+| Server files changed since `main` | `git diff --name-only c57eb4a -- server` | 23 PHP files, `.htaccess` and `schema.sql`, listed in `docs/DEPLOYMENT.md` section 5 |
+| `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 35 of 46 files, 129 call sites |
+
+Not measured on this run: `npm audit` (last figure in K-041), accessibility and performance
+(last runs in `qa/`), and anything on the live system.
 
 ## 1. Audit and readiness, 2026-10-10
 
@@ -21,7 +47,8 @@ A broad planning audit of `main` at `c57eb4a`, re-verified the same day by three
 read-only source reviews. It is not a penetration test or proof that every business action
 works. Its findings are recorded in `docs/KNOWN-ISSUES.md`: some matched existing entries
 (K-001, K-006, K-010, K-015, K-016, K-018, K-019, K-021, K-023, K-024), and the rest became
-K-025 to K-041, where K-029 and K-040 were found during batch 1.
+K-025 to K-043, where K-029 and K-040 were found during batch 1 and K-042 and K-043 during the
+public redesign. The checks below are the audit-day figures; section 0 has today's.
 
 ### Local checks at audit time
 
@@ -54,7 +81,7 @@ submitted.
 | 390px emulated touch viewport | Home, contact, services, dashboard, leads, projects, blog and work kept a 390px document width |
 | Invoicing and Platform at 390px | **FAIL** at audit (448px and 642px). Fixed in batch 1 (K-031) |
 | Dashboard on API failure | **FAIL** at audit: an error banner, but cards showed £0 and "All on time". Fixed in batch 1 (K-031) |
-| Public home on API failure | **FAIL.** The static fallback renders project gaps, the portrait placeholder and technical build commentary (K-038) |
+| Public home on API failure | **FAIL** at audit: the static fallback rendered project gaps, the portrait placeholder and technical build commentary. Engineering copy removed since; placeholders remain until the owner supplies material (K-038) |
 
 Not done: data-filled tables, dialogs, payment success screens, a screen-reader session, a full
 keyboard journey, or a new axe or Lighthouse run. The 2026-09-22 public measurements in section
@@ -71,7 +98,7 @@ keyboard journey, or a new axe or Lighthouse run. The 2026-09-22 public measurem
 | No borrowed design language | Full Mastercard-inspired system chosen | D-037 |
 | Four services | Six (D-038) | Two IT services added; networking and hardware excluded |
 | CI described as a quality gate | No tests, no `php -l`, deploy did not wait | Fixed (K-035) |
-| Stale counts in agent and contract files | 24 modules, 46 PHP files, 34 tables, 29 unit tests | Corrected on 2026-10-10 |
+| Stale counts in agent and contract files | Counts drifted between documents | Counts now live in section 0 only; `npm run docs:check` and the rule in `AGENTS.md` keep documents current |
 
 ### Readiness verdict
 
@@ -90,13 +117,13 @@ live-state discovery and owner inputs first; no launch is promised in a fixed nu
 | Phase | Work and dependency | Exit evidence | State on 2026-10-10 |
 |---|---|---|---|
 | 0. Agree scope | Design system and six services; motion contract, core workflows and navigation, positioning and feature dispositions; actual business and pricing facts | Dated decisions with clear exclusions and remaining questions | Plan approved (D-037 to D-044). Business facts outstanding (section 5) |
-| 1. Establish safety | Owner credential actions; reconcile host PHP and SQL; backup and restore; a safe local synthetic backend and mail sink; payment defects and alternative sign-in reviewed | Rotation and revocation confirmed, restoration demonstrated, release manifest and rollback recorded, no accidental production calls in tests | Local fixes done on the branch (section 4). Owner-side actions open |
-| 2. Complete business journeys | Enquiry follow-up, simple bookings, client conversion, quote acceptance and version, projects and tasks, invoices and reconciliation, verified reference access, scoped messages, updates and feedback, client-linked brief, portal and support isolation | Synthetic end-to-end journey, failure, retry and concurrency tests, and record ownership tests pass | Started |
-| 3. Polish the CMS | Target design foundation, smaller navigation, My account, consistent page and form states, unavailable metrics, quiet optional modules | Owner usability task passes; keyboard, phone, zoom and theme checks on affected screens | Navigation started (K-032) |
-| 4. Polish the public site | Hero and section design and motion, company and owner positioning, service copy, complete case studies, consent and legal content, safe publishing, metadata and sitemap | Buyer journey, publish and unpublish, share preview, responsive and accessibility evidence | Publishing fixes started (K-036 to K-038) |
+| 1. Establish safety | Owner credential actions; reconcile host PHP and SQL; backup and restore; a safe local synthetic backend and mail sink; payment defects and alternative sign-in reviewed | Rotation and revocation confirmed, restoration demonstrated, release manifest and rollback recorded, no accidental production calls in tests | Local fixes built (section 4), not deployed. Owner-side actions open |
+| 2. Complete business journeys | Enquiry follow-up, simple bookings, client conversion, quote acceptance and version, projects and tasks, invoices and reconciliation, verified reference access, scoped messages, updates and feedback, client-linked brief, portal and support isolation | Synthetic end-to-end journey, failure, retry and concurrency tests, and record ownership tests pass | Started. Enquiry follow-ups and client messages built with server tests; bookings, timeline, feedback and the full journey not built |
+| 3. Polish the CMS | Target design foundation, smaller navigation, My account, consistent page and form states, unavailable metrics, quiet optional modules | Owner usability task passes; keyboard, phone, zoom and theme checks on affected screens | Navigation grouped and My account built (K-032, K-023, K-024). CMS redesign on the target system not started |
+| 4. Polish the public site | Hero and section design and motion, company and owner positioning, service copy, complete case studies, consent and legal content, safe publishing, metadata and sitemap | Buyer journey, publish and unpublish, share preview, responsive and accessibility evidence | Public surface rebuilt on D-037; publishing, article format and engineering copy fixed (K-036, K-037, K-038 in part). Six-service copy, case studies and owner material wait for owner inputs |
 | 5. Social and affiliate pilot | Owned profile set-up, approved copy and media, first resources, disclosed links | Exact profile URLs, disclosure and link checks, a repeatable small publishing routine | Not started |
 | 6. AdSense pilot | Account approval and a certified consent platform, article-only slots | Consent and network proof, no scripts on private layouts, performance comparison, reversible switch | Not started |
-| 7. Consolidate and operate | Promote approved requirements to canonical documents, retire duplicates, review monthly | Valid references, one source per fact, accurate task, decision and release records | Documents consolidated 2026-10-10 (D-043, D-044) |
+| 7. Consolidate and operate | Promote approved requirements to canonical documents, retire duplicates, review monthly | Valid references, one source per fact, accurate task, decision and release records | Documents consolidated 2026-10-10 (D-043, D-044); sync rule and `npm run docs:check` added (D-045) |
 
 Public content drafting can run alongside the safety work, but no production-readiness
 announcement comes before the phase 1 and 2 gates. Affiliate and ad work is secondary. Customer
@@ -110,44 +137,49 @@ reference access cannot ship until the authentication and ownership gates pass.
    revoked (K-001), and that the seed-password file is gone from the live server (K-015).
    Nothing else in this list matters as much.
 2. Establish the real server state: which files are uploaded, which migrations have run (K-006).
-3. Upload the server set and run the outstanding SQL, `docs/DEPLOYMENT.md` sections 5.1 then
-   5.2, and check past Stripe payments against their VAT-inclusive totals (K-025). Until then
-   the work ledger has no database behind it and every server fix is repository-only.
+3. Upload the server set and run the SQL in `docs/DEPLOYMENT.md` section 5, and check past
+   Stripe payments against their VAT-inclusive totals (K-025). Until then every server fix is
+   repository-only and the work ledger has no tables behind it.
 4. Restore a backup somewhere isolated and agree the recovery targets (K-010,
    `docs/OPERATIONS.md` section 10).
-5. Merge batch 1 to `main` once CI passes, knowing that the merge deploys `dist/`.
+5. Review and merge PR #8 once CI passes, knowing that the merge deploys `dist/`, and that the
+   client then expects the server set in step 3.
 
 **P1, the core journeys**
 
 6. One tested enquiry to client to quote to project to invoice journey against synthetic data.
-7. My account for every role (K-023, K-024).
-8. Client messages through support tickets, with isolation tests (K-039).
-9. The seven-destination navigation (K-032).
-10. Token storage and the lock screen (K-033); honest contract labelling (K-034).
+7. Booking records inside Enquiries, the client timeline and private feedback
+   (`docs/PRODUCT-SPEC.md` sections 5.5 and 6).
+8. The remaining token work: `localStorage` exposure, token lifetime and a CSP review (K-033);
+   honest contract labelling (K-034).
 
-**P2, the public site**
+**P2, the CMS and the public site**
 
-11. Six service pages, authorised case studies and complete public copy (K-038); publishing that
-    really unpublishes (K-036); a safe article format (K-037); route-specific metadata and a
-    generated sitemap (K-018, K-019).
-12. Resolve the `llms.txt` conflict: `public/llms.txt` ships to the document root, and the
-    hardened `.htaccess` denies every `.txt` except `robots.txt`, so the file would be refused
-    in production. Read from the two files only; UNVERIFIED against the live server.
-13. Legal pages reviewed, with genuine dates (K-021).
-14. A screen-reader pass with real assistive technology, and a first CMS accessibility check.
-15. Exercise `work.php` against a real database before relying on it.
+9. The CMS redesign slice on the target system (`docs/DESIGN-SYSTEM.md` section 10), starting
+   with Today.
+10. Six service pages, authorised case studies, owner portrait and biography, and complete
+    public copy (K-038, owner inputs in section 5); route-specific metadata and a generated
+    sitemap (K-018, K-019); the canonical conflict and font import (K-042, K-043).
+11. After the `.htaccess` upload, confirm `/llms.txt` still serves. The deny rule exempts
+    `robots.txt` and `llms.txt` by name (`server/.htaccess`); the live behaviour is UNVERIFIED.
+12. Legal pages reviewed, with genuine dates (K-021).
+13. A screen-reader pass with real assistive technology, and a first CMS accessibility check.
+14. Exercise `work.php` against a real database before relying on it.
 
 **P3, growth**
 
-16. Social profiles, then the affiliate pilot, then the AdSense pilot
+15. Social profiles, then the affiliate pilot, then the AdSense pilot
     (`docs/CONTENT-AND-GROWTH.md`).
 
-**Ongoing:** hold the lint ratchet at 47 errors and bring it down (K-002); decide dependency
-exposure (K-041, K-017); measure performance in the field rather than on a local preview.
+**Ongoing:** hold the lint ratchet and bring it down (K-002); decide dependency exposure
+(K-041, K-017); measure performance in the field rather than on a local preview.
 
-## 4. What changed on 2026-10-10 (batch 1)
+## 4. What changed on 2026-10-10
 
-The local half of delivery phase 1. Contract: `.agent/CURRENT-TASK.md`.
+Contract: `.agent/CURRENT-TASK.md`. Every row is in the repository only: client changes deploy
+when PR #8 merges, and server changes need the manual upload in `docs/DEPLOYMENT.md` section 5.
+
+### Batch 1, the local half of delivery phase 1
 
 | Area | Change | Evidence |
 |---|---|---|
@@ -162,9 +194,24 @@ The local half of delivery phase 1. Contract: `.agent/CURRENT-TASK.md`.
 | Schema | The reserved column name `stored` is quoted | found by the CI server-test job, K-040 |
 | CI | Unit tests, server tests, `php -l`, lint ratchet; deploy waits for CI | workflow files, K-035. The CI run on the pushed branch found K-040; the latest run's result is not recorded here |
 
-Verification on 2026-10-10, local: `npm test` 29 PASS; `npm run test:server` 35 PASS;
-`npm run build` PASS; `php -l` 46 files PASS; `npm run lint:ratchet` PASS at 47 errors and
-2 warnings. Production, live database, real payments and real sends: NOT TESTED.
+### After batch 1
+
+| Area | Change | Evidence |
+|---|---|---|
+| Navigation | The sidebar groups its entries under Today, Enquiries, Clients, Projects, Money, Website and Settings; empty groups hide per role; every URL unchanged | Isolated preview with stubbed API, K-032 |
+| My account | `/app/account` for every role, client included: profile, two-factor, signed-in devices with revoke. `auth.php` `me` returns `totp_enabled` | `tests/server/account.test.ts`, `src/lib/access.test.ts`, K-023, K-024 |
+| Enquiry follow-ups | Next-action date, note and owner priority; overdue and due-today marks; a follow-ups card on Today. Degrades on an un-migrated database | `tests/server/leads.test.ts`, `src/lib/format.test.ts` |
+| Portal messages | Clients list, read, start and reply to their own support tickets; the client id comes from the token | `tests/server/support-client.test.ts`, 22 isolation tests, K-039 |
+| Public publishing | A successful empty CMS answer removes unpublished posts and work; fallback only on failure. Engineering counts and paths gone from the work fallback | `src/marketing/data/cmsResult.test.ts`, K-036, K-038 in part |
+| Article format | Headings, lists, bold and safe links, rendered without raw HTML; `{sponsored}` links | `src/marketing/lib/articleFormat.test.ts`, K-037 |
+| Lock screen | Unlock revokes the previous token; a wrong password no longer signs out | `src/lib/session-revoke.test.ts`, browser check with stubbed API, K-033 in part |
+| API-SPEC | Brought up to date with the server | Source review |
+| Public redesign | The public surface on D-037: Sofia Sans, cream and warm-black palette, pill navigation and actions, CSS and SVG motion with a reduced-motion fallback | 9 routes at 5 widths, contrast check, Lighthouse mobile accessibility 100, `docs/DESIGN-SYSTEM.md` |
+| Brand | Favicon, 32px and apple-touch icons and the share image on the D-037 palette | Files in `public/` |
+| Hygiene | Six unused public primitives, an unused API client and formatter removed | `knip`, typecheck, tests, build |
+| Documents | One upload list in `docs/DEPLOYMENT.md`; counts in section 0 only; the sync rule in `AGENTS.md` and `npm run docs:check` in CI | This file, D-045 |
+
+Production, live database, real payments and real sends: NOT TESTED.
 
 ## 5. Owner inputs outstanding
 
