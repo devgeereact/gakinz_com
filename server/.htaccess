@@ -38,7 +38,10 @@ RewriteRule ^(api|contact|ai|verify)\.php$ - [L]
 RewriteRule ^ index.html [L]
 
 # Basic hardening
-<FilesMatch "^(config|_bootstrap)\.php$">
+# config.php and every shared include (_bootstrap, _money, _smtp, _sms, _slack,
+# _monitor and any future _*.php). Includes are required by endpoints, never
+# requested directly (KNOWN-ISSUES K-013).
+<FilesMatch "^(config|_[A-Za-z0-9_-]+)\.php$">
   Require all denied
 </FilesMatch>
 
