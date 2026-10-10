@@ -71,7 +71,7 @@ function ensure_upload_dir(): void {
 if ($method === 'GET' && isset($_GET['token'])) {
   $token = preg_replace('/[^a-f0-9]/', '', (string)$_GET['token']);
   if ($token === '') fail('Invalid link.', 404);
-  $stmt = $conn->prepare('SELECT name, stored, mime FROM files WHERE share_token = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > NOW()) LIMIT 1');
+  $stmt = $conn->prepare('SELECT name, `stored`, mime FROM files WHERE share_token = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > NOW()) LIMIT 1');
   $stmt->bind_param('s', $token);
   $stmt->execute();
   $f = $stmt->get_result()->fetch_assoc();
@@ -83,7 +83,7 @@ if ($method === 'GET' && isset($_GET['token'])) {
 if ($method === 'GET' && isset($_GET['download'])) {
   require_auth($conn, STAFF);
   $id = (int)$_GET['download'];
-  $stmt = $conn->prepare('SELECT name, stored, mime FROM files WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+  $stmt = $conn->prepare('SELECT name, `stored`, mime FROM files WHERE id = ? AND deleted_at IS NULL LIMIT 1');
   $stmt->bind_param('i', $id);
   $stmt->execute();
   $f = $stmt->get_result()->fetch_assoc();
@@ -159,7 +159,7 @@ if ($method === 'POST' && $action === 'upload') {
   $uid = $user['id'];
 
   // Columns: client_id(i) project_id(i) name(s) stored(s) mime(s) size(i) uploaded_by(i)
-  $stmt = $conn->prepare('INSERT INTO files (client_id, project_id, name, stored, mime, size, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  $stmt = $conn->prepare('INSERT INTO files (client_id, project_id, name, `stored`, mime, size, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?)');
   if (!$stmt) { @unlink($dest); fail('Could not record the file.', 500); }
   $stmt->bind_param('iisssii', $clientId, $projectId, $orig, $stored, $mime, $size, $uid);
   if (!$stmt->execute()) { @unlink($dest); fail('Could not record the file.', 500); }

@@ -423,7 +423,7 @@ CREATE TABLE IF NOT EXISTS files (
   client_id   INT NULL,
   project_id  INT NULL,
   name        VARCHAR(255) NOT NULL,            -- original filename
-  stored      VARCHAR(255) NOT NULL,            -- on-disk name (random)
+  `stored`    VARCHAR(255) NOT NULL,            -- on-disk name (random)
   mime        VARCHAR(120) DEFAULT NULL,
   size        INT NOT NULL DEFAULT 0,
   share_token CHAR(40) DEFAULT NULL,            -- set when a public link is issued
