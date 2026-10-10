@@ -109,3 +109,18 @@ describe("PayPal checkout (A26)", () => {
     expect(r.json.error).toMatch(/switched off/)
   })
 })
+
+describe("Stripe webhook before the payment_events table exists", () => {
+  it("still marks a correct payment paid on an un-migrated database", async () => {
+    resetDb()
+    const invoiceId = createInvoice(createClient("Legacy Ltd"), [[1, 100]], 20)
+    sql("RENAME TABLE payment_events TO payment_events_hidden")
+    try {
+      const r = await postWebhook(stripeEvent("evt_legacy", invoiceId, 12000))
+      expect(r.status).toBe(200)
+      expect(one(`SELECT status FROM invoices WHERE id = ${invoiceId}`)).toBe("paid")
+    } finally {
+      sql("RENAME TABLE payment_events_hidden TO payment_events")
+    }
+  })
+})

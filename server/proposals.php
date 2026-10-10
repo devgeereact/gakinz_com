@@ -153,10 +153,16 @@ if ($method === 'POST' && $action === 'status') {
   $status = str_field($in, 'status', 20);
   if ($id <= 0) fail('A proposal id is required.');
   if (!in_array($status, ['draft', 'sent', 'declined'], true)) fail('Invalid status.');
-  $stmt = $conn->prepare('UPDATE proposals SET status = ? WHERE id = ? AND deleted_at IS NULL');
+  $stmt = $conn->prepare('SELECT status FROM proposals WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  $cur = $stmt->get_result()->fetch_assoc();
+  if (!$cur) fail('Proposal not found.', 404);
+  // An accepted quote has a project and invoices behind it; its terms are fixed.
+  if ($cur['status'] === 'accepted') fail('This quote has been accepted. Create a new quote for changed terms.', 409);
+  $stmt = $conn->prepare('UPDATE proposals SET status = ? WHERE id = ? AND deleted_at IS NULL AND status <> "accepted"');
   $stmt->bind_param('si', $status, $id);
   $stmt->execute();
-  if ($stmt->affected_rows < 1) fail('Proposal not found.', 404);
   audit($conn, $user['id'], 'proposal_status', "#$id → $status");
   ok(['ok' => true]);
 }
@@ -166,12 +172,15 @@ if ($method === 'POST' && $action === 'accept') {
   $id = (int)(body()['id'] ?? 0);
   if ($id <= 0) fail('A proposal id is required.');
 
-  $stmt = $conn->prepare('SELECT title, client_id, project_id, status, vat_rate FROM proposals WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+  $stmt = $conn->prepare('SELECT title, client_id, project_id, status, vat_rate, valid_until, valid_until < CURRENT_DATE AS expired FROM proposals WHERE id = ? AND deleted_at IS NULL LIMIT 1');
   $stmt->bind_param('i', $id);
   $stmt->execute();
   $p = $stmt->get_result()->fetch_assoc();
   if (!$p) fail('Proposal not found.', 404);
   if ($p['project_id']) ok(['ok' => true, 'project_id' => (int)$p['project_id'], 'existing' => true]);
+  // Only a quote the client has actually been sent can be accepted (plan A27).
+  if ($p['status'] !== 'sent') fail('Only a sent quote can be accepted. Mark it as sent first.', 409);
+  if (!empty($p['expired'])) fail('This quote expired on ' . $p['valid_until'] . '. Extend its validity before accepting.', 409);
 
   // Proposal subtotal (ex VAT) drives the 40/30/30 payment schedule.
   $stmt = $conn->prepare('SELECT COALESCE(SUM(qty * unit_price), 0) AS subtotal FROM proposal_items WHERE proposal_id = ?');
@@ -182,6 +191,22 @@ if ($method === 'POST' && $action === 'accept') {
 
   $conn->begin_transaction();
   try {
+    // Claim the quote first. The guarded UPDATE takes the row lock, so a
+    // concurrent request waits, then matches nothing and returns the project
+    // this request created (plan A12). Exactly one request converts.
+    $claim = $conn->prepare('UPDATE proposals SET status = "accepted" WHERE id = ? AND status = "sent" AND project_id IS NULL AND deleted_at IS NULL');
+    $claim->bind_param('i', $id);
+    $claim->execute();
+    if ($claim->affected_rows !== 1) {
+      $conn->rollback();
+      $stmt = $conn->prepare('SELECT project_id FROM proposals WHERE id = ? LIMIT 1');
+      $stmt->bind_param('i', $id);
+      $stmt->execute();
+      $existing = (int)($stmt->get_result()->fetch_assoc()['project_id'] ?? 0);
+      if ($existing > 0) ok(['ok' => true, 'project_id' => $existing, 'existing' => true]);
+      fail('This quote is no longer open for acceptance.', 409);
+    }
+
     $title = $p['title'];
     $clientId = $p['client_id'] !== null ? (int)$p['client_id'] : null;
     $stmt = $conn->prepare('INSERT INTO projects (name, client_id, status) VALUES (?, ?, "in_progress")');
@@ -189,7 +214,7 @@ if ($method === 'POST' && $action === 'accept') {
     $stmt->execute();
     $projectId = $conn->insert_id;
 
-    $stmt = $conn->prepare('UPDATE proposals SET status = "accepted", project_id = ? WHERE id = ?');
+    $stmt = $conn->prepare('UPDATE proposals SET project_id = ? WHERE id = ?');
     $stmt->bind_param('ii', $projectId, $id);
     $stmt->execute();
 

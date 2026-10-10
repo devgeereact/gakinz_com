@@ -311,18 +311,26 @@ fail('Unknown action.', 400);
 // Best-effort on an un-migrated database: if payment_events does not exist yet
 // the webhook still works, guarded by status <> "paid" as before.
 function gk_payment_event_seen(mysqli $conn, string $provider, string $eventId): bool {
-  $stmt = @$conn->prepare('SELECT 1 FROM payment_events WHERE provider = ? AND event_id = ? LIMIT 1');
-  if (!$stmt) return false;
-  $stmt->bind_param('ss', $provider, $eventId);
-  $stmt->execute();
-  return (bool)$stmt->get_result()->fetch_row();
+  try {
+    $stmt = $conn->prepare('SELECT 1 FROM payment_events WHERE provider = ? AND event_id = ? LIMIT 1');
+    if (!$stmt) return false;
+    $stmt->bind_param('ss', $provider, $eventId);
+    $stmt->execute();
+    return (bool)$stmt->get_result()->fetch_row();
+  } catch (Throwable $e) {
+    return false; // table not created yet
+  }
 }
 
 function gk_payment_event_record(mysqli $conn, string $provider, string $eventId, int $invoiceId, int $amountMinor, string $currency, string $outcome): void {
-  $stmt = @$conn->prepare(
-    'INSERT IGNORE INTO payment_events (provider, event_id, invoice_id, amount_minor, currency, outcome) VALUES (?, ?, ?, ?, ?, ?)'
-  );
-  if (!$stmt) { error_log('GAkinz payment_events table missing; event not recorded: ' . $eventId); return; }
-  $stmt->bind_param('ssiiss', $provider, $eventId, $invoiceId, $amountMinor, $currency, $outcome);
-  $stmt->execute();
+  try {
+    $stmt = $conn->prepare(
+      'INSERT IGNORE INTO payment_events (provider, event_id, invoice_id, amount_minor, currency, outcome) VALUES (?, ?, ?, ?, ?, ?)'
+    );
+    if (!$stmt) throw new RuntimeException('prepare failed');
+    $stmt->bind_param('ssiiss', $provider, $eventId, $invoiceId, $amountMinor, $currency, $outcome);
+    $stmt->execute();
+  } catch (Throwable $e) {
+    error_log('GAkinz payment_events not recorded (run the 2026-10-10 schema step): ' . $eventId);
+  }
 }

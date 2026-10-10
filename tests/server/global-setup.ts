@@ -28,7 +28,8 @@ function syntheticConfig(): string {
   const host = DB_HOST === "127.0.0.1" ? `127.0.0.1:${DB_PORT}` : "localhost"
   return `<?php
 // Synthetic configuration written by tests/server/global-setup.ts. Test only.
-mysqli_report(MYSQLI_REPORT_OFF); // endpoints rely on @prepare() returning false
+// No mysqli_report() call, as in config.php.example: PHP 8 defaults apply, so a
+// failed query throws exactly as it would on the live host.
 define('GK_DEBUG', true);
 define('DB_HOST', ${phpString(host)});
 define('DB_NAME', ${phpString(DB_NAME)});

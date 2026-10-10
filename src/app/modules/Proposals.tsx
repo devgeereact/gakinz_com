@@ -47,6 +47,29 @@ const statusClass: Record<ProposalStatus, string> = {
   declined: "bg-destructive/10 text-destructive",
 }
 
+const round2 = (n: number) => Math.round(n * 100) / 100
+
+/**
+ * The schedule proposals.php creates on acceptance: 40/30/30 of the ex-VAT
+ * subtotal, due today, +30 and +60 days, each invoice carrying the quote's VAT.
+ * Mirrors the server so the owner sees exactly what will be created.
+ */
+function acceptanceSchedule(p: Proposal) {
+  const deposit = round2(p.total * 0.4)
+  const stage = round2(p.total * 0.3)
+  const final = round2(p.total - deposit - stage)
+  const due = (days: number) => {
+    const d = new Date()
+    d.setDate(d.getDate() + days)
+    return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })
+  }
+  return [
+    { label: "Deposit (40%)", net: deposit, due: due(0) },
+    { label: "Stage payment (30%)", net: stage, due: due(30) },
+    { label: "Final payment (30%)", net: final, due: due(60) },
+  ].map((r) => ({ ...r, gross: round2(r.net + round2((r.net * p.vat_rate) / 100)) }))
+}
+
 const gbp = (n: number) =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(n)
 
@@ -60,6 +83,7 @@ export default function Proposals() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
+  const [confirming, setConfirming] = useState<Proposal | null>(null)
 
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState("")
@@ -164,6 +188,7 @@ export default function Proposals() {
   }
 
   const accept = async (p: Proposal) => {
+    setConfirming(null)
     setBusyId(p.id)
     const res = await proposals.accept(p.id)
     setBusyId(null)
@@ -354,7 +379,7 @@ export default function Proposals() {
                       )}
                       {p.status === "sent" && (
                         <>
-                          <Button variant="ghost" size="sm" disabled={busyId === p.id} onClick={() => accept(p)}>
+                          <Button variant="ghost" size="sm" disabled={busyId === p.id} onClick={() => setConfirming(p)}>
                             <Check className="mr-1 h-3.5 w-3.5" /> Accept
                           </Button>
                           <Button variant="ghost" size="sm" disabled={busyId === p.id} onClick={() => decline(p)}>
@@ -371,6 +396,48 @@ export default function Proposals() {
           </Table>
         )}
       </div>
+
+      <Dialog open={confirming !== null} onOpenChange={(o) => !o && setConfirming(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Accept “{confirming?.title}”?</DialogTitle>
+          </DialogHeader>
+          {confirming && (
+            <div className="space-y-3 text-sm">
+              <p className="text-muted-foreground">
+                Only accept once the client has agreed this exact quote. This creates one project and these three invoices
+                {confirming.vat_rate > 0 ? `, each with VAT at ${confirming.vat_rate}%` : ""}. Accepted terms cannot be changed afterwards.
+              </p>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead className="text-xs text-muted-foreground">
+                    <tr>
+                      <th className="py-1 pr-2 font-medium">Invoice</th>
+                      <th className="py-1 pr-2 font-medium">Due</th>
+                      <th className="py-1 text-right font-medium">Payable</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {acceptanceSchedule(confirming).map((r) => (
+                      <tr key={r.label} className="border-t">
+                        <td className="py-1.5 pr-2">{r.label}</td>
+                        <td className="py-1.5 pr-2 whitespace-nowrap">{r.due}</td>
+                        <td className="py-1.5 text-right font-medium">{gbp(r.gross)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setConfirming(null)}>Cancel</Button>
+            <Button onClick={() => confirming && accept(confirming)} disabled={confirming !== null && busyId === confirming.id}>
+              <Check className="mr-1 h-4 w-4" /> Accept and create project
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
