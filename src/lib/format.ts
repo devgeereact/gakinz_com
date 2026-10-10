@@ -35,3 +35,28 @@ export function gbp(n: number) {
 export function num(n: number, maximumFractionDigits = 0) {
   return new Intl.NumberFormat("en-GB", { maximumFractionDigits }).format(n)
 }
+
+/** Today's date in the browser's own time zone as YYYY-MM-DD (not UTC). */
+export function localIsoDate(d = new Date()) {
+  const p = (n: number) => String(n).padStart(2, "0")
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+/** A YYYY-MM-DD date as "12 Oct", read as a local calendar day. */
+export function formatYmd(ymd: string) {
+  const [y, m, d] = ymd.split("-").map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+}
+
+/**
+ * An enquiry's follow-up state: "overdue" before today, "today", "upcoming"
+ * after today, or null when there is no next action or the enquiry is closed.
+ */
+export function followUpState(
+  lead: { status: string; next_action_at?: string | null },
+  today = localIsoDate(),
+): "overdue" | "today" | "upcoming" | null {
+  const at = lead.next_action_at
+  if (!at || lead.status === "won" || lead.status === "lost") return null
+  return at < today ? "overdue" : at === today ? "today" : "upcoming"
+}

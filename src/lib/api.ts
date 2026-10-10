@@ -100,13 +100,28 @@ export type Lead = {
   score: number // 0 unscored | 1 cold | 2 warm | 3 hot
   lost_reason: string | null
   created_at: string
+  // Owner's follow-up (2026-10-10 schema step). Absent until that ALTER has run.
+  next_action_at?: string | null // YYYY-MM-DD
+  next_action_note?: string | null
+  priority?: LeadPriority
 }
+export type LeadPriority = 0 | 1 | 2 | 3 // 0 none | 1 low | 2 normal | 3 high
 export const leads = {
   list: () => api.get<Lead[]>("/leads.php"),
   setStatus: (id: number, status: LeadStage, lost_reason?: string) =>
     api.post<{ ok: boolean }>("/leads.php?action=status", { id, status, ...(lost_reason ? { lost_reason } : {}) }),
-  setMeta: (id: number, payload: { tags?: string; score?: number }) =>
-    api.post<{ ok: boolean }>("/leads.php?action=meta", { id, ...payload }),
+  setMeta: (
+    id: number,
+    payload: {
+      tags?: string
+      score?: number
+      next_action_at?: string | null
+      next_action_note?: string | null
+      priority?: LeadPriority
+    },
+  ) =>
+    // `followup` is false when the server has not had the follow-up columns added yet.
+    api.post<{ ok: boolean; followup?: boolean }>("/leads.php?action=meta", { id, ...payload }),
 }
 
 // Clients / CRM (§6 Clients).
