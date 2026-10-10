@@ -468,7 +468,7 @@ function ReportCard({
     <Card className={className}>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="text-base">{title}</CardTitle>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" disabled={!rows.length} onClick={() => downloadCsv(`${filename}.csv`, head, rows)}>
             <Download className="mr-1 h-3.5 w-3.5" /> CSV
           </Button>

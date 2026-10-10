@@ -160,7 +160,7 @@ export default function Leads() {
             Every enquiry from the website, captured and chased to won or lost.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={load}>
             <RefreshCw className="mr-2 h-4 w-4" /> Refresh
           </Button>

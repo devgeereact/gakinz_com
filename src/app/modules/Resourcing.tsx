@@ -102,7 +102,7 @@ export default function Resourcing() {
           <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Resourcing</h1>
           <p className="text-sm text-muted-foreground">This week’s capacity and who’s on leave — so start dates aren’t over-promised.</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={load}>
             <RefreshCw className="mr-2 h-4 w-4" /> Refresh
           </Button>

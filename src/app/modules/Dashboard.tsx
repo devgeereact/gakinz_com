@@ -163,6 +163,7 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [errors, setErrors] = useState<string[]>([])
+  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
 
   const [leads, setLeads] = useState<Lead[]>([])
   const [clientCount, setClientCount] = useState(0)
@@ -199,6 +200,7 @@ export default function Dashboard() {
     if (tm.ok) setEntries(tm.data)
     else errs.push("time")
     setErrors(errs)
+    setLoadedAt(new Date())
     setLoading(false)
     announcementsApi.list().then((r) => r.ok && setAnns(r.data.slice(0, 3)))
   }
@@ -291,6 +293,12 @@ export default function Dashboard() {
     }
   }, [leads, projects, tickets, invoices, entries])
 
+  // A source that failed to load is shown as unavailable, never as zero, so a
+  // failed invoices request cannot read as "£0 outstanding, all on time" (plan A08).
+  const down = (source: string) => errors.includes(source)
+  const NA = "—"
+  const NA_HINT = "Unavailable, refresh to retry"
+
   const generateBrief = async () => {
     setBriefing(true)
     setBrief(null)
@@ -331,14 +339,21 @@ export default function Dashboard() {
             <span className="gk-app-grad">Overview</span>
           </h1>
           <p className="text-sm text-muted-foreground">
-            The whole studio at a glance — live from GAkinzOS.
+            The whole studio at a glance
+            {loadedAt && <> · updated {loadedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</>}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={load}>
             <RefreshCw className="mr-2 h-4 w-4" /> Refresh
           </Button>
-          <Button size="sm" onClick={generateBrief} disabled={briefing} className="gk-shine shadow-md shadow-primary/20">
+          <Button
+            size="sm"
+            onClick={generateBrief}
+            disabled={briefing || errors.length > 0}
+            title={errors.length > 0 ? "Refresh until every figure has loaded before asking for a brief." : undefined}
+            className="gk-shine shadow-md shadow-primary/20"
+          >
             {briefing ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
@@ -353,8 +368,7 @@ export default function Dashboard() {
         <div role="alert" className="flex items-start gap-2 rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200">
           <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
-            Couldn’t reach: {errors.join(", ")}. Showing what loaded. If you’re running locally,
-            the live API may not be deployed yet.
+            Some figures could not be loaded ({errors.join(", ")}). They show as “—” until Refresh succeeds.
           </span>
         </div>
       )}
@@ -396,33 +410,33 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
         <Kpi
           label="Open leads"
-          value={String(stats.openLeads)}
-          hint="In the pipeline"
+          value={down("leads") ? NA : String(stats.openLeads)}
+          hint={down("leads") ? NA_HINT : "In the pipeline"}
           icon={Inbox}
           to="/app/leads"
-          series={spark.leads}
+          series={down("leads") ? undefined : spark.leads}
         />
         <Kpi
           label="Active projects"
-          value={String(stats.activeProjects)}
-          hint="Not yet launched"
+          value={down("projects") ? NA : String(stats.activeProjects)}
+          hint={down("projects") ? NA_HINT : "Not yet launched"}
           icon={FolderKanban}
           to="/app/projects"
-          series={spark.projects}
+          series={down("projects") ? undefined : spark.projects}
         />
         <Kpi
           label="Revenue paid"
-          value={money(stats.paid)}
-          hint="All settled invoices"
+          value={down("invoices") ? NA : money(stats.paid)}
+          hint={down("invoices") ? NA_HINT : "All settled invoices"}
           icon={Banknote}
           to="/app/invoicing"
           accent="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-          series={spark.paid}
+          series={down("invoices") ? undefined : spark.paid}
         />
         <Kpi
           label="Outstanding"
-          value={money(stats.outstanding)}
-          hint={stats.overdue ? `${stats.overdue} overdue` : "All on time"}
+          value={down("invoices") ? NA : money(stats.outstanding)}
+          hint={down("invoices") ? NA_HINT : stats.overdue ? `${stats.overdue} overdue` : "None overdue"}
           icon={Banknote}
           to="/app/invoicing"
           accent={
@@ -430,23 +444,23 @@ export default function Dashboard() {
               ? "bg-red-500/10 text-red-600 dark:text-red-400"
               : "bg-primary/10 text-primary"
           }
-          series={spark.outstanding}
+          series={down("invoices") ? undefined : spark.outstanding}
         />
         <Kpi
           label="Open tickets"
-          value={String(stats.openTickets)}
-          hint="Needs a reply"
+          value={down("support") ? NA : String(stats.openTickets)}
+          hint={down("support") ? NA_HINT : "Needs a reply"}
           icon={LifeBuoy}
           to="/app/support"
-          series={spark.tickets}
+          series={down("support") ? undefined : spark.tickets}
         />
         <Kpi
           label="Billable (wk)"
-          value={`${stats.billableHours.toFixed(1)}h`}
-          hint={`${stats.weekHours.toFixed(1)}h logged`}
+          value={down("time") ? NA : `${stats.billableHours.toFixed(1)}h`}
+          hint={down("time") ? NA_HINT : `${stats.weekHours.toFixed(1)}h logged`}
           icon={Clock}
           to="/app/time"
-          series={spark.billable}
+          series={down("time") ? undefined : spark.billable}
         />
       </div>
 
@@ -457,7 +471,11 @@ export default function Dashboard() {
             <CardTitle className="text-base">Revenue (paid)</CardTitle>
           </CardHeader>
           <CardContent>
-            {revenueSeries.length === 0 ? (
+            {down("invoices") ? (
+              <p className="py-12 text-center text-sm text-muted-foreground">
+                Invoices could not be loaded. Refresh to try again.
+              </p>
+            ) : revenueSeries.length === 0 ? (
               <p className="py-12 text-center text-sm text-muted-foreground">
                 No paid invoices yet. Settled invoices will chart here.
               </p>
@@ -511,7 +529,10 @@ export default function Dashboard() {
             <CardTitle className="text-base">Lead pipeline</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {pipeline.map((s) => (
+            {down("leads") && (
+              <p className="py-8 text-center text-sm text-muted-foreground">Leads could not be loaded. Refresh to try again.</p>
+            )}
+            {!down("leads") && pipeline.map((s) => (
               <div key={s.key}>
                 <div className="mb-1 flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">{s.label}</span>
@@ -543,7 +564,9 @@ export default function Dashboard() {
             </Button>
           </CardHeader>
           <CardContent>
-            {recentLeads.length === 0 ? (
+            {down("leads") ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Leads could not be loaded. Refresh to try again.</p>
+            ) : recentLeads.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">
                 No leads yet. The public contact form feeds this list.
               </p>
@@ -580,20 +603,20 @@ export default function Dashboard() {
             <CardTitle className="text-base">Studio snapshot</CardTitle>
           </CardHeader>
           <CardContent className="grid grid-cols-2 gap-4">
-            <Snapshot label="Clients" value={String(clientCount)} to="/app/clients" />
+            <Snapshot label="Clients" value={down("clients") ? NA : String(clientCount)} to="/app/clients" />
             <Snapshot
               label="Projects launched"
-              value={String(projects.filter((p) => p.status === "launched").length)}
+              value={down("projects") ? NA : String(projects.filter((p) => p.status === "launched").length)}
               to="/app/projects"
             />
             <Snapshot
               label="Active projects"
-              value={String(stats.activeProjects)}
+              value={down("projects") ? NA : String(stats.activeProjects)}
               to="/app/projects"
             />
             <Snapshot
               label="Overdue invoices"
-              value={String(stats.overdue)}
+              value={down("invoices") ? NA : String(stats.overdue)}
               to="/app/invoicing"
             />
           </CardContent>

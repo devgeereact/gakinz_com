@@ -151,7 +151,7 @@ export default function Projects() {
             Every build tracked from kickoff to launch.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={loadProjects}>
             <RefreshCw className="mr-2 h-4 w-4" /> Refresh
           </Button>
