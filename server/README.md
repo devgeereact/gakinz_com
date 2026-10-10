@@ -3,8 +3,8 @@
 The GitHub Actions deploy uploads **only `dist/`**. These PHP and configuration files live in
 the document root on cPanel and are uploaded by hand, then left alone by deploys.
 
-Full deploy detail, including the outstanding-upload list and the outstanding SQL, is in
-`docs/DEPLOYMENT.md`. The endpoint contract is in `docs/API-SPEC.md`.
+Full deploy detail, including the one list of files and SQL not yet uploaded, is in
+`docs/DEPLOYMENT.md` section 5. The endpoint contract is in `docs/API-SPEC.md`.
 
 ## One-time server setup
 
@@ -31,8 +31,9 @@ Full deploy detail, including the outstanding-upload list and the outstanding SQ
 
 ## Files
 
-44 PHP files. The five with a leading underscore are shared includes with no route of their
-own.
+One PHP file per resource, plus shared includes with a leading underscore that have no route
+of their own and are denied to direct requests by `.htaccess`. The file count is in
+`docs/STATUS.md` section 0.
 
 | File | Purpose |
 |---|---|
@@ -42,6 +43,7 @@ own.
 | `_sms.php` | Twilio transport for SMS and WhatsApp |
 | `_slack.php` | Slack incoming webhook, best effort |
 | `_monitor.php` | HTTP status and TLS expiry check for the care plan |
+| `_money.php` | The single VAT-inclusive payable-total calculation used by `payments.php` |
 | `api.php` | Unauthenticated read-only health check: confirms PHP runs and the database answers. No writes, no application tables |
 | `contact.php` | Public enquiry form, writes to `enquiries` |
 | `verify.php` | Public certificate verification |
@@ -52,14 +54,14 @@ own.
 | `leads.php`, `clients.php`, `proposals.php`, `contracts.php` | Sales |
 | `projects.php`, `tasks.php`, `design.php`, `dev.php`, `resourcing.php`, `time.php`, `careplan.php`, `files.php` | Delivery |
 | `invoices.php`, `payments.php`, `reports.php` | Money |
-| `portal.php`, `support.php`, `comms.php`, `mail.php` | Client-facing |
-| `blog.php`, `testimonials.php`, `content.php`, `knowledge.php`, `announcements.php` | Content |
+| `portal.php`, `support.php`, `comms.php`, `mail.php` | Client-facing. `portal.php` and the client branch of `support.php` serve `client`-role callers and are security-critical |
+| `blog.php`, `testimonials.php`, `content.php`, `knowledge.php`, `announcements.php`, `work.php` | Content. `work.php` also serves the public work ledger |
 | `ai.php` | OpenRouter proxy. Staff roles only, capped per role per day. The key stays server-side |
 | `weather.php` | OpenWeather proxy. Staff roles only, cached 10 minutes. The key stays server-side |
 | `github.php`, `figma.php`, `slack.php` | External connectors |
 | `cron.php` | Scheduled jobs. Gated by `$CRON_KEY`, not by a user session |
-| `schema.sql` | All 34 tables, plus the migration statements as comments from line 291 and dated blocks at the foot |
-| `.htaccess` | SPA routing, the `Authorization` header pass-through, and basic hardening |
+| `schema.sql` | Every table, plus the migration statements as comments in the `MIGRATIONS` block and dated blocks at the foot |
+| `.htaccess` | SPA routing, the `Authorization` header pass-through, and hardening: denies `config.php`, every `_*.php` include, and `.md`, `.sql`, `.log` and `.txt` files other than `robots.txt` and `llms.txt` |
 
 ## Adding endpoints
 
@@ -74,4 +76,6 @@ Before uploading anything:
 find server -name '*.php' -print0 | xargs -0 -n1 php -l
 ```
 
-Then record the file in `docs/DEPLOYMENT.md`. The deploy pipeline will not ship it.
+Then record the file in `docs/DEPLOYMENT.md` section 5 and describe it in `docs/API-SPEC.md`.
+The deploy pipeline will not ship it, and `npm run docs:check` fails a pull request that
+changes server code without touching `docs/DEPLOYMENT.md`.

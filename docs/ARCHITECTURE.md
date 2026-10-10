@@ -1,8 +1,9 @@
 # Architecture
 
-**Status:** current, verified by source inspection and a local build on 2026-09-22 against
-`feat/public-relaunch`, on top of `539b704`. Runtime behaviour of the deployed system is
-**UNVERIFIED** from this repository.
+**Status:** current for the branches stacked into PR #8 as at 2026-10-10, verified by source
+inspection and a local build. Section 8 summarises what was built on 2026-10-10. Counts live in
+`docs/STATUS.md` section 0. Runtime behaviour of the deployed system is **UNVERIFIED** from
+this repository.
 
 ---
 
@@ -34,14 +35,15 @@ Every data need becomes a PHP endpoint plus a call through `src/lib/api.ts`.
 |---|---|
 | Entry | `src/main.tsx` |
 | Routing | `src/routes/index.tsx`, `createBrowserRouter` |
-| API boundary | `src/lib/api.ts`, 36 exported groups over one `request()` helper |
+| API boundary | `src/lib/api.ts`, one exported group per resource over one `request()` helper |
 | Auth state | `src/store/auth.store.ts` |
 | Route guard | `src/app/RequireAuth.tsx` |
 | Role map | `src/lib/access.ts` |
+| CMS navigation | `src/components/app-sidebar.tsx`, seven groups (D-040) |
 | Public surface | `src/marketing/` |
 | Public design primitives | `src/marketing/components/primitives.tsx` |
 | Public per-route metadata | `src/marketing/components/Seo.tsx` |
-| CMS surface | `src/app/`, 24 lazy modules |
+| CMS surface | `src/app/`, lazy modules in `src/app/modules/`, plus My account |
 | CMS shell | `src/layouts/AppLayout.tsx` |
 | Shared UI | `src/components/`, shadcn and Radix primitives under `src/components/ui/` |
 | Tokens | `src/index.css`, `tailwind.config.js` |
@@ -90,9 +92,9 @@ the other. See `docs/DESIGN-SYSTEM.md`.
 
 ## 3. Server
 
-46 PHP files in `server/`. Six are shared includes with no route of their own, all denied to
-direct requests by `.htaccess` (K-013). `work.php` was added on 2026-09-22 and `_money.php` on
-2026-10-10.
+PHP files in `server/`, one per resource. Six are shared includes with no route of their own,
+all denied to direct requests by `.htaccess` (K-013). `work.php` was added on 2026-09-22 and
+`_money.php` on 2026-10-10.
 
 | Include | Role |
 |---|---|
@@ -132,7 +134,7 @@ This is the single most consequential fact about the architecture.
 
 | Track | What moves | How | Trigger |
 |---|---|---|---|
-| Client | `dist/` only | GitHub Actions, FTP | Push to `main` |
+| Client | `dist/` only | GitHub Actions, FTP | CI passing on a push to `main` |
 | Server | `server/*.php`, `.htaccess`, `schema.sql` | Manual upload | A person decides |
 
 A change under `server/` is committed but not live. A schema change is written but not
@@ -154,16 +156,18 @@ applied. See `docs/DEPLOYMENT.md`.
 | Figma | `figma.php` | Preview button reports not configured |
 | Slack | `_slack.php`, `slack.php` | Announcement still posts locally |
 | Calendly | `book.php` | Booking call to action hidden |
-| Google Fonts | `src/index.css` `@import` | Falls back to the declared local stacks. Text still renders |
+| Google Fonts | `src/index.css` `@import`, now for the CMS families only (K-042) | Falls back to the declared local stacks. Text still renders |
 
 **The two icon webfonts are gone.** `index.html` used to pull Bootstrap Icons from jsDelivr
 and Boxicons from `cdn.boxicons.com` as render-blocking stylesheets, with no integrity
 attribute and no local fallback, and between them they had zero usages. They were removed on
 2026-09-22.
 
-The Google Fonts stylesheet is now the public site's only third-party render dependency, and
-unlike the icon fonts it degrades: each family names a local fallback stack, so a blocked or
-slow Google Fonts request costs the typography, not the content.
+Since the D-037 rebuild the public surface sets Sofia Sans, self-hosted from
+`@fontsource-variable/sofia-sans`. The Google Fonts `@import` now loads only the CMS families
+(Newsreader, Manrope, JetBrains Mono), but it is still in the one shared stylesheet, so it
+still blocks rendering on public pages (K-042). Each family names a local fallback stack, so a
+blocked or slow request costs the typography, not the content.
 
 Everything else fails soft. Whether each really degrades as described at runtime is **NOT
 TESTED**; the claim rests on source inspection of the 503 and empty-value paths.
@@ -181,3 +185,21 @@ TESTED**; the claim rests on source inspection of the 503 and empty-value paths.
 - No migration runner, no ORM, no Composer dependency. The PHP is dependency free by choice,
   including the SMTP and TOTP implementations.
 - No staging environment. There is one production host.
+
+## 8. As built, 2026-10-10
+
+On the branches stacked into PR #8; none of it is deployed, and server parts need the upload in
+`docs/DEPLOYMENT.md` section 5. Scope and acceptance are in `docs/PRODUCT-SPEC.md`.
+
+| Area | Shape | Where |
+|---|---|---|
+| Navigation | Seven groups (Today, Enquiries, Clients, Projects, Money, Website, Settings), filtered per role by `canAccess`; an empty group is hidden; URLs unchanged | `app-sidebar.tsx`, `nav-main.tsx`, `global-search.tsx` |
+| My account | `/app/account` for every role, client included: profile, two-factor, own sessions. Reuses the panels moved out of Platform | `src/app/modules/Account.tsx`, `src/app/components/AccountSecurity.tsx`, `auth.php` |
+| Portal messages | The portal's Messages area calls `clientMessages` in `api.ts`, which hits the client branch of `support.php`; the client id comes from the token | `Portal.tsx`, `server/support.php` |
+| Enquiry follow-ups | Next-action date, note and priority on `enquiries`; due and overdue marks on the board and a card on Today; degrades on an un-migrated database | `Leads.tsx`, `Dashboard.tsx`, `src/lib/format.ts`, `server/leads.php` |
+| Payments | One payable-total calculation in `_money.php`; the webhook checks amount and currency and records events in `payment_events` | `server/payments.php`, `server/_money.php` |
+| Public data | A successful CMS answer, empty included, decides what shows; the static fallback is used only on failure | `src/marketing/data/cmsResult.ts`, `blog.ts`, `work.ts` |
+| Article format | A small parser for headings, lists, bold and safe links, rendered as React elements without raw HTML | `src/marketing/lib/articleFormat.ts`, `ResourceDetail.tsx` |
+| Lock screen | Unlock revokes the previous token; a 401 from the login call no longer clears the session | `LockScreen.tsx`, `src/lib/session-revoke.ts`, `api.ts` |
+| Public design | The public surface on D-037; the CMS keeps its own tokens until its redesign | `docs/DESIGN-SYSTEM.md` |
+| Documentation check | `npm run docs:check` in CI: links, and the document-sync rule | `scripts/docs-check.mjs`, `.github/workflows/ci.yml` |

@@ -69,13 +69,6 @@ export const api = {
   },
 }
 
-// Smoke-test endpoint (build order step 1): GET returns rows, POST inserts one.
-export type Item = { id: number; name: string; created_at: string }
-export const smoke = {
-  list: () => api.get<Item[]>("/api.php"),
-  add: (name: string) => api.post<Item>("/api.php", { name }),
-}
-
 // Public contact enquiry (corporate site → leads pipeline).
 export type EnquiryPayload = {
   name: string

@@ -6,6 +6,12 @@
 **Result: PASS on everything listed as measured below. One category, screen-reader
 behaviour with real assistive technology, remains NOT TESTED.**
 
+**Later evidence (2026-10-10).** The public surface was rebuilt on the D-037 design system
+after this run, so these figures describe the 2026-09-22 build. The rebuild was checked on 9
+routes at 5 widths for overflow, for AA contrast on every colour pairing, and with Lighthouse
+mobile (accessibility 100), against a local production build. A full axe sweep of the rebuilt
+surface has NOT been re-run, and the CMS remains NOT TESTED.
+
 ---
 
 ## Why this file reads the way it does

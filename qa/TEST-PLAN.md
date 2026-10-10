@@ -1,7 +1,7 @@
 # Test plan
 
-**Status of the suite on 2026-10-10:** 29 unit tests and 35 server integration tests, the
-latter against a throwaway local database. This document records what exists, what does not,
+**Status of the suite on 2026-10-10:** unit tests and server integration tests pass, the
+latter against a throwaway local database. The counts are in `docs/STATUS.md` section 0. This document records what exists, what does not,
 the order in which the gaps are worth closing, and the acceptance scenarios a release must
 pass (section 7).
 
@@ -12,10 +12,11 @@ pass (section 7).
 | Layer | Tool | Coverage | Result |
 |---|---|---|---|
 | Types | `tsc -b`, inside `npm run build` | Whole client | **PASS**, 2026-10-10 |
-| Unit | Vitest, `npm test` | `src/lib/access.ts` and `src/lib/csv.ts` | **PASS**, 29 tests, 2026-10-10 |
-| Server integration | Vitest, `npm run test:server` | Sign-in, payments, quote acceptance, blog editing and create ids, against a local `*_test` database (D-036) | **PASS**, 35 tests, 2026-10-10 |
-| PHP syntax | `php -l` | All 46 server files | **PASS**, 2026-10-10 |
-| Lint | ESLint, `npm run lint`, held by `npm run lint:ratchet` | Whole client | **FAIL**, 47 errors and 2 warnings; the ratchet passes |
+| Unit | Vitest, `npm test` | `src/lib/access.ts`, `csv.ts`, `format.ts`, `session-revoke.ts`, `src/marketing/lib/articleFormat.ts`, `src/marketing/data/cmsResult.ts` | **PASS**, 2026-10-10 |
+| Server integration | Vitest, `npm run test:server` | Sign-in, My account, payments, quote acceptance, blog editing, create ids, enquiry follow-ups and the `support.php` client branch, against a local `*_test` database (D-036) | **PASS**, 2026-10-10 |
+| PHP syntax | `php -l` | Every server file | **PASS**, 2026-10-10 |
+| Lint | ESLint, `npm run lint`, held by `npm run lint:ratchet` | Whole client | **FAIL**; the ratchet passes (K-002) |
+| Documentation | `npm run docs:check` | Links and the document-sync rule (`AGENTS.md`) | **PASS**, 2026-10-10 |
 | Accessibility | axe-core 4.10.2 in Chrome, plus computed contrast, focus, reflow and target-size sweeps | All 16 public routes | **PASS**, 0 violations, 2026-09-22. `qa/ACCESSIBILITY-AUDIT.md` |
 | Performance | Chrome DevTools trace and Lighthouse, production build served locally | Public surface | **PARTIAL.** Lab only, no field data, 2026-09-22. `qa/PERFORMANCE-AUDIT.md` |
 | Component | none | n/a | **NOT TESTED** |
@@ -37,11 +38,11 @@ npm run build                                              # tsc -b then vite bu
 npm test                                                   # unit tests
 npm run test:server                                        # PHP endpoints, local *_test database
 npm run lint:ratchet                                       # the lint backlog must not grow
+npm run docs:check                                         # documents current, links resolve
 find server -name '*.php' -print0 | xargs -0 -n1 php -l     # any touched PHP
 ```
 
-The lint backlog of 47 errors does not block, but it **must not grow**. See
-`docs/KNOWN-ISSUES.md` K-002.
+The lint backlog does not block, but it **must not grow**. See `docs/KNOWN-ISSUES.md` K-002.
 
 ## 3. What cannot be tested from this repository
 
@@ -70,8 +71,10 @@ What a test would assert, per endpoint and per branch, including read branches:
 
 - An anonymous request returns 401.
 - A valid token with a disallowed role returns 403.
-- A `client`-role token reaches `portal.php` and nothing else.
+- A `client`-role token reaches `portal.php`, the client branch of `support.php` and its own
+  account actions in `auth.php`, and nothing else.
 - `portal.php` ignores `?client_id` for a `client` caller and returns only that client's rows.
+  `support.php` already has this coverage (`tests/server/support-client.test.ts`).
 - An expired token, a soft-deleted user and a non-active account are all rejected.
 
 A static check is a cheap partial substitute: assert that every routed file in `server/`
@@ -126,8 +129,9 @@ requires production access, so it is a deliberate act, not a routine one.
 2. Submit the contact form with a real message. Confirm it appears in Leads.
 3. Sign in. Confirm the role lands on the right default route.
 4. Open one module per role group and confirm no error banner.
-5. Sign in as a `client`-role account. Confirm only the portal is reachable, and that editing
-   the URL to another client's identifier changes nothing.
+5. Sign in as a `client`-role account. Confirm only the portal and My account are reachable,
+   and that editing the URL to another client's identifier changes nothing. Do not send a
+   portal message unless a real client conversation calls for one.
 6. Check Platform, Integrations, and confirm the booleans match what was configured.
 7. Check the Care Plan module for a site returning a non-2xx status.
 
@@ -155,7 +159,7 @@ its acceptance cases, its rollback and its remaining owner inputs.
 | J01 | The owner handles a new enquiry, follow-up, confirmed call and one conversion without duplicate records | Phase 2; a synthetic journey plus retry | NOT TESTED |
 | J02 | A reference alone, or with the wrong email, discloses no customer record or account existence | Phases 1 and 2; response and throttling checks | NOT TESTED. The reference flow is not built |
 | J03 | A link expires, re-use fails, concurrent consumption allows at most one redemption, and privileged two-factor cannot be skipped | Phase 1; isolated authentication tests | PARTIAL. Magic-link single use under concurrency and the two-factor rule pass in `tests/server/auth.test.ts`; the reference and email link is not built |
-| J04 | Client A cannot read or write Client B's projects, tickets, messages, files, invoices or feedback by changing identifiers | Phase 2; endpoint tests with two fake clients | NOT TESTED |
+| J04 | Client A cannot read or write Client B's projects, tickets, messages, files, invoices or feedback by changing identifiers | Phase 2; endpoint tests with two fake clients | PARTIAL. Tickets and messages pass locally, `tests/server/support-client.test.ts` (K-039); projects, files, invoices and feedback NOT TESTED |
 | J05 | A customer message survives a failed send; a retry creates no duplicate, and the owner sees the notification failure | Phase 2; transport fixtures | NOT TESTED |
 | J06 | Permitted customer updates work; financial and internal fields and unverified email changes are rejected | Phase 2; positive and negative endpoint cases | NOT TESTED |
 | J07 | Private feedback stays private; publication needs recorded permission and approval | Phases 2 to 4; publish, unpublish and response inspection | NOT TESTED |

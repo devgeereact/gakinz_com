@@ -31,11 +31,6 @@ export function gbp(n: number) {
   return PRECISE.format(n)
 }
 
-/** Plain grouped number (e.g. 1,234). */
-export function num(n: number, maximumFractionDigits = 0) {
-  return new Intl.NumberFormat("en-GB", { maximumFractionDigits }).format(n)
-}
-
 /** Today's date in the browser's own time zone as YYYY-MM-DD (not UTC). */
 export function localIsoDate(d = new Date()) {
   const p = (n: number) => String(n).padStart(2, "0")

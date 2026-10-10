@@ -1,8 +1,10 @@
 # Known issues
 
 Open problems, each with evidence and a status. Fixed entries stay, marked, so their history
-is not lost. "Fixed" means fixed in the repository; anything under `server/` is not live until
-it is uploaded (`docs/DEPLOYMENT.md`).
+is not lost. "Fixed" means fixed in the repository: client changes made after `c57eb4a` reach
+the live site only when PR #8 merges, and anything under `server/` is not live until it is
+uploaded (`docs/DEPLOYMENT.md` section 5). Read this file before starting work, and update it
+in the same pull request as a fix (`AGENTS.md`, "Keeping documents current").
 
 Severity is judged on impact to the live business, not on how hard it is to fix. Entries
 K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` section 1.
@@ -10,7 +12,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | ID | Issue | Severity | Status |
 |---|---|---|---|
 | K-001 | A live super-admin credential is in git history | Critical | **Open. Rotation UNVERIFIED. Blocks launch** |
-| K-002 | Lint fails | Medium | Open. Now 46 errors, 2 warnings, down from 60 and 7; ratchet in CI |
+| K-002 | Lint fails | Medium | Open. 44 errors, 2 warnings on 2026-10-10, down from 60 and 7; ratchet in CI |
 | K-003 | `config.php.example` named a retired mail host | Medium | Fixed in the template. Server value UNVERIFIED |
 | K-004 | `api.php` accepts an unauthenticated POST | Medium | **Fixed 2026-09-22.** Not uploaded |
 | K-005 | `contact.php` has no spam protection | Medium | **Fixed 2026-09-22.** Not uploaded |
@@ -31,8 +33,8 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-020 | `tsc -b` does not use the strict project configs | Low | Open |
 | K-021 | The legal pages have no review date and several compliance gaps | Medium | Open. Owner decision |
 | K-022 | `SidebarMenuSub` drops its forwarded ref | Low | Open |
-| K-023 | Two CMS account links point at routes that do not exist | Low | Open |
-| K-024 | Non-admin roles cannot enable two-factor or revoke their own sessions | Medium | Open |
+| K-023 | Two CMS account links point at routes that do not exist | Low | **Fixed 2026-10-10.** Not deployed |
+| K-024 | Non-admin roles cannot enable two-factor or revoke their own sessions | Medium | **Fixed 2026-10-10.** Not deployed or uploaded |
 | K-025 | Stripe charged the ex-VAT amount and marked the invoice fully paid | **Critical** | **Fixed 2026-10-10.** Not uploaded. Past Stripe payments need checking |
 | K-026 | PayPal payment is recorded only if the customer's browser returns | High | **Mitigated 2026-10-10:** PayPal checkout switched off |
 | K-027 | Magic links and Google sign-in bypassed two-factor; one link could mint several sessions | **Critical** | **Fixed 2026-10-10.** Not uploaded |
@@ -40,14 +42,14 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-029 | Create endpoints returned the audit-log id instead of the new record's id | High | **Fixed 2026-10-10.** Not uploaded |
 | K-030 | CSV exports could run spreadsheet formulas from enquiry text | Medium | **Fixed 2026-10-10** |
 | K-031 | Dashboard showed £0 and "All on time" when data failed; two CMS screens overflowed phones | Medium | **Fixed 2026-10-10** |
-| K-032 | The CMS navigation is one flat list of 24 entries | Medium | Open. In progress |
-| K-033 | The bearer token lives in `localStorage`, and unlocking the lock screen issues a second token | Medium | Open. Unlock now revokes the old token (2026-10-10, not deployed) |
+| K-032 | The CMS navigation is one flat list of 24 entries | Medium | **Fixed 2026-10-10.** Not deployed |
+| K-033 | The bearer token lives in `localStorage`, and unlocking the lock screen issues a second token | Medium | **Partly fixed 2026-10-10:** unlock revokes the old token; not deployed. Storage, lifetime and CSP open |
 | K-034 | A contract "signature" is a staff-typed name, not client signing | Medium | Open |
 | K-035 | CI ran no tests and the deploy did not wait for CI | High | **Fixed 2026-10-10** |
-| K-036 | Public pages bring back unpublished posts and work from the static fallback | Medium | Open. In progress |
-| K-037 | The article renderer has no links or lists | Medium | Open. In progress |
-| K-038 | Public fallback copy shows engineering counts and internal file paths | Medium | Open. In progress |
-| K-039 | Clients cannot message the owner from the portal | High | Open. In progress |
+| K-036 | Public pages bring back unpublished posts and work from the static fallback | Medium | **Fixed 2026-10-10.** Not deployed |
+| K-037 | The article renderer has no links or lists | Medium | **Fixed 2026-10-10.** Not deployed |
+| K-038 | Public fallback copy shows engineering counts and internal file paths | Medium | **Partly fixed 2026-10-10:** engineering copy removed, not deployed. "To supply" placeholders wait for owner material |
+| K-039 | Clients cannot message the owner from the portal | High | **Fixed 2026-10-10.** Not deployed or uploaded. Private feedback still open |
 | K-040 | `stored` is a MySQL 8 reserved word, so the schema failed on MySQL | High | **Fixed 2026-10-10.** Not uploaded |
 | K-041 | `npm audit` reports 15 affected packages, ten of them high | Medium | Open. Owner decision |
 | K-042 | The Google Fonts `@import` still blocks rendering on public pages that no longer use those fonts | Low | Open |
@@ -81,9 +83,10 @@ needs rewriting, which is a force push and was explicitly excluded from this mig
 ## K-002 · Lint fails
 **Severity:** medium · **Status:** open, recorded not fixed
 
-`npm run lint` on 2026-09-04 reported **60 errors and 7 warnings across 42 files**. On
-2026-10-10 it reports **47 errors and 2 warnings**; `npm run lint:ratchet` enforces that
-ceiling in CI. The table below is the 2026-09-04 breakdown, kept for history.
+`npm run lint` on 2026-09-04 reported **60 errors and 7 warnings across 42 files**. The
+current figure is in `docs/STATUS.md` section 0 (44 errors and 2 warnings on 2026-10-10), and
+`npm run lint:ratchet` enforces the ceiling in `scripts/lint-ratchet.mjs` in CI. The table
+below is the 2026-09-04 breakdown, kept for history.
 
 | Count | Severity | Rule |
 |---|---|---|
@@ -197,7 +200,7 @@ in it as apparently real leads.
 ## K-006 · Deployed server state is unknown
 **Severity:** medium · **Status:** open, needs server access
 
-Which of the 44 PHP files on the host match the repository, and which of the schema migrations
+Which of the PHP files on the host match the repository, and which of the schema migrations
 have been applied, cannot be determined from here. See `docs/DEPLOYMENT.md` section 5.
 
 **Impact:** a feature can be complete in the repository and absent in production, and nothing
@@ -604,7 +607,9 @@ CMS only. The public surface does not use this component.
 ---
 
 ## K-023 · Two CMS account links point at routes that do not exist
-**Severity:** low · **Status:** open.
+**Severity:** low · **Status:** **fixed 2026-10-10, not deployed.** The user menu now links to
+`/app/account` (My account), which every signed-in role can open (`186474c`). The original
+finding follows.
 
 `src/components/nav-user.tsx:122` and `:128` link to `/app/account/profile` and
 `/app/account/notifications`. Neither route is declared in `src/routes/index.tsx`, so
@@ -619,7 +624,12 @@ CMS only. The public surface is unaffected.
 ---
 
 ## K-024 · Non-admin roles cannot enable two-factor or revoke their own sessions
-**Severity:** medium · **Status:** open.
+**Severity:** medium · **Status:** **fixed 2026-10-10, not deployed or uploaded.** My account
+(`src/app/modules/Account.tsx`, `AccountSecurity.tsx`) gives every role, client included, a
+read-only profile, two-factor setup and its own sessions with revoke. `auth.php` `me` now
+returns the caller's `totp_enabled`. `tests/server/account.test.ts` checks that each
+self-service action touches only the caller. The `auth.php` change is in the upload list. The
+original finding follows.
 
 The two-factor setup, the recovery codes and the "my sessions" list all live in the
 `Platform` module, which `src/lib/access.ts` gates to `super_admin` and `admin`.
@@ -654,7 +664,7 @@ Fix: `server/_money.php` is the single payable-total calculation; the link charg
 webhook marks paid only when Stripe's amount and currency match, and each event is recorded
 in the new `payment_events` table so redeliveries are ignored (`tests/server/payments.test.ts`,
 7 of its first 8 cases failed against the old file). **Operator action:** check invoices already
-paid through Stripe against their VAT-inclusive totals (`docs/DEPLOYMENT.md` 5.2).
+paid through Stripe against their VAT-inclusive totals (`docs/DEPLOYMENT.md` section 5.1).
 
 ## K-026 · PayPal payment is recorded only if the customer's browser returns
 **Severity:** high · **Status:** **mitigated 2026-10-10.**
@@ -711,7 +721,12 @@ tab list scrolls inside itself. Checked in an isolated local preview with every 
 stubbed: all 24 CMS routes fit at 320px and 390px. Data-filled tables NOT TESTED.
 
 ## K-032 · The CMS navigation is one flat list of 24 entries
-**Severity:** medium · **Status:** open, in progress.
+**Severity:** medium · **Status:** **fixed 2026-10-10, not deployed.** `app-sidebar.tsx` groups
+the entries under the seven D-040 destinations, relabels Dashboard, Leads, Proposals and
+Platform as Today, Enquiries, Quotes and Settings, and hides a group the role cannot use. URLs
+are unchanged. Checked in an isolated preview: the owner sees seven groups, a client sees
+Client Portal and My account. Moving supporting tools inside their records is later work
+(`docs/PRODUCT-SPEC.md` section 5.2). The original finding follows.
 
 `src/components/app-sidebar.tsx` renders one flat, ungrouped list of 24 entries, filtered per
 role by `canAccess`. A sole owner has to choose between 24 destinations to find the next
@@ -720,7 +735,8 @@ they serve. Resolution: the seven destinations in D-040 (`docs/PRODUCT-SPEC.md` 
 with existing URLs kept until the migration is verified.
 
 ## K-033 · The bearer token lives in `localStorage`, and unlocking issues a second token
-**Severity:** medium · **Status:** open.
+**Severity:** medium · **Status:** **partly fixed 2026-10-10, not deployed.** The second-token
+half is fixed (below). Storage, lifetime and the CSP remain open.
 
 `src/store/auth.store.ts` persists the bearer token in `localStorage` under `gk-auth`, where
 any script running on the same origin can read it, and public and private pages share that
@@ -730,7 +746,8 @@ first one valid. Resolution: review token lifetime, revocation and the CSP; revo
 the existing token on unlock; never describe the lock as a sign-out. This must be settled
 before any third-party script reaches a public page (`docs/CONTENT-AND-GROWTH.md` section 3).
 
-**Progress 2026-10-10 (client only, not deployed):** after a successful unlock the lock
+**Progress 2026-10-10 (client only, not deployed):** a wrong password on the lock screen no
+longer clears the session (`42f890b`). And after a successful unlock the lock
 screen sends the previous token to `auth.php?action=logout` through `auth.revokeToken` in
 `src/lib/api.ts`, so the server deletes it. `revokePreviousToken` in
 `src/lib/session-revoke.ts` retries three times with a doubling delay and writes a console
@@ -757,7 +774,11 @@ server tests, `php -l` and the lint ratchet, and `deploy.yml` runs only after CI
 push to `main` (D-036, `docs/DEPLOYMENT.md` section 2). The new server-test job found K-040.
 
 ## K-036 · Public pages bring back unpublished posts and work from the static fallback
-**Severity:** medium · **Status:** open, in progress.
+**Severity:** medium · **Status:** **fixed 2026-10-10, not deployed.** A successful CMS answer,
+empty included, now decides what the public pages show; the static fallback is used only when
+the request fails, and a JSON 404 is a real not-found (`src/marketing/data/cmsResult.ts`,
+`cmsResult.test.ts`, `3eadfd3`). The private content-health warning is not built. The original
+finding follows.
 
 At the 2026-10-10 audit, `src/marketing/data/blog.ts` and `src/marketing/data/work.ts` started
 with static content and kept it both on failure and on a **successful empty** response, and
@@ -767,7 +788,12 @@ success-empty differently from failure, so unpublishing never brings fallback co
 and give the owner a private content-health warning (`docs/PRODUCT-SPEC.md` section 4.4).
 
 ## K-037 · The article renderer has no links or lists
-**Severity:** medium · **Status:** open, in progress.
+**Severity:** medium · **Status:** **fixed 2026-10-10, not deployed.**
+`src/marketing/lib/articleFormat.ts` supports `##` and `###` headings, bullet and numbered
+lists, bold and `[text](url)` links as React elements with no raw HTML. Only `https`, `http`
+and `mailto` become anchors; `[text](url){sponsored}` adds `rel="sponsored"`
+(`articleFormat.test.ts`, `d5276cb`). Recommendation blocks are not built. The original
+finding follows.
 
 `src/marketing/pages/ResourceDetail.tsx` renders only `h2`, `h3` and plain paragraphs: no
 links, lists or emphasis. Articles cannot cite sources, and affiliate recommendations cannot
@@ -776,7 +802,12 @@ blocks, with no raw HTML, before any affiliate content (`docs/CONTENT-AND-GROWTH
 4).
 
 ## K-038 · Public fallback copy shows engineering counts and internal file paths
-**Severity:** medium · **Status:** open, in progress.
+**Severity:** medium · **Status:** **partly fixed 2026-10-10, not deployed.** The work fallback
+no longer shows module and endpoint counts or repository paths (`3eadfd3`). The labelled
+placeholders remain: "Portrait, to supply" (`Home.tsx`, `About.tsx`), "Biography, to supply"
+(`About.tsx`), "Screenshot, to supply" (`WorkDetail.tsx`) and "review date to supply"
+(`Legal.tsx`). They close when the owner supplies the material (`docs/STATUS.md` section 5)
+or the entries are unpublished. The original finding follows.
 
 At the 2026-10-10 audit the visible fallback text included "twenty-four modules … Forty
 server endpoints" and a `qa/ACCESSIBILITY-AUDIT.md` path (`work.ts`), "Portrait, to supply"
@@ -788,7 +819,14 @@ and complete content, and unpublish incomplete entries rather than invent replac
 narrows D-027).
 
 ## K-039 · Clients cannot message the owner from the portal
-**Severity:** high · **Status:** open, in progress.
+**Severity:** high · **Status:** **fixed 2026-10-10, not deployed or uploaded.** `support.php`
+has a client branch: a `client` user lists, reads, starts and replies to tickets of their own
+client only. The client id comes from the token, another client's ticket answers 404, and
+clients cannot set status, priority or assignee. The portal has a Messages area
+(`tests/server/support-client.test.ts`, 22 isolation tests with two synthetic clients, 8 of
+which failed on the old code; `cf534cf`). `support.php` is now security-critical like
+`portal.php` (`docs/SECURITY.md` section 3). Private feedback with publication consent is
+still open. The original finding follows.
 
 The portal aggregates projects, invoices and tickets, but Comms is staff-only and
 `server/support.php` requires STAFF for creating a ticket and replying, with no client branch.
@@ -804,7 +842,7 @@ The `files` table has a column named `stored`, which is a reserved word in MySQL
 MariaDB. `server/schema.sql` therefore failed to install on MySQL, and `files.php` queries
 would fail there. Found by the new CI server-test job (K-035). Fix: the column name is quoted
 with backticks in `schema.sql` and `files.php`, which works on both engines (`9db80b2`).
-`files.php` is in the batch-1 upload set (`docs/DEPLOYMENT.md` 5.2).
+`files.php` is in the upload set (`docs/DEPLOYMENT.md` section 5).
 
 ## K-041 · `npm audit` reports 15 affected packages, ten of them high
 **Severity:** medium · **Status:** open. Owner decision.

@@ -1,7 +1,8 @@
 # Deployment
 
-**Status:** the two tracks below are verified from `.github/workflows/deploy.yml`,
-`server/README.md` and `server/.htaccess`. **Everything about the live server state is
+**Status:** current as at 2026-10-10. The two tracks are read from
+`.github/workflows/deploy.yml`, `.github/workflows/ci.yml`, `server/README.md` and
+`server/.htaccess`. Section 5 is the one list of server work not yet uploaded. **Everything about the live server state is
 UNVERIFIED**: no server, database, FTP account or DNS record was contacted during this work.
 
 ---
@@ -10,7 +11,7 @@ UNVERIFIED**: no server, database, FTP account or DNS record was contacted durin
 
 | Track | What moves | Mechanism | Trigger |
 |---|---|---|---|
-| Client | `dist/` only | GitHub Actions, `SamKirkland/FTP-Deploy-Action@v4.4.0` | Push to `main` |
+| Client | `dist/` only | GitHub Actions, `SamKirkland/FTP-Deploy-Action@v4.4.0` | CI passing on a push to `main` |
 | Server | `server/*.php`, `.htaccess`, `schema.sql` | Manual upload by a person | A decision, never automatic |
 
 Both land in the same cPanel document root for `gakinz.com`. The workflow uploads with
@@ -55,9 +56,10 @@ npm run build          # runs tsc -b first, so a type error blocks the deploy
 npm test               # unit tests (src/)
 npm run test:server    # PHP endpoints against a throwaway local *_test database
 npm run lint:ratchet   # fails if the lint backlog (K-002) grows
+npm run docs:check     # links, and the document-sync rule in AGENTS.md
 ```
 
-CI runs all four, plus `php -l` over `server/`, and the deploy waits for it.
+CI runs all five, plus `php -l` over `server/`, and the deploy waits for it.
 
 ### Release policy
 
@@ -66,8 +68,8 @@ Approved 2026-10-10. Until then CI ran no tests and the deploy did not wait for 
 - **Keep the Vite build and the existing client and server model.** CI runs unit tests, the
   server tests and PHP syntax, and gains targeted synthetic endpoint and browser checks as
   they become available.
-- **Lint is a ratchet first, then a gate.** `npm run lint:ratchet` enforces the current
-  ceiling of 47 errors and 2 warnings (K-002). Clear the errors in small batches, then make
+- **Lint is a ratchet first, then a gate.** `npm run lint:ratchet` enforces the ceiling
+  in `scripts/lint-ratchet.mjs`; the current figure is in `docs/STATUS.md` (K-002). Clear the errors in small batches, then make
   lint blocking. `continue-on-error` alone is advisory, not a ratchet.
 - **Production deploys only after the required checks pass**, or through a deliberate,
   approved release trigger. Every push to `main` deploys `dist/`, so documentation or planning
@@ -113,38 +115,163 @@ Adapted from `server/README.md`, which has been corrected as part of this migrat
 There is no `/smoke` route any more. The public smoke-test page and its route were removed
 during the demo-surface cleanup, so step 5 of the old instructions could not pass.
 
-## 5. Outstanding server work
+## 5. Not yet uploaded
 
-**This list cannot be reconciled from the repository.** The previous `CLAUDE.md` accumulated
-roughly 25 "deployed and live" and "needs re-deploy" markers across sessions, with no single
-current list, and no server was contacted during this migration.
+This is the one list of server work that is committed and not known to be live. It covers
+every server change since `c57eb4a` (`main`, 2026-10-10) on the stacked branches in PR #8, and,
+conditionally, the 2026-09-22 relaunch set already on `main`. Keep it current: a change under
+`server/` updates this section in the same pull request (`AGENTS.md`, "Keeping documents
+current"), and `npm run docs:check` enforces that in CI.
 
-**Status of every item below: UNVERIFIED.**
+**Status of the live server: UNVERIFIED** (K-006). No server, database or FTP account was
+contacted while any of this work was done. The repository cannot say which of these files or
+statements are already live; only someone with server access can (section 5.6).
 
-### Files that may need uploading
+### 5.1 Operator actions, in order
 
-Every PHP file added or changed since the last confirmed upload. Because the last confirmed
-upload is itself unknown, the safe assumption is that any of the 44 files in `server/` may be
-behind the repository. The files the previous notes named at least once as outstanding:
+1. **Delete `seed_admin_password.txt` from the live document root if it is there** (K-015).
+   `auth.php` used to write a generated super-admin password into that file, and the old
+   `.htaccess` did not deny `.txt`. If it was there, treat the password as public: sign in,
+   change it, and revoke the account's sessions. Confirm the credential from git history is
+   rotated at the same time (K-001).
+2. **Upload `server/.htaccess` first.** It denies `.txt` except `robots.txt` and `llms.txt` (2026-09-22) and
+   every `_*.php` include (K-013), so both are in force before anything else lands.
+3. **Run the SQL in section 5.2**, in the order given.
+4. **Set or check the configuration in section 5.4.** In particular leave `$PAYPAL_ENABLED`
+   unset or `false` (K-026).
+5. **Upload the PHP in section 5.3** as one set. Several files depend on each other:
+   `payments.php` requires the new `_money.php`, and uploading one without the other breaks
+   every payment action.
+6. **Check invoices already paid through Stripe** (K-025). Before this change Stripe charged
+   the ex-VAT subtotal and marked the invoice fully paid. For every invoice with
+   `vat_rate > 0` marked paid by the Stripe webhook (`audit_log.action =
+   'invoice_paid_stripe'`), compare the amount in the Stripe dashboard with the invoice total
+   including VAT, and reconcile any shortfall with the client by hand.
+7. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
+   deploys the client that expects these server changes.
+8. **Walk the post-upload checks** in section 5.6.
+
+### 5.2 SQL, in order
+
+Every statement is at the foot of `server/schema.sql`. There is no migration runner; nothing is
+applied until someone runs it (`docs/DECISIONS.md` D-008). Older statements in the
+`MIGRATIONS` comment block are listed in `docs/DATA-MODEL.md` section 4; whether they have run
+is UNVERIFIED, so check them before step 1.
+
+| # | Statement | Source | Notes |
+|---|---|---|---|
+| 1 | `SELECT share_token, COUNT(*) c FROM files WHERE share_token IS NOT NULL GROUP BY share_token HAVING c > 1;` | 2026-09-22 relaunch, skip if already run | A pre-check, not a change. It must return **zero rows**. If not, stop and resolve the duplicates: statement 2 would fail, and a duplicate token is already a live bug, because the public lookup in `files.php` uses `LIMIT 1` |
+| 2 | `ALTER TABLE files ADD UNIQUE KEY uk_file_share (share_token);` | 2026-09-22 relaunch | `files.share_token` is the sole credential on an unauthenticated download (D-029) |
+| 3 | `CREATE TABLE IF NOT EXISTS work (...)` | 2026-09-22 relaunch | The work ledger. Safe to run twice |
+| 4 | `CREATE TABLE IF NOT EXISTS work_images (...)` | 2026-09-22 relaunch | After `work`; it carries a foreign key to it |
+| 5 | `CREATE TABLE IF NOT EXISTS payment_events (...)` | 2026-10-10, K-025 | Additive, safe to run twice. Until it runs, the Stripe webhook still checks amounts but cannot de-duplicate redelivered events or keep the evidence row |
+| 6 | `ALTER TABLE enquiries ADD COLUMN next_action_at ..., ADD COLUMN next_action_note ..., ADD COLUMN priority ...;` | 2026-10-10, enquiry follow-ups | Additive. Run once only; a second run fails on the duplicate column. Until it runs, `leads.php` lists and updates enquiries but answers `followup: false` and stores no follow-up |
+
+No existing data is migrated by any of these statements.
+
+### 5.3 PHP to upload
+
+**Changed on the branch since `c57eb4a`**, from `git diff --name-only c57eb4a -- server`.
+Upload all of them, with `.htaccess`:
 
 ```
-_smtp.php  _sms.php  _slack.php  _monitor.php
-ai.php  announcements.php  auth.php  careplan.php  clients.php  comms.php
-contracts.php  cron.php  design.php  dev.php  figma.php  files.php  github.php
-integrations.php  invoices.php  knowledge.php  leads.php  mail.php  oauth.php
-payments.php  portal.php  projects.php  proposals.php  reports.php  resourcing.php
-slack.php  time.php  users.php  weather.php  _bootstrap.php
+.htaccess
+_money.php (new)  auth.php         blog.php         clients.php
+comms.php         contact.php      content.php      contracts.php
+design.php        dev.php          files.php        knowledge.php
+leads.php         oauth.php        payments.php     projects.php
+proposals.php     resourcing.php   support.php      tasks.php
+testimonials.php  time.php         users.php
 ```
 
-`weather.php` was recorded as being stale on the server in a way that broke CORS for its GET.
-The repository copy routes through `_bootstrap.php` correctly. Live state is **UNVERIFIED**.
+**If the 2026-09-22 relaunch set was never uploaded**, which is UNVERIFIED, also upload these
+ten files from `main`. The other relaunch files are in the list above already.
 
-### Schema statements that may need running
+```
+_bootstrap.php  _monitor.php  ai.php      api.php      figma.php
+invoices.php    mail.php      portal.php  weather.php  work.php (new)
+```
 
-All of them are at the foot of `server/schema.sql` from line 291, as comments. The grouped
-list is in `docs/DATA-MODEL.md` section 4. Which have already been applied is **UNVERIFIED**.
+`support.php` now serves `client`-role callers and is security-critical, like `portal.php`
+(`docs/SECURITY.md` section 3). `README.md`, `schema.sql` and `config.php.example` stay out
+of the document root.
 
-### Configuration keys that may need setting
+### 5.4 Configuration this set needs
+
+| Key | Why it matters now |
+|---|---|
+| `$PAYPAL_ENABLED` | Leave unset or `false`. PayPal checkout refuses to start unless it is `true`, because there is no PayPal webhook yet (K-026) |
+| `$SEED_ADMIN_EMAIL` | `auth.php` no longer falls back to a hard-coded address. With this unset, a first run against an empty `users` table creates **no account at all** |
+| PHP `fileinfo` extension | `files.php` sniffs the real type of an upload with `finfo_file()`. Without it, uploads return 503 rather than accepting anything |
+
+The full key list is in section 5.7.
+
+### 5.5 Behaviour changes to expect
+
+From the 2026-09-22 relaunch set, if it was not already live:
+
+- **Care-plan monitoring may report sites as down.** TLS peer verification is on and redirects
+  are no longer followed, so an expired certificate fails and a redirecting site reports its
+  own 301. Check the certificate first. Internal addresses are no longer checked at all.
+- **`employee`, `editor` and `trainer` lose the Portal screen.** The staff preview branch of
+  `portal.php` is now super_admin, admin and manager, matching `invoices.php`.
+- **`api.php` is a read-only health check** returning `{"ok":true,"php":"8.x.y","db":true}`.
+  The unauthenticated POST is gone (K-004).
+- **Attaching an image to a work record makes that file permanently public** and clears any
+  earlier share expiry. Detaching does not revoke the link; revoke it in Files.
+- **Existing file rows keep their stored MIME type**, filtered through the allowlist on
+  download. Files already in `uploads/` with a now-rejected extension need a manual review.
+
+From the branch:
+
+- **Stripe pay links charge the VAT-inclusive total**, matching the invoice, PDF and portal.
+- **The Stripe webhook refuses mismatched payments.** A different amount or currency leaves
+  the invoice unpaid and writes an `invoice_payment_mismatch` audit row.
+- **PayPal checkout is switched off** (button removed, endpoint 503).
+- **Magic links sign in client accounts only**, and not one with two-factor on. Google sign-in
+  refuses accounts with two-factor on (K-027).
+- **Quotes can be accepted only from "sent" and before `valid_until`, exactly once**, and an
+  accepted quote can no longer go back to draft (K-028).
+- **Create endpoints return the new record's id**, not the audit-log row id (K-029).
+- **Editing a blog post keeps its body** (K-016).
+- **`files.php` quotes the column `stored`**, so it works on MySQL 8 as well as MariaDB
+  (K-040). The live table needs no change.
+- **Clients can message the studio** from the portal through `support.php`: list, read, start
+  and reply to their own tickets only. Staff replies show to clients as "GAkinz" (K-039).
+- **Enquiries carry a next-action date, a note and an owner priority** once SQL statement 6
+  has run.
+- **`auth.php?action=me` also returns `totp_enabled`**, which My account reads (K-024).
+
+### 5.6 Post-upload checks
+
+1. `https://gakinz.com/api.php` returns `{"ok":true,...,"db":true}`. A 500 or a missing `db`
+   means `config.php` cannot reach the database.
+2. `https://gakinz.com/robots.txt`, `/llms.txt` and `/sitemap.xml` are served, not 403.
+3. An invented `.txt` name in the document root returns 403, and so do
+   `https://gakinz.com/_money.php` and `https://gakinz.com/_smtp.php`.
+4. `GET /work.php?action=list` returns `[]` from a signed-out browser. A 500 means the work
+   tables were not created.
+5. In the CMS, open an existing blog post for editing: the body appears before Save is enabled.
+6. Open Enquiries and set a follow-up date on a real enquiry you intend to chase. If the
+   response says the follow-up was not stored, statement 6 has not run.
+7. The next time you create a real record (client, project, task), confirm it opens straight
+   away. No test record needs creating on the live system for this.
+8. After publishing a work record with an image, open its public page in a signed-out browser
+   and confirm the image loads.
+9. Do **not** test a real payment or a real send. Stripe behaviour is covered by
+   `npm run test:server` against a fake provider; a live check needs Stripe test-mode keys on a
+   non-production copy.
+
+**Establishing the real state.** For each PHP file, compare the server copy with the
+repository copy; for each statement, check whether the table, column or key exists. Record the
+result in `docs/STATUS.md` and close K-006 only then. Until that is done, no release note
+describes this project as deployed.
+
+**Rollback for this set.** Re-upload the previous versions of the listed PHP files and
+`.htaccess`, kept before overwriting. The new tables and columns can stay; nothing else reads
+them. See section 6.
+
+### 5.7 Configuration keys
 
 From `server/config.php.example`. Absent keys degrade the matching feature rather than
 breaking the application.
@@ -160,199 +287,16 @@ breaking the application.
 | `$TWILIO_SID`, `$TWILIO_TOKEN`, `$TWILIO_FROM` | SMS |
 | `$TWILIO_WHATSAPP_FROM` | WhatsApp |
 | `$STRIPE_SECRET`, `$STRIPE_WEBHOOK_SECRET`, `$STRIPE_SUCCESS_URL`, `$STRIPE_CANCEL_URL` | Stripe pay links |
-| `$PAYPAL_CLIENT_ID`, `$PAYPAL_SECRET`, `$PAYPAL_MODE` | PayPal |
+| `$PAYPAL_CLIENT_ID`, `$PAYPAL_SECRET`, `$PAYPAL_MODE`, `$PAYPAL_ENABLED` | PayPal, off unless `$PAYPAL_ENABLED` is `true` |
 | `$GOOGLE_CLIENT_ID`, `$GOOGLE_CLIENT_SECRET`, `$GOOGLE_REDIRECT`, `$APP_URL` | Google SSO |
 | `$CRON_KEY`, `$REPORT_RECIPIENTS` | Scheduled jobs and the digest |
 | `$GITHUB_TOKEN`, `$FIGMA_TOKEN`, `$SLACK_WEBHOOK_URL`, `$CALENDLY_URL` | The four external connectors |
 
-**The tracked template carries placeholders, not values.** As of 2026-09-04 `DB_NAME`,
-`DB_USER`, `$SEED_ADMIN_EMAIL`, `$SMTP_HOST` and `$IMAP_HOST` are all `REPLACE_` placeholders.
-Two of them used to hold real production identifiers, and the mail host used to name a server
-retired during the 2026-07 migration, which fails silently rather than loudly because a
-retired host of that kind still resolves and still answers. The real mail hostname is a
-hosting fact held in the operator's notes; this repository does not state hosting facts. See
-`docs/KNOWN-ISSUES.md` K-003.
-
-**This changed the template only.** Whether the **live** `config.php` still points at the
-retired mail host is UNVERIFIED and is one of the checks in the next section.
-
-### How to establish the real state
-
-Nothing in this list can be closed from here. Closing it needs someone with server access to,
-for each PHP file, compare the server copy with the repository copy, and for each migration,
-check whether the column or table exists. Until that is done, this section stays marked
-UNVERIFIED and no release note should claim otherwise.
-
-## 5.1 The 2026-09-22 public relaunch
-
-Everything in this section is committed and **none of it is live**. It is one upload plus
-three SQL statements, and the order matters.
-
-**Status of the live server: UNVERIFIED.** No server, database or FTP account was contacted
-while this work was done.
-
-### Operator actions, in order
-
-1. **Delete `seed_admin_password.txt` from the live document root if it is there.** This is
-   the urgent one and it comes before everything else. `auth.php` used to write a generated
-   super-admin password into that file, and the old deny list in `.htaccess` covered only
-   `.md`, `.sql` and `.log`, so the file was fetchable over the web by anyone who guessed the
-   name. If it was there, treat that password as public: sign in, change it, and revoke the
-   account's sessions from the sessions screen.
-2. **Upload `server/.htaccess` first**, so the new `.txt` deny is in force before anything
-   else lands. The rule exempts `robots.txt` by name, which the public site needs.
-3. **Run the SQL below**, in the order given.
-4. **Upload the changed PHP**, listed below.
-5. **Push the branch** so the client deploy ships `dist/`.
-6. **Walk the post-upload checks** at the end of this section.
-
-### SQL to run
-
-Statements are at the foot of `server/schema.sql`. There is no migration runner; nothing is
-applied until someone runs it (`docs/DECISIONS.md` D-008).
-
-| # | Statement | Notes |
-|---|---|---|
-| 1 | `SELECT share_token, COUNT(*) c FROM files WHERE share_token IS NOT NULL GROUP BY share_token HAVING c > 1;` | A pre-check, not a change. It must return **zero rows**. If it returns any, stop and resolve the duplicates, because statement 2 will fail and a duplicate token is already a live bug: the public lookup in `files.php` uses `LIMIT 1` and would serve the wrong file. |
-| 2 | `ALTER TABLE files ADD UNIQUE KEY uk_file_share (share_token);` | Matches the constraint `proposals.share_token` already has. `files.share_token` is the sole credential on an unauthenticated download and had no uniqueness guarantee. |
-| 3 | `CREATE TABLE IF NOT EXISTS work (...)` | The work ledger. Safe to run twice. |
-| 4 | `CREATE TABLE IF NOT EXISTS work_images (...)` | Must run **after** `work`; it carries a foreign key to it. |
-
-No existing table is modified and no data is migrated.
-
-### PHP to upload
-
-Upload the whole set together. Several changes interact, and the `.htaccess` deny list, the
-`auth.php` seeding change and the `files.php` upload allowlist in particular must not be left
-half applied.
-
-```
-.htaccess        _bootstrap.php   _monitor.php     api.php
-ai.php           auth.php         comms.php        contact.php
-design.php       figma.php        files.php        invoices.php
-mail.php         oauth.php        payments.php     portal.php
-support.php      time.php         weather.php      work.php   (new)
-```
-
-`README.md` and `config.php.example` stay out of the document root as always.
-
-### Configuration this adds or now requires
-
-| Key | Why it matters now |
-|---|---|
-| `$SEED_ADMIN_EMAIL` | `auth.php` no longer falls back to a hard-coded address. With this unset, a first run against an empty `users` table creates **no account at all** and nobody can sign in. |
-| PHP `fileinfo` extension | `files.php` now sniffs the real type of an upload with `finfo_file()`. Without the extension, uploads return 503 rather than silently accepting anything. |
-
-### Behaviour changes to expect
-
-- **Care-plan monitoring may start reporting sites as down.** TLS peer verification is now on
-  for the status request, so a monitored site with an expired or misconfigured certificate
-  fails where it previously returned a status code. Redirects are also no longer followed, so
-  a redirecting site reports its own 301 rather than the destination's 200. Check a site's
-  certificate first if it turns red after this upload. The TLS expiry reading is unaffected.
-- **A monitored URL pointing at an internal address stops being checked.** Intended: that was
-  a server-side request forgery path.
-- **`employee`, `editor` and `trainer` lose the Portal screen.** They could previously pass an
-  arbitrary `?client_id` to `portal.php` and read any client's invoice data, which
-  `invoices.php` restricts to `super_admin`, `admin` and `manager`. Both the endpoint and the
-  navigation now agree.
-- **`api.php` returns a different shape.** It was an `items` listing with an unauthenticated
-  POST that inserted rows. It is now a read-only health check returning
-  `{"ok":true,"php":"8.x.y","db":true}`. Nothing in the SPA reads it.
-- **Attaching an image to a work record makes that file permanently publicly reachable** and
-  clears any expiry an earlier Files share had set. That is deliberate: a portfolio image that
-  404s six months after launch is the failure being designed out. Detaching does not revoke
-  the link; revoke it in the Files module.
-- **Existing file rows keep whatever MIME their uploader's browser claimed.** The download path
-  filters them through the allowlist, so an old row with an unusual stored type downloads as
-  `application/octet-stream`. Nothing scans or removes files already in `uploads/` whose
-  extension the new allowlist would reject; that needs a manual review.
-
-### Post-upload checks
-
-1. `https://gakinz.com/api.php` returns `{"ok":true,...,"db":true}`. A 500 or a missing `db`
-   means `config.php` cannot reach the database.
-2. `https://gakinz.com/robots.txt` is served, not 403. A mistake here is invisible until
-   search engines notice.
-3. `https://gakinz.com/sitemap.xml` is served.
-4. An invented `.txt` name in the document root returns 403.
-5. `GET /work.php?action=list` returns `[]` from a signed-out browser. A 500 means the tables
-   were not created.
-6. After publishing a work record with an image, **open its public page in a signed-out
-   browser and confirm the image loads.** A 404 on the image with a 200 on the page is
-   invisible from inside the CMS, where every file is reachable through the authenticated
-   download route.
-
-## 5.2 The 2026-10-10 batch-1 fixes (delivery phase 1, `docs/STATUS.md`)
-
-Committed on branch `feat/plan-2026-batch-1`. **None of it is live.** Server state remains
-**UNVERIFIED**. Do 5.1 first if it has not been done; this section assumes it has.
-
-### Operator actions, in order
-
-1. **Upload `server/.htaccess`** (denies every `_*.php` include, K-013).
-2. **Run the SQL below.**
-3. **Upload the PHP below** as one set. `payments.php` requires the new `_money.php`; uploading
-   one without the other breaks every payment action.
-4. **Leave `$PAYPAL_ENABLED` unset or `false`** in the live `config.php`. PayPal checkout now
-   refuses to start unless it is `true` (K-026).
-5. **Check invoices already paid through Stripe** (K-025). Before this change Stripe charged
-   the ex-VAT subtotal and marked the invoice fully paid. For every invoice with `vat_rate > 0`
-   marked paid by the Stripe webhook (`audit_log.action = 'invoice_paid_stripe'`), compare the
-   amount in the Stripe dashboard with the invoice total including VAT, and reconcile any
-   shortfall with the client by hand.
-6. **Merge the branch to `main`** only when you want `dist/` deployed; CI must pass first.
-7. **Walk the post-upload checks.**
-
-### SQL to run
-
-| # | Statement | Notes |
-|---|---|---|
-| 1 | `CREATE TABLE IF NOT EXISTS payment_events (...)` | At the foot of `server/schema.sql`. Additive, safe to run twice. Until it runs, the Stripe webhook still works and still checks amounts, but cannot de-duplicate redelivered events or keep the evidence row. |
-
-### PHP to upload
-
-```
-.htaccess        _money.php (new)  auth.php         blog.php
-clients.php      comms.php         contact.php      content.php
-contracts.php    design.php        dev.php          files.php
-knowledge.php    oauth.php         payments.php     projects.php
-proposals.php    resourcing.php    support.php      tasks.php
-testimonials.php time.php          users.php
-```
-
-### Behaviour changes to expect
-
-- **Stripe pay links charge the VAT-inclusive total.** A £100 invoice at 20% VAT now charges
-  £120, matching the invoice, PDF and portal.
-- **The Stripe webhook refuses mismatched payments.** If the amount or currency Stripe reports
-  differs from the invoice's payable total, the invoice stays unpaid and an
-  `invoice_payment_mismatch` row appears in the audit log for manual reconciliation.
-- **PayPal checkout is switched off** (button removed, endpoint returns 503) until it has a
-  webhook or a manual reconciliation step.
-- **Magic links sign in client accounts only**, and not a client with two-factor on. Staff use
-  password and code. Google sign-in refuses accounts with two-factor on.
-- **Quotes can be accepted only from "sent" and before `valid_until`**, exactly once. An
-  accepted quote can no longer be moved back to draft.
-- **Create endpoints return the new record's id.** Before, they returned the audit-log row id.
-- **Editing a blog post keeps its body.**
-- **`files.php` quotes the column `stored`**, a reserved word in MySQL 8, so file queries work
-  on MySQL as well as MariaDB (K-040). The live table needs no change.
-
-### Post-upload checks
-
-1. `https://gakinz.com/_money.php` and `https://gakinz.com/_smtp.php` return 403.
-2. A normal endpoint, for example `https://gakinz.com/api.php`, still answers.
-3. In the CMS, open an existing blog post for editing: the body appears before Save is enabled.
-4. The next time you create a real record (client, project, task), confirm it opens straight
-   away. No test record needs creating on the live system for this.
-5. Do **not** test a real payment. Stripe behaviour is covered by `npm run test:server`
-   against a fake provider; a live check needs Stripe test-mode keys on a non-production copy.
-
-### Rollback
-
-Re-upload the previous versions of the listed PHP files and `.htaccess`. The
-`payment_events` table can stay; nothing else reads it.
+**The tracked template carries placeholders, not values.** `DB_NAME`, `DB_USER`,
+`$SEED_ADMIN_EMAIL`, `$SMTP_HOST` and `$IMAP_HOST` are `REPLACE_` placeholders. The mail host
+used to name a server retired in the 2026-07 migration; whether the **live** `config.php` still
+does is UNVERIFIED (K-003). The real mail hostname is a hosting fact held in the operator's
+notes, not here.
 
 ## 6. Rollback
 
