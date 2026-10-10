@@ -24,6 +24,9 @@ CREATE TABLE IF NOT EXISTS enquiries (
   tags         VARCHAR(255) DEFAULT NULL,    -- comma-separated labels
   score        INT NOT NULL DEFAULT 0,       -- 0 unscored | 1 cold | 2 warm | 3 hot
   lost_reason  VARCHAR(300) DEFAULT NULL,    -- captured when moved to 'lost'
+  next_action_at   DATE NULL DEFAULT NULL,         -- owner's next follow-up date
+  next_action_note VARCHAR(300) NULL DEFAULT NULL, -- what that follow-up is
+  priority     TINYINT NOT NULL DEFAULT 0,   -- owner's choice: 0 none | 1 low | 2 normal | 3 high (separate from score)
   ip           VARCHAR(45)  DEFAULT NULL,
   created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -598,3 +601,16 @@ CREATE TABLE IF NOT EXISTS payment_events (
   UNIQUE KEY uk_provider_event (provider, event_id),
   KEY idx_invoice (invoice_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-10-10 · Enquiry follow-ups (owner next action, note and priority).
+-- The owner sets a next-action date, a short note and a simple priority on an
+-- enquiry; the Enquiries board and the dashboard list the follow-ups that are
+-- due. `priority` is the owner's own choice and is separate from `score`.
+-- Fresh installs get the columns from the CREATE TABLE above. Additive and safe
+-- to run once against the live DB (see docs/DEPLOYMENT.md). Until it runs,
+-- leads.php still lists and updates enquiries but cannot store a follow-up.
+--   ALTER TABLE enquiries
+--     ADD COLUMN next_action_at   DATE NULL DEFAULT NULL AFTER lost_reason,
+--     ADD COLUMN next_action_note VARCHAR(300) NULL DEFAULT NULL AFTER next_action_at,
+--     ADD COLUMN priority         TINYINT NOT NULL DEFAULT 0 AFTER next_action_note;

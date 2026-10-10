@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { Loader2, Download, RefreshCw, Mail, Building2, UserPlus, Tag, Flame } from "lucide-react"
+import { useNavigate, useSearchParams } from "react-router-dom"
+import { Loader2, Download, RefreshCw, Mail, Building2, UserPlus, Tag, Flame, CalendarClock } from "lucide-react"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -21,7 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { leads, clients, type Lead, type LeadStage } from "@/lib/api"
+import { leads, clients, type Lead, type LeadPriority, type LeadStage } from "@/lib/api"
+import { followUpState, formatYmd, localIsoDate } from "@/lib/format"
 import AiAssist from "@/app/components/AiAssist"
 import { cn } from "@/lib/utils"
 
@@ -30,6 +31,21 @@ const SCORE_META: Record<number, { label: string; cls: string }> = {
   1: { label: "Cold", cls: "bg-sky-500/15 text-sky-700 dark:text-sky-300" },
   2: { label: "Warm", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
   3: { label: "Hot", cls: "bg-destructive/10 text-destructive" },
+}
+// The owner's own priority, separate from the AI score above.
+const PRIORITY_META: Record<number, { label: string; cls: string }> = {
+  1: { label: "Low", cls: "bg-muted text-muted-foreground" },
+  2: { label: "Normal", cls: "bg-primary/10 text-primary" },
+  3: { label: "High", cls: "bg-destructive/10 text-destructive" },
+}
+const FOLLOW_META = {
+  overdue: { label: "Overdue", cls: "bg-destructive/10 text-destructive" },
+  today: { label: "Due today", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
+  upcoming: { label: "Next", cls: "bg-muted text-muted-foreground" },
+} as const
+const isDueOn = (l: Lead, today: string) => {
+  const st = followUpState(l, today)
+  return st === "overdue" || st === "today"
 }
 const parseTags = (t: string | null) => (t ? t.split(",").map((x) => x.trim()).filter(Boolean) : [])
 
@@ -50,6 +66,8 @@ function formatDate(iso: string) {
 
 export default function Leads() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const dueOnly = searchParams.get("due") === "1"
   const [items, setItems] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -62,6 +80,9 @@ export default function Leads() {
   const [editFor, setEditFor] = useState<Lead | null>(null)
   const [editTags, setEditTags] = useState("")
   const [editScore, setEditScore] = useState("0")
+  const [editPriority, setEditPriority] = useState("0")
+  const [editNextAt, setEditNextAt] = useState("")
+  const [editNextNote, setEditNextNote] = useState("")
   const [savingMeta, setSavingMeta] = useState(false)
 
   const load = async () => {
@@ -80,11 +101,33 @@ export default function Leads() {
     load()
   }, [])
 
+  // The server omits the follow-up fields until the 2026-10-10 schema step runs.
+  const followUpsReady = items.length === 0 || items.some((l) => l.priority !== undefined)
+  const today = localIsoDate()
+  const dueCount = items.filter((l) => isDueOn(l, today)).length
+  const setDueOnly = (on: boolean) =>
+    setSearchParams(
+      (p) => {
+        if (on) p.set("due", "1")
+        else p.delete("due")
+        return p
+      },
+      { replace: true },
+    )
+
   const byStage = useMemo(() => {
     const map: Record<LeadStage, Lead[]> = { new: [], contacted: [], proposal: [], won: [], lost: [] }
-    for (const l of items) (map[l.status] ?? map.new).push(l)
+    const shown = dueOnly
+      ? items
+          .filter((l) => isDueOn(l, today))
+          .sort(
+            (a, b) =>
+              (a.next_action_at ?? "").localeCompare(b.next_action_at ?? "") || (b.priority ?? 0) - (a.priority ?? 0),
+          )
+      : items
+    for (const l of shown) (map[l.status] ?? map.new).push(l)
     return map
-  }, [items])
+  }, [items, dueOnly, today])
 
   const move = async (lead: Lead, status: LeadStage) => {
     // Moving to "lost" → capture a reason first.
@@ -119,17 +162,29 @@ export default function Leads() {
     setEditFor(lead)
     setEditTags(lead.tags ?? "")
     setEditScore(String(lead.score ?? 0))
+    setEditPriority(String(lead.priority ?? 0))
+    setEditNextAt(lead.next_action_at ?? "")
+    setEditNextNote(lead.next_action_note ?? "")
   }
   const saveMeta = async () => {
     if (!editFor) return
     setSavingMeta(true)
     const tags = editTags.trim()
     const score = Number(editScore)
-    const res = await leads.setMeta(editFor.id, { tags, score })
+    const follow = followUpsReady
+      ? {
+          priority: Number(editPriority) as LeadPriority,
+          next_action_at: editNextAt || null,
+          next_action_note: editNextNote.trim() || null,
+        }
+      : {}
+    const res = await leads.setMeta(editFor.id, { tags, score, ...follow })
     setSavingMeta(false)
     if (res.ok) {
-      setItems((xs) => xs.map((x) => (x.id === editFor.id ? { ...x, tags, score } : x)))
+      const saved = res.data.followup !== false
+      setItems((xs) => xs.map((x) => (x.id === editFor.id ? { ...x, tags, score, ...(saved ? follow : {}) } : x)))
       setEditFor(null)
+      if (!saved) toast.warning("Tags and score saved. Follow-ups need the server database update first.")
     } else toast.error(res.error || "Could not save.")
   }
 
@@ -161,6 +216,17 @@ export default function Leads() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          {followUpsReady && (
+            <Button
+              variant={dueOnly ? "default" : "outline"}
+              size="sm"
+              aria-pressed={dueOnly}
+              onClick={() => setDueOnly(!dueOnly)}
+            >
+              <CalendarClock className="mr-2 h-4 w-4" /> Follow-ups due
+              {!loading && !error && <span className="ml-1.5 tabular-nums">({dueCount})</span>}
+            </Button>
+          )}
           <Button variant="outline" size="sm" onClick={load}>
             <RefreshCw className="mr-2 h-4 w-4" /> Refresh
           </Button>
@@ -202,6 +268,14 @@ export default function Leads() {
                       <div className="flex items-start justify-between gap-2">
                         <span className="text-sm font-medium">{lead.name}</span>
                         <div className="flex items-center gap-1">
+                          {(lead.priority ?? 0) > 0 && (
+                            <span
+                              className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", PRIORITY_META[lead.priority ?? 0].cls)}
+                              title="Your priority"
+                            >
+                              {PRIORITY_META[lead.priority ?? 0].label}
+                            </span>
+                          )}
                           {lead.score > 0 && (
                             <span className={cn("inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium", SCORE_META[lead.score].cls)}>
                               <Flame className="h-2.5 w-2.5" /> {SCORE_META[lead.score].label}
@@ -217,6 +291,7 @@ export default function Leads() {
                           ))}
                         </div>
                       )}
+                      <FollowUp lead={lead} today={today} />
                       {lead.status === "lost" && lead.lost_reason && (
                         <p className="mt-1 text-[11px] italic text-muted-foreground">Lost: {lead.lost_reason}</p>
                       )}
@@ -272,7 +347,8 @@ export default function Leads() {
                           variant="outline"
                           size="icon"
                           className="h-8 w-8 flex-shrink-0"
-                          title="Tags & score"
+                          title="Tags, score and follow-up"
+                          aria-label={`Tags, score and follow-up for ${lead.name}`}
                           onClick={() => openEdit(lead)}
                         >
                           <Tag className="h-3.5 w-3.5" />
@@ -322,7 +398,7 @@ export default function Leads() {
       <Dialog open={!!editFor} onOpenChange={(o) => !o && setEditFor(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Tags &amp; score — {editFor?.name}</DialogTitle>
+            <DialogTitle>Tags, score and follow-up: {editFor?.name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -341,6 +417,35 @@ export default function Leads() {
               <Label htmlFor="ltags">Tags</Label>
               <Input id="ltags" value={editTags} onChange={(e) => setEditTags(e.target.value)} className="mt-1.5" placeholder="comma, separated, labels" />
             </div>
+            {followUpsReady ? (
+              <>
+                <div>
+                  <Label htmlFor="lpriority">Priority</Label>
+                  <Select value={editPriority} onValueChange={setEditPriority}>
+                    <SelectTrigger id="lpriority" className="mt-1.5"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">None</SelectItem>
+                      <SelectItem value="1">Low</SelectItem>
+                      <SelectItem value="2">Normal</SelectItem>
+                      <SelectItem value="3">High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="mt-1.5 text-xs text-muted-foreground">Your own call, separate from the score.</p>
+                </div>
+                <div>
+                  <Label htmlFor="lnextat">Next action date</Label>
+                  <Input id="lnextat" type="date" value={editNextAt} onChange={(e) => setEditNextAt(e.target.value)} className="mt-1.5" />
+                </div>
+                <div>
+                  <Label htmlFor="lnextnote">Next action</Label>
+                  <Input id="lnextnote" value={editNextNote} maxLength={300} onChange={(e) => setEditNextNote(e.target.value)} className="mt-1.5" placeholder="e.g. send the revised quote" />
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Follow-up dates and priority appear once the server database update has run.
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button onClick={saveMeta} disabled={savingMeta}>
@@ -350,6 +455,21 @@ export default function Leads() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+// Due, overdue or upcoming next action on an open enquiry, with its note.
+function FollowUp({ lead, today }: { lead: Lead; today: string }) {
+  const st = followUpState(lead, today)
+  if (!st || !lead.next_action_at) return null
+  return (
+    <div className="mt-1 text-[11px]">
+      <span className={cn("inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium", FOLLOW_META[st].cls)}>
+        <CalendarClock className="h-3 w-3" aria-hidden="true" />
+        {FOLLOW_META[st].label} {formatYmd(lead.next_action_at)}
+      </span>
+      {lead.next_action_note && <p className="mt-0.5 line-clamp-2 text-muted-foreground">{lead.next_action_note}</p>}
     </div>
   )
 }
