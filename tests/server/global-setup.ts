@@ -13,7 +13,7 @@ import fs from "node:fs"
 import http from "node:http"
 import path from "node:path"
 import {
-  assertSafeTarget, BASE, DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_USER, PHP_PORT, PROVIDER_BASE,
+  assertSafeTarget, BASE, DB_HOST, DB_NAME, DB_PASS, DB_USER, PHP_PORT, PROVIDER_BASE,
   PROVIDER_LOG, PROVIDER_PORT, STRIPE_SECRET, WEBHOOK_SECRET, WORK_DIR,
 } from "./env"
 import { mysqlArgs } from "./helpers"
@@ -25,7 +25,8 @@ function phpString(v: string): string {
 }
 
 function syntheticConfig(): string {
-  const host = DB_HOST === "127.0.0.1" ? `127.0.0.1:${DB_PORT}` : "localhost"
+  // config.php passes no port, so the test database must listen on 3306.
+  const host = DB_HOST === "127.0.0.1" ? "127.0.0.1" : "localhost"
   return `<?php
 // Synthetic configuration written by tests/server/global-setup.ts. Test only.
 // No mysqli_report() call, as in config.php.example: PHP 8 defaults apply, so a

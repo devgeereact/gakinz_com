@@ -21,7 +21,7 @@ permissions:
 
 jobs:
   verify:
-    name: typecheck + lint + build
+    name: typecheck + lint + unit tests + build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -42,15 +42,53 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      # Lint is ADVISORY for now. The tree currently has 60 errors (mostly
-      # unused-imports), so making this blocking today would paint main red and
-      # teach everyone to ignore the badge. Clear the backlog, then delete this
-      # line — a lint gate nobody trusts is worse than no lint gate.
-      - name: Lint (advisory)
-        run: npm run lint
-        continue-on-error: true
+      # Lint is a RATCHET: the existing backlog (47 errors, 2 warnings on
+      # 2026-10-10) is tolerated, but any new problem fails the build. Lower the
+      # limits in scripts/lint-ratchet.mjs as the backlog falls, then switch
+      # this step to `npm run lint` once it reaches zero.
+      - name: Lint (ratchet)
+        run: npm run lint:ratchet
+
+      - name: Unit tests
+        run: npm test
 
       # The build is a real gate: deploy.yml ships whatever `vite build`
       # produces, so a build that fails here is a deploy that would have shipped
       # a broken site.
       - run: npm run build
+
+  server:
+    name: PHP syntax + server integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mysqli, curl, mbstring
+          coverage: none
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: PHP syntax
+        run: find server -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      # The runner's own MySQL, started here. Synthetic data only; the tests
+      # refuse any non-local host and any database not named *_test.
+      - name: Start MySQL
+        run: sudo systemctl start mysql.service
+
+      - name: Server integration tests
+        run: npm run test:server
+        env:
+          GK_TEST_DB_HOST: 127.0.0.1
+          GK_TEST_DB_USER: root
+          GK_TEST_DB_PASS: root
