@@ -13,8 +13,10 @@ export const DB_NAME = process.env.GK_TEST_DB ?? "gakinz_test"
 export const DB_USER = process.env.GK_TEST_DB_USER ?? os.userInfo().username
 export const DB_PASS = process.env.GK_TEST_DB_PASS ?? ""
 
-export const PHP_PORT = 5191
-export const PROVIDER_PORT = 5192
+// Override per run so several worktrees can test at once without colliding:
+// GK_TEST_DB=gakinz_a_test GK_TEST_PHP_PORT=5291 GK_TEST_PROVIDER_PORT=5292
+export const PHP_PORT = Number(process.env.GK_TEST_PHP_PORT ?? 5191)
+export const PROVIDER_PORT = Number(process.env.GK_TEST_PROVIDER_PORT ?? 5192)
 export const BASE = `http://127.0.0.1:${PHP_PORT}`
 export const PROVIDER_BASE = `http://127.0.0.1:${PROVIDER_PORT}`
 
@@ -22,7 +24,7 @@ export const PROVIDER_BASE = `http://127.0.0.1:${PROVIDER_PORT}`
 export const STRIPE_SECRET = "sk_test_synthetic_only"
 export const WEBHOOK_SECRET = "whsec_synthetic_test_only"
 
-export const WORK_DIR = path.join(os.tmpdir(), "gakinz-server-test")
+export const WORK_DIR = path.join(os.tmpdir(), `gakinz-server-test-${DB_NAME}`)
 /** The fake provider appends every request it receives to this file. */
 export const PROVIDER_LOG = path.join(WORK_DIR, "provider-requests.jsonl")
 
