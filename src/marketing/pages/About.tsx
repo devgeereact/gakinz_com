@@ -4,6 +4,7 @@ import {
   Label,
   PageHero,
   Placeholder,
+  Portrait,
   Section,
   Split,
 } from "@/marketing/components/primitives"
@@ -117,16 +118,10 @@ export default function About() {
 
           <div className="lg:pt-2">
             {site.images.portrait ? (
-              <img
-                src={site.images.portrait.src}
-                alt={site.images.portrait.alt}
-                className="w-full"
-                width={800}
-                height={1000}
-                loading="lazy"
-              />
+              <Portrait src={site.images.portrait.src} alt={site.images.portrait.alt} />
             ) : (
               <Placeholder
+                shape="circle"
                 label="Portrait, to supply"
                 detail="A photograph of me. A stock photograph of a stranger on my own about page would be worse than an empty frame."
               />

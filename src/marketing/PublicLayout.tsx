@@ -25,7 +25,7 @@ export default function PublicLayout() {
           above the masthead so it is not obscured (2.4.11). */}
       <a
         href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:bg-gk-ink focus:px-4 focus:py-3 focus:text-gk-paper"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-action focus:bg-gk-ink focus:px-5 focus:py-3 focus:text-gk-paper"
       >
         Skip to content
       </a>

@@ -60,7 +60,7 @@ export default function Work() {
                     onClick={() => setKind(k)}
                     aria-pressed={active}
                     className={cn(
-                      "inline-flex min-h-[2.75rem] items-center gap-2 border px-4 text-body",
+                      "inline-flex min-h-[2.75rem] items-center gap-2 rounded-full border-[1.5px] px-5 text-body",
                       active
                         ? "border-gk-set bg-gk-set text-gk-paper"
                         : "border-gk-edge text-gk-ink-soft hover:border-gk-ink hover:text-gk-ink",
