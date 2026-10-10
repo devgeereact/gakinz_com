@@ -137,12 +137,19 @@ if ($action === 'callback') {
   if ($email === '' || !$verified) { header("Location: $bounce#sso_error=no_email"); exit; }
 
   // Match an existing, active user — never auto-create.
-  $stmt = $conn->prepare('SELECT id, status FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1');
+  $stmt = $conn->prepare('SELECT id, status, totp_enabled FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1');
   $stmt->bind_param('s', $email);
   $stmt->execute();
   $u = $stmt->get_result()->fetch_assoc();
   if (!$u) { header("Location: $bounce#sso_error=no_account"); exit; }
   if ($u['status'] !== 'active') { header("Location: $bounce#sso_error=inactive"); exit; }
+  // Google sign-in must not stand in for this app's two-factor (plan A29).
+  // An account with two-factor on signs in with password and code instead.
+  if (!empty($u['totp_enabled'])) {
+    audit($conn, (int)$u['id'], 'login_sso_refused', 'two-factor enabled');
+    header("Location: $bounce#sso_error=two_factor");
+    exit;
+  }
 
   $uid = (int)$u['id'];
   $token = bin2hex(random_bytes(32));

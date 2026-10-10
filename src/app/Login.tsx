@@ -15,6 +15,7 @@ const SSO_ERRORS: Record<string, string> = {
   inactive: "That account is suspended.",
   exchange_failed: "Google sign-in failed. Please try again.",
   no_email: "Google didn’t return a verified email.",
+  two_factor: "This account uses two-factor authentication. Sign in with your password and code.",
 }
 
 export default function Login() {
@@ -229,7 +230,7 @@ export default function Login() {
                 disabled={busy}
                 className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground"
               >
-                Email me a sign-in link instead
+                Client? Email me a sign-in link instead
               </button>
             )
           )}

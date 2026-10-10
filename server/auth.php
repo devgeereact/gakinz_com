@@ -20,6 +20,10 @@ require __DIR__ . '/_bootstrap.php';
 
 const TOKEN_TTL_DAYS = 30;
 const RESET_TTL_MINUTES = 60;
+// Magic links. Declared here, above the dispatch below: a top-level const
+// placed after the switch is never reached, because every action returns.
+const MAGIC_TTL_MINUTES = 15;
+const MAGIC_ROLES = ['client'];
 
 ensure_seed($conn);
 
@@ -418,16 +422,20 @@ function gk_consume_recovery(mysqli $conn, int $uid, ?string $json, string $code
 }
 
 // ── Magic-link login (passwordless) ─────────────────────────────────────────
-const MAGIC_TTL_MINUTES = 15;
+// Customer convenience only. A link never signs in a staff account and never
+// stands in for two-factor: staff, and any client who has two-factor on, sign
+// in with password and code (plan findings A22, A23).
 
 function magic_request(mysqli $conn): void {
   $email = strtolower(str_field(body(), 'email', 200));
-  $stmt = $conn->prepare('SELECT id, name, status FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1');
+  $stmt = $conn->prepare('SELECT id, name, status, role, totp_enabled FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1');
   $stmt->bind_param('s', $email);
   $stmt->execute();
   $u = $stmt->get_result()->fetch_assoc();
-  // Always succeed (no account enumeration). Only actually send for active users.
-  if ($u && $u['status'] === 'active' && ($GLOBALS['SMTP_HOST'] ?? '') !== '') {
+  // Always succeed (no account enumeration). Only actually send for active
+  // client accounts without two-factor, the only accounts a link can sign in.
+  $eligible = $u && $u['status'] === 'active' && in_array($u['role'], MAGIC_ROLES, true) && empty($u['totp_enabled']);
+  if ($eligible && ($GLOBALS['SMTP_HOST'] ?? '') !== '') {
     $uid = (int)$u['id'];
     // Flood guard: max 3 in 15 min.
     $cnt = $conn->prepare('SELECT COUNT(*) AS c FROM magic_links WHERE user_id = ? AND created_at > (NOW() - INTERVAL 15 MINUTE)');
@@ -465,19 +473,29 @@ function magic_consume(mysqli $conn): void {
   $m = $stmt->get_result()->fetch_assoc();
   if (!$m) fail('This sign-in link is invalid or has expired.', 400);
   $uid = (int)$m['user_id'];
+  $mid = (int)$m['id'];
+
+  // Burn the link first, atomically. Only the request whose UPDATE changes the
+  // row may continue, so concurrent clicks cannot mint several sessions.
+  $upd = $conn->prepare('UPDATE magic_links SET used_at = NOW() WHERE id = ? AND used_at IS NULL AND expires_at > NOW()');
+  $upd->bind_param('i', $mid);
+  $upd->execute();
+  if ($upd->affected_rows !== 1) fail('This sign-in link is invalid or has expired.', 400);
 
   // Load the user (must still be active).
-  $stmt = $conn->prepare('SELECT id, name, email, role, client_id, status FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+  $stmt = $conn->prepare('SELECT id, name, email, role, client_id, status, totp_enabled FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1');
   $stmt->bind_param('i', $uid);
   $stmt->execute();
   $u = $stmt->get_result()->fetch_assoc();
   if (!$u || $u['status'] !== 'active') fail('This account is not active.', 403);
-
-  // Burn the link.
-  $upd = $conn->prepare('UPDATE magic_links SET used_at = NOW() WHERE id = ?');
-  $mid = (int)$m['id'];
-  $upd->bind_param('i', $mid);
-  $upd->execute();
+  if (!in_array($u['role'], MAGIC_ROLES, true)) {
+    audit($conn, $uid, 'login_magic_refused', 'role ' . $u['role']);
+    fail('Sign-in links are for client accounts. Please sign in with your password.', 403);
+  }
+  if (!empty($u['totp_enabled'])) {
+    audit($conn, $uid, 'login_magic_refused', 'two-factor enabled');
+    fail('This account uses two-factor authentication. Please sign in with your password and code.', 403);
+  }
 
   // Issue a session token (records device/IP like a normal login).
   $tok = new_token();

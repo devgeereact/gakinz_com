@@ -104,7 +104,8 @@ export default async function setup(): Promise<() => Promise<void>> {
     "php",
     ["-d", "sendmail_path=/usr/bin/true", "-d", "display_errors=0", "-d", "log_errors=1",
      "-d", `error_log=${path.join(WORK_DIR, "php-error.log")}`, "-S", `127.0.0.1:${PHP_PORT}`, "-t", WORK_DIR],
-    { stdio: "ignore" },
+    // Several workers so concurrency tests exercise real parallel requests.
+    { stdio: "ignore", env: { ...process.env, PHP_CLI_SERVER_WORKERS: "6" } },
   )
   await waitFor(`${BASE}/book.php`)
 
