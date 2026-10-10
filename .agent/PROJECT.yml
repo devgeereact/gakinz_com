@@ -7,7 +7,7 @@ project:
 defaults:
   mode: "existing-application"
   workflows:
-    - "existing-app-recovery"
+    - "existing-application"   # ~/.agents/gee-os/workflows/EXISTING-APPLICATION.md
   specialists:
     - "typescript-react"
     - "php-mysql-api"
@@ -22,7 +22,7 @@ exclusions:
   - "git history rewriting"
 
 sources_of_truth:
-  product: "GAkinzOS.html (summarised in docs/PRODUCT-SPEC.md)"
+  product: "GAkinzOS.html (summarised in docs/PRODUCT-SPEC.md); proposed 2026 scope in docs/Plans 2026/ until approved and promoted"
   public_copy: "src/marketing/data/site.ts"
   routes: "src/routes/index.tsx"
   client_api_boundary: "src/lib/api.ts"
@@ -50,5 +50,11 @@ not_owned_here:
   - "TLS certificates"
   - "mail server hostnames and mailbox credentials"
   - "the dev-server port registry (this repository states only that its own port is 5102)"
+
+machines:
+  primary: mac-primary        # owns env files and secrets, including server/config.php
+  secondary: ubuntu-build     # builds and tests published branches
+  code_transport: github      # small focused commits, pushed per verified batch
+  env_files: primary-only     # never committed, never copied between computers
 
 mcp_profile: ".agent/MCP-PROFILE.yml"
