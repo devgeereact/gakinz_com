@@ -336,7 +336,7 @@ export default function Dashboard() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            <span className="gk-app-grad">Overview</span>
+            <span className="gk-app-grad">Today</span>
           </h1>
           <p className="text-sm text-muted-foreground">
             The whole studio at a glance
