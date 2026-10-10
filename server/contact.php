@@ -50,6 +50,7 @@ if (!$stmt->execute()) fail('Could not save your enquiry.', 500);
 
 // No user id: the caller is anonymous. The row is what the throttle above
 // counts, so it has to be written on every accepted submission.
+$newId = $conn->insert_id; // read before audit(), which inserts its own row
 audit($conn, null, 'enquiry_submit', $email);
 
-ok(['id' => $conn->insert_id], 201);
+ok(['id' => $newId], 201);

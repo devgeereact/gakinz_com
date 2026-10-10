@@ -78,8 +78,9 @@ if ($method === 'POST' && $action === 'leave') {
   $stmt = $conn->prepare('INSERT INTO leave_entries (user_id, start_date, end_date, type, note) VALUES (?, ?, ?, ?, ?)');
   $stmt->bind_param('issss', $uid, $start, $end, $type, $note);
   if (!$stmt->execute()) fail('Could not record the leave.', 500);
+  $newId = $conn->insert_id; // read before audit(), which inserts its own row
   audit($conn, $user['id'], 'leave_create', "user #$uid $start→$end");
-  ok(['id' => $conn->insert_id], 201);
+  ok(['id' => $newId], 201);
 }
 
 if ($method === 'POST' && $action === 'delete') {

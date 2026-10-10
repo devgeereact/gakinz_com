@@ -133,8 +133,9 @@ if ($method === 'POST' && $action === 'create') {
   $stmt = $conn->prepare('INSERT INTO clients (company, contact_name, email, phone, tag, retainer_amount, notes) VALUES (?, ?, ?, ?, ?, ?, ?)');
   $stmt->bind_param('sssssds', $company, $contact, $email, $phone, $tag, $retainer, $notes);
   if (!$stmt->execute()) fail('Could not create the client.', 500);
+  $newId = $conn->insert_id; // read before audit(), which inserts its own row
   audit($conn, $user['id'], 'client_create', $company);
-  ok(['id' => $conn->insert_id], 201);
+  ok(['id' => $newId], 201);
 }
 
 if ($method === 'POST' && $action === 'update') {

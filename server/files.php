@@ -163,8 +163,9 @@ if ($method === 'POST' && $action === 'upload') {
   if (!$stmt) { @unlink($dest); fail('Could not record the file.', 500); }
   $stmt->bind_param('iisssii', $clientId, $projectId, $orig, $stored, $mime, $size, $uid);
   if (!$stmt->execute()) { @unlink($dest); fail('Could not record the file.', 500); }
+  $newId = $conn->insert_id; // read before audit(), which inserts its own row
   audit($conn, $uid, 'file_upload', $orig);
-  ok(['id' => $conn->insert_id], 201);
+  ok(['id' => $newId], 201);
 }
 
 if ($method === 'POST' && $action === 'share') {

@@ -71,8 +71,9 @@ if ($method === 'POST' && $action === 'create') {
   $stmt = $conn->prepare('INSERT INTO users (name, email, password_hash, role, client_id) VALUES (?, ?, ?, ?, ?)');
   $stmt->bind_param('ssssi', $name, $email, $hash, $role, $clientId);
   if (!$stmt->execute()) fail('Could not create the user.', 500);
+  $newId = $conn->insert_id; // read before audit(), which inserts its own row
   audit($conn, $admin['id'], 'user_create', "$email ($role)");
-  ok(['id' => $conn->insert_id], 201);
+  ok(['id' => $newId], 201);
 }
 
 // Invite a staff member: create the account with a random password, then email a

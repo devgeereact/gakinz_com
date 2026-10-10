@@ -80,8 +80,9 @@ if ($method === 'POST' && $action === 'create') {
   $stmt = $conn->prepare('INSERT INTO contracts (client_id, project_id, kind, title, body, nda_triage, signer_name, signer_email, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
   $stmt->bind_param('iissssssi', $clientId, $projectId, $kind, $title, $body, $triage, $signerName, $signerEmail, $uid);
   if (!$stmt->execute()) fail('Could not create the contract.', 500);
+  $newId = $conn->insert_id; // read before audit(), which inserts its own row
   audit($conn, $uid, 'contract_create', $title);
-  ok(['id' => $conn->insert_id], 201);
+  ok(['id' => $newId], 201);
 }
 
 if ($method === 'POST' && $action === 'status') {

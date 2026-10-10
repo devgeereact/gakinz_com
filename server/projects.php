@@ -50,8 +50,9 @@ if ($method === 'POST' && $action === 'create') {
   $stmt = $conn->prepare('INSERT INTO projects (name, client_id, due_date) VALUES (?, ?, ?)');
   $stmt->bind_param('sis', $name, $clientId, $due);
   if (!$stmt->execute()) fail('Could not create the project.', 500);
+  $newId = $conn->insert_id; // read before audit(), which inserts its own row
   audit($conn, $user['id'], 'project_create', $name);
-  ok(['id' => $conn->insert_id], 201);
+  ok(['id' => $newId], 201);
 }
 
 if ($method === 'POST' && $action === 'status') {

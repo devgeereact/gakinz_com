@@ -90,8 +90,9 @@ if ($method === 'POST' && $action === 'create') {
   $stmt = $conn->prepare('INSERT INTO tickets (client_id, subject, body, priority) VALUES (?, ?, ?, ?)');
   $stmt->bind_param('isss', $clientId, $subject, $bodyText, $priority);
   if (!$stmt->execute()) fail('Could not create the ticket.', 500);
+  $newId = $conn->insert_id; // read before audit(), which inserts its own row
   audit($conn, $user['id'], 'ticket_create', $subject);
-  ok(['id' => $conn->insert_id], 201);
+  ok(['id' => $newId], 201);
 }
 
 if ($method === 'POST' && $action === 'status') {
@@ -146,11 +147,12 @@ if ($method === 'POST' && $action === 'reply') {
   $stmt->bind_param('iis', $id, $uid, $bodyText);
   if (!$stmt->execute()) fail('Could not add the reply.', 500);
   // A reply moves an open ticket into progress. Bound, not concatenated.
+  $newId = $conn->insert_id; // read now: the UPDATE and audit() below change insert_id
   $touch = $conn->prepare("UPDATE tickets SET status = 'in_progress' WHERE id = ? AND status = 'open'");
   $touch->bind_param('i', $id);
   $touch->execute();
   audit($conn, $uid, 'ticket_reply', "#$id");
-  ok(['id' => $conn->insert_id], 201);
+  ok(['id' => $newId], 201);
 }
 
 fail('Method not allowed.', 405);

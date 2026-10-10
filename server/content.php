@@ -52,8 +52,9 @@ if ($method === 'POST' && ($action === 'create' || $action === 'update')) {
     );
     $stmt->bind_param('ssssssi', $topic, $platform, $title, $bodyText, $hashtags, $keywords, $uid);
     if (!$stmt->execute()) fail('Could not save the draft.', 500);
+    $newId = $conn->insert_id; // read before audit(), which inserts its own row
     audit($conn, $uid, 'content_create', "$platform: $topic");
-    ok(['id' => $conn->insert_id], 201);
+    ok(['id' => $newId], 201);
   } else {
     $id = (int)($in['id'] ?? 0);
     if ($id <= 0) fail('A draft id is required.');

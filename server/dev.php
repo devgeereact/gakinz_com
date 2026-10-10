@@ -100,8 +100,9 @@ if ($method === 'POST' && $action === 'deploy') {
   $stmt = $conn->prepare('INSERT INTO deploys (project_id, environment, status, url, notes, created_by) VALUES (?, ?, ?, ?, ?, ?)');
   $stmt->bind_param('issssi', $pid, $env, $status, $url, $notes, $uid);
   if (!$stmt->execute()) fail('Could not log the deploy.', 500);
+  $newId = $conn->insert_id; // read before audit(), which inserts its own row
   audit($conn, $uid, 'deploy_log', "project #$pid $env $status");
-  ok(['id' => $conn->insert_id], 201);
+  ok(['id' => $newId], 201);
 }
 
 fail('Method not allowed.', 405);

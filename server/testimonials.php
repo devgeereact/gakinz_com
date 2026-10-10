@@ -76,8 +76,9 @@ if ($method === 'POST' && ($action === 'create' || $action === 'update')) {
     );
     $stmt->bind_param('ssssiii', $author, $role, $company, $quote, $rating, $approved, $sort);
     if (!$stmt->execute()) fail('Could not create the testimonial.', 500);
+    $newId = $conn->insert_id; // read before audit(), which inserts its own row
     audit($conn, $uid, 'testimonial_create', $author);
-    ok(['id' => $conn->insert_id], 201);
+    ok(['id' => $newId], 201);
   } else {
     $id = (int)($in['id'] ?? 0);
     if ($id <= 0) fail('A testimonial id is required.');

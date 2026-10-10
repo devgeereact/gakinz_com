@@ -55,8 +55,9 @@ if ($method === 'POST' && $action === 'create') {
   $stmt = $conn->prepare("INSERT INTO time_entries (project_id, user_id, description, minutes, billable, status, entry_date) VALUES (?, ?, ?, ?, ?, 'draft', ?)");
   $stmt->bind_param('iisiis', $projectId, $uid, $desc, $minutes, $billable, $date);
   if (!$stmt->execute()) fail('Could not log the time.', 500);
+  $newId = $conn->insert_id; // read before audit(), which inserts its own row
   audit($conn, $uid, 'time_log', "project #$projectId · {$minutes}m");
-  ok(['id' => $conn->insert_id], 201);
+  ok(['id' => $newId], 201);
 }
 
 if ($method === 'POST' && $action === 'delete') {
