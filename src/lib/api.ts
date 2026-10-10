@@ -905,6 +905,9 @@ export const blog = {
   list: () => api.get<BlogSummary[]>("/blog.php"),
   get: (slug: string) => api.get<BlogPost>(`/blog.php?slug=${encodeURIComponent(slug)}`),
   listAll: () => api.get<BlogAdminRow[]>("/blog.php?all=1"),
+  // Editors: one post by id, any status, with excerpt and body, for the edit form.
+  getForEdit: (id: number) =>
+    api.get<BlogAdminRow & { excerpt: string | null; body: string | null }>(`/blog.php?id=${id}`),
   create: (p: BlogInput) => api.post<{ id: number; slug: string }>("/blog.php?action=create", p),
   update: (id: number, p: BlogInput) => api.post<{ ok: boolean; slug: string }>("/blog.php?action=update", { id, ...p }),
   publish: (id: number, status: string) => api.post<{ ok: boolean }>("/blog.php?action=publish", { id, status }),

@@ -36,6 +36,10 @@ export default function Blog() {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(blank)
   const [saving, setSaving] = useState(false)
+  // Editing loads the full post first. Until it arrives (or if it fails) the
+  // form cannot be saved, so a half-loaded form never overwrites the body.
+  const [loadingPost, setLoadingPost] = useState(false)
+  const [postError, setPostError] = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true)
@@ -53,27 +57,39 @@ export default function Blog() {
 
   const startNew = () => {
     setForm(blank)
+    setPostError(null)
     setOpen(true)
   }
-  const startEdit = (a: BlogAdminRow) => {
-    setForm({
-      id: a.id,
-      title: a.title,
-      slug: a.slug,
-      excerpt: "",
-      category: a.category,
-      cover: a.cover,
-      read_mins: a.read_mins,
-      status: a.status,
-      body: "",
-    })
+  const startEdit = async (a: BlogAdminRow) => {
+    setForm({ ...blank, id: a.id, title: a.title, slug: a.slug, category: a.category, cover: a.cover, read_mins: a.read_mins, status: a.status })
+    setPostError(null)
+    setLoadingPost(true)
     setOpen(true)
+    const res = await blog.getForEdit(a.id)
+    setLoadingPost(false)
+    if (!res.ok) {
+      setPostError(res.error || "This post could not be loaded.")
+      return
+    }
+    const p = res.data
+    setForm({
+      id: p.id,
+      title: p.title,
+      slug: p.slug,
+      excerpt: p.excerpt ?? "",
+      category: p.category,
+      cover: p.cover,
+      read_mins: p.read_mins,
+      status: p.status,
+      body: p.body ?? "",
+    })
   }
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }))
 
   const save = async () => {
     if (!form.title.trim()) return toast.error("A title is required.")
+    if (loadingPost || postError) return
     setSaving(true)
     const { id, ...payload } = form
     const res = id ? await blog.update(id, payload) : await blog.create(payload)
@@ -194,6 +210,16 @@ export default function Blog() {
           <DialogHeader>
             <DialogTitle>{form.id ? "Edit post" : "New post"}</DialogTitle>
           </DialogHeader>
+          {loadingPost && (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+              <Loader2 className="h-4 w-4 animate-spin" /> Loading the full post…
+            </p>
+          )}
+          {postError && (
+            <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              {postError} Close this window and try again. Nothing has been changed.
+            </div>
+          )}
           <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -246,7 +272,7 @@ export default function Blog() {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={save} disabled={saving}>
+            <Button onClick={save} disabled={saving || loadingPost || postError !== null}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {form.id ? "Save changes" : "Create post"}
             </Button>
