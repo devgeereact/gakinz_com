@@ -1,6 +1,6 @@
 # Design system, as implemented
 
-**Status:** current. Read from `src/index.css`, `tailwind.config.js`,
+**Status:** sections 1 to 9 current; section 10 decided, not implemented. Read from `src/index.css`, `tailwind.config.js`,
 `src/marketing/components/primitives.tsx` and `src/marketing/PublicLayout.tsx` on 2026-09-22.
 Those files are the authority. If this document and they disagree, they win.
 
@@ -12,13 +12,16 @@ Those files are the authority. If this document and they disagree, they win.
 > only in the parts it names as shared. Section 9 lists what the two surfaces still have in
 > common.
 
-> The `DESIGN-SYSTEM.md` at the repository root is a **superseded proposal**. It describes
-> the "Forest Editorial" green and cream direction, built in June 2026 and replaced the same
-> month. See `docs/DECISIONS.md` D-006 and D-019. Do not restyle anything from it.
+> **Two systems are described here, and they must not be confused.** Sections 1 to 9 are the
+> system **as implemented** today. Section 10 is the **target system** the owner chose on
+> 2026-10-10 (`docs/DECISIONS.md` D-037), which is decided and **not yet implemented**. Until
+> the rebuild lands, the code follows sections 1 to 9. When it lands, section 10 replaces
+> them in the same change, so there is never a second active style guide.
 
-The direction implemented here is recorded in
-`docs/design/2026-09-22-directions/direction-approved.md` as "direction C with direction A's
-colour", and as a decision in `docs/DECISIONS.md` D-023 and D-024.
+The direction implemented here is "direction C with direction A's colour", recorded as
+decisions in `docs/DECISIONS.md` D-023 and D-024. The earlier "Forest Editorial" proposal
+and the September direction note are retired to git history (D-044); D-006 and D-023 carry
+what they decided.
 
 ---
 
@@ -343,3 +346,189 @@ in section 1. Both surfaces load their fonts from one Google Fonts stylesheet at
 `src/index.css`; that is the public site's remaining third-party render dependency, and it is
 recorded in `docs/ARCHITECTURE.md`. The two render-blocking icon webfonts that `index.html`
 used to pull from jsDelivr and `cdn.boxicons.com` are gone, and they had zero usages.
+
+---
+
+## 10. Target system (D-037), not yet implemented
+
+**Status:** decided by the owner on 2026-10-10, not built. Nothing in this section describes
+the code today. It governs the rebuild of both surfaces, which is delivery phases 3 and 4 in
+`docs/STATUS.md`.
+
+### 10.1 The reference and its provenance
+
+The owner chose the full Mastercard-inspired GetDesign system for the website and the CMS, to
+be followed as closely as possible rather than loosely adapted. The complete imported
+reference is preserved, unedited, in
+[DESIGN-REFERENCE-MASTERCARD.md](DESIGN-REFERENCE-MASTERCARD.md).
+
+| Fact | Value |
+|---|---|
+| Source command | `GETDESIGN_DISABLE_TELEMETRY=1 npx --yes getdesign@latest add mastercard` |
+| Package inspected | getdesign 0.6.25 |
+| SHA-256 of the reference file | `e76ceaa187f43bd24b8338d2b2314e71e9225b36492e40f32a55782281a10437` |
+| Upstream project | [VoltAgent/awesome-design-md](https://github.com/VoltAgent/awesome-design-md) |
+| Imported | 2026-10-10. The file exactly matched the package's bundled template |
+| Added to `package.json` or the lockfile | Nothing |
+
+The reference is a third-party design analysis, not Mastercard's official component library.
+Its observations and inferred breakpoints are reference material, not verified guarantees.
+**Do not edit the reference file**; a changed hash means it is no longer the preserved
+source. This section governs how GAkinz applies it.
+
+The target replaces the September direction in sections 1 to 9 (warm paper `#F6F3ED`, navy
+`#2A3160`, red oxide `#933C2F`, Newsreader over Instrument Sans) and the CMS's separate
+Manrope and lavender palette. It withdraws the 2026-09-22 rule against borrowed design
+language. The evidence rule stays: no claim on the public site without a source (D-027).
+
+### 10.2 Required substitutions, and nothing else
+
+Only these departures from the reference are allowed. Each exists because of law, licensing
+or accessibility, not taste.
+
+| Reference says | GAkinz uses | Reason |
+|---|---|---|
+| MarkForMC typeface | Sofia Sans variable, self-hosted under its open licence; Manrope as fallback | MarkForMC is Mastercard's proprietary font and cannot be licensed |
+| Logo colours `#EB001B` and `#F79E1B` | Never used anywhere | They are the Mastercard mark colours |
+| Interlocking or overlapping circle pairs | Never used; single circles and orbit lines only | Avoids confusion with the Mastercard logo |
+| Mastercard name, logo, photography, card or payment imagery | GAkinz logo, owner photographs and real project screenshots | Trade mark and honesty |
+| Any text colour or control edge below WCAG 2.2 AA contrast | Darkened to pass, same hue | Accessibility |
+| Small vertical button padding | At least 44px touch height | Accessibility |
+
+**Brand-confusion check**, run on the home page and every new template before release: no red
+and yellow circle pair, no card imagery, no wording that suggests a payment brand, and the
+GAkinz logo visible in the header. If a first-time viewer would think it is a Mastercard
+page, it fails.
+
+GAkinz uses its own name, logo, photographs, project work and service language. No
+Mastercard mark, payment-brand claim, source-site imagery or proprietary font is used, and
+no font is fetched from another brand's website.
+
+### 10.3 Shared design contract
+
+| Foundation | Website | CMS |
+|---|---|---|
+| Canvas | Cream `#F3F0EE`, lifted cream `#FCFBFA`, warm ink `#141413` | Same light foundation, white or lifted record surfaces, legible text |
+| Primary actions | Warm-black call to action, cream text, 20px radius | Same primary and secondary styling; compact controls keep comfortable hit areas |
+| Accent | Decorative orbital orange `#F37338`, sparse dots and section detail | Quiet decorative and brand cues; semantic success, warning and error colours stay unambiguous |
+| Consent signal | Reference orange `#CF4500`, only where contrast and the consent platform's styling permit | Consent controls follow consent requirements; orange is not the generic Save colour |
+| Typography | One geometric sans family, medium headings, tight display tracking | Same family; readable field labels, tables and figures; no decorative watermark behind data |
+| Type scale | Hero around 64px desktop and 40px mobile, section 36px, smaller headings 24px; fluid sizing with actual wrapping tested | Page headings around 28 to 36px, body and controls around 16px; no 64px KPI numbers |
+| Spacing | 8, 16, 24, 32, 48, 64, 96, 128 scale; generous desktop sections, 48 to 64px mobile sections | Same scale, tighter list and form spacing, sensible density |
+| Shape | Floating pill navigation, 40px hero frames, circular service portraits, 20px buttons | Rounded panels and dialogs, same buttons and chips; inputs and tables fit their function |
+| Elevation | A very soft floating-nav shadow, mostly flat surfaces | Soft elevation only for overlays and selected panels; borders clearly separate controls |
+| Imagery | Real owner and client work, circular portraits, large rounded feature media | Client-approved thumbnails and actual file or project previews; no ornamental imagery in every record |
+| Responsive | Full navigation to a compact accessible mobile menu; arcs simplified or removed on phones | Explicit drawer toggle, wrapping actions and tabs, contained responsive lists and tables |
+| Footer | Warm-black surface, white text, a conversational contact call to action | A small useful footer; no marketing-sized footer in the workspace |
+
+**Font.** Sofia Sans variable, self-hosted, replaces Newsreader, Instrument Sans and Manrope
+on both surfaces, so the website and CMS share one family; Manrope stays as the fallback.
+Confirm the licence file and the weights used (the reference uses 450 and 500) before
+implementation. Remove the stray Space Grotesk reference in `src/index.css` in the same
+change.
+
+**Accessible adaptations take precedence over copied measurements.** Low-contrast Dust Taupe
+and ghost headlines are decorative only, never labels, placeholder instructions or business
+data. Orange arcs carry no meaning. Form edges, status text and focus indicators meet contrast
+requirements. Button heights exceed the source's small vertical padding. Essential actions
+have visible text or accessible names. Do not copy consent styling that makes rejection
+harder than acceptance.
+
+**Themes.** The reference is a light marketing reference and defines no dark palette. The CMS
+ships several themes today (dark, dark-blue, gaussian-black, classic-light, semi-dark); reduce
+them to one light and one dark theme. Derive the dark theme from the same tokens (ink
+`#141413` as the surface, cream as text, orange accents unchanged), then contrast-test it. The
+public site stays light only.
+
+### 10.4 Hero and section composition
+
+**Home hero:** a concise service headline and introduction beside a large rounded frame
+holding a real project screenshot composition or owner and work imagery. One sparse orbital
+line may connect that frame to a circular portrait or service detail. The enquiry call to
+action is visible immediately and the image area is reserved before loading. Use GAkinz
+project material so the composition has a recognisable relationship to the business.
+
+**Service and detail heroes:** smaller rounded media or circular imagery related to the
+service, with copy and a relevant call to action. Vary placement and crop on purpose rather
+than repeating the home hero. About uses an actual owner portrait; Work uses genuine screen
+captures. Portfolio screenshots may stay rectangular inside a 40px frame so interface
+evidence is readable, even though the source favours circular photographs.
+
+**Service overview:** staggered circular imagery on desktop with restrained connecting arcs;
+clear stacked entries on phones. Long empty scroll stretches, a carousel, ghost text or a
+search button are not required just because the source has them; add them only where they
+help GAkinz visitors. The CMS uses the same vocabulary at working density, with no cinematic
+hero on administrative screens.
+
+### 10.5 Motion contract
+
+Motion makes the composition recognisable through real project material, timing and the
+service story. Build a small reusable set of variants, not a different animation engine per
+page. The timings are starting values, tuned in browser review.
+
+| Area | Animation | Limits |
+|---|---|---|
+| Home hero copy | Opacity plus a 12 to 20px upward entrance, 450 to 650ms; a 70 to 100ms stagger between heading, supporting line and call to action | Runs once; one semantic heading, selectable text and immediate focus and click access |
+| Hero media | Scale from about 0.98 to 1 with opacity, 600 to 800ms; an optional restrained inner-image reveal | The outer frame reserves its dimensions; no full-screen transition or content-dependent loading delay |
+| Orbital accent | One SVG path draw over 800 to 1200ms after the main content appears | Decorative and `aria-hidden`; no endless orbiting, flashing or required meaning |
+| Service and portfolio sections | A single viewport entrance, opacity and 12 to 16px movement, 350 to 500ms | Triggers once; no scroll hijack, pinned narrative or long repeated stagger |
+| Portrait and media hover | A small image scale or satellite-arrow shift, 150 to 250ms | Desktop hover only; clipping stays stable; the phone action works without hover |
+| Buttons and menu | Colour or opacity and an optional 1 to 2px arrow shift, 120 to 200ms; menu panel around 180 to 240ms | Keyboard focus distinct; nothing moves the target during activation |
+| CMS panels and dialogs | A brief fade or small displacement, around 120 to 180ms | No staggered table rows, animated money counts or workflow delay |
+| Success and loading | Short state feedback or a restrained skeleton | Never fake completion or progress; errors stay visible until resolved |
+
+No autoplay background video is required. Start with lightweight still imagery and CSS or SVG
+motion. Video is added only if real footage tells a useful story, is compressed, has a poster
+and accessible controls, and the page still meets its performance targets. No heavy 3D
+scenes, custom cursors, particle libraries or overlapping animation dependencies. Prefer CSS
+and browser capabilities; if sequencing later needs a library, check current official
+documentation and bundle impact first.
+
+`prefers-reduced-motion: reduce` removes translation, scale, path drawing and scroll effects
+and shows content in its final readable state. Content is visible if JavaScript fails,
+observers do not run or motion is off (the `.gk-fadein` rule in section 7 still holds).
+Animation never hides the main message until media loads and never delays the LCP element.
+Decorative motion pauses off-screen. Animate opacity and transforms, not layout, and nothing
+loops indefinitely without a user control.
+
+Acceptance: inspect desktop and touch mobile at 320, 390, 768 and 1440px, with reduced
+motion, keyboard navigation, a slow connection and both CMS themes. Confirm no layout shift,
+focus obstruction, hidden content or overflow. Capture a short desktop and mobile preview for
+the owner before applying the motion to every route, and compare field and lab performance
+before and after.
+
+### 10.6 Screen patterns
+
+A page header holds the name, a one-sentence purpose if needed, and the primary action, with
+filter and search beneath. A list shows a readable name, the relevant status or date and a
+labelled action. A record view gives a summary, the next action and a few meaningful tabs.
+Forms show errors beside fields and a summary when useful. A confirm dialog names the actual
+record and the consequences. Destructive actions are separated from the primary action.
+
+Loading, empty, unavailable, permission-denied and success are distinct states. An empty
+enquiry list says how enquiries arrive. An API failure says "Enquiries could not be loaded.
+Retry", without claiming the database is missing. Keep entered content on retry, warn on an
+unsaved departure and guard duplicate submissions. Never show a fake populated chart.
+
+Use the existing shadcn and Radix primitives and the shared `EmptyState` and `TableSkeleton`
+components where they fit. Extract a repeated form or state pattern only after the same
+problem appears on several screens. No universal form engine and no component-library rebuild.
+
+### 10.7 Responsive and accessibility acceptance
+
+Test 320, 390, 768, 1024 and 1440 CSS-pixel widths, portrait and landscape, long content and
+both CMS themes. At 200% zoom the primary tasks stay available. At 400% (320px reflow) content
+does not need scrolling in two directions, except for genuine data tables. A table may scroll
+inside a labelled container; the document itself never widens. On phones prefer record cards
+or fewer columns.
+
+Aim for 44px touch controls. WCAG 2.2 AA sets a 24px minimum target with stated exceptions, so
+the design target is not the standard. Verify keyboard access, visible focus, focus return
+after dialogs, accessible names, field errors, status announcements, contrast, and focus not
+hidden beneath sticky interface. Run real VoiceOver checks, and NVDA where available.
+Automated zero findings are not a compliance certificate.
+
+Sample users: the owner completes an enquiry and quote task without coaching; a business
+buyer finds the relevant scope and submits a synthetic enquiry; a synthetic client finds its
+invoice and support route without staff controls. Record completion, mistakes and points of
+hesitation. Start with one small feedback round.

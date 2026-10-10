@@ -1,6 +1,6 @@
 // Shared number / currency formatting for GAkinzOS (CMS).
 // One source of truth so figures read consistently across every module —
-// see DESIGN-SYSTEM.md §8 (aligned numeric tables, consistent number formatting).
+// see docs/DECISIONS.md D-006 (aligned numeric tables, consistent number formatting).
 // All en-GB. Two currency tempos:
 //   money() — whole-pound, for KPI tiles / dashboards (no pence noise)
 //   gbp()   — 2-decimal precise, for invoices / line items / anything billed

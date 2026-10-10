@@ -34,7 +34,7 @@ export type WorkKind = "case_study" | "product" | "experiment" | "writing"
  * This is the mechanism that lets one table hold four kinds of work without a
  * badge doing the explaining: an experiment does not have to pretend it had a
  * client, because its rows ask a different question. From the approved design
- * direction, docs/design/2026-09-22-directions/direction-approved.md.
+ * direction, docs/DECISIONS.md D-023 and D-025.
  */
 export const KIND_LABELS: Record<WorkKind, { name: string; rows: [string, string, string] }> = {
   case_study: { name: "Case study", rows: ["Problem", "Built", "Outcome"] },

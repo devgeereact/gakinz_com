@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 import * as XLSX from "xlsx"
 import { toCsv } from "./csv"
 
-// Plan finding A21: an enquiry typed into the public form can start with a
+// K-030: an enquiry typed into the public form can start with a
 // spreadsheet formula. Exported cells must open as text, not run.
 describe("toCsv formula neutralising", () => {
   it.each(["=HYPERLINK(\"http://x\",\"y\")", "+SUM(1,1)", "-2+3", "@cmd", "\tleading tab", "\rleading cr"])(

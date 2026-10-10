@@ -22,7 +22,8 @@ exclusions:
   - "git history rewriting"
 
 sources_of_truth:
-  product: "GAkinzOS.html (summarised in docs/PRODUCT-SPEC.md); proposed 2026 scope in docs/Plans 2026/ until approved and promoted"
+  product: "docs/PRODUCT-SPEC.md (approved 2026-10-10, docs/DECISIONS.md D-043)"
+  content_and_growth: "docs/CONTENT-AND-GROWTH.md"
   public_copy: "src/marketing/data/site.ts"
   routes: "src/routes/index.tsx"
   client_api_boundary: "src/lib/api.ts"
@@ -38,11 +39,28 @@ sources_of_truth:
   open_problems: "docs/KNOWN-ISSUES.md"
   completion_standard: "AGENTS.md and qa/RELEASE-CHECKLIST.md"
 
+# Retired 2026-10-10 with git rm (docs/DECISIONS.md D-044). Each is readable at commit c57eb4a.
 superseded:
   - path: "DESIGN-SYSTEM.md"
     reason: "Forest Editorial direction, built June 2026 then replaced by the mono and duo rebrand"
     replaced_by: "docs/DESIGN-SYSTEM.md"
-    recorded_in: "docs/DECISIONS.md D-006"
+    recorded_in: "docs/DECISIONS.md D-006, D-044"
+  - path: "GAkinzOS.html"
+    reason: "original product brief; no longer the scope authority"
+    replaced_by: "docs/PRODUCT-SPEC.md (Appendix B holds all 175 features with dispositions)"
+    recorded_in: "docs/DECISIONS.md D-043, D-044"
+  - path: "docs/adoption/"
+    reason: "completed 2026-09-04 GEE OS adoption records"
+    replaced_by: "docs/DECISIONS.md D-006 and D-019 to D-022; docs/KNOWN-ISSUES.md K-001 to K-003"
+    recorded_in: "docs/DECISIONS.md D-044"
+  - path: "docs/design/"
+    reason: "2026-09-22 content brief and direction note, superseded by D-037 and D-039"
+    replaced_by: "docs/DECISIONS.md D-023 (decision trail); docs/PRODUCT-SPEC.md section 3"
+    recorded_in: "docs/DECISIONS.md D-044"
+  - path: "docs/superpowers/specs/2026-09-22-public-relaunch-design.md"
+    reason: "completed relaunch specification, merged as f67f05b"
+    replaced_by: "docs/DECISIONS.md D-023 to D-032; docs/STATUS.md section 6"
+    recorded_in: "docs/DECISIONS.md D-044"
 
 not_owned_here:
   - "hosting and cPanel account configuration"

@@ -10,7 +10,7 @@
  *
  * Before this existed the Stripe link charged the ex-VAT subtotal and the
  * webhook then marked the whole invoice paid, so VAT was silently lost
- * (plan finding A25).
+ * (K-025).
  */
 
 /** Payable figures for one invoice, or null if it does not exist. */

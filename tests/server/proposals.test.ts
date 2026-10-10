@@ -1,5 +1,5 @@
 /**
- * Plan findings A27 and A12: only a sent, unexpired quote can be accepted, and
+ * K-028: only a sent, unexpired quote can be accepted, and
  * acceptance creates exactly one project and one 40/30/30 invoice schedule even
  * when the button is pressed twice or requests arrive together.
  */

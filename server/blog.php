@@ -144,7 +144,7 @@ if ($method === 'POST' && ($action === 'create' || $action === 'update')) {
     if ($id <= 0) fail('A post id is required.');
     $slug = unique_slug($conn, slugify($slugIn !== '' ? $slugIn : $title), $id);
     // An update that does not send excerpt or body keeps what is stored, so a
-    // form that never loaded them cannot wipe them (plan A06, K-016).
+    // form that never loaded them cannot wipe them (K-016).
     $cur = $conn->prepare('SELECT excerpt, body FROM posts WHERE id = ? AND deleted_at IS NULL LIMIT 1');
     $cur->bind_param('i', $id);
     $cur->execute();

@@ -68,7 +68,7 @@ var config = {
             colors: {
                 // ── Public brand ─────────────────────────────────────────
                 // Direction C with direction A's colour, per
-                // docs/design/2026-09-22-directions/direction-approved.md.
+                // docs/DECISIONS.md D-023.
                 //
                 // The two chromatics carry meaning rather than decoration:
                 // `set` marks a record whose material is settled, `come`

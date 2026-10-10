@@ -42,7 +42,7 @@ import BrandMark from "@/marketing/components/BrandMark"
 import { useAuth } from "@/store/auth.store"
 import { canAccess } from "@/lib/access"
 
-// GAkinzOS modules (GAkinzOS.html). Each maps to a /app/* route. `key` ties the
+// GAkinzOS modules (docs/PRODUCT-SPEC.md). Each maps to a /app/* route. `key` ties the
 // item to its role gate in src/lib/access.ts so the nav only shows modules the
 // signed-in role can actually open (server enforces the same lists).
 const navMain = [

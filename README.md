@@ -1,13 +1,14 @@
 # GAkinz
 
-The website and internal operations platform for **GAkinz**, a web design and development
-studio. One Vite application serves two surfaces from one domain and one build:
+The website and private workspace for **GAkinz**, websites and everyday IT support for small
+businesses, run by Gideon Akinlotan. One Vite application serves two surfaces from one domain
+and one build:
 
-- **Public site** at `/`, rebuilt on 2026-09-22. Its voice is first person singular, as
-  Gideon Akinlotan, designer and developer in London; GAkinz is named where a team genuinely
-  does the work. The copy rule is in the header of `src/marketing/data/site.ts` and is worth
-  reading before changing a word of it.
-- **GAkinzOS** at `/app/*`, the internal CMS that runs leads, clients, projects, proposals,
+- **Public site** at `/`, rebuilt on 2026-09-22. The approved direction (D-038, D-039) is six
+  services under the GAkinz name with Gideon named as the owner; the live copy still describes
+  four services in the first person. The copy rule is in the header of
+  `src/marketing/data/site.ts` and is worth reading before changing a word of it.
+- **GAkinzOS** at `/app/*`, the CMS that runs enquiries, clients, projects, quotes,
   invoicing, support, time, content, the work ledger and a client portal.
 
 Behind them sits a PHP and MySQL API on cPanel shared hosting.
@@ -25,8 +26,10 @@ Port 5102 is pinned with `strictPort`, so a clash fails loudly. This matters: in
 the app calls the **live** API at `https://gakinz.com`, and the live CORS allowlist names one
 localhost port. A drifted port shows up as an opaque CORS failure, not as a port error.
 
-There is no local PHP or MySQL. **Development runs against production data.** Treat every
-write as a write to the real business.
+The dev server has no local PHP or MySQL behind it. **Development runs against production
+data.** Treat every write as a write to the real business. Server behaviour is tested only
+through `npm run test:server`, against a throwaway local database (`docs/OPERATIONS.md`
+section 8).
 
 ## Commands
 
@@ -35,8 +38,10 @@ write as a write to the real business.
 | `npm run dev` | Dev server on port 5102 |
 | `npm run build` | `tsc -b` then `vite build`, output to `dist/` |
 | `npm run preview` | Serve the built output on port 5102 |
-| `npm test` | Vitest, single run |
-| `npm run lint` | ESLint. **Currently fails** with 47 errors and 2 warnings, down from 60 and 7. The count is a ratchet and must not grow. See `docs/KNOWN-ISSUES.md` |
+| `npm test` | Vitest unit tests, single run |
+| `npm run test:server` | PHP endpoints against a throwaway local `*_test` database |
+| `npm run lint` | ESLint. **Currently fails** with 47 errors and 2 warnings, down from 60 and 7. See `docs/KNOWN-ISSUES.md` K-002 |
+| `npm run lint:ratchet` | Fails if that count grows. CI runs it |
 | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` | PHP syntax gate |
 
 ## Stack
@@ -58,16 +63,16 @@ src/
   routes/        the single route table
   store/         auth state
   index.css      design tokens for both surfaces, and the utility layer
-server/          45 PHP endpoints, schema.sql, .htaccess, config template
-docs/            project documentation, see below
-  design/        design directions and the approved one, 2026-09-22
-qa/              test plan and audits
+server/          46 PHP files (endpoints and shared includes), schema.sql, .htaccess, config template
+tests/server/    server integration tests, run against a local *_test database
+docs/            project documentation, flat, see below
+qa/              test plan, audits and release checklist
 ```
 
 ## Deployment, in one paragraph
 
-**Two tracks, and only one is automatic.** Pushing to `main` triggers GitHub Actions, which
-builds and FTP-uploads `dist/` and nothing else. Everything under `server/` is uploaded by
+**Two tracks, and only one is automatic.** Pushing to `main` runs CI, and only when CI passes
+does GitHub Actions build and FTP-upload `dist/`, and nothing else. Everything under `server/` is uploaded by
 hand, and schema changes are run by hand, because there is no migration runner and the host
 has no Node. A change under `server/` is committed but not live. Full detail in
 `docs/DEPLOYMENT.md`.
@@ -80,30 +85,31 @@ Read `AGENTS.md` first if you are an agent. It is the shared contract.
 |---|---|
 | `AGENTS.md` | The contract every agent works to |
 | `CLAUDE.md` | The Claude Code pointer into it |
-| `docs/PRODUCT-SPEC.md` | What the product is, and how the built modules compare with the brief |
+| `CODEX.md` | The Codex pointer into it |
+| `server/README.md` | The server folder: install steps and what each file is for |
+| `docs/PRODUCT-SPEC.md` | The approved scope: services, public pages, CMS journeys, customer access, planned features, exclusions, and the original brief's 175-feature register |
 | `docs/ARCHITECTURE.md` | Shape, client, server, request lifecycle, the two deploy tracks |
-| `docs/DATA-MODEL.md` | 33 tables, ownership, share tokens, and the migration situation |
-| `docs/API-SPEC.md` | The 45 endpoints, their actions and their role gates |
-| `docs/DESIGN-SYSTEM.md` | The public design system **as implemented**, rebuilt 2026-09-22. GAkinzOS is unchanged and is covered there too |
-| `docs/design/2026-09-22-directions/direction-approved.md` | The three directions shown, which one was chosen, and what the choice settled |
+| `docs/DATA-MODEL.md` | The tables, ownership, share tokens, and the migration situation |
+| `docs/API-SPEC.md` | The endpoints, their actions and their role gates |
+| `docs/DESIGN-SYSTEM.md` | The design system **as implemented** (sections 1 to 9) and the decided target system, not yet built (section 10) |
+| `docs/DESIGN-REFERENCE-MASTERCARD.md` | The preserved, unedited third-party design reference behind the target system. Do not edit |
+| `docs/CONTENT-AND-GROWTH.md` | Resources standard, affiliate and AdSense pilots, measurement and the social profile kit |
 | `docs/SECURITY.md` | Authentication, roles, client isolation, secrets, known gaps |
-| `docs/DEPLOYMENT.md` | Both tracks, outstanding uploads, outstanding SQL |
-| `docs/OPERATIONS.md` | Local development, cron jobs, monitoring, mail, routine checks |
-| `docs/STATUS.md` | What is built, what is unverified. The file that changes most |
+| `docs/DEPLOYMENT.md` | Both tracks, release policy, outstanding uploads, outstanding SQL |
+| `docs/OPERATIONS.md` | Local development, cron jobs, monitoring, mail, test environment rules, launch gates, recovery targets |
+| `docs/STATUS.md` | Audit and readiness, delivery phases, open work, owner inputs outstanding. The file that changes most |
 | `docs/DECISIONS.md` | Dated decision records, including superseded ones |
 | `docs/KNOWN-ISSUES.md` | Open problems with evidence |
-| `docs/GEE-OS.md` | How this repository uses the GEE OS agent contract |
-| `qa/TEST-PLAN.md` | What is tested, what is not, and in what order to close the gaps |
+| `docs/GEE-OS.md` | How this repository uses the GEE OS agent contract, and its documentation profile |
+| `qa/TEST-PLAN.md` | What is tested, what is not, the order to close the gaps, and the J01 to J12 acceptance scenarios |
 | `qa/SECURITY-AUDIT.md` | Source-inspection audit |
 | `qa/ACCESSIBILITY-AUDIT.md` | The 2026-09-22 measured run on the public surface, and what is still NOT TESTED |
 | `qa/PERFORMANCE-AUDIT.md` | Bundle and page measurements, and what is unmeasured |
 | `qa/RELEASE-CHECKLIST.md` | Run this before shipping |
 
-Two documents at the root are **history, not instructions**:
-
-- `GAkinzOS.html`, the original product brief. Still the authority on intended scope.
-- `DESIGN-SYSTEM.md`, a **superseded** design proposal, now two rebrands behind the site. See
-  `docs/DECISIONS.md` D-006 and D-023.
+Superseded and completed documents, including the original `GAkinzOS.html` brief and the root
+`DESIGN-SYSTEM.md`, were retired on 2026-10-10 and remain in git history (`docs/DECISIONS.md`
+D-044).
 
 ## Ground rules
 
@@ -116,28 +122,16 @@ Two documents at the root are **history, not instructions**:
 6. DNS, TLS, hosting and mail-server facts are **not** documented here and must not be acted
    on from here.
 7. **Nothing invented ships on the public site.** Where a real value does not exist, the
-   field is `null` and the interface renders a labelled gap. No stock photograph of a
-   stranger, no invented client, no unsourced figure, and no claim the project cannot stand
-   behind. See `docs/DECISIONS.md` D-027.
+   field is `null`. No stock photograph of a stranger, no invented client, no unsourced
+   figure, and no claim the project cannot stand behind. Absent material is left unpublished
+   rather than shown as a gap. See `docs/DECISIONS.md` D-027 and D-039.
 8. **Every size on a public page comes from the nine-value type scale** in
    `tailwind.config.js`. No arbitrary size ships. See `docs/DECISIONS.md` D-024.
 
 ## State
 
-As at 2026-09-22, on branch `feat/public-relaunch`.
-
-`npm test` passes with 21 tests, `npm run build` is clean, `php -l` is clean across 45 files,
-and **lint fails with 47 errors and 2 warnings**, down from 60 and 7.
-
-On the public surface, measured on 2026-09-22 against the production build served locally:
-axe-core 4.10.2 reported 0 violations across 16 routes, contrast measured 0 failures across
-28 combinations with a lowest of 4.91:1, and focus indicators measured 0 failures across 353
-elements. **A screen-reader pass with real assistive technology has not been run**, and the
-Lighthouse and Core Web Vitals figures come from a local preview with no throttling, so they
-describe the build rather than a real visitor's experience. GAkinzOS at `/app/*` was not
-audited.
-
-**The deployed state of the server is unverified**, and the gap is now wider than usual:
-fifteen server files and two new tables are committed to this branch and none of it is
-uploaded or applied. The current picture, including what each number means and what it does
-not, is in `docs/STATUS.md`.
+Current state lives in one place, `docs/STATUS.md`: the 2026-10-10 audit and readiness
+verdict, the delivery phases, the open work in priority order and the owner inputs still
+outstanding. In short, a substantial system builds and its local tests pass, **the deployed
+state of the server is unverified**, and production readiness is **BLOCKED** until the
+credential, deployment, recovery, money and isolation gates in `docs/OPERATIONS.md` pass.

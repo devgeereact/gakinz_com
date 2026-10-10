@@ -294,7 +294,7 @@ export default function Dashboard() {
   }, [leads, projects, tickets, invoices, entries])
 
   // A source that failed to load is shown as unavailable, never as zero, so a
-  // failed invoices request cannot read as "£0 outstanding, all on time" (plan A08).
+  // failed invoices request cannot read as "£0 outstanding, all on time" (K-031).
   const down = (source: string) => errors.includes(source)
   const NA = "—"
   const NA_HINT = "Unavailable, refresh to retry"

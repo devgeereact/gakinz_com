@@ -76,7 +76,7 @@
      the wrapper so the CMS theme is untouched. */
   /* ── PUBLIC SURFACE PALETTE ───────────────────────────────────────────
      Direction C with direction A's colour. See
-     docs/design/2026-09-22-directions/direction-approved.md.
+     docs/DECISIONS.md D-023.
 
      Warm paper rather than pure white, warm ink rather than pure black, and
      two chromatics that each carry a job: navy marks what is settled, red
@@ -553,7 +553,7 @@
   /* ── "Forest Editorial" premium details (theme-aware, both skins) ──────── */
 
   /* Custom accent focus-glow ring — replaces the browser default everywhere.
-     See DESIGN-SYSTEM.md §5. */
+     History: docs/DECISIONS.md D-006. */
   /* Focus indicator, WCAG 1.4.11 Non-text Contrast.
      This was `hsl(var(--ring) / 0.7)`, which composited to #9690E0 — 2.86:1
      on the page and 2.48:1 on a dark panel. Both failed the 3:1 floor, and
@@ -987,7 +987,7 @@
 
 /* ─────────────────────────────────────────────────────────────────────────
    "Forest Editorial" signature — grain texture + accent underline flourish.
-   See DESIGN-SYSTEM.md §7. Cheap, reduced-motion-safe, theme-aware.
+   History: docs/DECISIONS.md D-006. Cheap, reduced-motion-safe, theme-aware.
    ──────────────────────────────────────────────────────────────────────── */
 
 /* Subtle film grain so forest dark sections aren't dead-flat. Overlay element:

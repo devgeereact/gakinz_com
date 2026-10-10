@@ -1,6 +1,6 @@
 name: Build and deploy to cPanel
 
-# Deploys only after CI has passed on main (plan A15). Before 2026-10-10 this
+# Deploys only after CI has passed on main (K-035). Before 2026-10-10 this
 # ran on every push to main in parallel with CI, so a failing build or test
 # could still ship. Server files and SQL are still uploaded by hand
 # (docs/DEPLOYMENT.md); this workflow ships dist/ only.

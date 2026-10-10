@@ -7,7 +7,7 @@ import FadeIn from "./FadeIn"
  * The public design system.
  *
  * Direction C with direction A's colour, per
- * docs/design/2026-09-22-directions/direction-approved.md.
+ * docs/DECISIONS.md D-023.
  *
  * The governing idea is that the page is a document, not a landing page.
  * Typography, spacing and rules carry the hierarchy. What was removed, and

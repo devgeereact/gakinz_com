@@ -59,6 +59,28 @@ npm run lint:ratchet   # fails if the lint backlog (K-002) grows
 
 CI runs all four, plus `php -l` over `server/`, and the deploy waits for it.
 
+### Release policy
+
+Approved 2026-10-10. Until then CI ran no tests and the deploy did not wait for it (K-035).
+
+- **Keep the Vite build and the existing client and server model.** CI runs unit tests, the
+  server tests and PHP syntax, and gains targeted synthetic endpoint and browser checks as
+  they become available.
+- **Lint is a ratchet first, then a gate.** `npm run lint:ratchet` enforces the current
+  ceiling of 47 errors and 2 warnings (K-002). Clear the errors in small batches, then make
+  lint blocking. `continue-on-error` alone is advisory, not a ratchet.
+- **Production deploys only after the required checks pass**, or through a deliberate,
+  approved release trigger. Every push to `main` deploys `dist/`, so documentation or planning
+  work is not pushed to `main` without considering that.
+- **Server files and SQL stay deliberate operator actions**, recorded in section 5 with their
+  evidence and rollback.
+- **Small reviewed batches**, one concern each, on feature branches. Never `npm audit fix
+  --force`, a framework change, or every improvement merged into one unreviewable release.
+- **Dependencies.** Identify reachable advisories, update compatible versions in small
+  batches, and remove unnecessary exports only with approval (K-041). A CSV-only export may
+  remove the `xlsx` problem if nobody needs workbooks (K-017). A Tailwind major migration is
+  never an automatic audit fix. Any lockfile update needs a fresh build and test run.
+
 ## 3. Server deploy
 
 The server has no Node, so nothing is built there. PHP files are uploaded as source.
@@ -86,7 +108,7 @@ Adapted from `server/README.md`, which has been corrected as part of this migrat
 4. Create `server/uploads/` in the document root and make it writable. `files.php` creates it
    and drops a deny-all `.htaccess` on first use, but a pre-created directory avoids a
    permissions surprise.
-5. Confirm `GET /api.php` returns `[]`.
+5. Confirm `GET /api.php` returns `{ ok, php, db }` (D-031).
 
 There is no `/smoke` route any more. The public smoke-test page and its route were removed
 during the demo-surface cleanup, so step 5 of the old instructions could not pass.
@@ -261,7 +283,7 @@ support.php      time.php         weather.php      work.php   (new)
    invisible from inside the CMS, where every file is reachable through the authenticated
    download route.
 
-## 5.2 The 2026-10-10 batch-1 fixes (plan `docs/Plans 2026/`, document 05)
+## 5.2 The 2026-10-10 batch-1 fixes (delivery phase 1, `docs/STATUS.md`)
 
 Committed on branch `feat/plan-2026-batch-1`. **None of it is live.** Server state remains
 **UNVERIFIED**. Do 5.1 first if it has not been done; this section assumes it has.
@@ -273,8 +295,8 @@ Committed on branch `feat/plan-2026-batch-1`. **None of it is live.** Server sta
 3. **Upload the PHP below** as one set. `payments.php` requires the new `_money.php`; uploading
    one without the other breaks every payment action.
 4. **Leave `$PAYPAL_ENABLED` unset or `false`** in the live `config.php`. PayPal checkout now
-   refuses to start unless it is `true` (plan A26).
-5. **Check invoices already paid through Stripe** (plan A25). Before this change Stripe charged
+   refuses to start unless it is `true` (K-026).
+5. **Check invoices already paid through Stripe** (K-025). Before this change Stripe charged
    the ex-VAT subtotal and marked the invoice fully paid. For every invoice with `vat_rate > 0`
    marked paid by the Stripe webhook (`audit_log.action = 'invoice_paid_stripe'`), compare the
    amount in the Stripe dashboard with the invoice total including VAT, and reconcile any
@@ -314,6 +336,8 @@ testimonials.php time.php          users.php
   accepted quote can no longer be moved back to draft.
 - **Create endpoints return the new record's id.** Before, they returned the audit-log row id.
 - **Editing a blog post keeps its body.**
+- **`files.php` quotes the column `stored`**, a reserved word in MySQL 8, so file queries work
+  on MySQL as well as MariaDB (K-040). The live table needs no change.
 
 ### Post-upload checks
 

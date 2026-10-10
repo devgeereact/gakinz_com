@@ -204,7 +204,7 @@ if ($method === 'POST' && $action === 'paypal_link') {
   // Off unless explicitly enabled: PayPal payment is only recorded when the
   // customer's browser returns to paypal_return, and there is no PayPal webhook
   // yet, so a closed tab leaves a captured payment against an unpaid invoice
-  // (plan finding A26). Turn on with $PAYPAL_ENABLED = true in config.php only
+  // (K-026). Turn on with $PAYPAL_ENABLED = true in config.php only
   // once that gap is closed or reconciled by hand.
   if (empty($GLOBALS['PAYPAL_ENABLED'])) {
     fail('PayPal checkout is switched off. Use the Stripe pay link or a bank transfer.', 503);

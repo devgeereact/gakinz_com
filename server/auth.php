@@ -424,7 +424,7 @@ function gk_consume_recovery(mysqli $conn, int $uid, ?string $json, string $code
 // ── Magic-link login (passwordless) ─────────────────────────────────────────
 // Customer convenience only. A link never signs in a staff account and never
 // stands in for two-factor: staff, and any client who has two-factor on, sign
-// in with password and code (plan findings A22, A23).
+// in with password and code (K-027).
 
 function magic_request(mysqli $conn): void {
   $email = strtolower(str_field(body(), 'email', 200));

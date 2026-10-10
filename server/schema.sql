@@ -580,7 +580,7 @@ CREATE TABLE IF NOT EXISTS work_images (
 --   ALTER TABLE files ADD UNIQUE KEY uk_file_share (share_token);  -- NULLs allowed; guards token collisions
 
 -- ─────────────────────────────────────────────────────────────────────────────
--- 2026-10-10 · Payment provider event log (plan finding A05/A25).
+-- 2026-10-10 · Payment provider event log (K-025).
 -- payments.php records every Stripe webhook event it processes, keyed by the
 -- provider's event id, so a redelivered event is a no-op, and stores the amount
 -- the provider reported so a mismatch can be reconciled by hand. Additive and
