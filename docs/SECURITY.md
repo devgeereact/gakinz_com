@@ -62,7 +62,8 @@ server logs and referrers but does put it in browser history.
 
 Seven roles, in `VALID_ROLES`. Per-endpoint constants define who may call what; the full
 matrix is in `docs/API-SPEC.md` section 3. `src/lib/access.test.ts` covers the client mirror
-with 11 tests, including the client-isolation rules.
+with 21 tests, including the client-isolation rules. Server behaviour for sign-in, payments,
+quote acceptance and blog editing is covered by `npm run test:server` (`tests/server/`).
 
 ### Client isolation
 

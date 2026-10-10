@@ -625,3 +625,55 @@ did not arrive in one commit; it accumulated because nothing was counting.
 Fonts stylesheet in `src/index.css` remains, because the three public families and the two
 CMS families are loaded from it and there is no self-hosted alternative in this tree. That is
 still a third-party render dependency and is recorded as such in `docs/ARCHITECTURE.md`.
+
+## D-033 · Alternative sign-in never stands in for two-factor; magic links are for clients
+**Date:** 2026-10-10 · **Status:** active
+
+Magic links sign in `client` accounts only, and not a client with two-factor on. Staff, and
+anyone with two-factor on, sign in with password and code. Google sign-in refuses accounts with
+two-factor on. A link is claimed with a guarded UPDATE so it works once under concurrency.
+**Why:** `magic_consume` gave `super_admin` a full session from an email alone (K-027), and the
+plan (`docs/Plans 2026/08`) requires that customer access never becomes owner access.
+
+## D-034 · A provider payment must match the invoice's payable total
+**Date:** 2026-10-10 · **Status:** active
+
+Every amount sent to, or accepted from, a payment provider is the VAT-inclusive payable total
+from `server/_money.php`, the same rounding as `invoices.php` and `portal.php`. The Stripe
+webhook marks an invoice paid only when amount and currency match, and records each event in
+`payment_events`. PayPal checkout stays off (`$PAYPAL_ENABLED`) until it has a webhook or a
+manual reconciliation step. **Why:** K-025 and K-026. Stripe is the one launch provider
+because it already has a signed webhook.
+
+## D-035 · Only a sent, unexpired quote is accepted, once, and its terms are then fixed
+**Date:** 2026-10-10 · **Status:** active
+
+Acceptance requires `status = 'sent'` and `valid_until` not passed, claims the quote inside the
+transaction, and creates exactly one project and one 40/30/30 schedule. An accepted quote
+cannot be moved back to draft; changed terms need a new quote. The CMS previews the three
+VAT-inclusive instalments before confirming. The 40/30/30 split itself is unchanged and awaits
+the owner's review (`docs/Plans 2026/10`). **Why:** K-028.
+
+## D-036 · Server behaviour is tested against a synthetic database, and deploy waits for CI
+**Date:** 2026-10-10 · **Status:** active
+
+`npm run test:server` runs the real PHP endpoints from a temporary copy of `server/` with a
+synthetic `config.php`, against a local database whose name must end in `_test`, with a fake
+payment provider and `mail()` pointed at `/usr/bin/true`. It refuses any non-local host. CI
+runs it with unit tests, `php -l` and the lint ratchet, and `deploy.yml` runs only after CI
+succeeds on a push to `main`. **Why:** development calls the live API (constraint 8), so
+without this nothing server-side could be tested safely; and a parallel deploy could ship a
+failing build (plan A15).
+
+## D-037 · The design direction becomes the full Mastercard-inspired GetDesign system
+**Date:** 2026-10-10 · **Status:** decided by the owner, not yet implemented
+
+The owner chose `npx getdesign@latest add mastercard` as the full design system for the website
+and the CMS, followed as closely as possible. This withdraws the 2026-09-22 rule that the
+public site must not borrow another company's design language, and replaces direction C
+(`docs/design/2026-09-22-directions/direction-approved.md`) once implemented. The evidence rule
+from the same date stands: no claim on the public site without a source. Only the
+substitutions in `docs/Plans 2026/03-WEBSITE-AND-UI.md` are made: a licensed font in place of
+MarkForMC, never the Mastercard mark colours or interlocking circles, and contrast fixes.
+`docs/DESIGN-SYSTEM.md` describes the built system until the rebuild lands.
+

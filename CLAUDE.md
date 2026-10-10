@@ -14,9 +14,10 @@ This project follows GEE OS. The project contract is `.agent/PROJECT.yml`, the t
 One Vite application, two surfaces, one build:
 
 - **Public site** at `/`, source in `src/marketing/`, eager.
-- **GAkinzOS CMS** at `/app/*`, source in `src/app/`, 23 modules, lazy and role gated.
+- **GAkinzOS CMS** at `/app/*`, source in `src/app/`, 24 modules, lazy and role gated.
 
-Behind it, 44 PHP endpoints in `server/` over MySQL on the same cPanel host.
+Behind it, 46 PHP files in `server/` (endpoints plus `_`-prefixed shared includes) over MySQL
+on the same cPanel host.
 
 ```
 Browser (React 19 + TS) -> fetch JSON -> server/*.php -> _bootstrap.php -> mysqli -> MySQL
@@ -31,7 +32,8 @@ through `src/lib/api.ts`.
 |---|---|
 | Install | `npm install` |
 | Develop | `npm run dev` (port 5102, `strictPort`) |
-| Test | `npm test` |
+| Test | `npm test` (unit), `npm run test:server` (needs local MySQL or MariaDB) |
+| Lint ratchet | `npm run lint:ratchet` |
 | Type check and build | `npm run build` (runs `tsc -b` first) |
 | Lint | `npm run lint` |
 | PHP syntax gate | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` |
@@ -93,12 +95,15 @@ When this file and the code disagree, the code wins and this file is wrong.
 - The active Tailwind config is `tailwind.config.js`. The `.ts` variant is inert; do not edit
   it.
 
-## Known state, as at 2026-09-04
+## Known state, as at 2026-10-10
 
-- `npm run build`, `npm test` (11 tests) and `php -l` all pass.
-- **`npm run lint` fails: 60 errors, 7 warnings, 42 files.** It does not block, but the count
-  must not grow. See `docs/KNOWN-ISSUES.md` K-002.
-- **Accessibility is NOT TESTED.** An earlier zero-violations claim has been withdrawn.
+- `npm run build`, `npm test` (29 unit tests), `npm run test:server` (35 server integration
+  tests against a throwaway local `*_test` database) and `php -l` all pass locally.
+- **`npm run lint` fails: 47 errors, 2 warnings.** `npm run lint:ratchet` enforces that ceiling
+  in CI, so the count must not grow. See `docs/KNOWN-ISSUES.md` K-002.
+- Deploy waits for CI (`.github/workflows/deploy.yml`, `workflow_run`).
+- **Accessibility is measured for the public site only** (`qa/ACCESSIBILITY-AUDIT.md`). The
+  CMS and real assistive technology are NOT TESTED.
 - **The deployed server state is UNVERIFIED.** Which PHP files are uploaded and which
   migrations have run cannot be known from here.
 - A live super-admin credential was published in an earlier revision of this file and is in

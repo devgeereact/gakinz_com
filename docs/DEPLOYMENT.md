@@ -24,8 +24,9 @@ when it is written. This is the single most common way work here looks finished 
 `.github/workflows/deploy.yml`:
 
 ```
-on: push, branches: [ main ]
-  actions/checkout@v5
+on: workflow_run of "CI", completed, branch main   (since 2026-10-10)
+if: CI concluded success AND the CI run was a push
+  actions/checkout@v5     ref: the exact commit CI verified
   actions/setup-node@v5   node-version: 22
   npm ci
   npm run build
@@ -44,18 +45,19 @@ Everyday loop:
 git add . && git commit -m "..." && git push
 ```
 
-Then watch the repository's Actions tab.
+Then watch the repository's Actions tab. The deploy starts only after the CI workflow passes
+on that push; a red CI run means nothing is deployed.
 
 ### Before you push
 
 ```bash
-npm run build     # runs tsc -b first, so a type error blocks the deploy
-npm test
-npm run lint      # currently fails, see docs/KNOWN-ISSUES.md K-002
+npm run build          # runs tsc -b first, so a type error blocks the deploy
+npm test               # unit tests (src/)
+npm run test:server    # PHP endpoints against a throwaway local *_test database
+npm run lint:ratchet   # fails if the lint backlog (K-002) grows
 ```
 
-`npm run build` is the gate that matters: the workflow runs the same command, so anything that
-fails locally fails the deploy.
+CI runs all four, plus `php -l` over `server/`, and the deploy waits for it.
 
 ## 3. Server deploy
 
@@ -258,6 +260,75 @@ support.php      time.php         weather.php      work.php   (new)
    browser and confirm the image loads.** A 404 on the image with a 200 on the page is
    invisible from inside the CMS, where every file is reachable through the authenticated
    download route.
+
+## 5.2 The 2026-10-10 batch-1 fixes (plan `docs/Plans 2026/`, document 05)
+
+Committed on branch `feat/plan-2026-batch-1`. **None of it is live.** Server state remains
+**UNVERIFIED**. Do 5.1 first if it has not been done; this section assumes it has.
+
+### Operator actions, in order
+
+1. **Upload `server/.htaccess`** (denies every `_*.php` include, K-013).
+2. **Run the SQL below.**
+3. **Upload the PHP below** as one set. `payments.php` requires the new `_money.php`; uploading
+   one without the other breaks every payment action.
+4. **Leave `$PAYPAL_ENABLED` unset or `false`** in the live `config.php`. PayPal checkout now
+   refuses to start unless it is `true` (plan A26).
+5. **Check invoices already paid through Stripe** (plan A25). Before this change Stripe charged
+   the ex-VAT subtotal and marked the invoice fully paid. For every invoice with `vat_rate > 0`
+   marked paid by the Stripe webhook (`audit_log.action = 'invoice_paid_stripe'`), compare the
+   amount in the Stripe dashboard with the invoice total including VAT, and reconcile any
+   shortfall with the client by hand.
+6. **Merge the branch to `main`** only when you want `dist/` deployed; CI must pass first.
+7. **Walk the post-upload checks.**
+
+### SQL to run
+
+| # | Statement | Notes |
+|---|---|---|
+| 1 | `CREATE TABLE IF NOT EXISTS payment_events (...)` | At the foot of `server/schema.sql`. Additive, safe to run twice. Until it runs, the Stripe webhook still works and still checks amounts, but cannot de-duplicate redelivered events or keep the evidence row. |
+
+### PHP to upload
+
+```
+.htaccess        _money.php (new)  auth.php         blog.php
+clients.php      comms.php         contact.php      content.php
+contracts.php    design.php        dev.php          files.php
+knowledge.php    oauth.php         payments.php     projects.php
+proposals.php    resourcing.php    support.php      tasks.php
+testimonials.php time.php          users.php
+```
+
+### Behaviour changes to expect
+
+- **Stripe pay links charge the VAT-inclusive total.** A £100 invoice at 20% VAT now charges
+  £120, matching the invoice, PDF and portal.
+- **The Stripe webhook refuses mismatched payments.** If the amount or currency Stripe reports
+  differs from the invoice's payable total, the invoice stays unpaid and an
+  `invoice_payment_mismatch` row appears in the audit log for manual reconciliation.
+- **PayPal checkout is switched off** (button removed, endpoint returns 503) until it has a
+  webhook or a manual reconciliation step.
+- **Magic links sign in client accounts only**, and not a client with two-factor on. Staff use
+  password and code. Google sign-in refuses accounts with two-factor on.
+- **Quotes can be accepted only from "sent" and before `valid_until`**, exactly once. An
+  accepted quote can no longer be moved back to draft.
+- **Create endpoints return the new record's id.** Before, they returned the audit-log row id.
+- **Editing a blog post keeps its body.**
+
+### Post-upload checks
+
+1. `https://gakinz.com/_money.php` and `https://gakinz.com/_smtp.php` return 403.
+2. A normal endpoint, for example `https://gakinz.com/api.php`, still answers.
+3. In the CMS, open an existing blog post for editing: the body appears before Save is enabled.
+4. The next time you create a real record (client, project, task), confirm it opens straight
+   away. No test record needs creating on the live system for this.
+5. Do **not** test a real payment. Stripe behaviour is covered by `npm run test:server`
+   against a fake provider; a live check needs Stripe test-mode keys on a non-production copy.
+
+### Rollback
+
+Re-upload the previous versions of the listed PHP files and `.htaccess`. The
+`payment_events` table can stay; nothing else reads it.
 
 ## 6. Rollback
 

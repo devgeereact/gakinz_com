@@ -30,7 +30,7 @@ One fact, one home. Where two documents disagree, the code is the authority.
 | Client API boundary | `src/lib/api.ts` |
 | Server boundary, auth and audit | `server/_bootstrap.php` |
 | Role access | the per-endpoint constants in `server/*.php`. `src/lib/access.ts` mirrors them for the interface only |
-| Data model | `server/schema.sql`, 31 tables, migrations as comments from line 291 |
+| Data model | `server/schema.sql`, 34 tables, migrations as comments from line 291 and dated blocks at the foot |
 | Design tokens and utilities | `src/index.css` and `tailwind.config.js` |
 | Server configuration keys | `server/config.php.example` |
 | Client deploy | `.github/workflows/deploy.yml` |
@@ -90,9 +90,10 @@ A change is complete when all of the following hold and are stated with evidence
 list is `qa/RELEASE-CHECKLIST.md`.
 
 1. `npm run build` succeeds, which includes `tsc -b`.
-2. `npm test` passes, and any new behaviour that can be unit tested has a test.
-3. `npm run lint` introduces no new error. The existing backlog of 60 errors and 7 warnings is
-   recorded in `docs/KNOWN-ISSUES.md` and does not block, but it must not grow.
+2. `npm test` passes, and any new behaviour that can be unit tested has a test. A server
+   change passes `npm run test:server`, and a money, auth or ownership change adds a case there.
+3. `npm run lint:ratchet` passes. The existing backlog of 47 errors and 2 warnings is recorded
+   in `docs/KNOWN-ISSUES.md` K-002; it may shrink, never grow.
 4. Any touched PHP passes `php -l`.
 5. Anything server side that must be uploaded by hand, or any SQL that must be run, is
    written into `docs/DEPLOYMENT.md` in the same change.

@@ -19,10 +19,10 @@ Severity is judged on impact to the live business, not on how hard it is to fix.
 | K-010 | No backup procedure is known to exist | High | Open. Outside this repository |
 | K-011 | `access.ts` can drift from the server role lists | Low | **Mostly closed 2026-09-22.** Three mismatches fixed, tests added |
 | K-012 | Stale design residue in `src/index.css` | Cosmetic | **Closed 2026-09-22** |
-| K-013 | Four shared includes are outside the `.htaccess` deny rule | Informational | Open |
+| K-013 | Four shared includes are outside the `.htaccess` deny rule | Informational | **Fixed 2026-10-10.** Not uploaded |
 | K-014 | `auth.php` hard-codes a fallback seed-admin address | Low | **Fixed 2026-09-22.** Not uploaded |
 | K-015 | A seed super-admin password was written to a web-served file | **Critical** | **Fixed in code 2026-09-22.** Operator must delete the live file |
-| K-016 | Editing a draft blog post silently destroys its body | High | Open. Data loss |
+| K-016 | Editing a draft blog post silently destroys its body | High | **Fixed 2026-10-10.** Not uploaded |
 | K-017 | `xlsx` carries a HIGH advisory with no fix available | Medium | Open. Owner decision |
 | K-018 | The public site is an empty shell to any client that does not run JavaScript | Medium | Open. Partly mitigated |
 | K-019 | `sitemap.xml` is hand-maintained and omits database-driven URLs | Low | Open |
@@ -31,6 +31,13 @@ Severity is judged on impact to the live business, not on how hard it is to fix.
 | K-022 | `SidebarMenuSub` drops its forwarded ref | Low | Open |
 | K-023 | Two CMS account links point at routes that do not exist | Low | Open |
 | K-024 | Non-admin roles cannot enable two-factor or revoke their own sessions | Medium | Open |
+| K-025 | Stripe charged the ex-VAT amount and marked the invoice fully paid | **Critical** | **Fixed 2026-10-10.** Not uploaded. Past Stripe payments need checking |
+| K-026 | PayPal payment is recorded only if the customer's browser returns | High | **Mitigated 2026-10-10:** PayPal checkout switched off |
+| K-027 | Magic links and Google sign-in bypassed two-factor; one link could mint several sessions | **Critical** | **Fixed 2026-10-10.** Not uploaded |
+| K-028 | Draft or declined quotes could be accepted; concurrent accepts duplicated projects and invoices | High | **Fixed 2026-10-10.** Not uploaded |
+| K-029 | Create endpoints returned the audit-log id instead of the new record's id | High | **Fixed 2026-10-10.** Not uploaded |
+| K-030 | CSV exports could run spreadsheet formulas from enquiry text | Medium | **Fixed 2026-10-10** |
+| K-031 | Dashboard showed £0 and "All on time" when data failed; two CMS screens overflowed phones | Medium | **Fixed 2026-10-10** |
 
 
 ---
@@ -60,8 +67,9 @@ needs rewriting, which is a force push and was explicitly excluded from this mig
 ## K-002 · Lint fails
 **Severity:** medium · **Status:** open, recorded not fixed
 
-`npm run lint` on 2026-09-04 reports **60 errors and 7 warnings across 42 files**. Six errors
-are auto-fixable.
+`npm run lint` on 2026-09-04 reported **60 errors and 7 warnings across 42 files**. On
+2026-10-10 it reports **47 errors and 2 warnings**; `npm run lint:ratchet` enforces that
+ceiling in CI. The table below is the 2026-09-04 breakdown, kept for history.
 
 | Count | Severity | Rule |
 |---|---|---|
@@ -332,7 +340,9 @@ were corrected with the rest of the block.
 ---
 
 ## K-013 · Four shared includes are outside the `.htaccess` deny rule
-**Severity:** informational · **Status:** open
+**Severity:** informational · **Status:** **fixed 2026-10-10, not uploaded.** The deny pattern
+is now `^(config|_[A-Za-z0-9_-]+)\.php$`. Regex checked locally; Apache/LiteSpeed behaviour
+NOT TESTED. The original finding follows.
 
 `server/.htaccess` denies `config.php` and `_bootstrap.php` by name. It does not deny
 `_smtp.php`, `_sms.php`, `_slack.php` or `_monitor.php`.
@@ -407,7 +417,10 @@ This is related to K-001 but is a separate exposure with a separate fix.
 ---
 
 ## K-016 · Editing a draft blog post silently destroys its body
-**Severity:** high · **Status:** open. This is data loss.
+**Severity:** high · **Status:** **fixed 2026-10-10, not uploaded.** The editor now loads the
+full post from a new editors-only `GET blog.php?id=` before Save is enabled, and an update that
+omits `excerpt` or `body` keeps the stored values (`tests/server/blog.test.ts`). The original
+finding follows.
 
 In `server/blog.php` the staff list branch (`?all=1`) selects `id, slug, title, category,
 cover, read_mins, status, published_at, updated_at`. It does not select `body` or
@@ -603,3 +616,74 @@ the dropdown already links to an account area that does not exist, and this is w
 belongs in it.
 
 CMS only, and not touched by this relaunch.
+
+---
+
+## K-025 · Stripe charged the ex-VAT amount and marked the invoice fully paid
+**Severity:** critical · **Status:** **fixed 2026-10-10, not uploaded.**
+
+`payments.php` built the Stripe Checkout amount from the line-item sum without `vat_rate`,
+while invoices, the PDF and the portal show the VAT-inclusive total. The webhook then marked
+the invoice paid, so the VAT was silently lost. Proposal acceptance stores VAT on every
+instalment invoice, so any VAT-registered quote paid by Stripe was affected.
+
+Fix: `server/_money.php` is the single payable-total calculation; the link charges it, the
+webhook marks paid only when Stripe's amount and currency match, and each event is recorded
+in the new `payment_events` table so redeliveries are ignored (`tests/server/payments.test.ts`,
+7 of its first 8 cases failed against the old file). **Operator action:** check invoices already
+paid through Stripe against their VAT-inclusive totals (`docs/DEPLOYMENT.md` 5.2).
+
+## K-026 · PayPal payment is recorded only if the customer's browser returns
+**Severity:** high · **Status:** **mitigated 2026-10-10.**
+
+There is no PayPal webhook; `paypal_return` is the only place a capture is recorded. A closed
+tab leaves money captured against an unpaid invoice. PayPal checkout now returns 503 unless
+`$PAYPAL_ENABLED = true`, and the CMS button is removed. A proper fix needs a verified PayPal
+webhook or a manual reconciliation step.
+
+## K-027 · Alternative sign-in paths bypassed two-factor
+**Severity:** critical · **Status:** **fixed 2026-10-10, not uploaded.**
+
+`magic_consume` issued a full session for any active user, including `super_admin`, without
+checking two-factor, and burned the link with an unguarded UPDATE, so concurrent clicks minted
+several sessions (reproduced locally). Google sign-in (`oauth.php`) also ignored two-factor.
+The magic-link constants were declared after the request dispatch and so were never defined:
+a configured `magic_request` would have failed with a fatal error.
+
+Fix: magic links sign in `client` accounts without two-factor only, the link is claimed with a
+guarded UPDATE, and Google sign-in refuses accounts with two-factor on
+(`tests/server/auth.test.ts`).
+
+## K-028 · Quote acceptance accepted the wrong quotes, and twice
+**Severity:** high · **Status:** **fixed 2026-10-10, not uploaded.**
+
+`proposals.php?action=accept` never checked `status`, so a draft or declined quote converted.
+The `project_id` check ran outside the transaction, so concurrent accepts created duplicate
+projects and invoice schedules (reproduced locally). Fix: accept only `sent`, unexpired quotes,
+claimed by a guarded UPDATE inside the transaction; an accepted quote cannot be moved back to
+draft (`tests/server/proposals.test.ts`).
+
+## K-029 · Create endpoints returned the wrong id
+**Severity:** high · **Status:** **fixed 2026-10-10, not uploaded.**
+
+Seventeen create handlers read `$conn->insert_id` after `audit()` had inserted its own row, so
+they returned the audit-log id. In three handlers an UPDATE ran in between, which would have
+returned 0. Found while testing K-016. Fix: read the id straight after the INSERT
+(`tests/server/create-ids.test.ts`).
+
+## K-030 · CSV exports could run spreadsheet formulas
+**Severity:** medium · **Status:** **fixed 2026-10-10.**
+
+`toCsv` quoted fields but did not neutralise a leading `=`, `+`, `-`, `@`, tab or CR, and
+enquiry text comes from the public form. Formula-like strings are now prefixed with an
+apostrophe; real numbers are untouched. SheetJS already writes XLSX strings as text cells
+(`src/lib/csv.test.ts`).
+
+## K-031 · Dashboard zeros on failure and phone overflow
+**Severity:** medium · **Status:** **fixed 2026-10-10.**
+
+A failed source showed as £0 and "All on time"; it now shows "—" with a retry hint. Invoicing
+and Platform widened a 390px screen to 448px and 642px; header actions now wrap and the shared
+tab list scrolls inside itself. Checked in an isolated local preview with every API call
+stubbed: all 24 CMS routes fit at 320px and 390px. Data-filled tables NOT TESTED.
+

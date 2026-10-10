@@ -1,8 +1,9 @@
 # Status
 
-**As at:** 2026-09-22, branch `feat/public-relaunch`, working tree on top of `539b704`. The
-public relaunch, the work ledger and the server security work are all in the working tree and
-are **not yet committed to `main`**.
+**As at:** 2026-10-10, branch `feat/plan-2026-batch-1` on top of `c57eb4a` (`main`). The
+2026-09-22 relaunch is merged (`f67f05b`). Batch 1 of the 2026 plan is committed on the branch
+and **not merged, not deployed, not uploaded**. Sections 1 to 11 below describe the 2026-09-22
+state and remain accurate except where section 0 says otherwise.
 
 **Method:** local test, build, lint and PHP syntax runs; axe-core, Lighthouse, contrast,
 focus-indicator and reflow measurements taken in Chrome against the production build served
@@ -11,6 +12,28 @@ mailbox, payment provider or DNS record was contacted.**
 
 This is the file that changes often. Anything about the deployed system is UNVERIFIED unless
 someone with server access has checked it.
+
+---
+
+## 0. What changed on 2026-10-10 (batch 1)
+
+Plan: `docs/Plans 2026/` (proposed; documents 00 and 05). Contract: `.agent/CURRENT-TASK.md`.
+
+| Area | Change | Evidence |
+|---|---|---|
+| Payments | VAT-inclusive Stripe amounts, amount and currency checked in the webhook, event log, PayPal off | `tests/server/payments.test.ts`, K-025, K-026 |
+| Sign-in | Magic links client-only, never past two-factor, single-use under concurrency; Google sign-in respects two-factor | `tests/server/auth.test.ts`, K-027 |
+| Quotes | Accept only sent, unexpired quotes, exactly once; confirmation shows VAT-inclusive instalments | `tests/server/proposals.test.ts`, K-028 |
+| Records | Create endpoints return the new record's id | `tests/server/create-ids.test.ts`, K-029 |
+| Blog | Editing keeps the body | `tests/server/blog.test.ts`, K-016 |
+| Exports | CSV formula neutralising | `src/lib/csv.test.ts`, K-030 |
+| CMS | Dashboard shows unavailable data as "—"; no phone overflow at 320px or 390px | isolated preview, K-031 |
+| Server | `.htaccess` denies every `_*.php` include | regex check only, K-013 |
+| CI | Unit tests, server tests, `php -l`, lint ratchet; deploy waits for CI | workflow files; CI run NOT TESTED until pushed |
+
+Verification on 2026-10-10, local: `npm test` 29 PASS; `npm run test:server` 35 PASS;
+`npm run build` PASS; `php -l` 46 files PASS; `npm run lint:ratchet` PASS at 47 errors and
+2 warnings. Production, live database, real payments and real sends: NOT TESTED.
 
 ---
 
@@ -286,7 +309,9 @@ whether the code path exists in the repository.
 
 1. Confirm whether the credential published in an earlier `CLAUDE.md` has been rotated
    (K-001). Nothing else in this list matters as much.
-2. Upload the server set and run the outstanding SQL. Until that happens the work ledger has
+2. Upload the server set and run the outstanding SQL, sections 5.1 then 5.2 of
+   `docs/DEPLOYMENT.md`, and check past Stripe payments against their VAT-inclusive totals
+   (K-025). Until that happens the work ledger has
    no database behind it and every security fix in section 6 is repository-only. The order
    matters and is set out in `docs/DEPLOYMENT.md`.
 3. Resolve the `llms.txt` conflict. `public/llms.txt` ships to the document root, and the

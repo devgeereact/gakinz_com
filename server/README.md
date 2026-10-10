@@ -58,7 +58,7 @@ own.
 | `weather.php` | OpenWeather proxy. Staff roles only, cached 10 minutes. The key stays server-side |
 | `github.php`, `figma.php`, `slack.php` | External connectors |
 | `cron.php` | Scheduled jobs. Gated by `$CRON_KEY`, not by a user session |
-| `schema.sql` | All 31 tables, plus the migration statements as comments from line 291 |
+| `schema.sql` | All 34 tables, plus the migration statements as comments from line 291 and dated blocks at the foot |
 | `.htaccess` | SPA routing, the `Authorization` header pass-through, and basic hardening |
 
 ## Adding endpoints
