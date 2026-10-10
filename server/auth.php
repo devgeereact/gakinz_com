@@ -5,7 +5,7 @@
  * the client never asserts its own role.
  *
  *   POST /auth.php?action=login   {email, password}      → { token, expires, user }
- *   GET  /auth.php?action=me      (Bearer)               → { user }
+ *   GET  /auth.php?action=me      (Bearer)               → { user, totp_enabled }
  *   POST /auth.php?action=logout  (Bearer)               → { ok: true }
  *   POST /auth.php?action=forgot  {email}                → { ok: true }   (always ok; no enumeration)
  *   POST /auth.php?action=reset   {token, password}      → { ok: true }
@@ -133,7 +133,23 @@ function login(mysqli $conn): void {
 
 function me(mysqli $conn): void {
   $u = require_auth($conn);
-  ok(['user' => $u]);
+  // The caller's own two-factor state, so My account can offer the right
+  // controls to every role (users.php, the only other source, is admin-only).
+  // Kept beside `user`, not inside it, so the stored session shape is
+  // unchanged. Null on an un-migrated DB without the totp columns.
+  // try/catch, not @: under PHP 8 mysqli throws on a missing column.
+  $totp = null;
+  try {
+    $stmt = $conn->prepare('SELECT totp_enabled FROM users WHERE id = ? LIMIT 1');
+    $uid = $u['id'];
+    $stmt->bind_param('i', $uid);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    if ($row) $totp = !empty($row['totp_enabled']);
+  } catch (Throwable $e) {
+    $totp = null;
+  }
+  ok(['user' => $u, 'totp_enabled' => $totp]);
 }
 
 function logout(mysqli $conn): void {
