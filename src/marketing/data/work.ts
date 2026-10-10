@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react"
-import { work as workApi } from "@/lib/api"
+import { work as workApi, type ApiResult } from "@/lib/api"
+import { resolveList, resolveOne } from "./cmsResult"
 
 /**
  * The work ledger.
  *
  * Records come from the `work` table through server/work.php. When that
- * endpoint is unreachable — or before the table has been created on the live
- * database — the page falls back to the static records below. That is the same
+ * request fails (the endpoint is unreachable, or the table has not been
+ * created on the live database yet) the page falls back to the static records
+ * below. A successful answer, even an empty one, is final. That is the same
  * shape src/marketing/data/blog.ts already uses in production.
  *
  * TWO RULES GOVERN THE FALLBACK RECORDS:
@@ -88,10 +90,10 @@ export function spineFor(r: WorkRecord): Spine {
 // ── Static fallback ─────────────────────────────────────────────────────────
 
 /**
- * Figures quoted below are counted from this repository and are re-counted in
- * the release checklist. `qa/RELEASE-CHECKLIST.md` carries the commands. If a
- * number here stops matching the repository, the number is wrong, not the
- * repository.
+ * Written for a buyer, not an engineer. No module or endpoint counts and no
+ * repository paths: they mean nothing to a reader and go stale on every
+ * release. Any outcome stated here must have a source in the project's own
+ * records (docs/DECISIONS.md D-030 for the accessibility line).
  */
 export const fallbackWork: WorkRecord[] = [
   {
@@ -105,7 +107,7 @@ export const fallbackWork: WorkRecord[] = [
       "The system I run the studio on. It sits behind this same domain and ships from the same build as the public site.",
     rows: [
       "Client work, invoices, files and support requests lived across separate tools that never spoke to each other, and the admin was quietly eating a day a week.",
-      "One private, role-gated workspace of twenty-four modules over a PHP and MySQL back end, sharing a single build with the public site. Forty server endpoints, and the browser never touches the database.",
+      "One private workspace, with access set by each person's role, covering client projects, invoices, files and support requests. It shares a single build with the public site, and client data stays on the server behind it.",
       null,
     ],
     liveUrl: null,
@@ -125,7 +127,7 @@ export const fallbackWork: WorkRecord[] = [
     rows: [
       "The site it replaced ran the same animated hero on all eight pages, used eight arbitrary heading sizes, and animated a claim of one hundred per cent accessibility that had never been measured.",
       "One type scale and no size outside it. Three design directions taken to finished pages and judged side by side rather than argued about. Every unevidenced claim removed, including that one.",
-      "Measured, not asserted: axe-core across sixteen routes returned no violations, and contrast was computed on rendered pixels rather than read off a comment. Two real defects turned up that no automated tool reported. The method and the gaps are published in qa/ACCESSIBILITY-AUDIT.md.",
+      "Checked before launch rather than asserted. Automated accessibility and colour contrast checks were run on a build of the site, and they turned up two problems with the visible keyboard focus that the standard checker had not reported. Both were fixed. No test with a real screen reader has been done yet, so the site makes no accessibility claim.",
     ],
     liveUrl: "https://gakinz.com",
     repoUrl: null,
@@ -205,8 +207,16 @@ function fromApi(r: ApiWork): WorkRecord {
   }
 }
 
+/*
+ * Publishing is real. A successful CMS answer decides what is shown, including
+ * an empty one, so an unpublished record leaves the site. The static records
+ * above appear only when the request fails (the endpoint is unreachable, or the
+ * table does not exist yet on the live database); see ./cmsResult.ts. Nothing
+ * is rendered from them before the request settles, so a withdrawn record
+ * never flashes up first.
+ */
 export function useWork() {
-  const [records, setRecords] = useState<WorkRecord[]>(fallbackWork)
+  const [records, setRecords] = useState<WorkRecord[]>([])
   const [loading, setLoading] = useState(true)
   const [fromCms, setFromCms] = useState(false)
 
@@ -214,16 +224,14 @@ export function useWork() {
     let alive = true
     workApi
       .list()
+      .catch(() => null)
       .then((res) => {
         if (!alive) return
-        if (res.ok && Array.isArray(res.data) && res.data.length > 0) {
-          setRecords((res.data as ApiWork[]).map(fromApi))
-          setFromCms(true)
-        }
-      })
-      .catch(() => {
-        /* The endpoint is unreachable or the table does not exist yet. The
-           static fallback above is already rendered, so the page stays valid. */
+        // WorkSummary is typed loosely in src/lib/api.ts; ApiWork is the shape
+        // this page reads.
+        const { items, fromCms } = resolveList(res as ApiResult<ApiWork[]> | null, fromApi, fallbackWork)
+        setRecords(items)
+        setFromCms(fromCms)
       })
       .finally(() => alive && setLoading(false))
     return () => {
@@ -234,33 +242,28 @@ export function useWork() {
   return { records, loading, fromCms }
 }
 
+// One record by slug. A 404 is a real not-found; the static record with that
+// slug is used only when the request fails. Keyed by slug, so a previous record
+// never shows while the next one loads.
 export function useWorkRecord(slug: string | undefined) {
-  const fallback = fallbackWork.find((r) => r.slug === slug) ?? null
-  const [record, setRecord] = useState<WorkRecord | null>(fallback)
-  const [loading, setLoading] = useState(true)
+  const [result, setResult] = useState<{ slug: string; record: WorkRecord | null } | null>(null)
 
   useEffect(() => {
+    if (!slug) return
     let alive = true
-    if (!slug) {
-      setLoading(false)
-      return
-    }
     workApi
       .get(slug)
+      .catch(() => null)
       .then((res) => {
         if (!alive) return
-        // ApiResult is a discriminated union: `data` only exists on the ok
-        // branch, so it must be narrowed before it is read.
-        if (!res.ok) return
-        const d = res.data as unknown as ApiWork | null
-        if (d?.slug) setRecord(fromApi(d))
+        const fallback = fallbackWork.find((r) => r.slug === slug) ?? null
+        setResult({ slug, record: resolveOne(res as ApiResult<ApiWork | null> | null, fromApi, fallback) })
       })
-      .catch(() => {})
-      .finally(() => alive && setLoading(false))
     return () => {
       alive = false
     }
   }, [slug])
 
-  return { record, loading }
+  const current = slug && result?.slug === slug ? result : null
+  return { record: current ? current.record : null, loading: Boolean(slug) && !current }
 }
