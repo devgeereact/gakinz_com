@@ -20,7 +20,7 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { ChevronsUpDownIcon, BadgeCheckIcon, BellIcon, LogOutIcon } from "lucide-react"
+import { ChevronsUpDownIcon, BadgeCheckIcon, ShieldCheckIcon, LogOutIcon } from "lucide-react"
 import { Link, useNavigate } from "react-router-dom"
 import { auth } from "@/lib/api"
 import { useAuth, type Role } from "@/store/auth.store"
@@ -119,15 +119,15 @@ const collapsed = state === "collapsed"
             <DropdownMenuSeparator className="my-2"/>
             <DropdownMenuGroup>
               <DropdownMenuItem asChild className="gap-2 h-9">
-                <Link to="/app/account/profile">
+                <Link to="/app/account">
                   <BadgeCheckIcon className="!size-5" />
-                  Account
+                  My account
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild className="gap-2 h-9">
-                <Link to="/app/account/notifications">
-                  <BellIcon className="!size-5" />
-                  Notifications
+                <Link to="/app/account#security">
+                  <ShieldCheckIcon className="!size-5" />
+                  Sign-in security
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuGroup>

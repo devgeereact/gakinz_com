@@ -210,7 +210,7 @@ export default function Leads() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Leads</h1>
+          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Enquiries</h1>
           <p className="text-sm text-muted-foreground">
             Every enquiry from the website, captured and chased to won or lost.
           </p>

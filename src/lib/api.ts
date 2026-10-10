@@ -554,7 +554,9 @@ export const auth = {
   magicRequest: (email: string) => api.post<{ ok: boolean }>("/auth.php?action=magic_request", { email }),
   magicConsume: (token: string) => api.post<LoginResponse>("/auth.php?action=magic_consume", { token }),
   ssoStatus: () => api.get<{ google: boolean }>("/oauth.php?action=status"),
-  me: () => api.get<{ user: AuthUser }>("/auth.php?action=me"),
+  // totp_enabled is the caller's own two-factor state; absent on a server that
+  // predates it, null on a DB without the totp columns.
+  me: () => api.get<{ user: AuthUser; totp_enabled?: boolean | null }>("/auth.php?action=me"),
   logout: () => api.post<{ ok: boolean }>("/auth.php?action=logout", {}),
   // Revokes a token other than the stored one (K-033: the token held before the
   // lock screen was unlocked). Sends that token explicitly and, unlike

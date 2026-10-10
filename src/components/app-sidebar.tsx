@@ -25,6 +25,7 @@ import {
   Sparkles,
   FolderOpen,
   HeartPulse,
+  UserRound,
 } from "lucide-react"
 
 import { Link } from "react-router-dom"
@@ -42,34 +43,68 @@ import BrandMark from "@/marketing/components/BrandMark"
 import { useAuth } from "@/store/auth.store"
 import { canAccess } from "@/lib/access"
 
-// GAkinzOS modules (docs/PRODUCT-SPEC.md). Each maps to a /app/* route. `key` ties the
-// item to its role gate in src/lib/access.ts so the nav only shows modules the
+// GAkinzOS modules (docs/PRODUCT-SPEC.md), grouped under the seven main
+// destinations (D-040). Each item maps to a /app/* route that is unchanged by
+// the grouping; only some labels changed. `key` ties the item to its role gate
+// in src/lib/access.ts so the nav only shows modules the
 // signed-in role can actually open (server enforces the same lists).
-const navMain = [
-  { key: "dashboard", title: "Dashboard", url: "app", icon: LayoutDashboard },
-  { key: "leads", title: "Leads", url: "app/leads", icon: Inbox },
-  { key: "clients", title: "Clients", url: "app/clients", icon: Users },
-  { key: "projects", title: "Projects", url: "app/projects", icon: FolderKanban },
-  { key: "design", title: "Design", url: "app/design", icon: Palette },
-  { key: "devpipeline", title: "Dev Pipeline", url: "app/devpipeline", icon: GitBranch },
-  { key: "proposals", title: "Proposals", url: "app/proposals", icon: FileText },
-  { key: "contracts", title: "Contracts", url: "app/contracts", icon: FileSignature },
-  { key: "invoicing", title: "Invoicing", url: "app/invoicing", icon: Receipt },
-  { key: "portal", title: "Client Portal", url: "app/portal", icon: PanelsTopLeft },
-  { key: "time", title: "Time", url: "app/time", icon: Clock },
-  { key: "resourcing", title: "Resourcing", url: "app/resourcing", icon: CalendarRange },
-  { key: "careplan", title: "Care Plan", url: "app/careplan", icon: HeartPulse },
-  { key: "support", title: "Support", url: "app/support", icon: LifeBuoy },
-  { key: "comms", title: "Comms", url: "app/comms", icon: MessagesSquare },
-  { key: "mailbox", title: "Mailbox", url: "app/mailbox", icon: Mail },
-  { key: "knowledge", title: "Knowledge", url: "app/knowledge", icon: BookOpen },
-  { key: "content", title: "Content Hub", url: "app/content", icon: Sparkles },
-  { key: "blog", title: "Blog", url: "app/blog", icon: Newspaper },
-  { key: "testimonials", title: "Testimonials", url: "app/testimonials", icon: Quote },
-  { key: "work", title: "Work", url: "app/work", icon: Briefcase },
-  { key: "files", title: "Files", url: "app/files", icon: FolderOpen },
-  { key: "analytics", title: "Analytics", url: "app/analytics", icon: BarChart3 },
-  { key: "platform", title: "Platform", url: "app/platform", icon: Settings },
+const navGroups = [
+  {
+    label: "Today",
+    items: [{ key: "dashboard", title: "Today", url: "app", icon: LayoutDashboard }],
+  },
+  {
+    label: "Enquiries",
+    items: [{ key: "leads", title: "Enquiries", url: "app/leads", icon: Inbox }],
+  },
+  {
+    label: "Clients",
+    items: [
+      { key: "clients", title: "Clients", url: "app/clients", icon: Users },
+      { key: "portal", title: "Client Portal", url: "app/portal", icon: PanelsTopLeft },
+      { key: "comms", title: "Comms", url: "app/comms", icon: MessagesSquare },
+      { key: "mailbox", title: "Mailbox", url: "app/mailbox", icon: Mail },
+    ],
+  },
+  {
+    label: "Projects",
+    items: [
+      { key: "projects", title: "Projects", url: "app/projects", icon: FolderKanban },
+      { key: "design", title: "Design", url: "app/design", icon: Palette },
+      { key: "devpipeline", title: "Dev Pipeline", url: "app/devpipeline", icon: GitBranch },
+      { key: "time", title: "Time", url: "app/time", icon: Clock },
+      { key: "files", title: "Files", url: "app/files", icon: FolderOpen },
+      { key: "support", title: "Support", url: "app/support", icon: LifeBuoy },
+    ],
+  },
+  {
+    label: "Money",
+    items: [
+      { key: "proposals", title: "Quotes", url: "app/proposals", icon: FileText },
+      { key: "contracts", title: "Contracts", url: "app/contracts", icon: FileSignature },
+      { key: "invoicing", title: "Invoicing", url: "app/invoicing", icon: Receipt },
+      { key: "careplan", title: "Care Plan", url: "app/careplan", icon: HeartPulse },
+      { key: "analytics", title: "Analytics", url: "app/analytics", icon: BarChart3 },
+    ],
+  },
+  {
+    label: "Website",
+    items: [
+      { key: "blog", title: "Blog", url: "app/blog", icon: Newspaper },
+      { key: "work", title: "Work", url: "app/work", icon: Briefcase },
+      { key: "testimonials", title: "Testimonials", url: "app/testimonials", icon: Quote },
+      { key: "content", title: "Content Hub", url: "app/content", icon: Sparkles },
+      { key: "knowledge", title: "Knowledge", url: "app/knowledge", icon: BookOpen },
+    ],
+  },
+  {
+    label: "Settings",
+    items: [
+      { key: "platform", title: "Settings", url: "app/platform", icon: Settings },
+      { key: "resourcing", title: "Resourcing", url: "app/resourcing", icon: CalendarRange },
+      { key: "account", title: "My account", url: "app/account", icon: UserRound },
+    ],
+  },
 ]
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
@@ -84,8 +119,11 @@ export function AppSidebar({ onHoverChange, ...props }: AppSidebarProps) {
     avatar: "",
     role: user?.role,
   }
-  // Only show modules the signed-in role can open (server enforces the same).
-  const visibleNav = navMain.filter((item) => canAccess(user?.role, item.key))
+  // Only show modules the signed-in role can open (server enforces the same),
+  // and drop a heading once none of its modules are left.
+  const visibleGroups = navGroups
+    .map((group) => ({ ...group, items: group.items.filter((item) => canAccess(user?.role, item.key)) }))
+    .filter((group) => group.items.length > 0)
 
   return (
     <div
@@ -108,7 +146,9 @@ export function AppSidebar({ onHoverChange, ...props }: AppSidebarProps) {
         </SidebarHeader>
 
         <SidebarContent>
-          <NavMain items={visibleNav} />
+          {visibleGroups.map((group) => (
+            <NavMain key={group.label} label={group.label} items={group.items} />
+          ))}
         </SidebarContent>
 
         <SidebarFooter className="border-t h-16 justify-center">
