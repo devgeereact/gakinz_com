@@ -41,7 +41,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-030 | CSV exports could run spreadsheet formulas from enquiry text | Medium | **Fixed 2026-10-10** |
 | K-031 | Dashboard showed £0 and "All on time" when data failed; two CMS screens overflowed phones | Medium | **Fixed 2026-10-10** |
 | K-032 | The CMS navigation is one flat list of 24 entries | Medium | Open. In progress |
-| K-033 | The bearer token lives in `localStorage`, and unlocking the lock screen issues a second token | Medium | Open |
+| K-033 | The bearer token lives in `localStorage`, and unlocking the lock screen issues a second token | Medium | Open. Unlock now revokes the old token (2026-10-10, not deployed) |
 | K-034 | A contract "signature" is a staff-typed name, not client signing | Medium | Open |
 | K-035 | CI ran no tests and the deploy did not wait for CI | High | **Fixed 2026-10-10** |
 | K-036 | Public pages bring back unpublished posts and work from the static fallback | Medium | Open. In progress |
@@ -727,6 +727,15 @@ Unlocking calls the real login, two-factor included, but issues a second token a
 first one valid. Resolution: review token lifetime, revocation and the CSP; revoke or reuse
 the existing token on unlock; never describe the lock as a sign-out. This must be settled
 before any third-party script reaches a public page (`docs/CONTENT-AND-GROWTH.md` section 3).
+
+**Progress 2026-10-10 (client only, not deployed):** after a successful unlock the lock
+screen sends the previous token to `auth.php?action=logout` through `auth.revokeToken` in
+`src/lib/api.ts`, so the server deletes it. `revokePreviousToken` in
+`src/lib/session-revoke.ts` retries three times with a doubling delay and writes a console
+warning on every failure; it never throws, so a failed revoke cannot lock the user out, and
+the old session can still be ended from the active sessions list. Unit tests in
+`src/lib/session-revoke.test.ts`. The `localStorage` exposure, token lifetime and CSP review
+remain open.
 
 ## K-034 · A contract "signature" is a staff-typed name, not client signing
 **Severity:** medium · **Status:** open.
