@@ -578,3 +578,23 @@ CREATE TABLE IF NOT EXISTS work_images (
 --   SELECT share_token, COUNT(*) c FROM files
 --     WHERE share_token IS NOT NULL GROUP BY share_token HAVING c > 1;   -- expect 0 rows
 --   ALTER TABLE files ADD UNIQUE KEY uk_file_share (share_token);  -- NULLs allowed; guards token collisions
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-10-10 · Payment provider event log (plan finding A05/A25).
+-- payments.php records every Stripe webhook event it processes, keyed by the
+-- provider's event id, so a redelivered event is a no-op, and stores the amount
+-- the provider reported so a mismatch can be reconciled by hand. Additive and
+-- safe to run once against the live DB (see docs/DEPLOYMENT.md). Until it runs,
+-- the webhook still works but cannot de-duplicate or keep this evidence.
+CREATE TABLE IF NOT EXISTS payment_events (
+  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  provider      VARCHAR(20)  NOT NULL,              -- stripe | paypal
+  event_id      VARCHAR(255) NOT NULL,              -- provider's event / capture id
+  invoice_id    INT NOT NULL,
+  amount_minor  INT NOT NULL,                       -- pence as reported by the provider; -1 if absent
+  currency      VARCHAR(3)   NOT NULL DEFAULT '',
+  outcome       VARCHAR(30)  NOT NULL,              -- marked_paid | already_paid | amount_mismatch | unknown_invoice | ignored
+  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uk_provider_event (provider, event_id),
+  KEY idx_invoice (invoice_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
