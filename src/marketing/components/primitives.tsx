@@ -71,11 +71,6 @@ export function Section({
   )
 }
 
-/** A full-width rule. Structural, so it uses the 3.21:1 edge colour. */
-export function Rule({ className }: { className?: string }) {
-  return <hr className={cn("border-0 border-t border-gk-edge", className)} />
-}
-
 // ── Micro type ──────────────────────────────────────────────────────────────
 
 /**
@@ -107,28 +102,6 @@ export function Label({
       {children}
     </As>
   )
-}
-
-/** @deprecated Use `Label`. Kept for pages not yet migrated. */
-export function RuleEyebrow({
-  children,
-  center,
-  className,
-}: {
-  children: ReactNode
-  center?: boolean
-  className?: string
-}) {
-  return <Label className={cn(center && "text-center", className)}>{children}</Label>
-}
-
-/**
- * @deprecated The animated gradient did not survive the relaunch. This renders
- * plain ink and exists only so call sites outside the marketing tree keep
- * compiling. Delete it once nothing imports it.
- */
-export function GradientText({ children, className }: { children: ReactNode; soft?: boolean; className?: string }) {
-  return <span className={className}>{children}</span>
 }
 
 // ── Actions ─────────────────────────────────────────────────────────────────
@@ -306,39 +279,6 @@ export function PageHero({
 
 // ── Contents ────────────────────────────────────────────────────────────────
 
-/**
- * A numbered contents list. A real ordered list of real links, so it is
- * navigable by keyboard and by landmark without any ARIA.
- */
-export function Contents({ items }: { items: { href: string; title: string; note?: string }[] }) {
-  return (
-    <nav aria-label="Contents">
-      <ol className="border-t border-gk-edge">
-        {items.map((item, i) => (
-          <li key={item.href} className="border-b border-gk-edge">
-            <a
-              href={item.href}
-              className="group grid grid-cols-[2.5rem_1fr] items-baseline gap-4 py-4 sm:grid-cols-[3.5rem_1fr_auto] sm:gap-6"
-            >
-              <span className="font-data text-label text-gk-ink-mute">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <span className="font-display text-t4 text-gk-ink underline-offset-4 group-hover:underline">
-                {item.title}
-              </span>
-              {item.note && (
-                <span className="col-start-2 font-data text-label text-gk-ink-mute sm:col-start-3">
-                  {item.note}
-                </span>
-              )}
-            </a>
-          </li>
-        ))}
-      </ol>
-    </nav>
-  )
-}
-
 // ── Index list ──────────────────────────────────────────────────────────────
 
 export function IndexList({ children, className }: { children: ReactNode; className?: string }) {
@@ -385,46 +325,6 @@ export function IndexRow({
 }
 
 // ── Feature row ─────────────────────────────────────────────────────────────
-
-export function FeatureRow({
-  index,
-  eyebrow,
-  title,
-  media,
-  flip = false,
-  children,
-  footer,
-  as: As = "h2",
-}: {
-  index: string
-  eyebrow: string
-  title: ReactNode
-  media: ReactNode
-  flip?: boolean
-  children?: ReactNode
-  footer?: ReactNode
-  /**
-   * Defaults to h2. The old default of h3 produced an h1 → h3 level skip on
-   * Services, Resources, Home and Contact, because these rows are the first
-   * heading under the page title.
-   */
-  as?: "h2" | "h3"
-}) {
-  return (
-    <div className="grid items-start gap-8 border-t border-gk-edge py-12 first:border-t-0 first:pt-0 lg:grid-cols-2 lg:gap-16">
-      <div className={cn("min-w-0", flip ? "lg:order-2" : "lg:order-1")}>{media}</div>
-      <div className={cn("min-w-0", flip ? "lg:order-1" : "lg:order-2")}>
-        <div className="flex items-baseline gap-4">
-          <span className="font-data text-label text-gk-ink-mute">{index}</span>
-          <Label dot>{eyebrow}</Label>
-        </div>
-        <As className="mt-4 font-display text-t3 text-gk-ink">{title}</As>
-        {children && <div className="mt-4 max-w-2xl text-body text-gk-ink-soft">{children}</div>}
-        {footer && <div className="mt-6">{footer}</div>}
-      </div>
-    </div>
-  )
-}
 
 // ── Split ───────────────────────────────────────────────────────────────────
 
@@ -504,15 +404,6 @@ export function Gap({ children }: { children: ReactNode }) {
 }
 
 // ── Quote ───────────────────────────────────────────────────────────────────
-
-export function QuoteBand({ quote, attribution }: { quote: ReactNode; attribution: string }) {
-  return (
-    <figure className="border-y border-gk-edge py-14">
-      <blockquote className="max-w-4xl font-display text-t3 text-gk-ink">{quote}</blockquote>
-      <figcaption className="mt-6 font-data text-label font-bold uppercase text-gk-ink-mute">{attribution}</figcaption>
-    </figure>
-  )
-}
 
 // ── Closing action ──────────────────────────────────────────────────────────
 
