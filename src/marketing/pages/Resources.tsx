@@ -127,7 +127,7 @@ export default function Resources() {
             </IndexList>
           ) : (
             <p className="border-y border-gk-edge py-12 text-lede text-gk-ink-soft">
-              Nothing under that topic yet.
+              {loading ? "Loading the writing…" : topic === "all" ? "Nothing published yet." : "Nothing under that topic yet."}
             </p>
           )}
         </div>

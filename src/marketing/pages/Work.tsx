@@ -80,7 +80,7 @@ export default function Work() {
             <Ledger records={shown} headingLevel="h3" />
           ) : (
             <p className="border-y border-gk-edge py-12 text-lede text-gk-ink-soft">
-              Nothing of that kind yet.
+              {loading ? "Loading the records…" : kind === "all" ? "Nothing published yet." : "Nothing of that kind yet."}
             </p>
           )}
         </div>
