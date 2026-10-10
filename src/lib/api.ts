@@ -507,6 +507,24 @@ export const auth = {
   ssoStatus: () => api.get<{ google: boolean }>("/oauth.php?action=status"),
   me: () => api.get<{ user: AuthUser }>("/auth.php?action=me"),
   logout: () => api.post<{ ok: boolean }>("/auth.php?action=logout", {}),
+  // Revokes a token other than the stored one (K-033: the token held before the
+  // lock screen was unlocked). Sends that token explicitly and, unlike
+  // `request`, never clears the stored session, which belongs to the new token.
+  revokeToken: async (token: string): Promise<ApiResult<{ ok: boolean }>> => {
+    try {
+      const res = await fetch(`${API_BASE}/auth.php?action=logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: "{}",
+      })
+      const text = await res.text()
+      const body = text ? JSON.parse(text) : null
+      if (!res.ok) return { ok: false, error: (body && body.error) || `Request failed (${res.status})`, status: res.status }
+      return { ok: true, data: body as { ok: boolean } }
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : "Network error" }
+    }
+  },
   forgot: (email: string) => api.post<{ ok: boolean }>("/auth.php?action=forgot", { email }),
   reset: (token: string, password: string) =>
     api.post<{ ok: boolean }>("/auth.php?action=reset", { token, password }),
