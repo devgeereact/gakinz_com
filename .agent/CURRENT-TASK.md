@@ -2,63 +2,80 @@
 
 ## Outcome
 
-The first implementation batch of the 2026 production plan (the local half of delivery phase 1, `docs/STATUS.md` sections 2 and 4) is built on a branch, one concern per commit, each with evidence. At the end, the money and sign-in defects K-025, K-026, K-027 and K-028 are fixed in source and covered by tests against a local synthetic database. The blog edit (K-016), dashboard zeros and mobile overflow (K-031) are fixed. CI runs tests and PHP syntax, and deploy waits for CI (K-035). Project contract files match the GEE OS templates.
+The 2026-10-10 implementation work is complete on branches stacked into PR #8, ending at
+`docs/refresh-and-sync-rule`: batch 1 (money, sign-in, quotes, blog, CI), the seven-destination
+navigation, My account, enquiry follow-ups, client portal messages, public publishing and the
+article format, the lock-screen token fix, the public redesign on D-037, the favicon and share
+image, dead-code removal, and a documentation refresh with a sync rule checked in CI (D-045).
+What each piece changed is in `docs/STATUS.md` section 4; what is still open is in section 3.
 
-Started 10 October 2026 on the owner's instruction "Lets Build now And make sure files and packages are Matching the GEE OS".
+Nothing is merged, deployed or uploaded. The next task starts only when the owner chooses it:
+
+1. **Owner inputs** (`docs/STATUS.md` section 5): the credential and seed-file actions, the
+   server reconciliation and upload (`docs/DEPLOYMENT.md` section 5), backup and recovery, and
+   the business, pricing and content facts that unlock the six-service public copy.
+2. **The CMS redesign slice**: the target system from `docs/DESIGN-SYSTEM.md` section 10 applied
+   to the CMS, starting with Today, without changing URLs or role access.
 
 ## Mode
 
-Existing Application (GEE OS `modes/EXISTING-APPLICATION.md`, workflow `workflows/EXISTING-APPLICATION.md`). Production risk. Development calls the live API, so nothing in this task runs the dev server against it for writes.
+Existing Application (GEE OS `modes/EXISTING-APPLICATION.md`, workflow
+`workflows/EXISTING-APPLICATION.md`). Production risk. Development calls the live API, so no
+write runs through the dev server.
 
 ## Scope
 
 - In scope:
-  - A synthetic test path. A local PHP server runs a copy of `server/` against a throwaway local `gakinz_test` database, with no live host and no transports.
-  - Server fixes in `auth.php`, `payments.php` and `proposals.php`, plus the schema additions they need. Schema changes are commented at the foot of `server/schema.sql` and recorded in `docs/DEPLOYMENT.md`.
-  - Client fixes in `Blog.tsx`, `Dashboard.tsx`, Invoicing and Platform layout, and `csv.ts` if time allows.
-  - The `.github/workflows` gating.
-  - Correcting the stale facts in agent and contract files.
-  - Moving the approved plan into the canonical documents (D-043) and retiring superseded documents (D-044).
+  - Review and merge of PR #8 once CI passes, by the owner.
+  - The owner inputs above, recorded in `docs/STATUS.md` section 5 with dates.
+  - The CMS redesign slice, when the owner approves it as the next task.
+  - Keeping every affected document current in the same pull request (`AGENTS.md`, "Keeping
+    documents current").
 - Out of scope:
-  - The design-system rebuild and the six-service public content (delivery phases 3 and 4). These wait for the owner inputs in `docs/STATUS.md` section 5.
-  - Customer messaging and feedback (phase 2).
-  - Monetisation and social.
-  - Deleting the temporary plan folder, which the owner does separately.
+  - Uploading server files, running SQL or deploying without the owner's explicit approval.
+  - Customer reference sign-in, bookings, feedback and the other phase 2 items not yet started,
+    until named in a new contract.
+  - Monetisation and social set-up.
   - DNS, TLS, mail hosting.
-  - Git history rewriting.
+  - Rewriting git history.
 
 ## Authority
 
 - Research: yes.
 - Create planning artefacts: yes.
-- Edit local files: yes, on branch `feat/plan-2026-batch-1`.
-- Commit: one concern per commit on the branch. No merge to `main`, because a push to `main` deploys `dist/`.
+- Edit local files: yes, on a feature branch. One concern per commit.
+- Commit and push: on a feature branch only. No merge to `main` by an agent, because a push to
+  `main` deploys `dist/`.
 - Use external services: no. No real send, no real payment, no live API call.
 - Change production: no. Server files and SQL are uploaded and run by the owner by hand.
 - MCP reads: local only.
 - MCP mutations: none.
-- Local database: creating and dropping `gakinz_test` on the local MariaDB is permitted. It holds synthetic data only.
+- Local database: creating and dropping `*_test` databases on the local MariaDB or MySQL is
+  permitted. Synthetic data only.
 
 ## Risk and dependencies
 
-- Risk level: production (money and sign-in code).
-- Affected areas: `server/auth.php`, `server/payments.php`, `server/proposals.php`, `server/schema.sql`, `src/app/modules/Blog.tsx`, `src/app/modules/Dashboard.tsx`, `src/app/modules/Invoicing.tsx`, `src/app/modules/Platform.tsx`, `.github/workflows/*.yml`, `docs/DEPLOYMENT.md`, `docs/KNOWN-ISSUES.md`.
-- Required decisions still open (`docs/STATUS.md` section 5): owner-side K-001, K-006, K-010 and K-015 actions; payment provider choice (the recommendation of Stripe only is applied by hiding PayPal links, which is reversible).
+- Risk level: production (money, sign-in and client isolation code is waiting to be uploaded).
+- Affected areas: `server/` (the upload set in `docs/DEPLOYMENT.md` section 5), the CMS shell and
+  modules for the redesign slice, `src/index.css` and `tailwind.config.js` for CMS tokens.
+- Required decisions: the owner inputs in `docs/STATUS.md` section 5, in particular K-001,
+  K-006, K-010 and K-015 actions, the payment provider, and the CMS redesign go-ahead.
 
 ## Evidence
 
 - Required checks:
-  - `npm test` (unit and server integration)
-  - `npm run typecheck`
-  - `npm run build`
-  - `php -l` over `server/`
-  - `npm run lint` must not exceed 47 errors and 2 warnings
+  - `npm run typecheck` and `npm run build`
+  - `npm test`, and `npm run test:server` for any server change
+  - `npm run lint:ratchet` (must not grow)
+  - `npm run docs:check`, with `-- --base origin/<base branch>` before opening a pull request
+  - `php -l` over any touched PHP
 - Completion conditions:
-  - Each fix has a failing-then-passing test or a recorded manual check.
-  - `docs/DEPLOYMENT.md` lists every server file and SQL statement to upload.
-  - `docs/KNOWN-ISSUES.md` and `docs/STATUS.md` reflect the new state.
-  - Deployed state remains UNVERIFIED and is reported as such.
+  - Each change has a test or a recorded manual check.
+  - The documents it affects are updated in the same pull request.
+  - The deployed state remains UNVERIFIED until someone with server access checks it, and is
+    reported as such.
 
 ## Previous contract
 
-The 2026-09-22 public relaunch contract was completed and merged as `f67f05b` (#5). Its full text remains in git history at that commit.
+The batch 1 contract of 2026-10-10 (branch `feat/plan-2026-batch-1`) is complete; its text is in
+git history at `9db80b2`. The 2026-09-22 public relaunch contract was merged as `f67f05b` (#5).

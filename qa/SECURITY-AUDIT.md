@@ -7,6 +7,14 @@ test, and no contact with the live system.
 **Overall verdict: PARTIAL.** The design is sound in the places that matter most, and there
 are specific open weaknesses. Nothing here supports a claim that the system is secure.
 
+**Status since this audit (2026-10-10).** This is a dated record and its findings are kept as
+written. Current status lives in `docs/KNOWN-ISSUES.md`: S-002 (K-004), S-003 (K-005), S-004
+(K-007), S-007a (K-014) and S-007 (K-013) are fixed in the repository and **not uploaded**;
+S-001 (K-001), S-005 (K-033, partly addressed) and S-008 (K-006) remain open; S-006 is
+unchanged. Later findings, among them the payment, sign-in and quote defects K-025 to K-028
+and the client branch of `support.php` (K-039), are in `docs/KNOWN-ISSUES.md` and
+`docs/SECURITY.md`. A fresh audit has not been run.
+
 Evidence statuses follow the GEE OS standard. Every finding below is derived from reading the
 code; where a control's real-world behaviour has not been observed, it is marked NOT TESTED
 even when the code looks correct.

@@ -1,10 +1,14 @@
 # Design system, as implemented
 
-**Status:** the public surface at `/` implements the D-037 system as of 2026-10-10. GAkinzOS at
-`/app/*` is unchanged and keeps its own palette. Sections 1 to 9 were read from
-`src/index.css`, `tailwind.config.js`, `src/marketing/components/primitives.tsx`,
-`action-class.ts`, `PublicNavbar.tsx`, `PublicFooter.tsx` and `FadeIn.tsx` on 2026-10-10.
-Those files are the authority. If this document and they disagree, they win.
+**Status:** the public surface at `/` implements the D-037 system as of 2026-10-10, on the
+branches stacked into PR #8 and **not yet deployed**. The favicon, the 32px and apple-touch
+icons and the 1200x630 share image (`public/og.png`) use the same palette, and `theme-color`
+is the cream canvas `#F3F0EE`. GAkinzOS at `/app/*` is unchanged and keeps its own palette; its
+redesign on the target system is the next CMS slice and has not started. Sections 1 to 9 were
+read from `src/index.css`, `tailwind.config.js`, `src/marketing/components/primitives.tsx`,
+`action-class.ts`, `PublicNavbar.tsx`, `PublicFooter.tsx` and `FadeIn.tsx` on 2026-10-10, and
+re-checked after six unused primitives were removed. Those files are the authority. If this
+document and they disagree, they win.
 
 > **Sections 1 to 8 describe the public surface at `/` only.**
 >
@@ -183,16 +187,13 @@ All in `src/marketing/components/primitives.tsx` unless named otherwise.
 |---|---|
 | `Measure` | The page's horizontal measure. Wrap any full-width content you lay out yourself |
 | `Section` | A horizontal band. `tone="paper"` is the canvas, `tone="sunk"` the lifted cream, `tone="ink"` the warm-black band, **once or twice per page at most**. The `muted` boolean is deprecated and maps to `sunk` |
-| `Rule` | A full-width structural rule in `gk-edge` |
 | `Split` | Two columns: a sticky label column (eyebrow with dot, heading, intro) and content |
 
 ### Type
 
 | Primitive | When to use it |
 |---|---|
-| `Label` | The 14px bold uppercase label. With `dot` it becomes the section eyebrow, led by a 6px `gk-signal` dot that is hidden from assistive technology. `PageHero`, `FeatureRow`, `Split` and the home hero use the dot |
-| `RuleEyebrow` | **Deprecated** wrapper over `Label` |
-| `GradientText` | **Deprecated no-op** that renders plain text. Delete once nothing imports it |
+| `Label` | The 14px bold uppercase label. With `dot` it becomes the section eyebrow, led by a 6px `gk-signal` dot that is hidden from assistive technology. `PageHero`, `Split` and the home hero use the dot |
 
 ### Actions
 
@@ -215,10 +216,7 @@ activation.
 | Primitive | When to use it |
 |---|---|
 | `PageHero` | An inner page's masthead: optional breadcrumb, dotted eyebrow, one `h1` (`t2`, `t1` from 640px), optional standfirst and children. It runs the hero entrance (section 7). No media, so inner pages do not copy the home hero |
-| `Contents` | A numbered contents list of real links, navigable without ARIA |
 | `IndexList` / `IndexRow` | A ruled index of records. Set `as="h2"` on a row that is the first heading under the page `h1` |
-| `FeatureRow` | A media-and-prose row with a dotted eyebrow; defaults to `h2` |
-| `QuoteBand` | A pull quote as a `<figure>` with a `<figcaption>` |
 | `CtaBand` | The closing call to action: a lifted-cream 40px frame with one heading, one standfirst and one `strong` action, revealed by `FadeIn` |
 
 ### Media
@@ -339,7 +337,8 @@ and `/services/web-design`, no `.gk-fadein` element was left hidden.
 - `--gk-violet`, `--gk-indigo` and `--gk-sky` survive at `:root` for the two auth pages named
   in section 2.
 - `gk-set-on-dark`, `gk-come-on-dark` and the `hero` type step exist but no page uses them.
-- `RuleEyebrow` and `GradientText` are deprecated shims.
+- `Rule`, `RuleEyebrow`, `GradientText`, `Contents`, `FeatureRow` and `QuoteBand` were removed
+  on 2026-10-10 because nothing used them (`knip`). Add a primitive back only with a caller.
 - The Google Fonts `@import` at the top of `src/index.css` now serves only the CMS (Newsreader
   for three `font-serif` headings, Manrope, JetBrains Mono) but still blocks rendering on
   public pages. See `docs/KNOWN-ISSUES.md` K-042.

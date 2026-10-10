@@ -1,18 +1,20 @@
 # API specification
 
-**Status:** current for the tracked source as at 2026-10-10. It is verified by source
-inspection of the 46 PHP files in `server/`. **No endpoint has been exercised against
-production.** Five areas are also covered by local integration tests in `tests/server/`,
-run with `npm run test:server` against a throwaway `*_test` database: the Stripe link and
-webhook, PayPal being switched off, magic links and two-factor, quote acceptance, blog
-editing, and create endpoints returning the new id. Everything else below is source
-inspection only. That applies with particular force to `work.php`, which has never run and
+**Status:** current for the tracked source as at 2026-10-10, on the branches stacked into
+PR #8. It is verified by source inspection of every PHP file in `server/`. **No endpoint has
+been exercised against production.** Some areas are also covered by local integration tests in
+`tests/server/`, run with `npm run test:server` against a throwaway `*_test` database: the
+Stripe link and webhook, PayPal being switched off, magic links and two-factor, My account
+self-service, quote acceptance, blog editing, create endpoints returning the new id, enquiry
+follow-ups and the client branch of `support.php`. Everything else below is source inspection
+only. That applies with particular force to `work.php`, which has never run and
 has no tables behind it on any database.
 
-The server changes of 2026-09-22 and 2026-10-10 are not known to be uploaded. Where this
+The server changes of 2026-09-22 and 2026-10-10 are not known to be uploaded; the list is
+`docs/DEPLOYMENT.md` section 5. Where this
 document describes behaviour, it describes the repository, not the live server.
 
-Authority: `server/*.php`. Client mirror: `src/lib/api.ts`, 36 exported groups.
+Authority: `server/*.php`. Client mirror: `src/lib/api.ts`.
 
 ---
 
@@ -87,6 +89,8 @@ server; `src/lib/access.ts` is the client mirror and is not a boundary.
 | `STAFF` | varies by file, see below | most modules |
 | `EDITORS` | super_admin, admin, manager, editor | `blog.php`, `testimonials.php`, `content.php`, `work.php` |
 | `PORTAL_PREVIEW_ROLES` | super_admin, admin, manager | `portal.php` staff branch. Narrowed on 2026-09-22 |
+| `STAFF_OR_CLIENT` | `support.php`'s STAFF plus `client` | `support.php` GET, `create` and `reply`, so a client caller reaches its own branch. Added 2026-10-10 |
+| `MAGIC_ROLES` | client | `auth.php` magic links |
 
 `STAFF` is not one list. Its value per file:
 
@@ -141,8 +145,13 @@ Grouped by area. Actions are the `?action=` value on POST unless stated.
 
 `auth.php` rules worth knowing:
 
-- `GET ?action=me` returns `{ user }` with `id`, `name`, `email`, `role`, `client_id` and
-  `status`, the row `require_auth()` reads. It is the cheapest way to check a token.
+- `GET ?action=me` returns `{ user, totp_enabled }`. `user` has `id`, `name`, `email`, `role`,
+  `client_id` and `status`, the row `require_auth()` reads; `totp_enabled` is the caller's own
+  two-factor state, read separately and `null` if the column is missing on an un-migrated
+  database. It is the cheapest way to check a token, and My account reads it.
+- `sessions`, `revoke`, `twofa_setup`, `twofa_enable`, `twofa_disable` and `twofa_recodes` act
+  on the caller's own account only, for every role including `client`
+  (`tests/server/account.test.ts`). They back My account at `/app/account`.
 - `login` takes `{ email, password, code? }`. An account with two-factor on gets a 401 with
   `two_factor_required: true` until a valid authenticator code or an unused recovery code is
   sent. Failed passwords and failed codes
@@ -163,6 +172,19 @@ Grouped by area. Actions are the `?action=` value on POST unless stated.
 | `clients.php` | GET list, GET `?id=`, `create`, `update`, `convert` | STAFF |
 | `proposals.php` | GET list, GET `?id=`, `create`, `status`, `accept`, `share` | STAFF |
 | `contracts.php` | GET list, GET `?id=`, `create`, `status`, `sign`, `delete` | STAFF |
+
+`leads.php` follow-ups (2026-10-10):
+
+- GET list returns each enquiry with `next_action_at` (a `YYYY-MM-DD` date or null),
+  `next_action_note` (up to 300 characters or null) and `priority` (an integer, 0 none, 1 low,
+  2 normal, 3 high, separate from the AI `score`).
+- `meta` takes `{ id, tags, score, next_action_at?, next_action_note?, priority? }`. A
+  follow-up key that is sent is validated and saved; one left out is left alone. An invalid
+  date or a priority outside 0 to 3 returns 400 before anything is written. The answer is
+  `{ ok: true }`, plus `followup: true` when a follow-up field was stored.
+- Before the enquiries `ALTER` in `docs/DEPLOYMENT.md` section 5.2 runs, the list omits the
+  three fields and `meta` saves tags and score and answers `followup: false`, rather than
+  failing (MySQL error 1054 is caught).
 
 `proposals.php` rules:
 
@@ -221,10 +243,27 @@ Grouped by area. Actions are the `?action=` value on POST unless stated.
 
 | Endpoint | Actions | Roles |
 |---|---|---|
-| `portal.php` | GET | Any authenticated user. The `client` role is bound to its own `client_id` and that branch is unchanged. The staff preview branch now requires super_admin, admin or manager |
-| `support.php` | GET list, GET `?id=`, `create`, `status`, `priority`, `assign`, `reply` | STAFF |
+| `portal.php` | GET | Any authenticated user. The `client` role is bound to its own `client_id`. The staff preview branch requires super_admin, admin or manager |
+| `support.php` | Staff: GET list, GET `?id=`, `create`, `status`, `priority`, `assign`, `reply`. Client: GET list, GET `?id=`, `create`, `reply` | STAFF, plus the `client` role on its own branch |
 | `comms.php` | GET list, GET `?id=`, `create`, `post`, `send`, `status` | STAFF |
 | `mail.php` | GET `status`, `inbox`, `message`; POST `send`, `seen` | MAIL_ROLES |
+
+`support.php` client branch (2026-10-10, security-critical like `portal.php`):
+
+- A `client` caller's client id comes from the token. Any `client_id` in the request is
+  ignored, and an account with no linked client gets 403.
+- GET list returns that client's tickets, newest activity first, each with `id`, `subject`,
+  `body`, `status`, `created_at`, `last_activity` and `replies`. GET `?id=` returns one ticket;
+  another client's ticket answers 404, exactly like a missing one.
+- `create` takes `{ subject, body? }` (subject required, up to 200 characters; body up to
+  5,000) and stores priority `normal`. `reply` takes `{ id, body }` and checks ownership
+  first. Over-long text is refused, not cut. Both write an audit row and return `{ id }` with
+  201.
+- Each reply carries `author` and `from_client`. Staff replies show to the client as
+  `GAkinz`, never a staff name. There is no internal-note flag, so every reply is client
+  facing.
+- Any other action from a client is 403. Clients cannot set status, priority or assignee.
+- Covered by `tests/server/support-client.test.ts` with two synthetic clients.
 
 ### Content
 
@@ -329,8 +368,10 @@ of the schema.
 3. Use prepared statements. Return through `ok()` and `fail()` only.
 4. Call `audit()` on every mutation.
 5. Add the client group to `src/lib/api.ts`.
-6. If it needs a schema change, append the `ALTER TABLE` as a comment at the foot of
-   `server/schema.sql` and record it in `docs/DEPLOYMENT.md`. There is no migration runner.
-7. Run `php -l` on the new file, then `npm run build` and `npm test`.
-8. Record the file in the outstanding-upload list in `docs/DEPLOYMENT.md`. The deploy pipeline
-   will not ship it.
+6. If it needs a schema change, append the `ALTER TABLE` as a dated comment at the foot of
+   `server/schema.sql` and record it in `docs/DATA-MODEL.md` and `docs/DEPLOYMENT.md`
+   section 5. There is no migration runner.
+7. Run `php -l` on the new file, then `npm run build`, `npm test` and `npm run test:server`.
+8. Record the file in the upload list in `docs/DEPLOYMENT.md` section 5 and describe it in this
+   file. The deploy pipeline will not ship it, and `npm run docs:check` fails a pull request
+   that changes server code without touching `docs/DEPLOYMENT.md`.
