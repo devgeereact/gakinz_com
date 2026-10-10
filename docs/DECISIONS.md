@@ -349,6 +349,7 @@ That is application code and was left alone. See `docs/KNOWN-ISSUES.md` K-014.
 
 ## D-023 · A new design system for the public surface, and only the public surface
 **Date:** 2026-09-22 · **Status:** active. **Narrows D-006.**
+**Status note:** superseded on the public surface by D-037, 2026-10-10.
 
 The public site at `/` is rebuilt on a new palette, type scale and component set, scoped to
 the `.gk-public` wrapper in `src/index.css`. GAkinzOS at `/app/*` keeps the mono and duo
@@ -402,6 +403,9 @@ again, that is a regression, not a choice.
 
 ## D-024 · The public type scale is closed at nine values
 **Date:** 2026-09-22 · **Status:** active
+**Status note:** on 2026-10-10 the nine values were retuned to the D-037 reference (14 to
+80px) and the families below were replaced by Sofia Sans; the names and the closed rule are
+kept. `tailwind.config.js` holds the current values.
 
 `tailwind.config.js` defines a nine-value perfect-fourth scale under semantic names: `label`,
 `body`, `lede`, `t4`, `t3`, `t2`, `t1`, `display`, `hero`. **No size outside the scale may

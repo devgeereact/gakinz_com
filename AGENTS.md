@@ -43,8 +43,9 @@ One fact, one home. Where two documents disagree, the code is the authority.
 | Hosting, DNS, TLS, mail and dev-server ports | the operator's global notes. **This repository states none of these** |
 
 `docs/DESIGN-SYSTEM.md` sections 1 to 9 describe what is in the code. Its section 10 is the
-target system the owner chose (D-037), decided and not yet built. Do not restyle from section
-10 outside an approved rebuild task.
+system the owner chose (D-037) with a status for each part: the public surface implements it
+since 2026-10-10; the CMS and real imagery are still target. Do not restyle the CMS from
+section 10 outside an approved rebuild task.
 
 ## Commands
 

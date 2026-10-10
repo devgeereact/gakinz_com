@@ -10,7 +10,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | ID | Issue | Severity | Status |
 |---|---|---|---|
 | K-001 | A live super-admin credential is in git history | Critical | **Open. Rotation UNVERIFIED. Blocks launch** |
-| K-002 | Lint fails | Medium | Open. Now 47 errors, 2 warnings, down from 60 and 7 |
+| K-002 | Lint fails | Medium | Open. Now 46 errors, 2 warnings, down from 60 and 7; ratchet in CI |
 | K-003 | `config.php.example` named a retired mail host | Medium | Fixed in the template. Server value UNVERIFIED |
 | K-004 | `api.php` accepts an unauthenticated POST | Medium | **Fixed 2026-09-22.** Not uploaded |
 | K-005 | `contact.php` has no spam protection | Medium | **Fixed 2026-09-22.** Not uploaded |
@@ -50,6 +50,8 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-039 | Clients cannot message the owner from the portal | High | Open. In progress |
 | K-040 | `stored` is a MySQL 8 reserved word, so the schema failed on MySQL | High | **Fixed 2026-10-10.** Not uploaded |
 | K-041 | `npm audit` reports 15 affected packages, ten of them high | Medium | Open. Owner decision |
+| K-042 | The Google Fonts `@import` still blocks rendering on public pages that no longer use those fonts | Low | Open |
+| K-043 | A static canonical in `index.html` conflicts with the per-route canonical | Low | Open |
 
 
 ---
@@ -805,4 +807,28 @@ suggested fixes involve a Tailwind major upgrade, which must not be applied blin
 Resolution: separate runtime exposure from development and build exposure, check each advisory
 individually, and update compatible versions in small batches with a fresh build and test run
 (`docs/DEPLOYMENT.md` section 2, "Release policy"). Never `npm audit fix --force`.
+
+## K-042 · The Google Fonts `@import` still blocks rendering on public pages
+**Severity:** low · **Status:** open.
+
+Since the D-037 public rebuild (2026-10-10) the public surface sets Sofia Sans, self-hosted
+from `@fontsource-variable/sofia-sans`. The `@import` at the top of `src/index.css` now loads
+only Newsreader, Manrope and JetBrains Mono, which the public pages do not use (Manrope is only
+Sofia Sans's fallback). It is still in the one shared stylesheet, so every public page waits
+for it. Lighthouse 12.8.2, mobile, against the production build served by `vite preview` on
+2026-10-10: render-blocking resources, estimated saving 450 ms, on both `/` and `/contact`;
+first contentful paint 2.1 s, performance 96. Fix: load those three families only for the CMS
+(for example from the CMS layout), then measure CLS again, because the comment above the
+`@import` records that moving fonts once raised CLS.
+
+## K-043 · A static canonical in `index.html` conflicts with the per-route canonical
+**Severity:** low · **Status:** open.
+
+`index.html` declares `<link rel="canonical" href="https://gakinz.com/" />` and `Seo.tsx`
+renders a per-route canonical as well. On any route other than `/` the page then carries two
+different canonical URLs. Lighthouse 12.8.2, mobile, 2026-10-10, against the production build:
+`/contact` scored SEO 92 with `Multiple conflicting URLs (https://gakinz.com/,
+https://gakinz.com/contact)`; `/` scored 100 because both values agree there. Fix: remove the
+static canonical from `index.html` or have `Seo.tsx` replace it, then re-run the audit on
+several routes. Not caused by the D-037 rebuild.
 
