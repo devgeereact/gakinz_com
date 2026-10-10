@@ -28,7 +28,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T
       // purge auth — RequireAuth then redirects to /login instead of leaving the
       // user stuck on a module that keeps erroring. (No-op pre-login.) Exception:
       // a 2FA-required 401 during login must NOT clear (there's nothing to clear).
-      if (res.status === 401 && body?.two_factor_required !== true) useAuth.getState().clear()
+      // Also exception: a 401 from the login call itself means wrong credentials,
+      // not an expired session. On the lock screen that must show an error, not
+      // sign the user out of the session they are unlocking.
+      if (res.status === 401 && body?.two_factor_required !== true && !path.startsWith("/auth.php?action=login")) {
+        useAuth.getState().clear()
+      }
       return { ok: false, error: (body && body.error) || `Request failed (${res.status})`, status: res.status, details: body || undefined }
     }
     return { ok: true, data: body as T }
@@ -100,13 +105,28 @@ export type Lead = {
   score: number // 0 unscored | 1 cold | 2 warm | 3 hot
   lost_reason: string | null
   created_at: string
+  // Owner's follow-up (2026-10-10 schema step). Absent until that ALTER has run.
+  next_action_at?: string | null // YYYY-MM-DD
+  next_action_note?: string | null
+  priority?: LeadPriority
 }
+export type LeadPriority = 0 | 1 | 2 | 3 // 0 none | 1 low | 2 normal | 3 high
 export const leads = {
   list: () => api.get<Lead[]>("/leads.php"),
   setStatus: (id: number, status: LeadStage, lost_reason?: string) =>
     api.post<{ ok: boolean }>("/leads.php?action=status", { id, status, ...(lost_reason ? { lost_reason } : {}) }),
-  setMeta: (id: number, payload: { tags?: string; score?: number }) =>
-    api.post<{ ok: boolean }>("/leads.php?action=meta", { id, ...payload }),
+  setMeta: (
+    id: number,
+    payload: {
+      tags?: string
+      score?: number
+      next_action_at?: string | null
+      next_action_note?: string | null
+      priority?: LeadPriority
+    },
+  ) =>
+    // `followup` is false when the server has not had the follow-up columns added yet.
+    api.post<{ ok: boolean; followup?: boolean }>("/leads.php?action=meta", { id, ...payload }),
 }
 
 // Clients / CRM (§6 Clients).
@@ -374,6 +394,35 @@ export const support = {
   reply: (id: number, body: string) => api.post<{ id: number }>("/support.php?action=reply", { id, body }),
 }
 
+// A `client`-role user's own messages: the client branch of support.php. The
+// server derives the client from the token, so none of these take a client id,
+// and it refuses status, priority and assignment for this role.
+export const MESSAGE_SUBJECT_MAX = 200
+export const MESSAGE_BODY_MAX = 5000
+export type ClientMessageReply = {
+  id: number
+  body: string
+  created_at: string
+  author: string | null
+  from_client: boolean
+}
+export type ClientThread = {
+  id: number
+  subject: string
+  body: string | null
+  status: TicketStatus
+  created_at: string
+  last_activity: string
+  replies: ClientMessageReply[]
+}
+export const clientMessages = {
+  list: () => api.get<ClientThread[]>("/support.php"),
+  get: (id: number) => api.get<ClientThread>(`/support.php?id=${id}`),
+  start: (subject: string, body: string) =>
+    api.post<{ id: number }>("/support.php?action=create", { subject, body }),
+  reply: (id: number, body: string) => api.post<{ id: number }>("/support.php?action=reply", { id, body }),
+}
+
 // Client portal (§6 Client Portal). Aggregated client-facing view.
 export type PortalData = {
   client: { id: number; company: string; contact_name: string | null; email: string | null }
@@ -505,8 +554,28 @@ export const auth = {
   magicRequest: (email: string) => api.post<{ ok: boolean }>("/auth.php?action=magic_request", { email }),
   magicConsume: (token: string) => api.post<LoginResponse>("/auth.php?action=magic_consume", { token }),
   ssoStatus: () => api.get<{ google: boolean }>("/oauth.php?action=status"),
-  me: () => api.get<{ user: AuthUser }>("/auth.php?action=me"),
+  // totp_enabled is the caller's own two-factor state; absent on a server that
+  // predates it, null on a DB without the totp columns.
+  me: () => api.get<{ user: AuthUser; totp_enabled?: boolean | null }>("/auth.php?action=me"),
   logout: () => api.post<{ ok: boolean }>("/auth.php?action=logout", {}),
+  // Revokes a token other than the stored one (K-033: the token held before the
+  // lock screen was unlocked). Sends that token explicitly and, unlike
+  // `request`, never clears the stored session, which belongs to the new token.
+  revokeToken: async (token: string): Promise<ApiResult<{ ok: boolean }>> => {
+    try {
+      const res = await fetch(`${API_BASE}/auth.php?action=logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: "{}",
+      })
+      const text = await res.text()
+      const body = text ? JSON.parse(text) : null
+      if (!res.ok) return { ok: false, error: (body && body.error) || `Request failed (${res.status})`, status: res.status }
+      return { ok: true, data: body as { ok: boolean } }
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : "Network error" }
+    }
+  },
   forgot: (email: string) => api.post<{ ok: boolean }>("/auth.php?action=forgot", { email }),
   reset: (token: string, password: string) =>
     api.post<{ ok: boolean }>("/auth.php?action=reset", { token, password }),

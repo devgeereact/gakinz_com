@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/collapsible"
 import {
   SidebarGroup,
+  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -25,11 +26,15 @@ type MenuItem = {
   items?: MenuItem[]
 }
 
-export function NavMain({ items }: { items: MenuItem[] }) {
+export function NavMain({ items, label }: { items: MenuItem[]; label?: string }) {
   const location = useLocation()
 
+  // Exact match or a deeper segment. The "/app" index (Today) matches only
+  // itself; a plain prefix test lit it up on every /app/* page.
   const isActiveRoute = (url: string) => {
-  return location.pathname.startsWith(`/${url}`)
+  const path = location.pathname.replace(/\/+$/, "")
+  if (path === `/${url}`) return true
+  return url !== "app" && path.startsWith(`/${url}/`)
 }
 
   const renderMenuItems = (menuItems: MenuItem[]) => {
@@ -147,6 +152,7 @@ export function NavMain({ items }: { items: MenuItem[] }) {
 
   return (
     <SidebarGroup>
+      {label && <SidebarGroupLabel>{label}</SidebarGroupLabel>}
       <SidebarMenu>
         {renderMenuItems(items)}
       </SidebarMenu>

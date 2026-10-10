@@ -178,7 +178,7 @@ if ($method === 'POST' && $action === 'accept') {
   $p = $stmt->get_result()->fetch_assoc();
   if (!$p) fail('Proposal not found.', 404);
   if ($p['project_id']) ok(['ok' => true, 'project_id' => (int)$p['project_id'], 'existing' => true]);
-  // Only a quote the client has actually been sent can be accepted (plan A27).
+  // Only a quote the client has actually been sent can be accepted (K-028).
   if ($p['status'] !== 'sent') fail('Only a sent quote can be accepted. Mark it as sent first.', 409);
   if (!empty($p['expired'])) fail('This quote expired on ' . $p['valid_until'] . '. Extend its validity before accepting.', 409);
 
@@ -193,7 +193,7 @@ if ($method === 'POST' && $action === 'accept') {
   try {
     // Claim the quote first. The guarded UPDATE takes the row lock, so a
     // concurrent request waits, then matches nothing and returns the project
-    // this request created (plan A12). Exactly one request converts.
+    // this request created (K-028). Exactly one request converts.
     $claim = $conn->prepare('UPDATE proposals SET status = "accepted" WHERE id = ? AND status = "sent" AND project_id IS NULL AND deleted_at IS NULL');
     $claim->bind_param('i', $id);
     $claim->execute();

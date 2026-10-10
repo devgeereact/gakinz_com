@@ -1,5 +1,5 @@
 /**
- * Plan finding A06 / K-016: editing a post must never wipe its body. Editors
+ * K-016: editing a post must never wipe its body. Editors
  * can load a full draft, and an update that omits body or excerpt keeps them.
  */
 import { beforeEach, describe, expect, it } from "vitest"

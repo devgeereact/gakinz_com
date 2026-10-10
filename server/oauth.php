@@ -143,7 +143,7 @@ if ($action === 'callback') {
   $u = $stmt->get_result()->fetch_assoc();
   if (!$u) { header("Location: $bounce#sso_error=no_account"); exit; }
   if ($u['status'] !== 'active') { header("Location: $bounce#sso_error=inactive"); exit; }
-  // Google sign-in must not stand in for this app's two-factor (plan A29).
+  // Google sign-in must not stand in for this app's two-factor (K-027).
   // An account with two-factor on signs in with password and code instead.
   if (!empty($u['totp_enabled'])) {
     audit($conn, (int)$u['id'], 'login_sso_refused', 'two-factor enabled');

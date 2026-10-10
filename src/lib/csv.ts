@@ -6,7 +6,7 @@ import * as XLSX from "xlsx"
 
 // A text cell that starts with one of these is run as a formula by Excel,
 // Numbers and Sheets. Enquiry text comes from the public form, so it is
-// untrusted (plan finding A21, OWASP "CSV injection").
+// untrusted (K-030, OWASP "CSV injection").
 const FORMULA_START = /^[=+\-@\t\r]/
 const PLAIN_NUMBER = /^[-+]?\d+(\.\d+)?$/
 

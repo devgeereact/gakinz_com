@@ -44,7 +44,7 @@ When this file and the code disagree, the code wins and this file is wrong.
 
 | Fact | Authority |
 |---|---|
-| Product scope | `GAkinzOS.html`, summarised in `docs/PRODUCT-SPEC.md` |
+| Product scope | `docs/PRODUCT-SPEC.md` (approved 2026-10-10, D-043) |
 | Routes | `src/routes/index.tsx` |
 | Client API boundary | `src/lib/api.ts` |
 | Server boundary and auth | `server/_bootstrap.php` |

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react"
 import Seo from "@/marketing/components/Seo"
 import { Action, PageHero, Section } from "@/marketing/components/primitives"
+import { actionClass } from "@/marketing/components/action-class"
 import { site, whatHappensNext } from "@/marketing/data/site"
 import { contact, booking, type EnquiryPayload } from "@/lib/api"
 import { cn } from "@/lib/utils"
@@ -57,7 +58,7 @@ const EMPTY: EnquiryPayload = {
 
 /** One control style for every input, select and textarea on the page. */
 const CONTROL =
-  "mt-2 block w-full min-h-[2.75rem] border bg-gk-paper px-3 py-2 text-body text-gk-ink placeholder:text-gk-ink-mute"
+  "mt-2 block w-full min-h-[2.75rem] rounded-action border-[1.5px] bg-gk-white px-4 py-2.5 text-body text-gk-ink placeholder:text-gk-ink-mute"
 
 function edge(invalid: boolean) {
   return invalid ? "border-gk-come" : "border-gk-edge"
@@ -207,7 +208,7 @@ export default function Contact() {
                   fires on the content change, not on the node insertion. */}
               <div role="alert">
                 {listed.length > 0 && (
-                  <div className="mb-8 border border-gk-come p-5">
+                  <div className="mb-8 rounded-action border-[1.5px] border-gk-come p-5">
                     <h3 className="font-display text-t4 text-gk-ink">There is a problem</h3>
                     <ul className="mt-3 space-y-2">
                       {listed.map((k) => (
@@ -221,7 +222,7 @@ export default function Contact() {
                   </div>
                 )}
                 {sendError && (
-                  <p className="mb-8 border border-gk-come p-5 text-body text-gk-come">{sendError}</p>
+                  <p className="mb-8 rounded-action border-[1.5px] border-gk-come p-5 text-body text-gk-come">{sendError}</p>
                 )}
               </div>
 
@@ -229,7 +230,7 @@ export default function Contact() {
                   easy to miss; this stays on the page. */}
               <div role="status">
                 {sent && (
-                  <p className="mb-8 border border-gk-set p-5 text-body text-gk-ink">
+                  <p className="mb-8 rounded-action border-[1.5px] border-gk-set p-5 text-body text-gk-ink">
                     Thank you, your message is with me. {site.contact.replyIntent}
                   </p>
                 )}
@@ -375,7 +376,7 @@ export default function Contact() {
                 <button
                   type="submit"
                   disabled={sending}
-                  className="inline-flex min-h-[2.75rem] items-center gap-2 bg-gk-set px-5 py-2.5 text-body font-medium text-gk-paper transition-colors hover:bg-gk-ink disabled:cursor-not-allowed disabled:opacity-60"
+                  className={actionClass({ variant: "strong", className: "disabled:cursor-not-allowed disabled:opacity-60" })}
                 >
                   {sending ? "Sending" : "Send enquiry"}
                 </button>

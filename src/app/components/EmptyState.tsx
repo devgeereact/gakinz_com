@@ -1,6 +1,6 @@
 import type { ComponentType, ReactNode } from "react"
 
-// Themed empty state for GAkinzOS modules — see DESIGN-SYSTEM.md §8.
+// Themed empty state for GAkinzOS modules (history: docs/DECISIONS.md D-006).
 // Replaces the ad-hoc "No X yet" centred text each module hand-rolls.
 // Icon sits in the forest-tokened gk-app-chip so empties feel branded, not blank.
 type EmptyStateProps = {

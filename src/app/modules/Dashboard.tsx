@@ -14,6 +14,7 @@ import {
 import {
   ArrowRight,
   Banknote,
+  CalendarClock,
   Clock,
   FolderKanban,
   Inbox,
@@ -27,7 +28,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
-import { money } from "@/lib/format"
+import { followUpState, formatYmd, localIsoDate, money } from "@/lib/format"
 import {
   leads as leadsApi,
   clients as clientsApi,
@@ -268,6 +269,28 @@ export default function Dashboard() {
     [leads],
   )
 
+  // Open enquiries whose next action is today or earlier: oldest first, then
+  // the owner's priority. `ready` is false until the server has the follow-up
+  // columns (it omits them before the 2026-10-10 schema step runs).
+  const followUps = useMemo(() => {
+    const today = localIsoDate()
+    const due = leads
+      .filter((l) => {
+        const st = followUpState(l, today)
+        return st === "overdue" || st === "today"
+      })
+      .sort(
+        (a, b) =>
+          (a.next_action_at ?? "").localeCompare(b.next_action_at ?? "") || (b.priority ?? 0) - (a.priority ?? 0),
+      )
+    return {
+      ready: leads.length === 0 || leads.some((l) => l.priority !== undefined),
+      count: due.length,
+      top: due.slice(0, 5),
+      today,
+    }
+  }, [leads])
+
   // Per-KPI trend series for the card sparklines.
   const spark = useMemo(() => {
     const months = lastNMonths(6)
@@ -294,7 +317,7 @@ export default function Dashboard() {
   }, [leads, projects, tickets, invoices, entries])
 
   // A source that failed to load is shown as unavailable, never as zero, so a
-  // failed invoices request cannot read as "£0 outstanding, all on time" (plan A08).
+  // failed invoices request cannot read as "£0 outstanding, all on time" (K-031).
   const down = (source: string) => errors.includes(source)
   const NA = "—"
   const NA_HINT = "Unavailable, refresh to retry"
@@ -336,7 +359,7 @@ export default function Dashboard() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            <span className="gk-app-grad">Overview</span>
+            <span className="gk-app-grad">Today</span>
           </h1>
           <p className="text-sm text-muted-foreground">
             The whole studio at a glance
@@ -619,6 +642,65 @@ export default function Dashboard() {
               value={down("invoices") ? NA : String(stats.overdue)}
               to="/app/invoicing"
             />
+          </CardContent>
+        </Card>
+
+        {/* Follow-ups due */}
+        <Card className="col-span-12 h-full xl:col-span-7">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CalendarClock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+              Follow-ups due
+              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal tabular-nums">
+                {down("leads") || !followUps.ready ? NA : followUps.count}
+              </span>
+            </CardTitle>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/app/leads?due=1")}>
+              View all <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {down("leads") ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Follow-ups could not be loaded. Refresh to try again.</p>
+            ) : !followUps.ready ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">
+                Follow-ups are not available until the server database update has run.
+              </p>
+            ) : followUps.top.length === 0 ? (
+              <p className="py-8 text-center text-sm text-muted-foreground">Nothing due. No enquiry has a next action today or earlier.</p>
+            ) : (
+              <ul className="divide-y">
+                {followUps.top.map((l) => {
+                  const overdue = followUpState(l, followUps.today) === "overdue"
+                  const when = l.next_action_at ? formatYmd(l.next_action_at) : ""
+                  return (
+                    <li key={l.id}>
+                      <button
+                        type="button"
+                        onClick={() => navigate("/app/leads?due=1")}
+                        aria-label={`Follow up ${l.name}${l.company ? `, ${l.company}` : ""}, ${overdue ? `overdue since ${when}` : "due today"}. Open enquiries.`}
+                        className="flex w-full items-center justify-between gap-3 py-2.5 text-left hover:text-primary"
+                      >
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium">{l.name}</p>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {l.next_action_note || l.company || l.email}
+                          </p>
+                        </div>
+                        <span
+                          className={cn(
+                            "shrink-0 rounded-full px-2 py-0.5 text-xs",
+                            overdue ? "bg-destructive/10 text-destructive" : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+                          )}
+                        >
+                          {overdue ? `Overdue, ${when}` : "Today"}
+                        </span>
+                      </button>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
           </CardContent>
         </Card>
       </div>

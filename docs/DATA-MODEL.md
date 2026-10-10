@@ -3,7 +3,8 @@
 **Status:** current for the tracked schema as at 2026-09-22. Whether the live database
 matches it is **UNVERIFIED**, because no live database was contacted.
 
-Authority: `server/schema.sql`. 33 tables. MySQL, InnoDB, `utf8mb4`.
+Authority: `server/schema.sql`. 34 tables, the 34th being `payment_events`, added on
+2026-10-10 and not applied to any live database. MySQL, InnoDB, `utf8mb4`.
 
 Two of those tables, `work` and `work_images`, were added on 2026-09-22 and **do not exist
 on any database**. That is not an inference from a failed check; nothing was checked. They
@@ -67,6 +68,7 @@ were written into the file and never run. See section 4.
 | Table | Purpose | Notes |
 |---|---|---|
 | `invoices`, `invoice_items` | Invoicing | `vat_rate` on the parent. Totals are computed from items at read time in several endpoints |
+| `payment_events` | One row per payment-provider event processed | Unique on provider and event id, so a redelivery is a no-op; keeps the amount and currency the provider reported and the outcome (K-025) |
 | `contracts` | Contracts and NDAs with typed-name e-signature | Stores signer name, IP and timestamp. NDA triage is a green, amber or red tag |
 
 ### Client-facing

@@ -39,6 +39,7 @@ import {
   Quote,
   Briefcase,
   HeartPulse,
+  UserRound,
   ChevronRight,
   type LucideIcon,
 } from "lucide-react"
@@ -49,13 +50,13 @@ import { canAccess } from "@/lib/access"
 // jumps to any module the signed-in role can open — no dead or demo links.
 type Cmd = { key: string; label: string; path: string; icon: LucideIcon }
 const COMMANDS: Cmd[] = [
-  { key: "dashboard", label: "Dashboard", path: "/app", icon: LayoutDashboard },
-  { key: "leads", label: "Leads", path: "/app/leads", icon: Inbox },
+  { key: "dashboard", label: "Today", path: "/app", icon: LayoutDashboard },
+  { key: "leads", label: "Enquiries", path: "/app/leads", icon: Inbox },
   { key: "clients", label: "Clients", path: "/app/clients", icon: Users },
   { key: "projects", label: "Projects", path: "/app/projects", icon: FolderKanban },
   { key: "design", label: "Design", path: "/app/design", icon: Palette },
   { key: "devpipeline", label: "Dev Pipeline", path: "/app/devpipeline", icon: GitBranch },
-  { key: "proposals", label: "Proposals", path: "/app/proposals", icon: FileText },
+  { key: "proposals", label: "Quotes", path: "/app/proposals", icon: FileText },
   { key: "contracts", label: "Contracts", path: "/app/contracts", icon: FileSignature },
   { key: "invoicing", label: "Invoicing", path: "/app/invoicing", icon: Receipt },
   { key: "portal", label: "Client Portal", path: "/app/portal", icon: PanelsTopLeft },
@@ -72,7 +73,8 @@ const COMMANDS: Cmd[] = [
   { key: "work", label: "Work", path: "/app/work", icon: Briefcase },
   { key: "files", label: "Files", path: "/app/files", icon: FolderOpen },
   { key: "analytics", label: "Analytics", path: "/app/analytics", icon: BarChart3 },
-  { key: "platform", label: "Platform", path: "/app/platform", icon: Settings },
+  { key: "platform", label: "Settings", path: "/app/platform", icon: Settings },
+  { key: "account", label: "My account", path: "/app/account", icon: UserRound },
 ]
 
 export function GlobalSearch() {

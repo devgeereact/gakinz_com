@@ -103,6 +103,8 @@ export const router = createBrowserRouter([
       { path: "files", lazy: lz(() => import("@/app/modules/Files")) },
       { path: "careplan", lazy: lz(() => import("@/app/modules/CarePlan")) },
       { path: "platform", lazy: lz(() => import("@/app/modules/Platform")) },
+      // My account: every signed-in role, client included (K-023, K-024).
+      { path: "account", lazy: lz(() => import("@/app/modules/Account")) },
 
       // ✅ 404 HANDLER
           { path: "*", lazy: lz(() => import("@/pages/NotFound")) },

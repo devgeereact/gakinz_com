@@ -1,9 +1,9 @@
-// Lint ratchet (plan A15). The backlog may shrink but never grow. Lower these
+// Lint ratchet (K-002, K-035). The backlog may shrink but never grow. Lower these
 // numbers whenever the backlog falls, and delete this script once both are 0
 // and `npm run lint` can be the gate on its own.
 import { execFileSync } from "node:child_process"
 
-const MAX_ERRORS = 45
+const MAX_ERRORS = 44
 const MAX_WARNINGS = 2
 
 let out

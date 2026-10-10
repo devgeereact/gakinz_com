@@ -7,6 +7,9 @@ import { Toaster } from "sonner"
 import UIThemeProvider from "@/providers/ui-theme-provider"
 
 import { router } from "@/routes"
+// Sofia Sans, the public family (D-037). Self-hosted; the browser downloads
+// only the unicode ranges a page uses.
+import "@fontsource-variable/sofia-sans"
 import "@/index.css"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
