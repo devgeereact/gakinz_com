@@ -1,6 +1,8 @@
+import { Fragment } from "react"
 import { Link, useParams } from "react-router-dom"
 import Seo, { SITE_URL } from "@/marketing/components/Seo"
 import { useMarketingPost } from "@/marketing/data/blog"
+import { parseArticle, type Inline } from "@/marketing/lib/articleFormat"
 import { Action, Label, Measure, Section } from "../components/primitives"
 import NotFound from "./NotFound"
 
@@ -14,11 +16,16 @@ import NotFound from "./NotFound"
  * any heading the author wrote in the body rendered as a heading rather than
  * printed as literal "## " text.
  *
- * WHAT WAS NOT DONE: no headings were invented. src/marketing/data/blog.ts
- * splits a post body on blank lines, so a CMS author who writes "## Why this
- * matters" previously got those two hashes on the page. Those now become an
- * h2 or h3 at the level written. The three static fallback pieces contain no
- * such markers, so they render exactly as before, as prose under the title.
+ * WHAT WAS NOT DONE: no headings were invented. A CMS author who writes
+ * "## Why this matters" gets an h2 at the level written, and nothing else.
+ *
+ * The body is read by src/marketing/lib/articleFormat.ts, a small safe format:
+ * paragraphs, ## and ### headings, bullet and numbered lists, **bold**, and
+ * links restricted to https, http and mailto. It is rendered here as React
+ * elements, never as HTML. A link off the site opens in a new tab, says so
+ * to a screen reader, and carries rel="noopener noreferrer"; one written with
+ * {sponsored} also carries rel="sponsored". The three static fallback pieces
+ * contain no such markers, so they render exactly as before.
  *
  * Structured data: an Article, carrying only fields that are true of the post.
  * No image, no wordCount, no dateModified. The post record holds none of
@@ -35,11 +42,31 @@ function formatDate(iso: string) {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
 }
 
-/** `## Heading` / `### Heading` written by a CMS author, or plain prose. */
-function blockOf(para: string): { level: 2 | 3; text: string } | null {
-  const m = /^(#{2,3})\s+(.+)$/.exec(para)
-  if (!m) return null
-  return { level: m[1].length === 2 ? 2 : 3, text: m[2].trim() }
+/** Inline text, bold and links from the article format, as React elements. */
+function InlineNodes({ nodes }: { nodes: Inline[] }) {
+  return nodes.map((n, i) => {
+    if (n.type === "text") return <Fragment key={i}>{n.text}</Fragment>
+    if (n.type === "bold") {
+      return (
+        <strong key={i}>
+          <InlineNodes nodes={n.children} />
+        </strong>
+      )
+    }
+    const rel = n.sponsored ? "sponsored noopener noreferrer" : n.external ? "noopener noreferrer" : undefined
+    return (
+      <a
+        key={i}
+        href={n.href}
+        rel={rel}
+        target={n.external ? "_blank" : undefined}
+        className="underline underline-offset-4 hover:text-gk-ink-soft"
+      >
+        <InlineNodes nodes={n.children} />
+        {n.external && <span className="sr-only"> (opens in a new tab)</span>}
+      </a>
+    )
+  })
 }
 
 export default function ResourceDetail() {
@@ -120,25 +147,40 @@ export default function ResourceDetail() {
 
         <Section>
           <div className="max-w-2xl">
-            {post.bodyParas.map((para, i) => {
-              const block = blockOf(para)
-              if (block?.level === 2) {
+            {parseArticle(post.bodyParas.join("\n\n")).map((block, i) => {
+              if (block.type === "heading" && block.level === 2) {
                 return (
                   <h2 key={i} className="mt-12 font-display text-t3 text-gk-ink first:mt-0">
-                    {block.text}
+                    <InlineNodes nodes={block.children} />
                   </h2>
                 )
               }
-              if (block?.level === 3) {
+              if (block.type === "heading") {
                 return (
                   <h3 key={i} className="mt-10 font-display text-t4 text-gk-ink first:mt-0">
-                    {block.text}
+                    <InlineNodes nodes={block.children} />
                   </h3>
+                )
+              }
+              if (block.type === "list") {
+                const List = block.ordered ? "ol" : "ul"
+                return (
+                  <List
+                    key={i}
+                    start={block.ordered && block.start !== 1 ? block.start : undefined}
+                    className={`mt-6 space-y-2 pl-6 text-lede text-gk-ink first:mt-0 ${block.ordered ? "list-decimal" : "list-disc"}`}
+                  >
+                    {block.items.map((item, j) => (
+                      <li key={j}>
+                        <InlineNodes nodes={item} />
+                      </li>
+                    ))}
+                  </List>
                 )
               }
               return (
                 <p key={i} className="mt-6 text-lede text-gk-ink first:mt-0">
-                  {para}
+                  <InlineNodes nodes={block.children} />
                 </p>
               )
             })}

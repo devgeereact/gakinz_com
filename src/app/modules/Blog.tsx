@@ -258,7 +258,7 @@ export default function Blog() {
             </div>
             <div>
               <Label htmlFor="bbody">Body</Label>
-              <Textarea id="bbody" rows={10} value={form.body} onChange={(e) => set("body", e.target.value)} className="mt-1.5" placeholder="Write the post. Separate paragraphs with a blank line." />
+              <Textarea id="bbody" rows={10} value={form.body} onChange={(e) => set("body", e.target.value)} className="mt-1.5" placeholder={"Write the post. Separate paragraphs with a blank line.\n## Heading, - bullet, 1. numbered, **bold**, [text](https://…), and [text](https://…){sponsored} for a paid link."} />
             </div>
             <div>
               <Label>Status</Label>
