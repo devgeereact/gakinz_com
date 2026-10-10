@@ -1,5 +1,5 @@
 /**
- * Plan findings A22 and A23. A magic link is a customer convenience: it must
+ * K-027. A magic link is a customer convenience: it must
  * never sign in a staff account, never skip two-factor, and must work at most
  * once even under concurrent requests.
  */

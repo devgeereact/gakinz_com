@@ -3,22 +3,26 @@ import { Link, NavLink, useLocation } from "react-router-dom"
 import { Menu, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { site } from "@/marketing/data/site"
+import BrandMark from "./BrandMark"
+import { actionClass } from "./action-class"
 
 /**
- * The masthead.
+ * The masthead: the reference's floating navigation pill.
  *
- * A ruled line of type, not a floating pill bar. The old navbar carried a
- * Services mega-menu that declared role="menu" and role="menuitem" on
- * navigation links: that overrode the native link role, so assistive
- * technology announced "menu item" and lost the URL, and it promised the ARIA
- * menu keyboard pattern — roving tabindex, arrow keys, typeahead — which was
- * never implemented. It has been removed rather than completed. The four
- * services are a short list on /services, which is one click away and needs
- * no keyboard pattern of its own.
+ * A white pill that docks 16px below the top of the viewport and stays
+ * there, lifted by the reference's level-one shadow. The GAkinz mark sits at
+ * the left of it on every width, which is what the brand-confusion check in
+ * DESIGN-SYSTEM 10.2 looks for first. `html { scroll-padding-top: 6rem }`
+ * keeps a focused target clear of it (WCAG 2.4.11).
+ *
+ * The old Services mega-menu declared role="menu" on navigation links, which
+ * overrode the link role and promised a keyboard pattern it never had. It is
+ * not coming back: four links and one action fit the pill.
  *
  * The mobile panel is a disclosure, not a modal: no focus trap, because a
- * disclosure should not have one. It does close on Escape and it does return
- * focus to its trigger, both of which were missing.
+ * disclosure should not have one. It closes on Escape and returns focus to
+ * its trigger. It drops out of the pill as a rounded white panel and fades
+ * in over 200ms where motion is allowed; it leaves instantly.
  */
 
 const LINKS = [
@@ -29,17 +33,18 @@ const LINKS = [
 ]
 
 export default function PublicNavbar() {
-  const [open, setOpen] = useState(false)
+  // The menu remembers the path it was opened on, so it is closed on any
+  // other route without a state update inside an effect.
   const { pathname } = useLocation()
+  const [openOn, setOpenOn] = useState<string | null>(null)
+  const open = openOn === pathname
   const triggerRef = useRef<HTMLButtonElement>(null)
-
-  useEffect(() => setOpen(false), [pathname])
 
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setOpen(false)
+        setOpenOn(null)
         triggerRef.current?.focus()
       }
     }
@@ -49,31 +54,33 @@ export default function PublicNavbar() {
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      "inline-flex min-h-[2.75rem] items-center text-body text-gk-ink-soft hover:text-gk-ink",
-      isActive && "text-gk-ink underline underline-offset-[6px]",
+      "inline-flex min-h-[2.75rem] items-center rounded-full px-4 text-body font-medium tracking-[-0.02em] text-gk-ink-soft transition-colors duration-150 hover:text-gk-ink",
+      isActive && "bg-gk-paper text-gk-ink",
     )
 
   return (
-    <header className="border-b border-gk-edge bg-gk-paper">
-      <div className="mx-auto w-full max-w-[76rem] px-5 sm:px-8">
-        <div className="flex items-center justify-between gap-6 py-4">
-          <Link to="/" className="group min-w-0 py-1">
-            <span className="block font-display text-lede leading-none text-gk-ink">{site.name}</span>
-            <span className="mt-1 block font-data text-label uppercase text-gk-ink-mute">
-              {site.role} · {site.location}
+    <header className="pointer-events-none sticky top-0 z-50 px-3 pt-3 sm:px-6 sm:pt-4">
+      <div className="pointer-events-auto relative mx-auto w-full max-w-[76rem]">
+        <div className="flex items-center justify-between gap-4 rounded-full bg-gk-white py-2 pl-4 pr-2 shadow-float sm:pl-6 lg:py-2.5 lg:pr-2.5">
+          <Link to="/" className="flex min-h-[2.75rem] min-w-0 items-center gap-3">
+            <BrandMark className="h-8 w-8 shrink-0 text-gk-ink" />
+            <span className="min-w-0">
+              <span className="block truncate text-body font-medium leading-tight tracking-[-0.02em] text-gk-ink">
+                {site.name}
+              </span>
+              <span className="hidden text-label font-bold uppercase leading-tight text-gk-ink-mute lg:block">
+                {site.role} · {site.location}
+              </span>
             </span>
           </Link>
 
-          <nav aria-label="Primary" className="hidden items-center gap-8 md:flex">
+          <nav aria-label="Primary" className="hidden items-center gap-1 md:flex">
             {LINKS.map((l) => (
               <NavLink key={l.to} to={l.to} className={linkClass}>
                 {l.label}
               </NavLink>
             ))}
-            <Link
-              to="/contact"
-              className="inline-flex min-h-[2.75rem] items-center bg-gk-set px-5 text-body font-medium text-gk-paper hover:bg-gk-ink"
-            >
+            <Link to="/contact" className={actionClass({ variant: "strong", className: "ml-2" })}>
               Start a project
             </Link>
           </nav>
@@ -81,39 +88,44 @@ export default function PublicNavbar() {
           <button
             ref={triggerRef}
             type="button"
-            onClick={() => setOpen((v) => !v)}
+            onClick={() => setOpenOn(open ? null : pathname)}
             aria-expanded={open}
             aria-controls="primary-menu"
             aria-label={open ? "Close menu" : "Open menu"}
-            className="-mr-2 inline-flex h-11 w-11 items-center justify-center text-gk-ink md:hidden"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gk-paper text-gk-ink md:hidden"
           >
-            {open ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
-      </div>
 
-      <div
-        id="primary-menu"
-        hidden={!open}
-        className="border-t border-gk-edge bg-gk-paper md:hidden"
-      >
-        <nav aria-label="Primary" className="mx-auto w-full max-w-[76rem] px-5 py-2 sm:px-8">
-          <ul>
-            {LINKS.map((l) => (
-              <li key={l.to} className="border-b border-gk-rule last:border-b-0">
-                <NavLink to={l.to} className="flex min-h-[3rem] items-center text-body text-gk-ink">
-                  {l.label}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-          <Link
-            to="/contact"
-            className="my-4 inline-flex min-h-[2.75rem] w-full items-center justify-center bg-gk-set px-5 text-body font-medium text-gk-paper"
-          >
-            Start a project
-          </Link>
-        </nav>
+        <div
+          id="primary-menu"
+          hidden={!open}
+          className="gk-menu-panel absolute inset-x-0 top-full mt-2 rounded-media bg-gk-white p-3 shadow-lifted md:hidden"
+        >
+          <nav aria-label="Primary" onClick={(e) => (e.target as HTMLElement).closest("a") && setOpenOn(null)}>
+            <ul>
+              {LINKS.map((l) => (
+                <li key={l.to}>
+                  <NavLink
+                    to={l.to}
+                    className={({ isActive }) =>
+                      cn(
+                        "flex min-h-[3rem] items-center rounded-action px-4 text-lede font-medium tracking-[-0.02em] text-gk-ink",
+                        isActive && "bg-gk-paper",
+                      )
+                    }
+                  >
+                    {l.label}
+                  </NavLink>
+                </li>
+              ))}
+            </ul>
+            <Link to="/contact" className={actionClass({ variant: "strong", className: "mt-3 w-full" })}>
+              Start a project
+            </Link>
+          </nav>
+        </div>
       </div>
     </header>
   )

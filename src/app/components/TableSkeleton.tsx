@@ -1,6 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton"
 
-// Themed loading skeleton that matches table shape — see DESIGN-SYSTEM.md §8.
+// Themed loading skeleton that matches table shape (history: docs/DECISIONS.md D-006).
 // Premium-tech loading state: shimmer rows instead of a lone spinner, so the
 // layout doesn't jump when real data arrives. Drop in while a module's list loads.
 type TableSkeletonProps = {

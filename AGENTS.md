@@ -10,10 +10,11 @@ This project follows GEE OS. Contracts live in `.agent/`: `PROJECT.yml` for the 
 
 - Project: GAkinz (gakinz.com). One Vite application serving a public marketing site and the
   GAkinzOS internal CMS, backed by a PHP and MySQL API on cPanel.
-- Purpose: win and run studio work. The public site sells; the CMS runs leads, clients,
-  projects, proposals, invoicing, support, time, content and the client portal.
-- Users: the public, studio staff across six roles, and external clients holding a `client`
-  role that sees only its own portal.
+- Purpose: win and run the work of a one-owner business offering six website and IT services
+  (D-038). The public site sells; the CMS runs enquiries, clients, projects, quotes,
+  invoicing, support, content and the client portal. Scope: `docs/PRODUCT-SPEC.md`.
+- Users: the public, the owner (with six staff roles kept for safety), and external clients
+  holding a `client` role that sees only its own portal.
 - Lifecycle stage: maintenance, with an unfinished deployment backlog.
 - Risk level: production. The site is live, the database holds real client and enquiry data,
   and the API sends real email and can take real payments.
@@ -24,7 +25,8 @@ One fact, one home. Where two documents disagree, the code is the authority.
 
 | Fact | Authority |
 |---|---|
-| Product scope and module numbering | `GAkinzOS.html`, summarised in `docs/PRODUCT-SPEC.md` |
+| Product scope, journeys, planned features and exclusions | `docs/PRODUCT-SPEC.md` |
+| Content, social and monetisation policy | `docs/CONTENT-AND-GROWTH.md` |
 | Public copy | `src/marketing/data/site.ts` |
 | Routes | `src/routes/index.tsx` |
 | Client API boundary | `src/lib/api.ts` |
@@ -40,8 +42,10 @@ One fact, one home. Where two documents disagree, the code is the authority.
 | Open problems | `docs/KNOWN-ISSUES.md` |
 | Hosting, DNS, TLS, mail and dev-server ports | the operator's global notes. **This repository states none of these** |
 
-The `DESIGN-SYSTEM.md` at the repository root is a **superseded proposal**, not the
-implemented system. `docs/DESIGN-SYSTEM.md` describes what is actually in the code.
+`docs/DESIGN-SYSTEM.md` sections 1 to 9 describe what is in the code. Its section 10 is the
+system the owner chose (D-037) with a status for each part: the public surface implements it
+since 2026-10-10; the CMS and real imagery are still target. Do not restyle the CMS from
+section 10 outside an approved rebuild task.
 
 ## Commands
 
@@ -49,7 +53,8 @@ implemented system. `docs/DESIGN-SYSTEM.md` describes what is actually in the co
 |---|---|
 | Install | `npm install` |
 | Develop | `npm run dev` (port 5102, `strictPort`, fails loudly on a clash) |
-| Test | `npm test` (Vitest) |
+| Test | `npm test` (unit), `npm run test:server` (needs local MySQL or MariaDB) |
+| Lint ratchet | `npm run lint:ratchet` |
 | Type check and build | `npm run build` (runs `tsc -b` first) |
 | Lint | `npm run lint` |
 | PHP syntax gate | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` |

@@ -119,7 +119,7 @@ $REPORT_RECIPIENTS = '';  // e.g. 'founder@gakinz.com, ops@gakinz.com'
 $PAYPAL_CLIENT_ID  = '';
 $PAYPAL_SECRET     = '';
 $PAYPAL_MODE       = 'live';  // 'sandbox' | 'live'
-$PAYPAL_ENABLED    = false;   // keep false: no PayPal webhook yet, see payments.php (plan A26)
+$PAYPAL_ENABLED    = false;   // keep false: no PayPal webhook yet, see payments.php (K-026)
 // ── WhatsApp via Twilio (reuses $TWILIO_SID/$TWILIO_TOKEN). Sender in whatsapp: form.
 $TWILIO_WHATSAPP_FROM = '';   // e.g. 'whatsapp:+14155238886'
 

@@ -1,6 +1,15 @@
+import type { CSSProperties } from "react"
 import { Link } from "react-router-dom"
 import Seo, { personSchema, websiteSchema } from "@/marketing/components/Seo"
-import { Action, Label, Measure, Placeholder, Section } from "@/marketing/components/primitives"
+import {
+  Action,
+  Label,
+  Measure,
+  Orbit,
+  Placeholder,
+  Portrait,
+  Section,
+} from "@/marketing/components/primitives"
 import Ledger from "@/marketing/components/Ledger"
 import Testimonials from "@/marketing/components/Testimonials"
 import FadeIn from "@/marketing/components/FadeIn"
@@ -57,22 +66,38 @@ export default function Home() {
         ]}
       />
 
-      {/* ── Masthead ─────────────────────────────────────────────────── */}
-      <div className="border-b border-gk-edge">
-        <Measure className="pb-14 pt-14 sm:pb-20 sm:pt-24">
-          <div className="grid gap-12 lg:grid-cols-[1fr_20rem] lg:gap-16">
-            <div className="min-w-0">
-              <Label>
-                {site.role} · {site.location}
-              </Label>
-              <h1 className="mt-6 max-w-[16ch] font-display text-t2 font-normal text-gk-ink sm:text-t1 lg:text-display">
+      {/* ── Masthead ─────────────────────────────────────────────────────
+          Copy left, a circular portrait right, one orange orbit drawn
+          between them once the content has arrived (DESIGN-SYSTEM 10.4).
+          The copy rises in three steps 80ms apart; the portrait frame
+          scales from 0.98. Every one of those rests in its final state
+          under reduced motion, and the frame reserves its box throughout. */}
+      <div className="overflow-x-clip">
+        <Measure className="pb-16 pt-12 sm:pb-24 sm:pt-16 lg:pb-32 lg:pt-20">
+          <div className="relative grid items-center gap-12 lg:grid-cols-[1fr_22rem] lg:gap-16 xl:grid-cols-[1fr_26rem]">
+            <div className="relative z-10 min-w-0">
+              <div className="gk-rise">
+                <Label dot>
+                  {site.role} · {site.location}
+                </Label>
+              </div>
+              <h1
+                className="gk-rise mt-6 max-w-[16ch] font-display text-t2 text-gk-ink sm:text-t1 lg:text-display"
+                style={{ "--gk-delay": "80ms" } as CSSProperties}
+              >
                 A website is part of how a business runs, not a brochure it keeps.
               </h1>
-              <p className="mt-8 max-w-2xl text-lede text-gk-ink-soft">
+              <p
+                className="gk-rise mt-8 max-w-2xl text-lede text-gk-ink-soft"
+                style={{ "--gk-delay": "160ms" } as CSSProperties}
+              >
                 I am {site.name}. I draw the thing and then I build it, so nothing is lost explaining
                 one to the other, and I stay on afterwards so it keeps working. {site.studio.note}
               </p>
-              <div className="mt-10 flex flex-wrap gap-4">
+              <div
+                className="gk-rise mt-10 flex flex-wrap gap-4"
+                style={{ "--gk-delay": "240ms" } as CSSProperties}
+              >
                 <Action to="/contact" variant="strong">
                   Start a project
                 </Action>
@@ -80,21 +105,19 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="lg:pt-2">
-              {site.images.portrait ? (
-                <img
-                  src={site.images.portrait.src}
-                  alt={site.images.portrait.alt}
-                  className="w-full"
-                  width={800}
-                  height={1000}
-                />
-              ) : (
-                <Placeholder
-                  label="Portrait, to supply"
-                  detail="A photograph of Gideon. No stock photograph of a stranger stands in for the person whose site this is."
-                />
-              )}
+            <div className="relative mx-auto w-full max-w-[20rem] sm:max-w-[22rem] lg:max-w-none">
+              <Orbit />
+              <div className="gk-media-in relative" style={{ "--gk-delay": "120ms" } as CSSProperties}>
+                {site.images.portrait ? (
+                  <Portrait src={site.images.portrait.src} alt={site.images.portrait.alt} />
+                ) : (
+                  <Placeholder
+                    shape="circle"
+                    label="Portrait, to supply"
+                    detail="A photograph of Gideon. No stock photograph of a stranger stands in for the person whose site this is."
+                  />
+                )}
+              </div>
             </div>
           </div>
         </Measure>
@@ -229,17 +252,19 @@ export default function Home() {
       )}
 
       {/* ── Contact ──────────────────────────────────────────────────── */}
-      <section id="contact" className="bg-gk-ink text-gk-on-dark">
-        <Measure className="py-16 sm:py-24">
-          <div className="grid gap-10 md:grid-cols-[1fr_auto] md:items-end">
+      {/* Lifted cream in a 40px frame, not a second warm-black slab: the
+          footer below is the ink surface now. */}
+      <section id="contact" className="pb-16 md:pb-24">
+        <Measure>
+          <div className="grid gap-10 rounded-media bg-gk-sunk px-6 py-12 sm:px-12 sm:py-16 md:grid-cols-[1fr_auto] md:items-end">
             <div className="max-w-2xl">
-              <h2 className="font-display text-t2 text-gk-on-dark">Tell me what the site has to do.</h2>
-              <p className="mt-5 text-lede text-gk-on-dark-soft">
+              <h2 className="font-display text-t2 text-gk-ink">Tell me what the site has to do.</h2>
+              <p className="mt-5 text-lede text-gk-ink-soft">
                 A paragraph is enough. If it is not something I should take on, I will say so and point
                 you somewhere better. {site.contact.replyIntent}
               </p>
             </div>
-            <Action to="/contact" variant="strong" onDark>
+            <Action to="/contact" variant="strong">
               Start a project
             </Action>
           </div>
