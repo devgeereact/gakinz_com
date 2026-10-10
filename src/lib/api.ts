@@ -374,6 +374,35 @@ export const support = {
   reply: (id: number, body: string) => api.post<{ id: number }>("/support.php?action=reply", { id, body }),
 }
 
+// A `client`-role user's own messages: the client branch of support.php. The
+// server derives the client from the token, so none of these take a client id,
+// and it refuses status, priority and assignment for this role.
+export const MESSAGE_SUBJECT_MAX = 200
+export const MESSAGE_BODY_MAX = 5000
+export type ClientMessageReply = {
+  id: number
+  body: string
+  created_at: string
+  author: string | null
+  from_client: boolean
+}
+export type ClientThread = {
+  id: number
+  subject: string
+  body: string | null
+  status: TicketStatus
+  created_at: string
+  last_activity: string
+  replies: ClientMessageReply[]
+}
+export const clientMessages = {
+  list: () => api.get<ClientThread[]>("/support.php"),
+  get: (id: number) => api.get<ClientThread>(`/support.php?id=${id}`),
+  start: (subject: string, body: string) =>
+    api.post<{ id: number }>("/support.php?action=create", { subject, body }),
+  reply: (id: number, body: string) => api.post<{ id: number }>("/support.php?action=reply", { id, body }),
+}
+
 // Client portal (§6 Client Portal). Aggregated client-facing view.
 export type PortalData = {
   client: { id: number; company: string; contact_name: string | null; email: string | null }

@@ -11,18 +11,152 @@
  *   POST /support.php?action=reply    {id, body}
  *
  * Status: open | in_progress | resolved.  Priority: urgent | high | normal | low.
+ *
+ * A `client`-role user may list, read, create and reply, and nothing else.
+ * Their client id always comes from the token, exactly as in portal.php: any
+ * client_id in the request is ignored, a ticket of another client answers 404,
+ * and they cannot set status, priority or assignee. Every reply is client
+ * facing (ticket_replies has no internal-note flag).
  */
 require __DIR__ . '/_bootstrap.php';
 
 const STAFF = ['super_admin', 'admin', 'manager', 'editor', 'employee'];
+const STAFF_OR_CLIENT = ['super_admin', 'admin', 'manager', 'editor', 'employee', 'client'];
 const STATUSES = ['open', 'in_progress', 'resolved'];
 const PRIORITIES = ['urgent', 'high', 'normal', 'low'];
+
+/** The caller's own client id. A client account with no client is refused. */
+function own_client_id(array $user): int {
+  $clientId = (int)($user['client_id'] ?? 0);
+  if ($clientId <= 0) fail('Your account is not linked to a client.', 403);
+  return $clientId;
+}
+
+/** Trimmed text that is refused, not silently cut, when it is too long. */
+function client_text(array $in, string $key, int $max): string {
+  $v = trim((string)($in[$key] ?? ''));
+  if (mb_strlen($v) > $max) fail("That is too long. Please keep it under $max characters.");
+  return $v;
+}
+
+/**
+ * Replies for tickets already proven to belong to $clientId. The client_id
+ * condition is repeated in the query so a reply can never cross clients.
+ */
+function client_replies(mysqli $conn, int $clientId, ?int $ticketId = null): array {
+  $sql = 'SELECT r.id, r.ticket_id, r.body, r.created_at, u.name AS author, (u.role = "client") AS from_client
+          FROM ticket_replies r
+          JOIN tickets t ON t.id = r.ticket_id
+          LEFT JOIN users u ON u.id = r.user_id
+          WHERE t.client_id = ? AND t.deleted_at IS NULL' . ($ticketId !== null ? ' AND t.id = ?' : '') . '
+          ORDER BY r.id ASC';
+  $stmt = $conn->prepare($sql);
+  if ($ticketId !== null) $stmt->bind_param('ii', $clientId, $ticketId);
+  else $stmt->bind_param('i', $clientId);
+  $stmt->execute();
+  $res = $stmt->get_result();
+  $byTicket = [];
+  while ($r = $res->fetch_assoc()) {
+    $tid = (int)$r['ticket_id'];
+    $byTicket[$tid][] = [
+      'id' => (int)$r['id'],
+      'body' => $r['body'],
+      'created_at' => $r['created_at'],
+      // Staff names stay internal; a client sees the studio, not the person.
+      'author' => $r['from_client'] ? $r['author'] : 'GAkinz',
+      'from_client' => (bool)$r['from_client'],
+    ];
+  }
+  return $byTicket;
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
+// ── Client branch ─────────────────────────────────────────────────────────────
+// Handled first and always ends the request, so no client request can reach
+// the staff branches below.
+if (in_array($method, ['GET', 'POST'], true) && ($action === '' || in_array($action, ['create', 'reply'], true))) {
+  $user = require_auth($conn, STAFF_OR_CLIENT);
+} else {
+  $user = require_auth($conn, STAFF);
+}
+
+if ($user['role'] === 'client') {
+  $clientId = own_client_id($user);
+  $columns = 't.id, t.subject, t.body, t.status, t.created_at,
+              COALESCE((SELECT MAX(r.created_at) FROM ticket_replies r WHERE r.ticket_id = t.id), t.created_at) AS last_activity';
+
+  if ($method === 'GET' && isset($_GET['id'])) {
+    $id = (int)$_GET['id'];
+    $stmt = $conn->prepare("SELECT $columns FROM tickets t WHERE t.id = ? AND t.client_id = ? AND t.deleted_at IS NULL LIMIT 1");
+    $stmt->bind_param('ii', $id, $clientId);
+    $stmt->execute();
+    $t = $stmt->get_result()->fetch_assoc();
+    if (!$t) fail('Ticket not found.', 404);
+    $t['id'] = (int)$t['id'];
+    $t['replies'] = client_replies($conn, $clientId, $t['id'])[$t['id']] ?? [];
+    ok($t);
+  }
+
+  if ($method === 'GET') {
+    $stmt = $conn->prepare("SELECT $columns FROM tickets t WHERE t.client_id = ? AND t.deleted_at IS NULL ORDER BY last_activity DESC, t.id DESC LIMIT 200");
+    $stmt->bind_param('i', $clientId);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $replies = client_replies($conn, $clientId);
+    $rows = [];
+    while ($t = $res->fetch_assoc()) {
+      $t['id'] = (int)$t['id'];
+      $t['replies'] = $replies[$t['id']] ?? [];
+      $rows[] = $t;
+    }
+    ok($rows);
+  }
+
+  if ($method === 'POST' && $action === 'create') {
+    $in = body();
+    $subject = client_text($in, 'subject', 200);
+    if ($subject === '') fail('A subject is required.');
+    $bodyText = client_text($in, 'body', 5000);
+    $bodyText = $bodyText !== '' ? $bodyText : null;
+    // Client from the token, never from the request; priority is the studio's call.
+    $stmt = $conn->prepare("INSERT INTO tickets (client_id, subject, body, priority) VALUES (?, ?, ?, 'normal')");
+    $stmt->bind_param('iss', $clientId, $subject, $bodyText);
+    if (!$stmt->execute()) fail('Could not send your message.', 500);
+    $newId = $conn->insert_id; // read before audit(), which inserts its own row
+    audit($conn, $user['id'], 'ticket_create', "#$newId (client) $subject");
+    ok(['id' => $newId], 201);
+  }
+
+  if ($method === 'POST' && $action === 'reply') {
+    $in = body();
+    $id = (int)($in['id'] ?? 0);
+    $bodyText = client_text($in, 'body', 5000);
+    if ($id <= 0 || $bodyText === '') fail('A ticket id and reply text are required.');
+    // Ownership first. Another client's ticket answers exactly like a missing one.
+    $own = $conn->prepare('SELECT id FROM tickets WHERE id = ? AND client_id = ? AND deleted_at IS NULL LIMIT 1');
+    $own->bind_param('ii', $id, $clientId);
+    $own->execute();
+    if (!$own->get_result()->fetch_assoc()) fail('Ticket not found.', 404);
+    $uid = $user['id'];
+    $stmt = $conn->prepare('INSERT INTO ticket_replies (ticket_id, user_id, body) VALUES (?, ?, ?)');
+    $stmt->bind_param('iis', $id, $uid, $bodyText);
+    if (!$stmt->execute()) fail('Could not send your reply.', 500);
+    $newId = $conn->insert_id; // read before audit(), which inserts its own row
+    audit($conn, $uid, 'ticket_reply', "#$id (client)");
+    ok(['id' => $newId], 201);
+  }
+
+  fail('Not allowed.', 403);
+}
+
+// ── Staff ─────────────────────────────────────────────────────────────────────
+// $user is already authorised as STAFF here: the client branch above always
+// ends the request. The require_auth() calls below are kept as belt and braces.
+
 if ($method === 'GET' && isset($_GET['id'])) {
-  require_auth($conn, STAFF); // staff only — clients see their tickets via portal.php
+  require_auth($conn, STAFF);
   $id = (int)$_GET['id'];
   $stmt = $conn->prepare(
     'SELECT t.id, t.subject, t.body, t.status, t.priority, t.client_id, t.assignee_id,
@@ -56,7 +190,7 @@ if ($method === 'GET' && isset($_GET['id'])) {
 }
 
 if ($method === 'GET') {
-  require_auth($conn, STAFF); // staff only — clients see their tickets via portal.php
+  require_auth($conn, STAFF);
   $rows = [];
   $sql = 'SELECT t.id, t.subject, t.status, t.priority, t.client_id, t.assignee_id,
                  c.company AS client_company, u.name AS assignee_name, t.created_at
