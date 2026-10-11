@@ -32,7 +32,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-019 | `sitemap.xml` is hand-maintained and omits database-driven URLs | Low | Open |
 | K-020 | `tsc -b` does not use the strict project configs | Low | Open |
 | K-021 | The legal pages have no review date and several compliance gaps | Medium | Open. Owner decision |
-| K-022 | `SidebarMenuSub` drops its forwarded ref | Low | Open |
+| K-022 | `SidebarMenuSub` drops its forwarded ref | Low | **Fixed 2026-10-11.** Not deployed |
 | K-023 | Two CMS account links point at routes that do not exist | Low | **Fixed 2026-10-10.** Not deployed |
 | K-024 | Non-admin roles cannot enable two-factor or revoke their own sessions | Medium | **Fixed 2026-10-10.** Not deployed or uploaded |
 | K-025 | Stripe charged the ex-VAT amount and marked the invoice fully paid | **Critical** | **Fixed 2026-10-10.** Not uploaded. Past Stripe payments need checking |
@@ -592,7 +592,10 @@ substance of a legal notice is not an agent's to draft:
 ---
 
 ## K-022 · `SidebarMenuSub` drops its forwarded ref
-**Severity:** low · **Status:** open.
+**Severity:** low · **Status:** fixed 2026-10-11 on `test/work-and-journey`; not deployed.
+
+The ref is now attached to the `<ul>`. No caller passes one (`src/components/nav-main.tsx`),
+so rendering is unchanged; the fix also clears one `unused-imports/no-unused-vars` lint error.
 
 `src/components/ui/sidebar.tsx:698`. `SidebarMenuSub` is a `React.forwardRef` whose `ref`
 is destructured but never attached to the `<ul>`, so any ref passed to it is silently
