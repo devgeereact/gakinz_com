@@ -110,7 +110,7 @@ Measured on branch `docs/refresh-and-sync-rule`, on top of `chore/codebase-hygie
 - `npm test` 102 unit tests PASS; `npm run test:server` 116 server integration tests PASS (2026-10-11)
   against a throwaway local `*_test` database; `npm run build` and `php -l` over 46 PHP files
   PASS.
-- **`npm run lint` fails: 44 errors, 2 warnings.** `npm run lint:ratchet` holds that ceiling in
+- **`npm run lint` fails: 41 errors, 1 warning (2026-10-11).** `npm run lint:ratchet` holds that ceiling in
   CI, so the count must not grow. See `docs/KNOWN-ISSUES.md` K-002.
 - The 2026-10-10 work (batch 1, navigation, My account, enquiry follow-ups, portal messages,
   public publishing and article format, the public redesign) is on branches stacked into

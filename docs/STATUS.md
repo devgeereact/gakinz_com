@@ -29,7 +29,7 @@ update this table when a count changes.
 | Unit tests | `npm test` | **PASS.** 102 tests in 6 files |
 | Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 116 tests in 10 files (2026-10-11, Ubuntu, MariaDB 10.11) |
 | Type check and build | `npm run typecheck`, `npm run build` | **PASS** |
-| Lint | `npm run lint:ratchet` | 44 errors, 2 warnings, at the ratchet ceiling. **`npm run lint` still fails** (K-002) |
+| Lint | `npm run lint:ratchet` | 41 errors, 1 warning, at the ratchet ceiling (2026-10-11). **`npm run lint` still fails** (K-002) |
 | Documentation | `npm run docs:check` | **PASS** |
 | PHP files | `ls server/*.php \| wc -l` | 46: 40 endpoints and 6 `_`-prefixed includes, all passing `php -l` |
 | Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 34 |
