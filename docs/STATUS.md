@@ -27,7 +27,7 @@ update this table when a count changes.
 | Measure | Command | Result |
 |---|---|---|
 | Unit tests | `npm test` | **PASS.** 102 tests in 6 files |
-| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 89 tests in 8 files |
+| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 106 tests in 9 files (2026-10-11, Ubuntu, MariaDB 10.11) |
 | Type check and build | `npm run typecheck`, `npm run build` | **PASS** |
 | Lint | `npm run lint:ratchet` | 44 errors, 2 warnings, at the ratchet ceiling. **`npm run lint` still fails** (K-002) |
 | Documentation | `npm run docs:check` | **PASS** |
@@ -164,7 +164,9 @@ reference access cannot ship until the authentication and ownership gates pass.
     `robots.txt` and `llms.txt` by name (`server/.htaccess`); the live behaviour is UNVERIFIED.
 12. Legal pages reviewed, with genuine dates (K-021).
 13. A screen-reader pass with real assistive technology, and a first CMS accessibility check.
-14. Exercise `work.php` against a real database before relying on it.
+14. Exercise `work.php` against a real database before relying on it. **Done locally 2026-10-11**:
+    `tests/server/work.test.ts` covers access, client consent, validation, images and ordering
+    against a local `*_test` database. The live tables still do not exist until the SQL is run.
 
 **P3, growth**
 

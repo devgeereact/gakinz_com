@@ -38,7 +38,7 @@ export function q(v: string | number | null): string {
 
 const TABLES = [
   "payment_events", "audit_log", "magic_links", "auth_tokens", "invoice_items", "invoices",
-  "ticket_replies", "tickets",
+  "ticket_replies", "tickets", "work_images", "work", "files",
   "proposal_items", "proposals", "tasks", "projects", "posts", "users", "clients",
 ]
 

@@ -13,14 +13,14 @@ pass (section 7).
 |---|---|---|---|
 | Types | `tsc -b`, inside `npm run build` | Whole client | **PASS**, 2026-10-10 |
 | Unit | Vitest, `npm test` | `src/lib/access.ts`, `csv.ts`, `format.ts`, `session-revoke.ts`, `src/marketing/lib/articleFormat.ts`, `src/marketing/data/cmsResult.ts` | **PASS**, 2026-10-10 |
-| Server integration | Vitest, `npm run test:server` | Sign-in, My account, payments, quote acceptance, blog editing, create ids, enquiry follow-ups and the `support.php` client branch, against a local `*_test` database (D-036) | **PASS**, 2026-10-10 |
+| Server integration | Vitest, `npm run test:server` | Sign-in, My account, payments, quote acceptance, blog editing, create ids, enquiry follow-ups, the work ledger (`work.php`) and the `support.php` client branch, against a local `*_test` database (D-036) | **PASS**, 2026-10-10 |
 | PHP syntax | `php -l` | Every server file | **PASS**, 2026-10-10 |
 | Lint | ESLint, `npm run lint`, held by `npm run lint:ratchet` | Whole client | **FAIL**; the ratchet passes (K-002) |
 | Documentation | `npm run docs:check` | Links and the document-sync rule (`AGENTS.md`) | **PASS**, 2026-10-10 |
 | Accessibility | axe-core 4.10.2 in Chrome, plus computed contrast, focus, reflow and target-size sweeps | All 16 public routes | **PASS**, 0 violations, 2026-09-22. `qa/ACCESSIBILITY-AUDIT.md` |
 | Performance | Chrome DevTools trace and Lighthouse, production build served locally | Public surface | **PARTIAL.** Lab only, no field data, 2026-09-22. `qa/PERFORMANCE-AUDIT.md` |
 | Component | none | n/a | **NOT TESTED** |
-| Other endpoints | none | Everything outside the server suite, including `work.php` | **NOT TESTED** |
+| Other endpoints | none | Everything outside the server suite | **NOT TESTED** |
 | End-to-end | none | n/a | **NOT TESTED** |
 | Screen reader | none | n/a | **NOT TESTED**. The largest remaining accessibility gap |
 
