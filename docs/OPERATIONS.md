@@ -163,6 +163,38 @@ Approved in D-042 and implemented for the server in D-036.
 - Docker is optional, chosen only if it makes repeatable tests simpler. This is safety
   infrastructure, not a new hosting architecture.
 
+### Running the server tests on any computer
+
+`npm run test:server` needs, on the computer itself:
+
+- PHP 8 on the `PATH` with the `mysqli`, `curl` and `mbstring` extensions (`php -m`).
+- A local MySQL 8 or MariaDB server and a database user that may create and drop databases
+  whose names end in `_test`. Nothing else on that server is touched.
+- The `mysql` command-line client on the `PATH`.
+
+Defaults suit a Mac with Homebrew MariaDB and socket login as the current user. Anywhere else,
+set these for the run (they are read by `tests/server/env.ts`; the host must be `localhost` or
+`127.0.0.1`, and the database name must end in `_test`):
+
+| Variable | Default | Example on Ubuntu with a password user |
+|---|---|---|
+| `GK_TEST_DB_HOST` | `localhost` (socket) | `127.0.0.1` |
+| `GK_TEST_DB_PORT` | `3306` | `3306` |
+| `GK_TEST_DB_USER` | the operating-system user | `gakinz_test` |
+| `GK_TEST_DB_PASS` | empty | a local test-only password, never a production one |
+| `GK_TEST_DB` | `gakinz_test` | `gakinz_test` |
+| `GK_TEST_PHP_PORT`, `GK_TEST_PROVIDER_PORT` | `5191`, `5192` | change only to run two suites at once |
+
+One-time database user on Ubuntu (run as the MySQL root user; test-only credentials):
+
+```sql
+CREATE USER 'gakinz_test'@'localhost' IDENTIFIED BY '<local test password>';
+GRANT ALL PRIVILEGES ON `%\_test`.* TO 'gakinz_test'@'localhost';
+```
+
+`server/config.php` and every `.env` file stay on the Mac (D-042, GEE OS two-computer rule).
+The tests never read them: they write a synthetic `config.php` into a temporary folder.
+
 ## 9. Production acceptance gates
 
 No release note may describe the system as ready to take orders until every gate below has

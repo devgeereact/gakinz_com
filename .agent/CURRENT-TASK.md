@@ -2,11 +2,13 @@
 
 ## Outcome
 
-The 2026-10-10 implementation work is complete on branches stacked into PR #8, ending at
-`docs/refresh-and-sync-rule`: batch 1 (money, sign-in, quotes, blog, CI), the seven-destination
-navigation, My account, enquiry follow-ups, client portal messages, public publishing and the
-article format, the lock-screen token fix, the public redesign on D-037, the favicon and share
-image, dead-code removal, and a documentation refresh with a sync rule checked in CI (D-045).
+The 2026-10-10 implementation work is complete and every section PR (#9 to #17) is merged into
+`feat/plan-2026-batch-1`, which is PR #8 to `main`: batch 1 (money, sign-in, quotes, blog, CI),
+the seven-destination navigation, My account, enquiry follow-ups, client portal messages, public
+publishing and the article format, the lock-screen token fix, the public redesign on D-037, the
+favicon and share image, dead-code removal, and a documentation refresh with a sync rule checked
+in CI (D-045). CI on PR #8 passes. The merged section branches still exist on GitHub and can be
+deleted once PR #8 is merged.
 What each piece changed is in `docs/STATUS.md` section 4; what is still open is in section 3.
 
 Nothing is merged, deployed or uploaded. The next task starts only when the owner chooses it:
@@ -16,6 +18,22 @@ Nothing is merged, deployed or uploaded. The next task starts only when the owne
    the business, pricing and content facts that unlock the six-service public copy.
 2. **The CMS redesign slice**: the target system from `docs/DESIGN-SYSTEM.md` section 10 applied
    to the CMS, starting with Today, without changing URLs or role access.
+
+## Resume on another computer
+
+1. `gh repo clone devgeereact/gakinz_com` (or `git fetch origin` in an existing
+   clone), then `git switch feat/plan-2026-batch-1` and `git pull --ff-only`. Until PR #8 is
+   merged, this branch, not `main`, holds all the work.
+2. `npm ci` (Node 22 or newer; CI uses 22).
+3. Read `docs/STATUS.md` and `docs/KNOWN-ISSUES.md` before starting (`AGENTS.md`, "Keeping
+   documents current"), then this file.
+4. Check the baseline: `npm run typecheck`, `npm test`, `npm run build`, `npm run lint:ratchet`,
+   `npm run docs:check`. For server work set up the local test database once
+   (`docs/OPERATIONS.md` section 8) and run `npm run test:server`.
+5. Never run `npm run dev` for writes: it talks to the live API. Never copy `server/config.php`
+   or `.env` files between computers.
+6. New work goes on a new branch from `feat/plan-2026-batch-1` (or from `main` once PR #8 is
+   merged), one concern per commit, pushed per verified batch, with a pull request.
 
 ## Mode
 
