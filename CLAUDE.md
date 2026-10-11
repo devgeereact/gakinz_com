@@ -107,7 +107,7 @@ When this file and the code disagree, the code wins and this file is wrong.
 Measured on branch `docs/refresh-and-sync-rule`, on top of `chore/codebase-hygiene`
 (`8568a6d`). The source for every count is `docs/STATUS.md` section 0.
 
-- `npm test` 102 unit tests PASS; `npm run test:server` 106 server integration tests PASS (2026-10-11)
+- `npm test` 102 unit tests PASS; `npm run test:server` 116 server integration tests PASS (2026-10-11)
   against a throwaway local `*_test` database; `npm run build` and `php -l` over 46 PHP files
   PASS.
 - **`npm run lint` fails: 44 errors, 2 warnings.** `npm run lint:ratchet` holds that ceiling in

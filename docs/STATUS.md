@@ -27,7 +27,7 @@ update this table when a count changes.
 | Measure | Command | Result |
 |---|---|---|
 | Unit tests | `npm test` | **PASS.** 102 tests in 6 files |
-| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 106 tests in 9 files (2026-10-11, Ubuntu, MariaDB 10.11) |
+| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 116 tests in 10 files (2026-10-11, Ubuntu, MariaDB 10.11) |
 | Type check and build | `npm run typecheck`, `npm run build` | **PASS** |
 | Lint | `npm run lint:ratchet` | 44 errors, 2 warnings, at the ratchet ceiling. **`npm run lint` still fails** (K-002) |
 | Documentation | `npm run docs:check` | **PASS** |
@@ -148,6 +148,9 @@ reference access cannot ship until the authentication and ownership gates pass.
 **P1, the core journeys**
 
 6. One tested enquiry to client to quote to project to invoice journey against synthetic data.
+   **Done locally 2026-10-11**: `tests/server/journey.test.ts` runs contact form, conversion,
+   quote, acceptance, the VAT-inclusive deposit through the fake Stripe provider and the client
+   portal. Not run against the live server.
 7. Booking records inside Enquiries, the client timeline and private feedback
    (`docs/PRODUCT-SPEC.md` sections 5.5 and 6).
 8. The remaining token work: `localStorage` exposure, token lifetime and a CSP review (K-033);
