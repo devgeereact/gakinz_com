@@ -33,7 +33,7 @@ even when the code looks correct.
 ## 2. Findings
 
 ### S-001 · Live super-admin credential in git history
-**Severity:** critical · **Status:** FAIL · **See** `docs/KNOWN-ISSUES.md` K-001
+**Severity:** critical · **Status:** PARTIAL (password rotated 2026-10-12, owner-reported; sessions unconfirmed) · **See** `docs/KNOWN-ISSUES.md` K-001
 
 The previous `CLAUDE.md` carried a working production login, with a plaintext password, in a
 tracked file. The account is the seeded super-admin named in `server/config.php.example`. It is therefore in every clone and in the history. The account is

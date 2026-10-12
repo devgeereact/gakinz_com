@@ -11,7 +11,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 
 | ID | Issue | Severity | Status |
 |---|---|---|---|
-| K-001 | A live super-admin credential is in git history | Critical | **Open. Rotation UNVERIFIED. Blocks launch** |
+| K-001 | A live super-admin credential is in git history | Critical | **Password rotated 2026-10-12 (owner-reported).** Session revocation and K-015 file check unconfirmed |
 | K-002 | Lint fails | Medium | Open. 41 errors, 1 warning on 2026-10-11, down from 60 and 7; ratchet in CI |
 | K-003 | `config.php.example` named a retired mail host | Medium | Fixed in the template. Server value UNVERIFIED |
 | K-004 | `api.php` accepts an unauthenticated POST | Medium | **Fixed 2026-09-22.** Not uploaded |
@@ -59,7 +59,8 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 ---
 
 ## K-001 · A live super-admin credential is in git history
-**Severity:** critical · **Status:** open, rotation UNVERIFIED
+**Severity:** critical · **Status:** password rotated by the owner on 2026-10-12 (owner-reported, not verified from here). Revoking every session
+(`auth_tokens`) and the K-015 seed-file check are not yet confirmed. Close this issue when both are.
 
 The previous `CLAUDE.md` recorded a working login for the production CMS, with a plaintext
 password, in a tracked file. That file is in every clone and in the history.

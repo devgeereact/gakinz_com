@@ -229,7 +229,8 @@ feature list, the "deliberately not doing" list and phase 1 client access by pas
 
 **Safety, before any real order (phase 1)**
 
-- [ ] The admin credential from git history rotated and all sessions revoked (K-001). Date:
+- [ ] The admin credential from git history rotated and all sessions revoked (K-001). Date: password rotated
+      2026-10-12 (owner-reported); session revocation unconfirmed
 - [ ] The seed-password file deleted from the live server (K-015). Date:
 - [ ] Which PHP files and SQL migrations are live, checked and recorded (K-006). Date:
 - [ ] A backup restored somewhere safe and checked (K-010). Date:
@@ -511,7 +512,7 @@ because this branch changes fourteen server files, adds a fifteenth and adds two
 | Whether the live `ALLOWED_ORIGINS` contains `http://localhost:5102` | UNVERIFIED |
 | Whether `$SMTP_HOST` and `$IMAP_HOST` on the host point at the retired server | UNVERIFIED |
 | Whether the cPanel cron entry for `cron.php` exists | UNVERIFIED |
-| Whether the seeded super-admin password has been rotated | UNVERIFIED, and important. See `docs/KNOWN-ISSUES.md` K-001 |
+| Whether the seeded super-admin password has been rotated | Owner-reported rotated 2026-10-12. Session revocation unconfirmed. See `docs/KNOWN-ISSUES.md` K-001 |
 
 Closing these needs someone with server access. Until then no release note should describe
 this project as deployed. `docs/DEPLOYMENT.md` holds the upload list and the outstanding SQL.

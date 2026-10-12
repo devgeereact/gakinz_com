@@ -123,7 +123,8 @@ MariaDB. The source for every count is `docs/STATUS.md` section 0.
 - **The deployed server state is UNVERIFIED.** Which PHP files are uploaded and which
   migrations have run cannot be known from here.
 - A live super-admin credential was published in an earlier revision of this file and is in
-  git history. See `docs/KNOWN-ISSUES.md` K-001.
+  git history. The owner reports it rotated on 2026-10-12; session revocation is unconfirmed.
+  See `docs/KNOWN-ISSUES.md` K-001.
 
 Do not describe this project as clean, deployed, accessible or secure. Say what was checked
 and how, and mark the rest NOT TESTED or UNVERIFIED.

@@ -128,7 +128,8 @@ decision or access to the live server.
 
 - [ ] **Rotate the super-admin credential (K-001).** A working production password is in
       git history. The account reaches the mailbox, client records, invoices and payment
-      links. Rotation status is UNVERIFIED and the owner has confirmed it is not yet done.
+      links. The owner reports the password rotated on 2026-10-12; revoking every session is
+      not yet confirmed.
       **This is the single highest-priority item on the project and it is independent of
       everything else here.** Then decide separately whether history needs scrubbing.
 - [ ] **Delete `seed_admin_password.txt` from the live document root (K-015)**, if it is

@@ -197,7 +197,8 @@ The current list, with status, is `docs/KNOWN-ISSUES.md`; the 2026-09-04 audit i
 `qa/SECURITY-AUDIT.md`. Still open in the repository on 2026-10-10:
 
 1. A live super-admin credential was published in an earlier `CLAUDE.md` and is in git
-   history. Rotation status is **UNVERIFIED** (K-001).
+   history. The password was rotated on 2026-10-12 (owner-reported); session revocation is
+   unconfirmed (K-001).
 2. The session token is readable by scripts on the origin, and there is no
    Content-Security-Policy (K-033).
 3. Every fix since 2026-09-22 (the `api.php` POST, the contact throttle, the upload allowlist,
