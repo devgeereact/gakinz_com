@@ -13,6 +13,8 @@ import type { WorkRecord } from "@/marketing/data/work"
  *   - Keep every name obviously fictional. Never use a real business, a real
  *     person or a real client of the studio, even with permission: real
  *     material belongs in the CMS, where server/work.php checks consent.
+ *     Check new names against the owner's other projects first; a demo name
+ *     that resembles a real client reads as a claim about that client.
  *   - Every record carries `demo: true`, which renders a visible "Demo" tag.
  *   - Slugs start with `demo-`, which is how useWorkRecord finds them.
  */
@@ -25,14 +27,14 @@ export type DemoWork = WorkRecord & { demo: true; mock: MockKind; tags: string[]
 
 export const demoWork: DemoWork[] = [
   {
-    slug: "demo-harbour-and-reed",
+    slug: "demo-northwick-and-vale",
     demo: true,
     mock: "storefront",
     tags: ["Web design", "Build", "Content"],
     kind: "case_study",
-    title: "Harbour & Reed",
+    title: "Northwick & Vale",
     clientName: null,
-    sector: "Joinery, fictional",
+    sector: "Furniture makers, fictional",
     year: "2026",
     summary:
       "A fictional workshop's site, rebuilt so a commission enquiry arrives with the drawings and the budget already attached.",
@@ -99,9 +101,9 @@ export const demoTestimonials: (Testimonial & { demo: true })[] = [
   {
     id: -1,
     demo: true,
-    author: "Amara Okafor",
+    author: "Jordan Ellis",
     role: "Owner",
-    company: "Harbour & Reed (fictional)",
+    company: "Northwick & Vale (fictional)",
     quote:
       "Demo quote. The enquiries now arrive with what we need to price the job, so we reply once instead of three times.",
     rating: 5,
@@ -109,7 +111,7 @@ export const demoTestimonials: (Testimonial & { demo: true })[] = [
   {
     id: -2,
     demo: true,
-    author: "Tom Whitfield",
+    author: "Sam Barrow",
     role: "Partner",
     company: "Ledgerline (fictional)",
     quote: "Demo quote. Month end used to be a week of chasing. Now the clients upload before we have to ask.",
@@ -118,7 +120,7 @@ export const demoTestimonials: (Testimonial & { demo: true })[] = [
   {
     id: -3,
     demo: true,
-    author: "Priya Shah",
+    author: "Alex Morgan",
     role: "Founder",
     company: "Kiln Street Studio (fictional)",
     quote: "Demo quote. The evening classes fill from the site now, and nobody has to sit by the phone.",
