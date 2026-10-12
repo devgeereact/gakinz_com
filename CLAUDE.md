@@ -102,20 +102,21 @@ When this file and the code disagree, the code wins and this file is wrong.
 - The active Tailwind config is `tailwind.config.js`. The `.ts` variant is inert; do not edit
   it.
 
-## Known state, as at 2026-10-10
+## Known state, as at 2026-10-12
 
-Measured on branch `docs/refresh-and-sync-rule`, on top of `chore/codebase-hygiene`
-(`8568a6d`). The source for every count is `docs/STATUS.md` section 0.
+Measured on branch `feat/plan-2026-batch-1` at `bfbfae0` (PR #18 merged in), on the Mac with
+MariaDB. The source for every count is `docs/STATUS.md` section 0.
 
-- `npm test` 102 unit tests PASS; `npm run test:server` 116 server integration tests PASS (2026-10-11)
-  against a throwaway local `*_test` database; `npm run build` and `php -l` over 46 PHP files
-  PASS.
-- **`npm run lint` fails: 41 errors, 1 warning (2026-10-11).** `npm run lint:ratchet` holds that ceiling in
+- `npm test` 102 unit tests PASS; `npm run test:server` 116 server integration tests PASS
+  against a throwaway local `*_test` database; `npm run build`, `npm run typecheck` and
+  `php -l` over 46 PHP files PASS.
+- **`npm run lint` fails: 41 errors, 1 warning.** `npm run lint:ratchet` holds that ceiling in
   CI, so the count must not grow. See `docs/KNOWN-ISSUES.md` K-002.
 - The 2026-10-10 work (batch 1, navigation, My account, enquiry follow-ups, portal messages,
   public publishing and article format, the public redesign) is on branches stacked into
   PR #8. **Not merged, not deployed, and no server file uploaded.** The upload list is
-  `docs/DEPLOYMENT.md` section 5.
+  `docs/DEPLOYMENT.md` section 5. Merging PR #8 deploys `dist/`, so merge only after the
+  section 5.1 operator steps (SQL and PHP upload) are done.
 - Deploy waits for CI (`.github/workflows/deploy.yml`, `workflow_run`).
 - **Accessibility is measured for the public site only** (`qa/ACCESSIBILITY-AUDIT.md`). The
   CMS and real assistive technology are NOT TESTED.
