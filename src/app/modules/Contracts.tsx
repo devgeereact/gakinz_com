@@ -400,7 +400,7 @@ async function renderContractPdf(c: ContractDetail) {
   doc.setFontSize(10)
   const lines = doc.splitTextToSize(c.body || "", W - M * 2)
   doc.text(lines, M, 140)
-  let y = 140 + lines.length * 13 + 30
+  const y = 140 + lines.length * 13 + 30
   if (c.signed_at) {
     doc.setFont("helvetica", "bold")
     doc.text("Electronically signed", M, y)

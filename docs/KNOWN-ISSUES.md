@@ -12,7 +12,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | ID | Issue | Severity | Status |
 |---|---|---|---|
 | K-001 | A live super-admin credential is in git history | Critical | **Open. Rotation UNVERIFIED. Blocks launch** |
-| K-002 | Lint fails | Medium | Open. 44 errors, 2 warnings on 2026-10-10, down from 60 and 7; ratchet in CI |
+| K-002 | Lint fails | Medium | Open. 41 errors, 1 warning on 2026-10-11, down from 60 and 7; ratchet in CI |
 | K-003 | `config.php.example` named a retired mail host | Medium | Fixed in the template. Server value UNVERIFIED |
 | K-004 | `api.php` accepts an unauthenticated POST | Medium | **Fixed 2026-09-22.** Not uploaded |
 | K-005 | `contact.php` has no spam protection | Medium | **Fixed 2026-09-22.** Not uploaded |
@@ -32,7 +32,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-019 | `sitemap.xml` is hand-maintained and omits database-driven URLs | Low | Open |
 | K-020 | `tsc -b` does not use the strict project configs | Low | Open |
 | K-021 | The legal pages have no review date and several compliance gaps | Medium | Open. Owner decision |
-| K-022 | `SidebarMenuSub` drops its forwarded ref | Low | Open |
+| K-022 | `SidebarMenuSub` drops its forwarded ref | Low | **Fixed 2026-10-11.** Not deployed |
 | K-023 | Two CMS account links point at routes that do not exist | Low | **Fixed 2026-10-10.** Not deployed |
 | K-024 | Non-admin roles cannot enable two-factor or revoke their own sessions | Medium | **Fixed 2026-10-10.** Not deployed or uploaded |
 | K-025 | Stripe charged the ex-VAT amount and marked the invoice fully paid | **Critical** | **Fixed 2026-10-10.** Not uploaded. Past Stripe payments need checking |
@@ -84,7 +84,7 @@ needs rewriting, which is a force push and was explicitly excluded from this mig
 **Severity:** medium · **Status:** open, recorded not fixed
 
 `npm run lint` on 2026-09-04 reported **60 errors and 7 warnings across 42 files**. The
-current figure is in `docs/STATUS.md` section 0 (44 errors and 2 warnings on 2026-10-10), and
+current figure is in `docs/STATUS.md` section 0 (41 errors and 1 warning on 2026-10-11), and
 `npm run lint:ratchet` enforces the ceiling in `scripts/lint-ratchet.mjs` in CI. The table
 below is the 2026-09-04 breakdown, kept for history.
 
@@ -592,7 +592,10 @@ substance of a legal notice is not an agent's to draft:
 ---
 
 ## K-022 · `SidebarMenuSub` drops its forwarded ref
-**Severity:** low · **Status:** open.
+**Severity:** low · **Status:** fixed 2026-10-11 on `test/work-and-journey`; not deployed.
+
+The ref is now attached to the `<ul>`. No caller passes one (`src/components/nav-main.tsx`),
+so rendering is unchanged; the fix also clears the one `unused-imports/no-unused-vars` lint warning.
 
 `src/components/ui/sidebar.tsx:698`. `SidebarMenuSub` is a `React.forwardRef` whose `ref`
 is destructured but never attached to the `<ul>`, so any ref passed to it is silently

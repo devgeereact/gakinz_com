@@ -553,7 +553,8 @@ function IntegrationsTab() {
                       size="sm"
                       onClick={async () => {
                         const r = await integrations.slackTest()
-                        r.ok ? toast.success("Posted to Slack.") : toast.error(r.error || "Slack test failed.")
+                        if (r.ok) toast.success("Posted to Slack.")
+                        else toast.error(r.error || "Slack test failed.")
                       }}
                     >
                       Test

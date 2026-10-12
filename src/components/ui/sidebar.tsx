@@ -697,6 +697,7 @@ const SidebarMenuSub = React.forwardRef<
   React.ComponentProps<"ul">
 >(({ className, ...props }, ref) => (
   <ul
+      ref={ref}
       data-slot="sidebar-menu-sub"
       data-sidebar="menu-sub"
       className={cn(

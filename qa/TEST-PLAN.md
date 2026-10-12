@@ -13,14 +13,14 @@ pass (section 7).
 |---|---|---|---|
 | Types | `tsc -b`, inside `npm run build` | Whole client | **PASS**, 2026-10-10 |
 | Unit | Vitest, `npm test` | `src/lib/access.ts`, `csv.ts`, `format.ts`, `session-revoke.ts`, `src/marketing/lib/articleFormat.ts`, `src/marketing/data/cmsResult.ts` | **PASS**, 2026-10-10 |
-| Server integration | Vitest, `npm run test:server` | Sign-in, My account, payments, quote acceptance, blog editing, create ids, enquiry follow-ups and the `support.php` client branch, against a local `*_test` database (D-036) | **PASS**, 2026-10-10 |
+| Server integration | Vitest, `npm run test:server` | Sign-in, My account, payments, quote acceptance, blog editing, create ids, enquiry follow-ups, the work ledger (`work.php`), the enquiry-to-paid-deposit journey and the `support.php` client branch, against a local `*_test` database (D-036) | **PASS**, 2026-10-10 |
 | PHP syntax | `php -l` | Every server file | **PASS**, 2026-10-10 |
 | Lint | ESLint, `npm run lint`, held by `npm run lint:ratchet` | Whole client | **FAIL**; the ratchet passes (K-002) |
 | Documentation | `npm run docs:check` | Links and the document-sync rule (`AGENTS.md`) | **PASS**, 2026-10-10 |
 | Accessibility | axe-core 4.10.2 in Chrome, plus computed contrast, focus, reflow and target-size sweeps | All 16 public routes | **PASS**, 0 violations, 2026-09-22. `qa/ACCESSIBILITY-AUDIT.md` |
 | Performance | Chrome DevTools trace and Lighthouse, production build served locally | Public surface | **PARTIAL.** Lab only, no field data, 2026-09-22. `qa/PERFORMANCE-AUDIT.md` |
 | Component | none | n/a | **NOT TESTED** |
-| Other endpoints | none | Everything outside the server suite, including `work.php` | **NOT TESTED** |
+| Other endpoints | none | Everything outside the server suite | **NOT TESTED** |
 | End-to-end | none | n/a | **NOT TESTED** |
 | Screen reader | none | n/a | **NOT TESTED**. The largest remaining accessibility gap |
 
@@ -156,16 +156,16 @@ its acceptance cases, its rollback and its remaining owner inputs.
 
 | ID | Scenario | Phase and proof | Status on 2026-10-10 |
 |---|---|---|---|
-| J01 | The owner handles a new enquiry, follow-up, confirmed call and one conversion without duplicate records | Phase 2; a synthetic journey plus retry | NOT TESTED |
+| J01 | The owner handles a new enquiry, follow-up, confirmed call and one conversion without duplicate records | Phase 2; a synthetic journey plus retry | PARTIAL. Enquiry to client conversion, including a repeated conversion that creates no duplicate, passes locally in `tests/server/journey.test.ts`; follow-up and confirmed call NOT TESTED |
 | J02 | A reference alone, or with the wrong email, discloses no customer record or account existence | Phases 1 and 2; response and throttling checks | NOT TESTED. The reference flow is not built |
 | J03 | A link expires, re-use fails, concurrent consumption allows at most one redemption, and privileged two-factor cannot be skipped | Phase 1; isolated authentication tests | PARTIAL. Magic-link single use under concurrency and the two-factor rule pass in `tests/server/auth.test.ts`; the reference and email link is not built |
-| J04 | Client A cannot read or write Client B's projects, tickets, messages, files, invoices or feedback by changing identifiers | Phase 2; endpoint tests with two fake clients | PARTIAL. Tickets and messages pass locally, `tests/server/support-client.test.ts` (K-039); projects, files, invoices and feedback NOT TESTED |
+| J04 | Client A cannot read or write Client B's projects, tickets, messages, files, invoices or feedback by changing identifiers | Phase 2; endpoint tests with two fake clients | PARTIAL. Tickets and messages pass locally, `tests/server/support-client.test.ts` (K-039); the portal ignores another client's id for projects and invoices, `tests/server/journey.test.ts`; files and feedback NOT TESTED |
 | J05 | A customer message survives a failed send; a retry creates no duplicate, and the owner sees the notification failure | Phase 2; transport fixtures | NOT TESTED |
 | J06 | Permitted customer updates work; financial and internal fields and unverified email changes are rejected | Phase 2; positive and negative endpoint cases | NOT TESTED |
 | J07 | Private feedback stays private; publication needs recorded permission and approval | Phases 2 to 4; publish, unpublish and response inspection | NOT TESTED |
 | J08 | The project brief stays client-linked, shared milestones exclude owner notes, and the export omits restricted information | Phases 2 and 3; record and sanitised export checks | NOT TESTED |
 | J09 | The enquiry-to-handover task works on phone and desktop with keyboard, zoom and reduced motion | Phases 3 and 4; observable owner and client usability checks | NOT TESTED |
-| J10 | Accurate quote, invoice and payment evidence, backup restoration, and publish and edit checks pass | Phases 1 to 4; the production gates | NOT TESTED |
+| J10 | Accurate quote, invoice and payment evidence, backup restoration, and publish and edit checks pass | Phases 1 to 4; the production gates | PARTIAL. Quote to invoice to paid deposit passes locally against a fake provider, `tests/server/journey.test.ts`; backup restoration and the live checks NOT TESTED |
 | J11 | A draft or declined quote cannot be accepted or converted; a sent quote converts exactly once under double-click and concurrent requests | Phase 1; endpoint tests | PASS locally, `tests/server/proposals.test.ts` (K-028). Not on the live server |
 | J12 | The Stripe charge equals the invoice's payable total including VAT; a mismatched amount or currency is rejected and not marked paid | Phase 1; sandbox fixtures | PASS locally against a fake provider, `tests/server/payments.test.ts` (K-025). Not on the live server |
 

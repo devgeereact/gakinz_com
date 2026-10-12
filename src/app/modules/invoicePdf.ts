@@ -35,7 +35,7 @@ export function downloadInvoicePdf(inv: InvoiceDetail) {
 
   // Meta
   doc.setTextColor(...INK)
-  let y = 130
+  const y = 130
   doc.setFontSize(10)
   doc.setFont("helvetica", "bold")
   doc.text("Billed to", M, y)
