@@ -2,6 +2,7 @@ import { useEffect } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 import PublicNavbar from "./components/PublicNavbar"
 import PublicFooter from "./components/PublicFooter"
+import { DEMO_ON } from "./demo/flag"
 
 export default function PublicLayout() {
   const { pathname } = useLocation()
@@ -34,6 +35,13 @@ export default function PublicLayout() {
         <Outlet />
       </main>
       <PublicFooter />
+      {/* Development only: says that tagged items are fictional fixtures.
+          DEMO_ON is `false` in a production build, so this never ships. */}
+      {DEMO_ON && (
+        <p className="pointer-events-none fixed bottom-4 left-4 z-[60] rounded-full border border-dashed border-gk-come/70 bg-gk-white/95 px-4 py-2 font-data text-[0.75rem] font-bold uppercase tracking-[0.04em] text-gk-come shadow-float">
+          Demo content on · dev only · VITE_DEMO=off to hide
+        </p>
+      )}
     </div>
   )
 }

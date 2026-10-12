@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom"
 import { cn } from "@/lib/utils"
 import { KIND_LABELS, spineFor, type WorkRecord } from "@/marketing/data/work"
-import { Gap } from "./primitives"
+import { DemoTag, Gap } from "./primitives"
 
 /**
  * The work ledger.
@@ -48,7 +48,10 @@ export function LedgerRecord({ record, headingLevel = "h3" }: { record: WorkReco
     >
       <div className="grid gap-6 lg:grid-cols-[1fr_14rem] lg:gap-12">
         <div className="min-w-0">
-          <p className="font-data text-label uppercase text-gk-ink-mute">{kind.name}</p>
+          <p className="flex flex-wrap items-center gap-3 font-data text-label uppercase text-gk-ink-mute">
+            {kind.name}
+            {record.demo && <DemoTag />}
+          </p>
 
           <Heading className="mt-3 font-display text-t3 text-gk-ink">
             {record.clientName ? (

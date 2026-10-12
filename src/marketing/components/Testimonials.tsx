@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { testimonials as testimonialsApi, type Testimonial } from "@/lib/api"
-import { Label, Section } from "./primitives"
+import { DemoTag, Label, Section } from "./primitives"
 
 /**
  * CMS-curated client testimonials.
@@ -23,17 +23,23 @@ import { Label, Section } from "./primitives"
  * BEHAVIOUR KEPT: the component renders nothing at all until the API returns
  * at least one approved testimonial. An absent section is correct here. An
  * invented quote, or a placeholder one, is not.
+ *
+ * `fallback` exists for development demo quotes only (src/marketing/demo),
+ * which never exist in a production build. Each one carries a Demo tag.
  */
 export default function Testimonials({
   eyebrow = "In their words",
   title = "What clients say",
   muted = false,
+  fallback = [],
 }: {
   eyebrow?: string
   title?: string
   muted?: boolean
+  fallback?: (Testimonial & { demo?: boolean })[]
 }) {
-  const [items, setItems] = useState<Testimonial[]>([])
+  const [fetched, setItems] = useState<(Testimonial & { demo?: boolean })[]>([])
+  const items = fetched.length > 0 ? fetched : fallback
 
   useEffect(() => {
     let alive = true
@@ -66,7 +72,10 @@ export default function Testimonials({
                   &ldquo;{t.quote}&rdquo;
                 </blockquote>
                 <figcaption className="lg:pt-2">
-                  <span className="block text-body text-gk-ink">{t.author}</span>
+                  <span className="flex flex-wrap items-center gap-2 text-body text-gk-ink">
+                    {t.author}
+                    {t.demo && <DemoTag />}
+                  </span>
                   {attribution && (
                     <span className="mt-1 block text-body text-gk-ink-soft">{attribution}</span>
                   )}

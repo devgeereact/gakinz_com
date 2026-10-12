@@ -396,6 +396,25 @@ export function Placeholder({
   )
 }
 
+/**
+ * Marks a development demo fixture (src/marketing/demo). Dashed, like a
+ * placeholder, so it reads as "not real" at a glance. It only ever renders on
+ * demo data, which never exists in a production build.
+ */
+export function DemoTag({ className, onDark = false }: { className?: string; onDark?: boolean }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border border-dashed px-2.5 py-0.5 font-data text-[0.75rem] font-bold uppercase tracking-[0.04em]",
+        onDark ? "border-gk-come-on-dark text-gk-come-on-dark" : "border-gk-come/70 text-gk-come",
+        className,
+      )}
+    >
+      Demo
+    </span>
+  )
+}
+
 /** An inline "to supply" marker for a missing value inside a line of text. */
 export function Gap({ children }: { children: ReactNode }) {
   return (

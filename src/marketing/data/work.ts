@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { work as workApi, type ApiResult } from "@/lib/api"
 import { resolveList, resolveOne } from "./cmsResult"
+import { DEMO_ON } from "@/marketing/demo/flag"
 
 /**
  * The work ledger.
@@ -80,6 +81,8 @@ export type WorkRecord = {
   images: WorkImage[]
   /** What is still missing, in the owner's words. Rendered as a labelled gap. */
   awaiting: string | null
+  /** Development demo fixture (src/marketing/demo). Never set on a real record. */
+  demo?: boolean
 }
 
 /** A record is settled when every one of its three rows has real content. */
@@ -251,6 +254,16 @@ export function useWorkRecord(slug: string | undefined) {
   useEffect(() => {
     if (!slug) return
     let alive = true
+    // Development demo records never touch the API. In a production build
+    // DEMO_ON is `false`, so this branch and its import are removed.
+    if (DEMO_ON && slug.startsWith("demo-")) {
+      import("@/marketing/demo/content").then(({ demoWork }) => {
+        if (alive) setResult({ slug, record: demoWork.find((r) => r.slug === slug) ?? null })
+      })
+      return () => {
+        alive = false
+      }
+    }
     workApi
       .get(slug)
       .catch(() => null)
