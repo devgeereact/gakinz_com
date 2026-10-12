@@ -1,9 +1,11 @@
 // Central API helper.
-// Dev → hit the live API on the domain (api.php enables CORS).
-// Production (same domain) → relative path.
+// Dev → hit the live API on the domain (api.php enables CORS), unless
+// VITE_API_BASE points it elsewhere, such as a local PHP server over a local
+// database. Production (same domain) → relative path; the override is
+// ignored in a production build.
 import { getStoredToken, useAuth, type AuthUser, type Role } from "@/store/auth.store"
 
-export const API_BASE = import.meta.env.DEV ? "https://gakinz.com" : ""
+export const API_BASE = import.meta.env.DEV ? (import.meta.env.VITE_API_BASE || "https://gakinz.com") : ""
 
 export type ApiResult<T> =
   | { ok: true; data: T }
