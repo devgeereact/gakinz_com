@@ -24,9 +24,24 @@ looks: in development `src/lib/api.ts` calls the **live** API at `https://gakinz
 live `ALLOWED_ORIGINS` list contains exactly one localhost entry. A drifted port appears as an
 opaque CORS failure, not as a port error.
 
-The dev server has no local PHP or MySQL behind it. Development runs against production
-data. Treat every write in development as a write to the real business. The only safe place
-to exercise the server is the synthetic test path in section 8.
+By default the dev server has no local PHP or MySQL behind it. Development runs against
+production data. Treat every write in development as a write to the real business.
+
+**Local CMS, against a local database.** To look around the CMS without touching production,
+set `VITE_API_BASE` (read by `src/lib/api.ts` in development only) to a local PHP server:
+
+1. Create a local database (for example `gakinz_dev`) and load `server/schema.sql` into it.
+2. Copy `server/` to a folder outside the repository and give the copy its own `config.php`,
+   built like `syntheticConfig()` in `tests/server/global-setup.ts`: the local database, no
+   live keys, and `ALLOWED_ORIGINS` naming the dev origin (for example
+   `http://localhost:5103`).
+3. Insert a `super_admin` row in `users` with a `password_hash()` bcrypt hash.
+4. `php -S 127.0.0.1:5193 -t <that folder>` and
+   `VITE_API_BASE=http://127.0.0.1:5193 npx vite --port 5103 --strictPort`.
+
+Mail, payments and the other integrations are unconfigured there, so they degrade to 503.
+Never put a live key or the live database into that `config.php`. The synthetic test path in
+section 8 remains the place to test the server.
 
 | Command | Purpose |
 |---|---|
