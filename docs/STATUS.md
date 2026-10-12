@@ -215,6 +215,8 @@ when PR #8 merges, and server changes need the manual upload in `docs/DEPLOYMENT
 | Brand | Favicon, 32px and apple-touch icons and the share image on the D-037 palette | Files in `public/` |
 | Hygiene | Six unused public primitives, an unused API client and formatter removed | `knip`, typecheck, tests, build |
 | Documents | One upload list in `docs/DEPLOYMENT.md`; counts in section 0 only; the sync rule in `AGENTS.md` and `npm run docs:check` in CI | This file, D-045 |
+| Hero, navigation, footer (2026-10-12) | Featured-project hero with tabbed work frames; three-zone pill navigation, four links inline from 1024px; short footer with a large wordmark; the home contents list removed | Dev and production preview at 390, 768, 1024 and 1440px, no overflow; reduced motion at rest; D-046 |
+| Demo content (2026-10-12) | Fictional work records, drawn screens and testimonials in `src/marketing/demo/`, development only, each tagged Demo | No fixture string in `dist/` after `npm run build`; D-046 |
 
 Production, live database, real payments and real sends: NOT TESTED.
 

@@ -716,6 +716,29 @@
   }
 }
 
+/* The footer wordmark (PublicFooter): the studio name set as large as the
+   column allows and cut by the page edge. Decorative and aria-hidden, so the
+   low contrast is deliberate; it never carries information. */
+.gk-wordmark {
+  font-size: clamp(5.5rem, 24vw, 19rem);
+  background: linear-gradient(180deg, rgba(243, 240, 238, 0.16) 0%, rgba(243, 240, 238, 0.02) 85%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Arrow actions (StartProject, "Read the record"): the arrow nudges 2px
+   towards its direction on pointer hover only. The target itself never
+   moves (DESIGN-SYSTEM 10.5). */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .gk-arrow-link .gk-arrow {
+    transition: transform 180ms var(--gk-ease-out);
+  }
+  .gk-arrow-link:hover .gk-arrow {
+    transform: translate(2px, -2px);
+  }
+}
+
 /* Desktop hover only: a touch tap must never trigger it, and nothing moves
    while a control is being activated. */
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {

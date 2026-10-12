@@ -1,28 +1,25 @@
-import type { CSSProperties } from "react"
 import { Link } from "react-router-dom"
 import Seo, { personSchema, websiteSchema } from "@/marketing/components/Seo"
-import {
-  Action,
-  Label,
-  Measure,
-  Orbit,
-  Placeholder,
-  Portrait,
-  Section,
-} from "@/marketing/components/primitives"
+import { Action, Label, Measure, Section } from "@/marketing/components/primitives"
+import HomeHero, { type FeaturedItem } from "@/marketing/components/HomeHero"
 import Ledger from "@/marketing/components/Ledger"
 import Testimonials from "@/marketing/components/Testimonials"
 import FadeIn from "@/marketing/components/FadeIn"
 import { site, services, howIWork } from "@/marketing/data/site"
-import { useWork } from "@/marketing/data/work"
+import { KIND_LABELS, useWork } from "@/marketing/data/work"
+import { useDemo } from "@/marketing/data/useDemo"
 import { useMarketingBlog } from "@/marketing/data/blog"
 
 /**
  * The home page.
  *
- * Direction C: the page is a document. The first screen carries the person,
- * one claim with a point of view, and a numbered contents list in place of a
- * navigation bar.
+ * The first screen carries one claim with a point of view and the work itself,
+ * in the featured-project hero (HomeHero). The numbered contents list that used
+ * to sit under it was a second navigation bar and is gone.
+ *
+ * In development the demo fixtures (src/marketing/demo) fill the empty slots
+ * so the populated layout can be seen and worked on. Each demo item carries a
+ * visible Demo tag, and none of it exists in a production build.
  *
  * Gone from this page, and not coming back without evidence: the aurora hero,
  * the animated gradient headline, the marquee, the ghost numerals, the bento
@@ -38,18 +35,27 @@ function readableDate(iso: string): string {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
 }
 
-const CONTENTS = [
-  { href: "#work", title: "Selected work", note: "Three records" },
-  { href: "#services", title: "What I do", note: "Four things" },
-  { href: "#how", title: "How I work", note: "One idea" },
-  { href: "#writing", title: "Writing" },
-  { href: "#contact", title: "Contact" },
-]
 
 export default function Home() {
   const { records } = useWork()
   const { posts } = useMarketingBlog()
   const recent = posts.slice(0, 3)
+  const demo = useDemo()
+
+  const ledger = demo ? [...demo.demoWork, ...records] : records
+  // Demo items lead in development so the frame shows a populated project.
+  const featured: FeaturedItem[] = [
+    ...(demo?.demoWork ?? []).map((r) => ({
+      record: r,
+      tags: r.tags,
+      media: demo ? <demo.ScreenMock kind={r.mock} title={r.title} /> : null,
+    })),
+    ...records.map((r) => ({
+      record: r,
+      tags: [KIND_LABELS[r.kind].name, r.sector].filter((t): t is string => Boolean(t)),
+      media: r.cover ? <img src={r.cover.src} alt={r.cover.alt} className="h-full w-full rounded-[1.25rem] object-cover" /> : null,
+    })),
+  ].slice(0, 4)
 
   return (
     <>
@@ -66,90 +72,7 @@ export default function Home() {
         ]}
       />
 
-      {/* ── Masthead ─────────────────────────────────────────────────────
-          Copy left, a circular portrait right, one orange orbit drawn
-          between them once the content has arrived (DESIGN-SYSTEM 10.4).
-          The copy rises in three steps 80ms apart; the portrait frame
-          scales from 0.98. Every one of those rests in its final state
-          under reduced motion, and the frame reserves its box throughout. */}
-      <div className="overflow-x-clip">
-        <Measure className="pb-16 pt-12 sm:pb-24 sm:pt-16 lg:pb-32 lg:pt-20">
-          <div className="relative grid items-center gap-12 lg:grid-cols-[1fr_22rem] lg:gap-16 xl:grid-cols-[1fr_26rem]">
-            <div className="relative z-10 min-w-0">
-              <div className="gk-rise">
-                <Label dot>
-                  {site.role} · {site.location}
-                </Label>
-              </div>
-              <h1
-                className="gk-rise mt-6 max-w-[16ch] font-display text-t2 text-gk-ink sm:text-t1 lg:text-display"
-                style={{ "--gk-delay": "80ms" } as CSSProperties}
-              >
-                A website is part of how a business runs, not a brochure it keeps.
-              </h1>
-              <p
-                className="gk-rise mt-8 max-w-2xl text-lede text-gk-ink-soft"
-                style={{ "--gk-delay": "160ms" } as CSSProperties}
-              >
-                I am {site.name}. I draw the thing and then I build it, so nothing is lost explaining
-                one to the other, and I stay on afterwards so it keeps working. {site.studio.note}
-              </p>
-              <div
-                className="gk-rise mt-10 flex flex-wrap gap-4"
-                style={{ "--gk-delay": "240ms" } as CSSProperties}
-              >
-                <Action to="/contact" variant="strong">
-                  Start a project
-                </Action>
-                <Action href="#work">See selected work</Action>
-              </div>
-            </div>
-
-            <div className="relative mx-auto w-full max-w-[20rem] sm:max-w-[22rem] lg:max-w-none">
-              <Orbit />
-              <div className="gk-media-in relative" style={{ "--gk-delay": "120ms" } as CSSProperties}>
-                {site.images.portrait ? (
-                  <Portrait src={site.images.portrait.src} alt={site.images.portrait.alt} />
-                ) : (
-                  <Placeholder
-                    shape="circle"
-                    label="Portrait, to supply"
-                    detail="A photograph of Gideon. No stock photograph of a stranger stands in for the person whose site this is."
-                  />
-                )}
-              </div>
-            </div>
-          </div>
-        </Measure>
-      </div>
-
-      {/* ── Contents ─────────────────────────────────────────────────── */}
-      <Section className="!py-12">
-        <nav aria-label="Contents">
-          <ol className="border-t border-gk-edge">
-            {CONTENTS.map((item, i) => (
-              <li key={item.href} className="border-b border-gk-edge">
-                <a
-                  href={item.href}
-                  className="group grid min-h-[3.5rem] grid-cols-[2.5rem_1fr] items-center gap-4 py-3 hover:bg-gk-sunk sm:grid-cols-[3.5rem_1fr_auto] sm:gap-6"
-                >
-                  <span className="font-data text-label text-gk-ink-mute">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <span className="font-display text-t4 text-gk-ink group-hover:underline">
-                    {item.title}
-                  </span>
-                  {item.note && (
-                    <span className="hidden font-data text-label uppercase text-gk-ink-mute sm:block">
-                      {item.note}
-                    </span>
-                  )}
-                </a>
-              </li>
-            ))}
-          </ol>
-        </nav>
-      </Section>
+      <HomeHero items={featured} />
 
       {/* ── Selected work ────────────────────────────────────────────── */}
       <Section id="work">
@@ -160,7 +83,7 @@ export default function Home() {
             Where a field is not mine to state yet, it says so rather than guessing.
           </p>
         </div>
-        <Ledger records={records.slice(0, 3)} headingLevel="h3" />
+        <Ledger records={ledger.slice(0, 3)} headingLevel="h3" />
         <div className="mt-10">
           <Action to="/work">All work</Action>
         </div>
@@ -219,7 +142,7 @@ export default function Home() {
       {/* Testimonials render only when the CMS holds approved ones. The
           component returns null when empty, which is the correct behaviour:
           an empty quote band is better than an invented quote. */}
-      <Testimonials />
+      <Testimonials fallback={demo?.demoTestimonials} />
 
       {/* ── Writing ──────────────────────────────────────────────────── */}
       {recent.length > 0 && (

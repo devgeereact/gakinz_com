@@ -807,3 +807,28 @@ competed in `docs/DEPLOYMENT.md`, and several fixed defects were still listed as
 that a document changed cannot prove it changed correctly; review still has to.
 **Evidence:** `npm run docs:check -- --base refs/remotes/origin/chore/codebase-hygiene` passes
 on the branch, and fails, naming `docs/DEPLOYMENT.md`, when a server file is touched alone.
+
+## D-046 · Hero, navigation and footer follow three 21st.dev patterns; demo content is development only
+**Date:** 2026-10-12 · **Status:** active
+
+The owner asked for a professional hero, navigation and footer taken from the best fitting
+21st.dev components, with no overflowing or long navigation, and for demo content so the
+populated landing page can be seen during development. Three MIT patterns were chosen from the
+21st.dev hero, navigation and footer listings and rebuilt in the D-037 tokens, with CSS motion
+only and no new dependency: "Featured Project Hero" (ibrandify) for the home hero, the
+navigation of "Agency Hero Section" (ShadcnSpace) for the masthead, and "Large Name Footer"
+(Spectrum UI) for the footer. The component source needs a 21st.dev API key, so the layouts
+were taken from the public previews, not copied. Navigation is capped at four links, shown
+inline only from 1024px; the footer drops its full service list. Demo fixtures live in
+`src/marketing/demo/`, render only when `import.meta.env.DEV` is true, and carry a visible
+Demo tag.
+**Why:** a portfolio hero should show the work, not describe it; the earlier navigation and
+footer repeated the sitemap. Demo content cannot ship because the evidence rule (D-027) forbids
+invented clients, quotes and outcomes on the public site, so it is confined to development and
+removed from the build at compile time.
+**Evidence:** after `npm run build`, no fixture name, quote or "Demo content" string is in
+`dist/`. `vite preview` of the build shows only the real fallback records with placeholder
+frames, no horizontal overflow at 390px or 1440px, and every hero element at rest with reduced
+motion. Dev server: 4 tabs, arrow-key tab movement, `/work/demo-ledgerline` resolves, the
+mobile menu closes on Escape and returns focus. NOT TESTED: real screen readers, real touch
+devices.

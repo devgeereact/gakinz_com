@@ -160,22 +160,29 @@ else is flat.
 
 ### Navigation (`PublicNavbar.tsx`)
 
-A white pill, sticky 12px (16px from 640px) below the top of the viewport. The GAkinz
-`BrandMark` and the owner's name sit at the left on every width; the role and location line
-shows from 1024px. From 768px the four links are 44px-tall pills, the current one filled with
-canvas cream, followed by the warm-black "Start a project" action. Below 768px a 44px round
-button opens a disclosure: a white 40px-radius panel laid over the page, with 48px rows and a
-full-width action. It has no focus trap, by design. It closes on Escape and returns focus to
-the button, on a route change, and when a link in it is clicked. The header's transparent
-margin ignores the pointer, so it never blocks the page beneath it.
+A white pill, sticky 12px (16px from 640px) below the top of the viewport, in three zones
+(pattern: 21st.dev "Agency Hero Section" navigation, ShadcnSpace, MIT; rebuilt in these tokens,
+D-046). Left: the GAkinz `BrandMark` and the owner's name on every width, with the role and
+location line from 1280px. Centre, from 1024px: the four links (Work, Services, Writing,
+About) as a segmented group on a cream track; the current link is a white pill with the
+float shadow. Right: `StartProject`, the warm-black action with its arrow in a cream circle,
+visible from 640px. Four links is the ceiling, and the centre group only appears where the
+measured row fits, so nothing overflows or wraps.
+
+Below 1024px a 44px round button opens a disclosure: a white 40px-radius panel laid over the
+page, with 48px rows and a full-width `StartProject`. It has no focus trap, by design. It
+closes on Escape and returns focus to the button, on a route change, and when a link in it is
+clicked. The header's transparent margin ignores the pointer, so it never blocks the page.
 
 ### Footer (`PublicFooter.tsx`)
 
-The warm-black surface. A large conversational line (`site.line` at `t2`, `t1` from 640px)
-sits beside a cream "Start a project" action and the email address, then four columns, then
-the copyright and legal links, divided by `gk-on-dark` at 20 per cent. Links are 44px tall on
-phones and 32px from 640px. Because the footer is ink, closing calls to action above it are
-lifted-cream 40px frames rather than a second dark band.
+The warm-black surface, kept short (pattern: 21st.dev "Large Name Footer", Spectrum UI, MIT;
+D-046). A brand column holds the mark, `site.line` and `StartProject` on dark; then three
+short columns, Explore (five pages), Contact (email, place, real social profiles only) and
+Legal; then the copyright and a "Back to top" link; then the studio name set very large
+(`.gk-wordmark`, `clamp(5.5rem, 24vw, 19rem)`) and cut by the page edge. The wordmark is
+decorative, `aria-hidden` and deliberately low contrast. No column holds more than five links:
+the footer no longer repeats every service. Links are 44px tall on phones and 32px from 640px.
 
 ## 5. The primitives
 
@@ -251,6 +258,15 @@ a portrait. Both have a 1.5px dashed clay border at 60 per cent, a lifted-cream 
 clay label and an optional line of detail in `gk-ink-mute`, and both reserve their final size
 so nothing moves when the real image arrives. `Gap` renders an inline bold clay `[to supply]`.
 
+**Development demo content (D-046).** In `npm run dev` only, `src/marketing/demo/` fills the
+empty slots of the home page with clearly fictional fixtures: three work records with drawn
+interface screens (`ScreenMock.tsx`) and three testimonials. Each carries a dashed clay
+`DemoTag`, and a fixed "Demo content on" note sits at the bottom left. `DEMO_ON`
+(`demo/flag.ts`) is `import.meta.env.DEV`, so `vite build` removes every demo branch and the
+fixtures are never emitted to `dist/`; `VITE_DEMO=off npm run dev` shows the production view.
+This is the one sanctioned exception to the placeholder rule, and it exists only on a
+developer's machine.
+
 **The rule this enforces.** Filling a gap means obtaining the real material, never relaxing
 the rule. **Related guards elsewhere:** `server/work.php` refuses to publish a record that
 names a client without stored consent and refuses an image with no alt text;
@@ -299,6 +315,7 @@ loops, nothing animates layout, and no base class is ever `opacity: 0`.
 | `.gk-orbit-path` | A stroke-dash draw (`pathLength="1"`) | 1000ms after 650ms, ease-in-out | `Orbit` |
 | `.gk-fadein` | Opacity and a 14px rise | 450ms | `FadeIn` |
 | `.gk-menu-panel` | Opacity and an 8px drop, entering only, via `@starting-style` | 200ms | The mobile menu. Closing is instant |
+| `.gk-arrow-link .gk-arrow` | The arrow icon nudges 2px up and right on hover; the target never moves | 180ms | `StartProject`, the hero's "Read the record". Only under `(hover: hover) and (pointer: fine)` |
 | `.gk-hover-zoom` | The child scales to 1.03 | 220ms | `MediaFrame`, `Portrait`. Only under `(hover: hover) and (pointer: fine)` |
 
 **The `FadeIn` reveal rule.** `.gk-fadein` is visible by default and, where motion is
@@ -459,15 +476,17 @@ public site stays light only. **Status:** public light-only, implemented; CMS th
 
 ### 10.4 Hero and section composition
 
-**Home hero:** a concise service headline and introduction beside a large rounded frame
-holding a real project screenshot composition or owner and work imagery. One sparse orbital
-line may connect that frame to a circular portrait or service detail. The enquiry call to
-action is visible immediately and the image area is reserved before loading. Use GAkinz
-project material so the composition has a recognisable relationship to the business.
-**Status: implemented (public) with a placeholder.** The headline, introduction and enquiry
-action sit beside a circular portrait frame, with one orbit arc over it. The portrait is a
-labelled circular `Placeholder` until a real photograph exists, and no project screenshot
-composition exists yet, so the imagery itself is still target.
+**Home hero:** a concise service headline and introduction, then the work on the first
+screen (pattern: 21st.dev "Featured Project Hero", ibrandify, MIT; D-046). The claim and the
+standfirst with `StartProject` and "See all work" sit side by side; below them, a numbered row
+of project tabs (ARIA tabs: one tab stop, arrow keys, Home and End, nothing auto-rotates)
+selects one record at a time, shown in a 40px lifted-cream frame beside its sector and year,
+title, summary, tag chips and "Read the record". `HomeHero.tsx` takes `FeaturedItem`s built
+in `Home.tsx` from the work records. The frame holds the record's cover screenshot, or a
+labelled `Placeholder` ("Project screenshot, to supply") when there is none. The numbered
+contents list that used to sit under the hero is removed: it was a second navigation bar.
+**Status: implemented (public).** No real project screenshots exist yet, so in production
+every frame is a placeholder until covers are added in the CMS.
 
 **Service and detail heroes:** smaller rounded media or circular imagery related to the
 service, with copy and a relevant call to action. Vary placement and crop on purpose rather
@@ -498,7 +517,7 @@ page. The timings are starting values, tuned in browser review.
 | Orbital accent | One SVG path draw over 800 to 1200ms after the main content appears | Decorative and `aria-hidden`; no endless orbiting, flashing or required meaning | Implemented (public): `.gk-orbit-path`, 1000ms after 650ms, runs once |
 | Service and portfolio sections | A single viewport entrance, opacity and 12 to 16px movement, 350 to 500ms | Triggers once; no scroll hijack, pinned narrative or long repeated stagger | Implemented (public): `FadeIn`, 14px, 450ms, on the sections that already used it |
 | Portrait and media hover | A small image scale or satellite-arrow shift, 150 to 250ms | Desktop hover only; clipping stays stable; the phone action works without hover | Implemented (public): `.gk-hover-zoom`, scale 1.03, 220ms. No satellite control |
-| Buttons and menu | Colour or opacity and an optional 1 to 2px arrow shift, 120 to 200ms; menu panel around 180 to 240ms | Keyboard focus distinct; nothing moves the target during activation | Implemented (public): colour only, 150ms, no arrow shift; menu panel 200ms on entry |
+| Buttons and menu | Colour or opacity and an optional 1 to 2px arrow shift, 120 to 200ms; menu panel around 180 to 240ms | Keyboard focus distinct; nothing moves the target during activation | Implemented (public): colour, 150ms; a 2px arrow nudge on `StartProject` and "Read the record" (pointer hover only, D-046); menu panel 200ms on entry |
 | CMS panels and dialogs | A brief fade or small displacement, around 120 to 180ms | No staggered table rows, animated money counts or workflow delay | Target |
 | Success and loading | Short state feedback or a restrained skeleton | Never fake completion or progress; errors stay visible until resolved | Target |
 
