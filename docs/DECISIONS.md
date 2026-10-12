@@ -809,7 +809,7 @@ that a document changed cannot prove it changed correctly; review still has to.
 on the branch, and fails, naming `docs/DEPLOYMENT.md`, when a server file is touched alone.
 
 ## D-046 · Hero, navigation and footer follow three 21st.dev patterns; demo content is development only
-**Date:** 2026-10-12 · **Status:** active
+**Date:** 2026-10-12 · **Status:** the demo-content half is active; the hero, navigation and footer half is superseded by D-047
 
 The owner asked for a professional hero, navigation and footer taken from the best fitting
 21st.dev components, with no overflowing or long navigation, and for demo content so the
@@ -832,3 +832,23 @@ frames, no horizontal overflow at 390px or 1440px, and every hero element at res
 motion. Dev server: 4 tabs, arrow-key tab movement, `/work/demo-ledgerline` resolves, the
 mobile menu closes on Escape and returns focus. NOT TESTED: real screen readers, real touch
 devices.
+
+## D-047 · A businesslike public frame, modelled on the owner's EGO LTD and RitaGreen sites
+**Date:** 2026-10-12 · **Status:** active
+
+The owner named two 21st.dev components and their own EGO LTD and RitaGreen sites as the
+standard, "clean and professional". The home hero follows "SaaS Template" (waleedkibhen, MIT):
+an ink stage, an announcement pill, a centred fading headline, a warm glow and a GAkinzOS
+product frame. The footer follows "Newsletter Signup Footer" (Oliver, MIT) on lifted cream;
+its email field starts an enquiry, because there is no newsletter. The masthead follows EGO
+and RitaGreen: a dark utility line of contact facts, a solid bar with the links beside the
+brand, "Client login" and the action on the right. Actions and fields move from a 20px to a
+12px radius (`rounded-action`), a squarer, more businesslike shape than the Mastercard pill;
+40px media frames stay. The featured-project tabs from D-046 are removed: the hero now shows
+the product, and the work ledger follows it. Demo fixture names were changed so none resembles
+a real client project of the owner's.
+**Why:** the owner's direction. It departs from D-037 in the action radius and the light
+footer; the palette, type and 40px frames are unchanged.
+**Evidence:** production preview: no horizontal overflow at 320, 390, 768 and 1440px, no demo
+text, every hero element at rest with reduced motion. Dev server: the footer field opens
+`/contact` with the email filled in. NOT TESTED: real screen readers, real touch devices.

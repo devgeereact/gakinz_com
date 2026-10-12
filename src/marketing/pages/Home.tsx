@@ -1,21 +1,21 @@
 import { Link } from "react-router-dom"
 import Seo, { personSchema, websiteSchema } from "@/marketing/components/Seo"
 import { Action, Label, Measure, Section } from "@/marketing/components/primitives"
-import HomeHero, { type FeaturedItem } from "@/marketing/components/HomeHero"
+import HomeHero from "@/marketing/components/HomeHero"
 import Ledger from "@/marketing/components/Ledger"
 import Testimonials from "@/marketing/components/Testimonials"
 import FadeIn from "@/marketing/components/FadeIn"
 import { site, services, howIWork } from "@/marketing/data/site"
-import { KIND_LABELS, useWork } from "@/marketing/data/work"
+import { useWork } from "@/marketing/data/work"
 import { useDemo } from "@/marketing/data/useDemo"
 import { useMarketingBlog } from "@/marketing/data/blog"
 
 /**
  * The home page.
  *
- * The first screen carries one claim with a point of view and the work itself,
- * in the featured-project hero (HomeHero). The numbered contents list that used
- * to sit under it was a second navigation bar and is gone.
+ * The first screen is the hero (HomeHero, D-047): one claim with a point of
+ * view, the actions, and the GAkinzOS frame. The numbered contents list that
+ * used to sit under it was a second navigation bar and is gone.
  *
  * In development the demo fixtures (src/marketing/demo) fill the empty slots
  * so the populated layout can be seen and worked on. Each demo item carries a
@@ -43,19 +43,6 @@ export default function Home() {
   const demo = useDemo()
 
   const ledger = demo ? [...demo.demoWork, ...records] : records
-  // Demo items lead in development so the frame shows a populated project.
-  const featured: FeaturedItem[] = [
-    ...(demo?.demoWork ?? []).map((r) => ({
-      record: r,
-      tags: r.tags,
-      media: demo ? <demo.ScreenMock kind={r.mock} title={r.title} /> : null,
-    })),
-    ...records.map((r) => ({
-      record: r,
-      tags: [KIND_LABELS[r.kind].name, r.sector].filter((t): t is string => Boolean(t)),
-      media: r.cover ? <img src={r.cover.src} alt={r.cover.alt} className="h-full w-full rounded-[1.25rem] object-cover" /> : null,
-    })),
-  ].slice(0, 4)
 
   return (
     <>
@@ -72,7 +59,7 @@ export default function Home() {
         ]}
       />
 
-      <HomeHero items={featured} />
+      <HomeHero screen={demo ? <demo.ScreenMock kind="dashboard" title="GAkinzOS" bare /> : null} />
 
       {/* ── Selected work ────────────────────────────────────────────── */}
       <Section id="work">

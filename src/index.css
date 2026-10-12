@@ -128,9 +128,10 @@
     --border: var(--gk-edge);
     --input: var(--gk-edge);
     --ring: var(--gk-ink);
-    /* The reference skips the 8 to 12px middle: 20px actions, 40px media,
-       full pills. Shared shadcn controls inherit the 20px step. */
-    --radius: 1.25rem;
+    /* 12px actions and fields (D-047, a squarer, more businesslike action
+       than the reference's 20px pill), 40px media frames, full pills for
+       chips. Shared shadcn controls inherit the 12px step. */
+    --radius: 0.75rem;
     /* One strong ease-out for every entrance and hover. */
     --gk-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
     font-family: 'Sofia Sans Variable', Manrope, ui-sans-serif, system-ui, sans-serif;
@@ -714,17 +715,6 @@
       transform: translateY(-8px);
     }
   }
-}
-
-/* The footer wordmark (PublicFooter): the studio name set as large as the
-   column allows and cut by the page edge. Decorative and aria-hidden, so the
-   low contrast is deliberate; it never carries information. */
-.gk-wordmark {
-  font-size: clamp(5.5rem, 24vw, 19rem);
-  background: linear-gradient(180deg, rgba(243, 240, 238, 0.16) 0%, rgba(243, 240, 238, 0.02) 85%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
 }
 
 /* Arrow actions (StartProject, "Read the record"): the arrow nudges 2px

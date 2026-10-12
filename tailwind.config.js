@@ -45,9 +45,9 @@ var config = {
             // Spacing needs no extension: the reference's 8, 16, 24, 32, 48,
             // 64, 96 and 128 are Tailwind's 2, 4, 6, 8, 12, 16, 24 and 32.
             borderRadius: {
-                // The reference radius scale, public surface: 20px actions,
+                // Public radius scale: 12px actions and fields (D-047),
                 // 40px media frames. Pills and circles use `rounded-full`.
-                action: '1.25rem',
+                action: '0.75rem',
                 media: '2.5rem',
                 lg: 'var(--radius)',
                 md: 'calc(var(--radius) - 2px)',

@@ -150,7 +150,7 @@ phones, 32px from 640px and 48px from 1024px. `Section` pads 64px, then 96px fro
 
 | Token | Value | Use |
 |---|---|---|
-| `rounded-action` | 20px | Primary and secondary actions, form fields, notices, mobile menu rows. Also `--radius` on `.gk-public`, which shared shadcn controls inherit |
+| `rounded-action` | 12px (20px until D-047) | Primary and secondary actions, form fields, notices, square icon buttons. Also `--radius` on `.gk-public`, which shared shadcn controls inherit |
 | `rounded-media` | 40px | Media frames, placeholders, closing frames, the mobile menu panel |
 | `rounded-full` | pill or circle | Navigation pill and its links, filter chips, portraits |
 
@@ -160,29 +160,29 @@ else is flat.
 
 ### Navigation (`PublicNavbar.tsx`)
 
-A white pill, sticky 12px (16px from 640px) below the top of the viewport, in three zones
-(pattern: 21st.dev "Agency Hero Section" navigation, ShadcnSpace, MIT; rebuilt in these tokens,
-D-046). Left: the GAkinz `BrandMark` and the owner's name on every width, with the role and
-location line from 1280px. Centre, from 1024px: the four links (Work, Services, Writing,
-About) as a segmented group on a cream track; the current link is a white pill with the
-float shadow. Right: `StartProject`, the warm-black action with its arrow in a cream circle,
-visible from 640px. Four links is the ceiling, and the centre group only appears where the
-measured row fits, so nothing overflows or wraps.
+Modelled on the owner's EGO LTD and RitaGreen sites, which the owner set as the standard
+(D-047). From 768px a 40px ink utility line carries the email, the place and the reply
+intention, all from `site`. Below it, one solid white bar, 72px tall, sticky, with a hairline
+foot: the `BrandMark` with the owner's name and role on the left, then the four links (Work,
+Services, Writing, About) beside it from 1024px, the current one underlined in ink; on the
+right "Client login" (to `/login`, from 1024px) and `StartProject`, the ink action with a
+trailing arrow (from 640px). Four links is the ceiling, and they only sit in the bar where the
+measured row fits, so nothing overflows.
 
-Below 1024px a 44px round button opens a disclosure: a white 40px-radius panel laid over the
-page, with 48px rows and a full-width `StartProject`. It has no focus trap, by design. It
-closes on Escape and returns focus to the button, on a route change, and when a link in it is
-clicked. The header's transparent margin ignores the pointer, so it never blocks the page.
+Below 1024px a 44px square button opens a disclosure: a full-width white panel under the bar
+with 52px divided rows, the client login and a full-width `StartProject`. It has no focus trap,
+by design. It closes on Escape and returns focus to the button, on a route change, and when a
+link in it is clicked.
 
 ### Footer (`PublicFooter.tsx`)
 
-The warm-black surface, kept short (pattern: 21st.dev "Large Name Footer", Spectrum UI, MIT;
-D-046). A brand column holds the mark, `site.line` and `StartProject` on dark; then three
-short columns, Explore (five pages), Contact (email, place, real social profiles only) and
-Legal; then the copyright and a "Back to top" link; then the studio name set very large
-(`.gk-wordmark`, `clamp(5.5rem, 24vw, 19rem)`) and cut by the page edge. The wordmark is
-decorative, `aria-hidden` and deliberately low contrast. No column holds more than five links:
-the footer no longer repeats every service. Links are 44px tall on phones and 32px from 640px.
+Pattern: 21st.dev "Newsletter Signup Footer" (Oliver, MIT), chosen by the owner (D-047). A
+lifted-cream surface with a hairline top. Left: the mark and studio name, "Have a project in
+mind?", and an email field with "Continue". There is no newsletter, so the field starts an
+enquiry: it navigates to `/contact` with the address in router state (never the URL), and the
+form there opens with it filled in. Right: three short columns, Work, Studio and Legal, at most
+four links each. The bottom line holds the copyright, email and place with icons, real social
+profiles as square buttons (none yet), and a square "Back to top" button.
 
 ## 5. The primitives
 
@@ -476,17 +476,17 @@ public site stays light only. **Status:** public light-only, implemented; CMS th
 
 ### 10.4 Hero and section composition
 
-**Home hero:** a concise service headline and introduction, then the work on the first
-screen (pattern: 21st.dev "Featured Project Hero", ibrandify, MIT; D-046). The claim and the
-standfirst with `StartProject` and "See all work" sit side by side; below them, a numbered row
-of project tabs (ARIA tabs: one tab stop, arrow keys, Home and End, nothing auto-rotates)
-selects one record at a time, shown in a 40px lifted-cream frame beside its sector and year,
-title, summary, tag chips and "Read the record". `HomeHero.tsx` takes `FeaturedItem`s built
-in `Home.tsx` from the work records. The frame holds the record's cover screenshot, or a
-labelled `Placeholder` ("Project screenshot, to supply") when there is none. The numbered
-contents list that used to sit under the hero is removed: it was a second navigation bar.
-**Status: implemented (public).** No real project screenshots exist yet, so in production
-every frame is a placeholder until covers are added in the CMS.
+**Home hero:** pattern: 21st.dev "SaaS Template" hero (waleedkibhen, MIT), chosen by the owner
+(D-047). An ink stage with a 40px radius, inset 12px from the viewport edge, holds a
+centred composition: an announcement pill linking to the GAkinzOS record, the two-line
+headline whose second line fades from cream to muted, the standfirst, `StartProject` and "See
+the work" on dark, and a line of three check-marked promises the site already states. A
+decorative orange radial glow sits behind the actions. A browser-style frame rises out of the
+stage and is cut by its foot; it is for GAkinzOS, the owner's own system. **Status:
+implemented (public).** No real GAkinzOS capture exists yet, so in production the frame holds
+a labelled placeholder ("GAkinzOS screenshot, to supply"), which reads as empty at desktop size.
+Supplying a capture with no client data in it is the next step. In development the demo
+fixtures draw a dashboard in it.
 
 **Service and detail heroes:** smaller rounded media or circular imagery related to the
 service, with copy and a relevant call to action. Vary placement and crop on purpose rather

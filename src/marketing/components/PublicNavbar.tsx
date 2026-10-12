@@ -1,26 +1,23 @@
 import { useEffect, useRef, useState } from "react"
 import { Link, NavLink, useLocation } from "react-router-dom"
-import { ArrowUpRight, Menu, X } from "lucide-react"
+import { ArrowRight, Clock, Mail, MapPin, Menu, X } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { site } from "@/marketing/data/site"
 import BrandMark from "./BrandMark"
 import { actionClass } from "./action-class"
 
 /**
- * The masthead: one floating white pill, three zones.
+ * The masthead: a slim utility line, then one solid bar (D-047).
  *
- * Pattern taken from the 21st.dev "Agency Hero Section" navigation
- * (ShadcnSpace, MIT): brand on the left, a segmented group of links in the
- * centre, and the enquiry action on the right with its arrow in a circle.
- * Rebuilt in the D-037 tokens with no new dependency; see DESIGN-SYSTEM 4.
+ * Modelled on the owner's own EGO LTD and RitaGreen sites, which the owner
+ * named as the standard: contact facts in a dark utility line, the brand with
+ * the nav beside it, and the sign-in link and the one action on the right.
+ * Every fact in the utility line comes from `site`; nothing is invented.
  *
- * Overflow is designed out rather than squeezed:
- *   - four links, short labels, and never more (the old mega-menu is not
- *     coming back: it declared role="menu" on links and broke the link role);
- *   - the centre group appears only from 1024px, where the measured row fits
- *     with room to spare; below that the links move into the disclosure;
- *   - the enquiry action stays visible from 640px, and inside the disclosure
- *     below that, so it is never more than one tap away.
+ * Overflow is designed out rather than squeezed: four links, never more,
+ * shown inline only from 1024px, where the measured row fits with room to
+ * spare. Below that they move into the disclosure with the sign-in link and
+ * the action. The utility line hides below 768px.
  *
  * The mobile panel is a disclosure, not a modal: no focus trap, because a
  * disclosure should not have one. It closes on Escape (returning focus to its
@@ -34,23 +31,12 @@ const LINKS = [
   { to: "/about", label: "About" },
 ]
 
-/** The enquiry action with the arrow in a circle. Shared with the hero and footer. */
+/** The enquiry action. Shared with the hero and the footer. */
 export function StartProject({ className, onDark = false }: { className?: string; onDark?: boolean }) {
   return (
-    <Link
-      to="/contact"
-      className={actionClass({ variant: "strong", onDark, className: cn("gk-arrow-link gap-3 pr-1.5", className) })}
-    >
+    <Link to="/contact" className={actionClass({ variant: "strong", onDark, className: cn("gk-arrow-link", className) })}>
       Start a project
-      <span
-        aria-hidden
-        className={cn(
-          "inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-          onDark ? "bg-gk-ink text-gk-on-dark" : "bg-gk-on-dark text-gk-ink",
-        )}
-      >
-        <ArrowUpRight className="gk-arrow h-4 w-4" />
-      </span>
+      <ArrowRight aria-hidden className="gk-arrow h-4 w-4" />
     </Link>
   )
 }
@@ -77,28 +63,49 @@ export default function PublicNavbar() {
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      "inline-flex min-h-[2.5rem] items-center rounded-full px-4 text-body font-medium tracking-[-0.02em] transition-colors duration-150",
-      isActive ? "bg-gk-white text-gk-ink shadow-float" : "text-gk-ink-soft hover:text-gk-ink",
+      "relative inline-flex min-h-[2.75rem] items-center px-1 text-body font-medium tracking-[-0.01em] transition-colors duration-150",
+      "after:absolute after:inset-x-1 after:bottom-1.5 after:h-0.5 after:rounded-full",
+      isActive ? "text-gk-ink after:bg-gk-ink" : "text-gk-ink-soft hover:text-gk-ink after:bg-transparent",
     )
 
   return (
-    <header className="pointer-events-none sticky top-0 z-50 px-3 pt-3 sm:px-6 sm:pt-4">
-      <div className="pointer-events-auto relative mx-auto w-full max-w-[76rem]">
-        <div className="grid grid-cols-[1fr_auto] items-center gap-4 rounded-full bg-gk-white py-2 pl-4 pr-2 shadow-float sm:pl-5 lg:grid-cols-[1fr_auto_1fr]">
-          <Link to="/" className="flex min-h-[2.75rem] min-w-0 items-center gap-3 justify-self-start">
-            <BrandMark className="h-8 w-8 shrink-0 text-gk-ink" />
+    <>
+      {/* ── Utility line ─────────────────────────────────────────────── */}
+      <div className="hidden bg-gk-ink text-[0.8125rem] text-gk-on-dark-soft md:block">
+        <div className="mx-auto flex h-10 w-full max-w-[76rem] items-center justify-between gap-6 px-8 lg:px-12">
+          <div className="flex items-center gap-6">
+            <a href={`mailto:${site.contact.email}`} className="inline-flex items-center gap-2 hover:text-gk-on-dark">
+              <Mail aria-hidden className="h-3.5 w-3.5" />
+              {site.contact.email}
+            </a>
+            <span className="inline-flex items-center gap-2">
+              <MapPin aria-hidden className="h-3.5 w-3.5" />
+              {site.contact.place}
+            </span>
+          </div>
+          <span className="inline-flex items-center gap-2">
+            <Clock aria-hidden className="h-3.5 w-3.5" />I aim to reply the next working day
+          </span>
+        </div>
+      </div>
+
+      {/* ── Bar ─────────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-50 border-b border-gk-rule bg-gk-white/95 backdrop-blur supports-[backdrop-filter]:bg-gk-white/85">
+        <div className="relative mx-auto flex h-[4.5rem] w-full max-w-[76rem] items-center gap-10 px-4 sm:px-8 lg:px-12">
+          <Link to="/" className="flex min-h-[2.75rem] min-w-0 items-center gap-3">
+            <BrandMark className="h-9 w-9 shrink-0 text-gk-ink" />
             <span className="min-w-0">
-              <span className="block truncate text-body font-medium leading-tight tracking-[-0.02em] text-gk-ink">
+              <span className="block truncate text-body font-bold leading-tight tracking-[-0.01em] text-gk-ink">
                 {site.name}
               </span>
-              <span className="hidden truncate text-[0.75rem] font-bold uppercase leading-tight tracking-[0.04em] text-gk-ink-mute xl:block">
-                {site.role} · {site.location}
+              <span className="block truncate text-[0.6875rem] font-bold uppercase leading-tight tracking-[0.12em] text-gk-ink-mute">
+                {site.role}
               </span>
             </span>
           </Link>
 
           <nav aria-label="Primary" className="hidden lg:block">
-            <ul className="flex items-center gap-1 rounded-full bg-gk-paper p-1">
+            <ul className="flex items-center gap-7">
               {LINKS.map((l) => (
                 <li key={l.to}>
                   <NavLink to={l.to} className={linkClass}>
@@ -109,7 +116,13 @@ export default function PublicNavbar() {
             </ul>
           </nav>
 
-          <div className="flex items-center gap-2 justify-self-end">
+          <div className="ml-auto flex items-center gap-3">
+            <Link
+              to="/login"
+              className="hidden min-h-[2.75rem] items-center px-2 text-body font-medium text-gk-ink-soft transition-colors duration-150 hover:text-gk-ink lg:inline-flex"
+            >
+              Client login
+            </Link>
             <StartProject className="hidden sm:inline-flex" />
             <button
               ref={triggerRef}
@@ -118,7 +131,7 @@ export default function PublicNavbar() {
               aria-expanded={open}
               aria-controls="primary-menu"
               aria-label={open ? "Close menu" : "Open menu"}
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gk-paper text-gk-ink lg:hidden"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-action border border-gk-rule text-gk-ink lg:hidden"
             >
               {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
@@ -128,30 +141,36 @@ export default function PublicNavbar() {
         <div
           id="primary-menu"
           hidden={!open}
-          className="gk-menu-panel absolute inset-x-0 top-full mt-2 rounded-media bg-gk-white p-3 shadow-lifted lg:hidden"
+          className="gk-menu-panel absolute inset-x-0 top-full border-b border-gk-rule bg-gk-white px-4 pb-5 pt-2 shadow-lifted sm:px-8 lg:hidden"
         >
           <nav aria-label="Primary" onClick={(e) => (e.target as HTMLElement).closest("a") && setOpenOn(null)}>
-            <ul>
+            <ul className="divide-y divide-gk-rule">
               {LINKS.map((l) => (
                 <li key={l.to}>
                   <NavLink
                     to={l.to}
                     className={({ isActive }) =>
                       cn(
-                        "flex min-h-[3rem] items-center rounded-action px-4 text-lede font-medium tracking-[-0.02em] text-gk-ink",
-                        isActive && "bg-gk-paper",
+                        "flex min-h-[3.25rem] items-center justify-between text-lede font-medium tracking-[-0.01em]",
+                        isActive ? "text-gk-ink" : "text-gk-ink-soft",
                       )
                     }
                   >
                     {l.label}
+                    <ArrowRight aria-hidden className="h-4 w-4 text-gk-ink-mute" />
                   </NavLink>
                 </li>
               ))}
+              <li>
+                <Link to="/login" className="flex min-h-[3.25rem] items-center text-lede font-medium text-gk-ink-soft">
+                  Client login
+                </Link>
+              </li>
             </ul>
-            <StartProject className="mt-3 w-full justify-between pl-6" />
+            <StartProject className="mt-4 w-full" />
           </nav>
         </div>
-      </div>
-    </header>
+      </header>
+    </>
   )
 }

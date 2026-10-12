@@ -1,137 +1,171 @@
-import { Link } from "react-router-dom"
-import { ArrowUp } from "lucide-react"
+import { useState, type FormEvent } from "react"
+import { Link, useNavigate } from "react-router-dom"
+import { ArrowRight, ArrowUp, Mail, MapPin } from "lucide-react"
 import { site } from "@/marketing/data/site"
 import BrandMark from "./BrandMark"
-import { StartProject } from "./PublicNavbar"
+import { actionClass } from "./action-class"
 
 /**
- * The footer: the reference's warm-black surface, kept short.
+ * The footer (D-047).
  *
- * Pattern taken from the 21st.dev "Large Name Footer" (Spectrum UI, MIT): a
- * brand column with the one action, three short link columns, and the studio
- * name set very large at the foot, cut by the page edge. Rebuilt in the D-037
- * tokens with no new dependency; see DESIGN-SYSTEM 4.
+ * Pattern taken from the 21st.dev "Newsletter Signup Footer" (Oliver, MIT),
+ * as the owner chose: a light surface, the brand and one email field on the
+ * left, three short link columns on the right, and a quiet bottom line with
+ * square icon buttons. Rebuilt in the D-037 tokens.
  *
- * Deliberately short. The previous footer listed every service as well as
- * every page; a footer is a way out, not a second sitemap. No column holds
- * more than five links.
+ * There is no newsletter, so the field is not a subscription: it starts an
+ * enquiry. Submitting carries the address to /contact in router state (not
+ * the URL, so it never lands in a server log) and the form there opens with
+ * it filled in. Nothing is sent from the footer itself.
  *
- * What was removed earlier, and must stay removed:
- *   - a hard-coded `© 2026` (the year is computed);
- *   - "Company registration number 00000000", which is not a real number
- *     (`site.studio.registration` prints only when one exists);
- *   - social icons linking to bare home pages (`site.social` renders only
- *     real profile URLs).
- *
- * Column headings are `<h2>` styled as labels. Links are 44px tall on touch
- * widths and 32px where a pointer is likely. The wordmark is decorative and
- * hidden from assistive technology; it carries no information.
+ * Kept short on purpose: no column holds more than five links, and the
+ * footer does not repeat every service. Must stay removed: a hard-coded
+ * year, an invented registration number, and social links to bare home
+ * pages (`site.social` renders only real profiles).
  */
 const LINK =
-  "inline-flex min-h-[2.75rem] items-center text-body text-gk-on-dark-soft transition-colors duration-150 hover:text-gk-on-dark sm:min-h-[2rem]"
-const HEAD = "text-label font-bold uppercase text-gk-on-dark-soft"
+  "inline-flex min-h-[2.75rem] items-center text-body text-gk-ink-soft transition-colors duration-150 hover:text-gk-ink sm:min-h-[2rem]"
+const HEAD = "text-body font-bold text-gk-ink"
 
-const EXPLORE = [
-  { to: "/work", label: "Work" },
-  { to: "/services", label: "Services" },
-  { to: "/pricing", label: "Pricing" },
-  { to: "/resources", label: "Writing" },
-  { to: "/about", label: "About" },
-]
-
-const LEGAL = [
-  { to: "/privacy", label: "Privacy" },
-  { to: "/terms", label: "Terms" },
-  { to: "/cookies", label: "Cookies" },
+const COLUMNS = [
+  {
+    title: "Work",
+    links: [
+      { to: "/work", label: "Selected work" },
+      { to: "/services", label: "Services" },
+      { to: "/pricing", label: "Pricing" },
+      { to: "/sectors", label: "Who I work with" },
+    ],
+  },
+  {
+    title: "Studio",
+    links: [
+      { to: "/about", label: "About" },
+      { to: "/resources", label: "Writing" },
+      { to: "/contact", label: "Contact" },
+      { to: "/login", label: "Client login" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { to: "/privacy", label: "Privacy" },
+      { to: "/terms", label: "Terms" },
+      { to: "/cookies", label: "Cookies" },
+    ],
+  },
 ]
 
 export default function PublicFooter() {
   const year = new Date().getFullYear()
+  const navigate = useNavigate()
+  const [email, setEmail] = useState("")
+
+  const start = (e: FormEvent) => {
+    e.preventDefault()
+    navigate("/contact", { state: { email: email.trim() } })
+  }
 
   return (
-    <footer className="overflow-hidden bg-gk-ink text-gk-on-dark">
-      <div className="mx-auto w-full max-w-[76rem] px-4 pt-16 sm:px-8 md:pt-24 lg:px-12">
-        <div className="grid gap-12 md:grid-cols-[1.4fr_1fr_1fr_1fr] md:gap-8">
-          <div className="max-w-sm">
-            <p className="flex items-center gap-3 text-lede font-medium text-gk-on-dark">
-              <BrandMark className="h-8 w-8 shrink-0" />
-              {site.studio.name}
+    <footer className="border-t border-gk-rule bg-gk-sunk">
+      <div className="mx-auto w-full max-w-[76rem] px-4 pb-10 pt-16 sm:px-8 md:pt-20 lg:px-12">
+        <div className="grid gap-12 lg:grid-cols-[1.25fr_2fr] lg:gap-16">
+          <div className="max-w-md">
+            <Link to="/" className="inline-flex min-h-[2.75rem] items-center gap-3">
+              <BrandMark className="h-8 w-8 shrink-0 text-gk-ink" />
+              <span className="text-lede font-bold tracking-[-0.01em] text-gk-ink">{site.studio.name}</span>
+            </Link>
+            <h2 className="mt-6 font-display text-t4 font-medium text-gk-ink">Have a project in mind?</h2>
+            <p className="mt-2 text-body text-gk-ink-soft">
+              Leave your email and the enquiry form opens with it filled in. A paragraph about the job is
+              enough.
             </p>
-            <p className="mt-5 text-body text-gk-on-dark-soft">{site.line}</p>
-            <StartProject onDark className="mt-8" />
+            <form onSubmit={start} className="mt-5 flex flex-col gap-2 sm:flex-row">
+              <label htmlFor="footer-email" className="sr-only">
+                Email address
+              </label>
+              <input
+                id="footer-email"
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@company.co.uk"
+                className="min-h-[2.75rem] w-full min-w-0 flex-1 rounded-action border border-gk-edge bg-gk-white px-4 text-body text-gk-ink"
+              />
+              <button type="submit" className={actionClass({ variant: "strong", className: "gk-arrow-link shrink-0" })}>
+                Continue
+                <ArrowRight aria-hidden className="gk-arrow h-4 w-4" />
+              </button>
+            </form>
+            <p className="mt-3 text-[0.875rem] text-gk-ink-mute">
+              {site.contact.replyIntent} See the{" "}
+              <Link to="/privacy" className="underline underline-offset-2 hover:text-gk-ink">
+                privacy notice
+              </Link>
+              .
+            </p>
           </div>
 
-          <div>
-            <h2 className={HEAD}>Explore</h2>
-            <ul className="mt-4 space-y-1">
-              {EXPLORE.map((l) => (
-                <li key={l.to}>
-                  <Link to={l.to} className={LINK}>
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+          <div className="grid gap-10 sm:grid-cols-3">
+            {COLUMNS.map((c) => (
+              <div key={c.title}>
+                <h2 className={HEAD}>{c.title}</h2>
+                <ul className="mt-4 space-y-1">
+                  {c.links.map((l) => (
+                    <li key={l.to}>
+                      <Link to={l.to} className={LINK}>
+                        {l.label}
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
           </div>
+        </div>
 
-          <div>
-            <h2 className={HEAD}>Contact</h2>
-            <ul className="mt-4 space-y-1">
-              <li>
-                <a className={LINK} href={`mailto:${site.contact.email}`}>
-                  {site.contact.email}
+        <div className="mt-16 flex flex-col gap-4 border-t border-gk-rule pt-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-1 text-[0.875rem] text-gk-ink-mute sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-5">
+            <span>
+              © {year} {site.name}
+              {site.studio.registration ? ` · ${site.studio.registration}` : ""}
+            </span>
+            <a href={`mailto:${site.contact.email}`} className="inline-flex min-h-[2.75rem] items-center gap-2 hover:text-gk-ink sm:min-h-0">
+              <Mail aria-hidden className="h-3.5 w-3.5" />
+              {site.contact.email}
+            </a>
+            <span className="inline-flex items-center gap-2">
+              <MapPin aria-hidden className="h-3.5 w-3.5" />
+              {site.contact.place}
+            </span>
+          </div>
+          <ul className="flex items-center gap-2">
+            {site.social.map((s) => (
+              <li key={s.url}>
+                <a
+                  href={s.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="inline-flex h-11 min-w-[2.75rem] items-center justify-center rounded-action border border-gk-rule bg-gk-white px-3 text-[0.875rem] text-gk-ink-soft hover:text-gk-ink"
+                >
+                  {s.label}
                 </a>
               </li>
-              {site.contact.phone && (
-                <li>
-                  <a className={LINK} href={`tel:${site.contact.phone.replace(/\s/g, "")}`}>
-                    {site.contact.phone}
-                  </a>
-                </li>
-              )}
-              <li className="py-2 text-body text-gk-on-dark-soft">{site.contact.place}</li>
-              {site.social.map((s) => (
-                <li key={s.url}>
-                  <a className={LINK} href={s.url} target="_blank" rel="noreferrer noopener">
-                    {s.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <h2 className={HEAD}>Legal</h2>
-            <ul className="mt-4 space-y-1">
-              {LEGAL.map((l) => (
-                <li key={l.to}>
-                  <Link to={l.to} className={LINK}>
-                    {l.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        <div className="mt-16 flex flex-col gap-2 border-t border-gk-on-dark/20 pt-6 text-body text-gk-on-dark-soft sm:flex-row sm:items-center sm:justify-between">
-          <p>
-            © {year} {site.name}
-            {site.studio.registration ? ` · ${site.studio.registration}` : ""}
-          </p>
-          <a href="#main" className={`${LINK} gap-2`}>
-            Back to top
-            <ArrowUp aria-hidden className="h-4 w-4" />
-          </a>
+            ))}
+            <li>
+              <a
+                href="#main"
+                aria-label="Back to top"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-action border border-gk-rule bg-gk-white text-gk-ink-soft hover:text-gk-ink"
+              >
+                <ArrowUp aria-hidden className="h-4 w-4" />
+              </a>
+            </li>
+          </ul>
         </div>
       </div>
-
-      <p
-        aria-hidden
-        className="gk-wordmark pointer-events-none mx-auto -mb-[0.18em] mt-6 max-w-[76rem] select-none px-4 text-center font-display font-medium leading-[0.8] tracking-[-0.05em] sm:px-8 lg:px-12"
-      >
-        {site.studio.name}
-      </p>
     </footer>
   )
 }

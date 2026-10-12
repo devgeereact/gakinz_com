@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { useLocation } from "react-router-dom"
 import Seo from "@/marketing/components/Seo"
 import { Action, PageHero, Section } from "@/marketing/components/primitives"
 import { actionClass } from "@/marketing/components/action-class"
@@ -70,7 +71,12 @@ function Marker({ children }: { children: string }) {
 }
 
 export default function Contact() {
-  const [form, setForm] = useState<EnquiryPayload>(EMPTY)
+  // The footer's email field passes the address in router state (D-047).
+  const { state } = useLocation()
+  const [form, setForm] = useState<EnquiryPayload>(() => {
+    const email = (state as { email?: unknown } | null)?.email
+    return typeof email === "string" ? { ...EMPTY, email: email.slice(0, 200) } : EMPTY
+  })
   const [sending, setSending] = useState(false)
   const [errors, setErrors] = useState<Partial<Record<RequiredField, string>>>({})
   const [sendError, setSendError] = useState("")

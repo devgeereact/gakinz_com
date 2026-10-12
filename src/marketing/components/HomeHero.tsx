@@ -1,201 +1,120 @@
-import { useId, useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react"
+import type { CSSProperties, ReactNode } from "react"
 import { Link } from "react-router-dom"
-import { ArrowUpRight } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { ArrowRight, Check } from "lucide-react"
 import { site } from "@/marketing/data/site"
-import { KIND_LABELS, type WorkRecord } from "@/marketing/data/work"
 import { StartProject } from "./PublicNavbar"
-import { Action, DemoTag, Label, Measure, Placeholder } from "./primitives"
+import { Action } from "./primitives"
 
 /**
- * The home hero: the claim, then the work, on the first screen.
+ * The home hero (D-047).
  *
- * Pattern taken from the 21st.dev "Featured Project Hero" (Waqar H. Syed,
- * ibrandify, MIT): headline and standfirst split across the top, a numbered
- * row of project tabs, and one project at a time in a large frame beside its
- * summary and a single action. Rebuilt in the D-037 tokens with CSS motion
- * only (DESIGN-SYSTEM 10.4 and 10.5); no animation library.
+ * Pattern taken from the 21st.dev "SaaS Template" hero (waleedkibhen, MIT),
+ * as the owner chose: a dark stage, a small announcement pill, a centred
+ * two-line headline whose second line fades, one standfirst, the actions, a
+ * warm glow under them, and a large product frame rising out of the stage.
+ * Rebuilt in the D-037 tokens (ink stage, cream type, decorative orange glow)
+ * with CSS motion only and no new dependency.
  *
- * The frame shows the record's cover screenshot when one exists, otherwise a
- * labelled placeholder: no stock image and no invented interface stands in
- * for a real project (D-027). In development the demo fixtures pass a drawn
- * screen as `media`; that never happens in a production build.
+ * The frame is for GAkinzOS, the owner's own system, because it is the one
+ * product this site can show without anyone's permission. Until a real
+ * capture exists the frame holds a labelled placeholder: no stock image and
+ * no invented dashboard stands in for it (D-027). In development the demo
+ * fixtures pass a drawn screen as `screen`; that never happens in a
+ * production build.
  *
- * The tabs follow the ARIA tabs pattern: one tab stop, arrow keys, Home and
- * End move between them, and the panel is labelled by its tab. Nothing
- * rotates on its own.
+ * The trust line repeats only what the site already states as fact.
  */
-
-export type FeaturedItem = {
-  record: WorkRecord
-  tags: string[]
-  /** The picture for the frame. `null` renders the labelled placeholder. */
-  media: ReactNode | null
-}
 
 const delay = (ms: number) => ({ "--gk-delay": `${ms}ms` }) as CSSProperties
 
-export default function HomeHero({ items }: { items: FeaturedItem[] }) {
-  const [active, setActive] = useState(0)
-  const tabs = useRef<(HTMLButtonElement | null)[]>([])
-  const base = useId()
-  const index = Math.min(active, items.length - 1)
-  const current = items[index]
+const PROMISES = ["Designed and built by one person", "Looked after once it is live", `Based in ${site.location}`]
 
-  const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    const last = items.length - 1
-    const next =
-      e.key === "ArrowRight" ? (index === last ? 0 : index + 1)
-      : e.key === "ArrowLeft" ? (index === 0 ? last : index - 1)
-      : e.key === "Home" ? 0
-      : e.key === "End" ? last
-      : null
-    if (next === null) return
-    e.preventDefault()
-    setActive(next)
-    tabs.current[next]?.focus()
-  }
-
+export default function HomeHero({ screen = null }: { screen?: ReactNode }) {
   return (
-    <div className="overflow-x-clip">
-      <Measure className="pb-16 pt-12 sm:pb-24 sm:pt-16 lg:pt-20">
-        {/* ── Claim ──────────────────────────────────────────────────── */}
-        <div className="grid gap-8 lg:grid-cols-[1.35fr_1fr] lg:items-end lg:gap-16">
-          <div className="min-w-0">
-            <div className="gk-rise">
-              <Label dot>
-                {site.role} · {site.location}
-              </Label>
-            </div>
-            <h1
-              className="gk-rise mt-6 max-w-[17ch] font-display text-t2 text-gk-ink sm:text-t1 lg:text-display"
-              style={delay(80)}
+    <div className="px-3 pt-3 sm:px-6 sm:pt-6">
+      <section
+        aria-labelledby="hero-heading"
+        className="relative mx-auto max-w-[90rem] overflow-hidden rounded-media bg-gk-ink px-4 pt-14 text-center sm:px-8 sm:pt-20 lg:pt-24"
+      >
+        {/* The glow: decorative, behind everything, no meaning. */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute left-1/2 top-[38%] h-[28rem] w-[56rem] max-w-[140%] -translate-x-1/2 rounded-full bg-[radial-gradient(closest-side,rgba(243,115,56,0.32),rgba(243,115,56,0.08)_55%,transparent)] blur-2xl"
+        />
+
+        <div className="relative mx-auto max-w-4xl">
+          <div className="gk-rise">
+            <Link
+              to="/work/gakinzos"
+              className="inline-flex min-h-[2.75rem] items-center gap-2 rounded-full border border-gk-on-dark/20 bg-gk-on-dark/5 px-4 text-[0.875rem] text-gk-on-dark-soft transition-colors duration-150 hover:border-gk-on-dark/40 hover:text-gk-on-dark"
             >
-              A website is part of how a business runs, not a brochure it keeps.
-            </h1>
+              <span className="h-1.5 w-1.5 rounded-full bg-gk-orange" aria-hidden />
+              GAkinzOS runs this studio
+              <span className="inline-flex items-center gap-1 font-medium text-gk-on-dark">
+                See how <ArrowRight aria-hidden className="h-3.5 w-3.5" />
+              </span>
+            </Link>
           </div>
-          <div className="gk-rise lg:pb-2" style={delay(160)}>
-            <p className="text-lede text-gk-ink-soft">
-              I am {site.name}. I draw the thing and then I build it, and I stay on afterwards so it
-              keeps working.
-            </p>
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <StartProject />
-              <Action to="/work">See all work</Action>
-            </div>
+
+          <h1
+            id="hero-heading"
+            className="gk-rise mx-auto mt-8 max-w-[18ch] font-display text-[2.5rem] font-medium leading-[1.04] tracking-[-0.03em] text-gk-on-dark sm:text-t1 lg:text-[4.5rem]"
+            style={delay(80)}
+          >
+            A website is part of how a business runs,{" "}
+            <span className="bg-gradient-to-b from-gk-on-dark to-gk-on-dark-soft/70 bg-clip-text text-transparent">
+              not a brochure it keeps.
+            </span>
+          </h1>
+
+          <p className="gk-rise mx-auto mt-7 max-w-2xl text-lede text-gk-on-dark-soft" style={delay(160)}>
+            I am {site.name}, a {site.role.toLowerCase()} in {site.location}. I draw the thing, build it,
+            and stay on afterwards so it keeps working.
+          </p>
+
+          <div className="gk-rise mt-10 flex flex-wrap items-center justify-center gap-3" style={delay(240)}>
+            <StartProject onDark />
+            <Action to="/work" onDark>
+              See the work
+            </Action>
           </div>
+
+          <ul
+            className="gk-rise mt-8 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[0.875rem] text-gk-on-dark-soft"
+            style={delay(300)}
+          >
+            {PROMISES.map((p) => (
+              <li key={p} className="inline-flex items-center gap-2">
+                <Check aria-hidden className="h-4 w-4 text-gk-come-on-dark" />
+                {p}
+              </li>
+            ))}
+          </ul>
         </div>
 
-        {/* ── Featured work ──────────────────────────────────────────── */}
-        {current && (
-          <div className="gk-rise mt-16 lg:mt-20" style={delay(240)}>
-            <div className="flex flex-wrap items-end justify-between gap-4 border-b border-gk-rule pb-4">
-              <div
-                role="tablist"
-                aria-label="Featured work"
-                onKeyDown={onKey}
-                className="-mx-1 flex max-w-full gap-2 overflow-x-auto px-1 py-1"
-              >
-                {items.map((it, i) => {
-                  const selected = i === index
-                  return (
-                    <button
-                      key={it.record.slug}
-                      ref={(el) => {
-                        tabs.current[i] = el
-                      }}
-                      id={`${base}-tab-${i}`}
-                      role="tab"
-                      type="button"
-                      aria-selected={selected}
-                      aria-controls={`${base}-panel`}
-                      tabIndex={selected ? 0 : -1}
-                      onClick={() => setActive(i)}
-                      className={cn(
-                        "inline-flex min-h-[2.75rem] shrink-0 items-center gap-3 rounded-full border-[1.5px] py-1.5 pl-1.5 pr-5 text-body font-medium tracking-[-0.02em] transition-colors duration-150",
-                        selected
-                          ? "border-gk-ink bg-gk-white text-gk-ink"
-                          : "border-transparent text-gk-ink-soft hover:text-gk-ink",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "inline-flex h-8 w-8 items-center justify-center rounded-full font-data text-[0.75rem]",
-                          selected ? "bg-gk-ink text-gk-on-dark" : "bg-gk-sunk text-gk-ink-mute",
-                        )}
-                      >
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-                      {it.record.title}
-                    </button>
-                  )
-                })}
-              </div>
-              <p className="font-data text-label uppercase text-gk-ink-mute">
-                Selected work · {String(items.length).padStart(2, "0")}
-              </p>
+        {/* The product frame: rises from the stage and is cut by its foot. */}
+        <figure className="gk-media-in relative mx-auto mt-14 max-w-5xl sm:mt-16" style={delay(360)}>
+          <div className="rounded-t-[1.5rem] border border-b-0 border-gk-on-dark/15 bg-gk-on-dark/[0.06] p-2 pb-0 sm:p-3 sm:pb-0">
+            <div className="flex items-center gap-2 px-2 pb-2 sm:pb-3">
+              <span className="h-2.5 w-2.5 rounded-full bg-gk-on-dark/25" />
+              <span className="h-2.5 w-2.5 rounded-full bg-gk-on-dark/25" />
+              <span className="h-2.5 w-2.5 rounded-full bg-gk-on-dark/25" />
+              <span className="ml-3 truncate font-data text-[0.75rem] text-gk-on-dark-soft">GAkinzOS</span>
             </div>
-
-            <div
-              key={current.record.slug}
-              id={`${base}-panel`}
-              role="tabpanel"
-              aria-labelledby={`${base}-tab-${index}`}
-              className="mt-8 grid gap-10 lg:grid-cols-[1.15fr_1fr] lg:items-center lg:gap-16"
-            >
-              <figure className="gk-media-in relative">
-                <div className="relative flex aspect-[4/3] flex-col overflow-hidden rounded-media bg-gk-sunk p-5 sm:p-8">
-                  <figcaption className="relative z-10 flex items-center justify-between gap-4 pb-4 sm:pb-6">
-                    <span className="truncate text-body font-medium text-gk-ink">{current.record.title}</span>
-                    <span className="shrink-0 font-data text-[0.75rem] uppercase tracking-[0.04em] text-gk-ink-mute">
-                      {KIND_LABELS[current.record.kind].name} / {String(index + 1).padStart(2, "0")}
-                    </span>
-                  </figcaption>
-                  <div className="relative z-10 min-h-0 flex-1">
-                    {current.media ?? (
-                      <Placeholder
-                        className="h-full !aspect-auto"
-                        label="Project screenshot, to supply"
-                        detail="A real capture of this project. No stock image stands in for the work."
-                      />
-                    )}
-                  </div>
+            <div className="aspect-[4/3] overflow-hidden rounded-t-[1rem] bg-gk-sunk sm:aspect-[16/8]">
+              {screen ?? (
+                <div className="flex h-full flex-col items-center justify-center gap-2 border-[1.5px] border-b-0 border-dashed border-gk-come/60 px-6 text-center">
+                  <span className="font-data text-label font-bold uppercase text-gk-come">GAkinzOS screenshot, to supply</span>
+                  <span className="max-w-[40ch] text-body text-gk-ink-mute">
+                    A real capture of the studio system, with no client data in it.
+                  </span>
                 </div>
-              </figure>
-
-              <div className="gk-rise min-w-0" style={delay(80)}>
-                <p className="flex flex-wrap items-center gap-3 font-data text-label uppercase text-gk-ink-mute">
-                  {[current.record.sector, current.record.year].filter(Boolean).join(" · ")}
-                  {current.record.demo && <DemoTag />}
-                </p>
-                <h2 className="mt-4 font-display text-t2 text-gk-ink sm:text-t1">{current.record.title}</h2>
-                {current.record.summary && (
-                  <p className="mt-5 max-w-xl text-lede text-gk-ink-soft">{current.record.summary}</p>
-                )}
-                {current.tags.length > 0 && (
-                  <ul className="mt-6 flex flex-wrap gap-2">
-                    {current.tags.map((t) => (
-                      <li
-                        key={t}
-                        className="rounded-full border border-gk-rule bg-gk-white px-3 py-1 text-[0.875rem] text-gk-ink-soft"
-                      >
-                        {t}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <Link
-                  to={`/work/${current.record.slug}`}
-                  className="gk-arrow-link mt-8 inline-flex min-h-[2.75rem] items-center gap-2 border-b-[1.5px] border-gk-ink text-body font-medium text-gk-ink"
-                >
-                  Read the record
-                  <ArrowUpRight aria-hidden className="gk-arrow h-4 w-4" />
-                </Link>
-              </div>
+              )}
             </div>
           </div>
-        )}
-      </Measure>
+          <figcaption className="sr-only">GAkinzOS, the system this studio runs on.</figcaption>
+        </figure>
+      </section>
     </div>
   )
 }
