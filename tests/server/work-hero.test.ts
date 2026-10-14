@@ -232,7 +232,7 @@ describe("hero field validation", () => {
 describe("before the migration", () => {
   // The ALTER recorded at the foot of server/schema.sql, uncommented.
   const migrate = fs.readFileSync(path.resolve(__dirname, "../../server/schema.sql"), "utf8")
-    .match(/--   ALTER TABLE work\n[\s\S]*?ADD KEY idx_hero \(hero_order\);/)![0]
+    .match(/-- {3}ALTER TABLE work\n[\s\S]*?ADD KEY idx_hero \(hero_order\);/)![0]
     .replace(/^--\s{3}/gm, "")
 
   it("keeps every existing action working, returns an empty hero and refuses hero writes", async () => {
