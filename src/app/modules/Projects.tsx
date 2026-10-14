@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react"
-import { Loader2, Plus, RefreshCw, CalendarDays } from "lucide-react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { AlertCircle, FolderKanban, Loader2, Plus, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/page-kit"
 import {
   projects,
   tasks as tasksApi,
@@ -38,12 +40,6 @@ const PROJECT_STATUS: { key: ProjectStatus; label: string }[] = [
   { key: "on_hold", label: "On hold" },
   { key: "launched", label: "Launched" },
 ]
-const projectStatusClass: Record<ProjectStatus, string> = {
-  planning: "bg-muted text-muted-foreground",
-  in_progress: "bg-primary/10 text-primary",
-  on_hold: "bg-secondary text-secondary-foreground",
-  launched: "bg-accent text-accent-foreground",
-}
 
 // 5-stage delivery pipeline (Discover · Design · Build · Launch · Support).
 const PROJECT_STAGES: { key: ProjectStage; label: string }[] = [
@@ -55,9 +51,10 @@ const PROJECT_STAGES: { key: ProjectStage; label: string }[] = [
 ]
 const stageLabel = (s: ProjectStage) => PROJECT_STAGES.find((x) => x.key === s)?.label ?? s
 
+// Column names follow the approved prototype (D-046); the stored keys are unchanged.
 const TASK_COLS: { key: TaskStatus; label: string }[] = [
-  { key: "todo", label: "To do" },
-  { key: "doing", label: "Doing" },
+  { key: "todo", label: "Next" },
+  { key: "doing", label: "In progress" },
   { key: "review", label: "Review" },
   { key: "done", label: "Done" },
 ]
@@ -67,12 +64,15 @@ function fmt(d: string | null) {
   return new Date(d.replace(" ", "T")).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
 }
 
+const pct = (p: Project) => (p.task_count > 0 ? Math.round((p.done_count / p.task_count) * 100) : 0)
+
 export default function Projects() {
   const [list, setList] = useState<Project[]>([])
   const [clientList, setClientList] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Project | null>(null)
+  const boardRef = useRef<HTMLDivElement>(null)
 
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ name: "", client_id: "", due_date: "" })
@@ -136,6 +136,12 @@ export default function Projects() {
     }
   }
 
+  const select = (p: Project) => {
+    setSelected(p)
+    // The prototype brings the selected project's board into view.
+    requestAnimationFrame(() => boardRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" }))
+  }
+
   // Count projects sitting in each delivery stage (the dashboard tally).
   const stageTally = PROJECT_STAGES.map((s) => ({
     ...s,
@@ -143,137 +149,173 @@ export default function Projects() {
   }))
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Projects</h1>
-          <p className="text-sm text-muted-foreground">
-            Every build tracked from kickoff to launch.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={loadProjects}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" /> New project
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>New project</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="pname">Name</Label>
-                  <Input id="pname" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="mt-1.5" />
-                </div>
-                <div>
-                  <Label>Client</Label>
-                  <Select value={form.client_id} onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}>
-                    <SelectTrigger className="mt-1.5">
-                      <SelectValue placeholder="No client / internal" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clientList.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>
-                          {c.company}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="pdue">Due date</Label>
-                  <Input id="pdue" type="date" value={form.due_date} onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))} className="mt-1.5" />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={createProject} disabled={saving}>
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create
+    <div>
+      <PageHeader
+        title="Projects"
+        subtitle="Every build tracked from kickoff to launch."
+        actions={
+          <>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus /> New project
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>New project</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="pname">Name</Label>
+                    <Input id="pname" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="mt-1.5" />
+                  </div>
+                  <div>
+                    <Label>Client</Label>
+                    <Select value={form.client_id} onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}>
+                      <SelectTrigger className="mt-1.5">
+                        <SelectValue placeholder="No client / internal" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {clientList.map((c) => (
+                          <SelectItem key={c.id} value={String(c.id)}>
+                            {c.company}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="pdue">Due date</Label>
+                    <Input id="pdue" type="date" value={form.due_date} onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))} className="mt-1.5" />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button onClick={createProject} disabled={saving}>
+                    {saving && <Loader2 className="animate-spin" />}
+                    Create
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Button variant="outline" onClick={loadProjects}>
+              <RefreshCw /> Refresh
+            </Button>
+          </>
+        }
+      />
 
       {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the projects endpoint and DB must be live on the server.
-        </div>
-      )}
-
-      {!loading && list.length > 0 && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {stageTally.map((s) => (
-            <div key={s.key} className="rounded-xl border border-border bg-card p-4">
-              <div className="text-2xl font-semibold text-primary">{s.count}</div>
-              <div className="mt-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">{s.label}</div>
-            </div>
-          ))}
+        <div role="alert" className="mb-4 flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-bad" />
+          <div className="min-w-[min(100%,200px)] flex-1">
+            <p className="font-semibold">Could not load projects.</p>
+            <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
+              {error}. The projects endpoint and database must be live on the server.
+            </p>
+          </div>
+          <Button variant="outline" onClick={loadProjects}>
+            <RefreshCw /> Try again
+          </Button>
         </div>
       )}
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading projects…
+        <div role="status" aria-label="Loading projects" className="grid gap-4">
+          <div className="grid grid-cols-3 gap-4 sm:grid-cols-5">
+            {PROJECT_STAGES.map((s) => (
+              <Skeleton key={s.key} className="h-[76px] rounded-2xl" />
+            ))}
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {[0, 1, 2].map((i) => (
+              <Skeleton key={i} className="h-[170px] rounded-2xl" />
+            ))}
+          </div>
+          <span className="sr-only">Loading projects…</span>
         </div>
       ) : list.length === 0 ? (
-        <div className="rounded-xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
-          No projects yet. Create one to start tracking a build.
-        </div>
+        !error && (
+          <div className="grid place-items-center gap-2.5 rounded-2xl border border-dashed border-line-strong bg-card px-5 py-14 text-center">
+            <span aria-hidden className="grid h-12 w-12 place-items-center rounded-[14px] bg-acc-soft text-acc">
+              <FolderKanban className="h-5 w-5" />
+            </span>
+            <h2 className="font-display text-[1.2rem] font-semibold">No projects yet</h2>
+            <p className="max-w-[46ch] text-muted-foreground">Create one to start tracking a build.</p>
+            <Button className="mt-1" onClick={() => setOpen(true)}>
+              <Plus /> New project
+            </Button>
+          </div>
+        )
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {list.map((p) => (
-            <button
-              key={p.id}
-              onClick={() => setSelected(p)}
-              className={cn(
-                "rounded-xl border bg-card p-5 text-left transition-all hover:border-primary/40 hover:shadow-sm",
-                selected?.id === p.id ? "border-primary ring-1 ring-primary" : "border-border",
-              )}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="font-semibold">{p.name}</h3>
-                <span className={cn("rounded px-2 py-0.5 text-xs font-medium", projectStatusClass[p.status])}>
-                  {PROJECT_STATUS.find((s) => s.key === p.status)?.label}
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">{p.client_company || "Internal"}</p>
-              <div className="mt-2">
-                <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-xs font-medium text-primary">
-                  {stageLabel(p.stage)}
-                </span>
-              </div>
-              <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                <span>
-                  {p.done_count}/{p.task_count} tasks done
-                </span>
-                {p.due_date && (
-                  <span className="flex items-center gap-1">
-                    <CalendarDays className="h-3 w-3" /> {fmt(p.due_date)}
-                  </span>
+        <>
+          <StatGrid className="grid-cols-3 sm:grid-cols-5 xl:grid-cols-5">
+            {stageTally.map((s) => (
+              <StatTile key={s.key} label={s.label} value={s.count} />
+            ))}
+          </StatGrid>
+
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {list.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => select(p)}
+                aria-pressed={selected?.id === p.id}
+                className={cn(
+                  "grid min-w-0 content-start gap-2.5 rounded-2xl border bg-card p-[18px] text-left transition-colors hover:border-line-strong focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30",
+                  selected?.id === p.id && "border-acc hover:border-acc",
                 )}
-              </div>
-            </button>
-          ))}
-        </div>
+              >
+                <span className="flex flex-wrap items-center justify-between gap-2">
+                  <StatusBadge status={p.stage}>{stageLabel(p.stage)}</StatusBadge>
+                  <span className="text-[12.5px] text-muted-foreground">
+                    {p.due_date ? `Due ${fmt(p.due_date)}` : p.status === "launched" ? "Launched" : "No due date"}
+                  </span>
+                </span>
+                <span className="font-display text-[1.15rem] font-semibold leading-snug [overflow-wrap:anywhere]">{p.name}</span>
+                <span className="min-w-0 text-muted-foreground [overflow-wrap:anywhere]">{p.client_company || "Internal"}</span>
+                <Progress value={pct(p)} label={`${p.name}: ${pct(p)}% of tasks done`} />
+                <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[12.5px] text-muted-foreground">
+                  <span>{PROJECT_STATUS.find((s) => s.key === p.status)?.label}</span>
+                  <span className="font-mono tabular-nums">
+                    {p.done_count}/{p.task_count} tasks · {pct(p)}%
+                  </span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
       )}
 
       {selected && (
-        <ProjectBoard
-          project={selected}
-          statusOptions={PROJECT_STATUS}
-          stageOptions={PROJECT_STAGES}
-          onStatusChange={(s) => setProjectStatus(selected, s)}
-          onStageChange={(s) => setProjectStage(selected, s)}
-          onTasksChanged={loadProjects}
-        />
+        <div ref={boardRef} className="mt-4 scroll-mt-4">
+          <ProjectBoard
+            project={selected}
+            statusOptions={PROJECT_STATUS}
+            stageOptions={PROJECT_STAGES}
+            onStatusChange={(s) => setProjectStatus(selected, s)}
+            onStageChange={(s) => setProjectStage(selected, s)}
+            onTasksChanged={loadProjects}
+          />
+        </div>
       )}
+    </div>
+  )
+}
+
+/** The prototype's `.prog`: a 6px track with the accent fill. */
+function Progress({ value, label }: { value: number; label: string }) {
+  return (
+    <div
+      role="progressbar"
+      aria-valuenow={value}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label={label}
+      className="h-1.5 overflow-hidden rounded-full border bg-secondary"
+    >
+      <i className="block h-full rounded-full bg-acc" style={{ width: `${Math.min(value, 100)}%` }} />
     </div>
   )
 }
@@ -342,15 +384,20 @@ function ProjectBoard({
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border pb-4">
-        <div>
-          <h2 className="text-lg font-semibold">{project.name}</h2>
-          <p className="text-sm text-muted-foreground">{project.client_company || "Internal"} · task board</p>
+    <section className="min-w-0 rounded-2xl border bg-card p-[18px]" aria-label={`${project.name} task board`}>
+      <div className="mb-4 flex flex-wrap items-end gap-3">
+        <div className="min-w-[min(100%,200px)] flex-1">
+          <p className="font-mono text-xs uppercase tracking-[.08em] text-muted-foreground [overflow-wrap:anywhere]">
+            {project.client_company || "Internal"}
+          </p>
+          <h2 className="mt-1 font-display text-[1.4rem] font-semibold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">
+            {project.name}
+          </h2>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="grid min-w-[160px] gap-1.5 max-sm:flex-1">
+          <Label htmlFor="pst">Delivery stage</Label>
           <Select value={project.stage} onValueChange={(v) => onStageChange(v as ProjectStage)}>
-            <SelectTrigger className="h-9 w-36" aria-label="Delivery stage">
+            <SelectTrigger id="pst" aria-label="Delivery stage">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -361,8 +408,11 @@ function ProjectBoard({
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="grid min-w-[160px] gap-1.5 max-sm:flex-1">
+          <Label htmlFor="pss">Project status</Label>
           <Select value={project.status} onValueChange={(v) => onStatusChange(v as ProjectStatus)}>
-            <SelectTrigger className="h-9 w-40" aria-label="Project status">
+            <SelectTrigger id="pss" aria-label="Project status">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -376,64 +426,64 @@ function ProjectBoard({
         </div>
       </div>
 
-      <div className="flex gap-2 py-4">
-        <Input
-          value={newTitle}
-          onChange={(e) => setNewTitle(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && addTask()}
-          placeholder="Add a task and press Enter"
-          className="max-w-md"
-        />
-        <Button onClick={addTask} disabled={adding}>
-          {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
-        </Button>
-      </div>
-
       {loading ? (
-        <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading tasks…
+        <div role="status" className="grid auto-cols-[minmax(250px,1fr)] grid-flow-col gap-3.5 overflow-x-auto pb-2">
+          {TASK_COLS.map((c) => (
+            <Skeleton key={c.key} className="h-[200px] rounded-2xl" />
+          ))}
+          <span className="sr-only">Loading tasks…</span>
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid auto-cols-[minmax(250px,1fr)] grid-flow-col gap-3.5 overflow-x-auto pb-2" data-kanban>
           {TASK_COLS.map((col) => (
-            <div key={col.key} className="rounded-lg border border-border bg-muted/30">
-              <div className="flex items-center justify-between border-b border-border px-3 py-2">
-                <span className="text-sm font-semibold">{col.label}</span>
-                <span className="rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">
-                  {byStatus[col.key].length}
-                </span>
+            <div key={col.key} className="flex min-h-[200px] flex-col gap-2 rounded-2xl border bg-secondary p-2.5">
+              <div className="flex items-center gap-2 px-1.5 pb-2 pt-1">
+                <StatusBadge status={col.label} />
+                <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">{byStatus[col.key].length}</span>
               </div>
-              <div className="space-y-2 p-2">
-                {byStatus[col.key].length === 0 ? (
-                  <p className="px-1 py-3 text-center text-xs text-muted-foreground">—</p>
-                ) : (
-                  byStatus[col.key].map((task) => (
-                    <div key={task.id} className="rounded-lg border border-border bg-card p-3 shadow-sm">
-                      <p className="text-sm">{task.title}</p>
-                      <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{task.assignee || "Unassigned"}</span>
-                        {fmt(task.due_date) && <span>{fmt(task.due_date)}</span>}
-                      </div>
-                      <Select value={task.status} onValueChange={(v) => moveTask(task, v as TaskStatus)}>
-                        <SelectTrigger className="mt-2 h-7 text-xs">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TASK_COLS.map((c) => (
-                            <SelectItem key={c.key} value={c.key} className="text-xs">
-                              {c.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  ))
-                )}
-              </div>
+              {byStatus[col.key].map((task) => (
+                <div key={task.id} className="grid gap-1.5 rounded-xl border bg-card p-3 transition-[border-color,box-shadow] hover:border-line-strong hover:shadow-sm">
+                  <b className="min-w-0 font-semibold [overflow-wrap:anywhere]">{task.title}</b>
+                  <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[12.5px] text-muted-foreground">
+                    <span className="min-w-0 [overflow-wrap:anywhere]">{task.assignee || "Unassigned"}</span>
+                    {fmt(task.due_date) && <span className="font-mono tabular-nums">{fmt(task.due_date)}</span>}
+                  </span>
+                  <Select value={task.status} onValueChange={(v) => moveTask(task, v as TaskStatus)}>
+                    <SelectTrigger className="mt-1 h-8 text-xs" aria-label={`Move ${task.title}`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TASK_COLS.map((c) => (
+                        <SelectItem key={c.key} value={c.key} className="text-xs">
+                          {c.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ))}
             </div>
           ))}
         </div>
       )}
-    </div>
+
+      <div className="mt-3 flex min-h-10 min-w-0 items-center gap-2 rounded-[10px] border bg-card pl-3 pr-1 focus-within:border-acc focus-within:shadow-[0_0_0_3px_hsl(var(--os-acc-soft))]">
+        {adding ? <Loader2 className="h-4 w-4 shrink-0 animate-spin text-muted-foreground" /> : <Plus className="h-4 w-4 shrink-0 text-muted-foreground" />}
+        <label htmlFor="ptask" className="sr-only">
+          Add a task
+        </label>
+        <input
+          id="ptask"
+          value={newTitle}
+          onChange={(e) => setNewTitle(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && addTask()}
+          placeholder="Add a task and press Enter"
+          className="min-h-[38px] w-full min-w-0 border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+        />
+        <Button variant="ghost" size="sm" onClick={addTask} disabled={adding}>
+          Add
+        </Button>
+      </div>
+    </section>
   )
 }
