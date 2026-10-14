@@ -1,6 +1,6 @@
 # Data model
 
-**Status:** current for the tracked schema as at 2026-10-10. Whether the live database
+**Status:** current for the tracked schema as at 2026-10-14. Whether the live database
 matches it is **UNVERIFIED**, because no live database was contacted.
 
 Authority: `server/schema.sql`. MySQL or MariaDB, InnoDB, `utf8mb4`; the table count is in
@@ -8,7 +8,7 @@ Authority: `server/schema.sql`. MySQL or MariaDB, InnoDB, `utf8mb4`; the table c
 
 Not applied to any live database, because they were written into the file and never run:
 `work` and `work_images` (2026-09-22), `payment_events` and the three enquiry follow-up
-columns (2026-10-10). That is not an inference from a failed check; nothing was checked. See
+columns (2026-10-10), the seven work hero columns and `site_content` (2026-10-14). That is not an inference from a failed check; nothing was checked. See
 section 4.
 
 ---
@@ -90,6 +90,7 @@ section 4.
 | `content_drafts` | AI content hub output | Platforms: blog, linkedin, x, instagram, facebook, tiktok |
 | `kb_articles` | Internal SOPs and wiki | |
 | `announcements` | Dashboard broadcasts | Optionally mirrored to Slack |
+| `site_content` | Editable public-site copy, added 2026-10-14 | One row per section (`hero`, `services`, `process`, `packages`, `addons`, `terms`, `faqs`, `contact`), keyed by `section`. `draft` and `published` are JSON held as `MEDIUMTEXT`, because the host's MySQL version is UNVERIFIED. `site.php` validates every section against a fixed shape before storing it and serves only `published` publicly. `updated_by` and `published_by` are user ids with no foreign key, so removing a user leaves the history readable |
 | `items` | Smoke test only | Two columns. Now **unused**: `api.php` was reduced to a read-only health check on 2026-09-22 and no longer reads or writes it. The table is left in place because dropping it on a live database is not something this repository can verify. See `docs/DECISIONS.md` D-031 |
 
 ### Work, added 2026-09-22
@@ -119,8 +120,20 @@ rather than as a process note is the whole point: the rule can then be checked i
 `invoice_items`, because the host's MySQL version is UNVERIFIED and JSON support cannot be
 assumed.
 
+**Homepage hero, added 2026-10-14.** Seven nullable columns on `work`: `hero_order`
+(1 to 5 while the record is in the hero, otherwise `NULL`), `brand_colour` (`#RRGGBB`),
+`hero_word` (one or two words finishing the headline), and `hero_desktop_file_id`,
+`hero_desktop_alt`, `hero_mobile_file_id`, `hero_mobile_alt` for the two screenshots. The
+screenshots are `files` rows served by share token, as work images are, and `work.php` issues
+a permanent token when one is attached and refuses one without alt text. `work.php` also
+enforces the rules the schema cannot: at most five records in the hero, published only, the
+order kept gap-free at 1..n, and a record dropped from the hero when it is unpublished or
+removed. There is deliberately no unique key on `hero_order`, because renumbering passes
+through duplicate values.
+
 **Indexes.** `work` has a unique `slug`, `idx_public (status, kind, sort_order)` for the
-public list, and `idx_slug`. `work_images` has `idx_work (work_id, sort_order)`.
+public list, `idx_slug`, and `idx_hero (hero_order)`. `work_images` has
+`idx_work (work_id, sort_order)`.
 
 ## 3. Ownership and isolation
 
@@ -164,9 +177,11 @@ Outstanding statements, grouped as they appear in the file:
 | Share-token collision guard, 2026-09-22 | `ALTER TABLE files ADD UNIQUE KEY uk_file_share (share_token)` |
 | Payment event log, 2026-10-10 | `CREATE TABLE IF NOT EXISTS payment_events`. Safe to run twice |
 | Enquiry follow-ups, 2026-10-10 | `ALTER TABLE enquiries ADD COLUMN next_action_at`, `next_action_note`, `priority`. Run once; a second run fails on the duplicate column |
+| Homepage hero, 2026-10-14 | `ALTER TABLE work ADD COLUMN hero_order`, `brand_colour`, `hero_word`, `hero_desktop_file_id`, `hero_desktop_alt`, `hero_mobile_file_id`, `hero_mobile_alt`, plus `idx_hero`. Run once; a second run fails on the duplicate column |
+| Site content, 2026-10-14 | `CREATE TABLE IF NOT EXISTS site_content`. Safe to run twice |
 
 Which of the older statements have already been applied to the live database is
-**UNVERIFIED**. The 2026-09-22 and 2026-10-10 groups are known **not** to have been applied by
+**UNVERIFIED**. The 2026-09-22, 2026-10-10 and 2026-10-14 groups are known **not** to have been applied by
 this work, because no database has been contacted since they were written. Their order is in
 `docs/DEPLOYMENT.md` section 5.2.
 
@@ -211,6 +226,14 @@ the tables it will return a 500, not a reduced result. The client compensates in
 `src/marketing/data/work.ts` reads the API and falls back to a typed static record set when
 the call fails, so the public page renders either way. The CMS module does not, and will
 report the error.
+
+**The 2026-10-14 additions do degrade**, because they extend features that already exist.
+Without the hero columns, `work.php` selects `NULL` in their place, so every existing action
+keeps its shape; `?action=hero` returns `[]`; and `setHero`, `heroOrder` and a create or
+update carrying a non-empty hero value answer 503 with a message naming the schema step.
+Without `site_content`, `site.php?action=get` returns `{}` and the staff actions answer 503.
+Both paths are tested against a real database with the column or table dropped
+(`tests/server/work-hero.test.ts`, `tests/server/site.test.ts`).
 
 ## 7. Files, share tokens and what stays public
 

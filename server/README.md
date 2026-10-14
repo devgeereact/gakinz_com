@@ -55,7 +55,7 @@ of their own and are denied to direct requests by `.htaccess`. The file count is
 | `projects.php`, `tasks.php`, `design.php`, `dev.php`, `resourcing.php`, `time.php`, `careplan.php`, `files.php` | Delivery |
 | `invoices.php`, `payments.php`, `reports.php` | Money |
 | `portal.php`, `support.php`, `comms.php`, `mail.php` | Client-facing. `portal.php` and the client branch of `support.php` serve `client`-role callers and are security-critical |
-| `blog.php`, `testimonials.php`, `content.php`, `knowledge.php`, `announcements.php`, `work.php` | Content. `work.php` also serves the public work ledger |
+| `blog.php`, `testimonials.php`, `content.php`, `knowledge.php`, `announcements.php`, `work.php`, `site.php` | Content. `work.php` also serves the public work ledger and the homepage hero; `site.php` serves published site copy publicly and drafts to editors |
 | `ai.php` | OpenRouter proxy. Staff roles only, capped per role per day. The key stays server-side |
 | `weather.php` | OpenWeather proxy. Staff roles only, cached 10 minutes. The key stays server-side |
 | `github.php`, `figma.php`, `slack.php` | External connectors |

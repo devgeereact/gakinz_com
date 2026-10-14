@@ -26,17 +26,17 @@ update this table when a count changes.
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 102 tests in 6 files |
-| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 116 tests in 10 files (2026-10-11, Ubuntu, MariaDB 10.11) |
+| Unit tests | `npm test` | **PASS.** 104 tests in 6 files (2026-10-14, redesign server batch) |
+| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 140 tests in 12 files (2026-10-14, Ubuntu, MariaDB 10.11, redesign server batch) |
 | Type check and build | `npm run typecheck`, `npm run build` | **PASS** |
 | Lint | `npm run lint:ratchet` | 41 errors, 1 warning, at the ratchet ceiling (2026-10-11). **`npm run lint` still fails** (K-002) |
 | Documentation | `npm run docs:check` | **PASS** |
-| PHP files | `ls server/*.php \| wc -l` | 46: 40 endpoints and 6 `_`-prefixed includes, all passing `php -l` |
-| Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 34 |
+| PHP files | `ls server/*.php \| wc -l` | 47: 41 endpoints and 6 `_`-prefixed includes, all passing `php -l` (2026-10-14, `site.php` added) |
+| Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 35 (2026-10-14, `site_content` added) |
 | CMS screens | `src/routes/index.tsx` under `/app` | 25: Today (the index), 23 module routes and My account, in seven navigation groups |
-| Client API groups | `src/lib/api.ts` | 36 exported groups over one `request()` helper |
-| Server files changed since `main` | `git diff --name-only c57eb4a -- server` | 23 PHP files, `.htaccess` and `schema.sql`, listed in `docs/DEPLOYMENT.md` section 5 |
-| `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 35 of 46 files, 129 call sites |
+| Client API groups | `src/lib/api.ts` | 37 exported groups over one `request()` helper (2026-10-14, `siteContent` added) |
+| Server files changed since `main` | `git diff --name-only c57eb4a -- server` | 25 PHP files, `.htaccess`, `schema.sql`, `README.md` and `config.php.example`; the upload list is `docs/DEPLOYMENT.md` section 5 (2026-10-14) |
+| `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 36 of 47 files, 134 call sites (2026-10-14) |
 
 Not measured on this run: `npm audit` (last figure in K-041), accessibility and performance
 (last runs in `qa/`), and anything on the live system.
