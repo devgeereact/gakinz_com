@@ -268,6 +268,12 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .copy code{font-family:var(--mono);font-size:15px;padding:12px 14px;border-radius:12px;background:var(--panel);border:1px solid var(--line);user-select:all}
 .gk-site .article{max-width:42rem}
 .gk-site .article p{font-size:1.15rem;line-height:1.7;color:color-mix(in srgb,var(--fg) 88%,transparent);margin-bottom:1.3em}
+.gk-site .clauses{border-top:1px solid var(--line)}
+.gk-site .clauses section{display:grid;grid-template-columns:3rem minmax(0,1fr);gap:8px 16px;padding:28px 0;border-bottom:1px solid var(--line)}
+.gk-site .clauses .n{font-family:var(--mono);font-size:13px;color:var(--acc);padding-top:8px}
+.gk-site .clauses h2{font-size:1.45rem;margin-bottom:12px}
+.gk-site .clauses p{color:color-mix(in srgb,var(--fg) 88%,transparent);max-width:64ch}
+.gk-site .clauses p + p{margin-top:12px}
 .gk-site .foot{border-top:1px solid var(--line);padding-block:0 32px;background:var(--bg)}
 .gk-site .foot__strip{display:flex;height:4px}
 .gk-site .foot__strip i{flex:1}
