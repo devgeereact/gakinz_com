@@ -135,7 +135,17 @@ export function ProjectCard({ p, wide }: { p: Project; wide?: boolean }) {
   )
 }
 
-export function CtaBand({ projects }: { projects: Project[] }) {
+export function CtaBand({
+  projects,
+  title = "Tell me what the site has to do.",
+  intro = "A paragraph is enough. If it is not something I should take on, I will say so and point you somewhere better.",
+  cta = "Start a project",
+}: {
+  projects: Project[]
+  title?: string
+  intro?: string
+  cta?: string
+}) {
   return (
     <div className="band">
       <div className="band__strip" aria-hidden="true">
@@ -144,13 +154,13 @@ export function CtaBand({ projects }: { projects: Project[] }) {
         ))}
       </div>
       <div>
-        <h2 className="h-l">Tell me what the site has to do.</h2>
+        <h2 className="h-l">{title}</h2>
         <p className="lede" style={{ marginTop: 16 }}>
-          A paragraph is enough. If it is not something I should take on, I will say so and point you somewhere better.
+          {intro}
         </p>
       </div>
       <Link className="btn btn--main" to="/contact">
-        Start a project <IArrow />
+        {cta} <IArrow />
       </Link>
     </div>
   )
