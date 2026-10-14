@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { Link } from "react-router-dom"
 import {
   ArrowDown,
   ArrowUp,
@@ -17,6 +18,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Switch } from "@/components/ui/switch"
 import {
   Dialog,
   DialogContent,
@@ -36,6 +38,16 @@ import {
   type WorkStatus,
 } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import {
+  HERO_MAX,
+  blankHero,
+  heroChanges,
+  heroFormFromRow,
+  heroIdsInHeroOrder,
+  heroIdsInListOrder,
+  validateHero,
+  type HeroForm,
+} from "./siteContentModel"
 
 // The Work module: one record type (server/work.php) for the studio's own
 // portfolio, feeding the public /work pages. Not a page builder — a plain admin
@@ -127,6 +139,11 @@ export default function Work() {
   // narrative text could be read back. See loadDetail().
   const [detailImages, setDetailImages] = useState<WorkImage[]>([])
   const [narrativeLoaded, setNarrativeLoaded] = useState(true)
+  // Homepage hero fields, kept apart from the record so only changed keys are sent.
+  const [hero, setHero] = useState<HeroForm>(blankHero)
+  const [heroInitial, setHeroInitial] = useState<HeroForm>(blankHero)
+  // Ids whose hero switch is mid-request, so a double click cannot race itself.
+  const [heroBusy, setHeroBusy] = useState<number[]>([])
 
   // Image manager.
   const [imgFor, setImgFor] = useState<WorkAdminRow | null>(null)
@@ -197,12 +214,22 @@ export default function Work() {
     }
   }
 
+  // The hero screenshot pickers choose from the same image library the Images
+  // dialog uses.
+  const loadLibrary = async () => {
+    const lib = await filesApi.list()
+    if (lib.ok) setLibrary(lib.data.filter((f) => (f.mime ?? "").startsWith("image/")))
+  }
+
   const startNew = () => {
     setForm(blank)
     setErrs({})
     setDetailImages([])
     setNarrativeLoaded(true)
+    setHero(blankHero)
+    setHeroInitial(blankHero)
     setOpen(true)
+    loadLibrary()
   }
 
   const startEdit = async (row: WorkAdminRow) => {
@@ -227,8 +254,14 @@ export default function Work() {
       sort_order: row.sort_order,
       ...narrative,
     })
+    const h = heroFormFromRow(row)
+    setHero(h)
+    setHeroInitial(h)
     setOpen(true)
+    loadLibrary()
   }
+
+  const setH = <K extends keyof HeroForm>(k: K, v: HeroForm[K]) => setHero((h) => ({ ...h, [k]: v }))
 
   const set = <K extends keyof FormState>(k: K, v: FormState[K]) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -250,6 +283,7 @@ export default function Work() {
       next.client_consent =
         "This record names a client, so it cannot be published until client consent is recorded. Tick consent, clear the client name, or save it as a draft."
     }
+    Object.assign(next, validateHero(hero))
     setErrs(next)
     return Object.keys(next).length === 0
   }
@@ -265,11 +299,16 @@ export default function Work() {
       completed_on: rest.completed_on || null,
       live_url: (rest.live_url ?? "").trim() || undefined,
       repo_url: (rest.repo_url ?? "").trim() || undefined,
+      // Hero keys only when they changed, so an unrelated edit leaves them alone.
+      ...heroChanges(heroInitial, hero),
     }
     const res = id ? await work.update(id, payload) : await work.create(payload)
     setSaving(false)
     if (res.ok) {
-      toast.success(id ? "Work saved." : "Work created.")
+      const heroRemoved = "hero_removed" in res.data && res.data.hero_removed
+      toast.success(
+        id ? (heroRemoved ? "Work saved. As a draft it has left the homepage hero." : "Work saved.") : "Work created.",
+      )
       setOpen(false)
       load()
       return
@@ -290,7 +329,13 @@ export default function Work() {
     const res = await work.publish(row.id, next)
     setBusy(false)
     if (res.ok) {
-      toast.success(next === "published" ? "Published." : "Moved back to draft.")
+      toast.success(
+        next === "published"
+          ? "Published."
+          : res.data.hero_removed
+            ? "Moved back to draft and out of the homepage hero."
+            : "Moved back to draft.",
+      )
       load()
       return
     }
@@ -324,12 +369,54 @@ export default function Work() {
     setItems(next)
     setBusy(true)
     const res = await work.reorder(next.map((x) => x.id))
-    setBusy(false)
-    if (res.ok) load()
-    else {
+    if (!res.ok) {
+      setBusy(false)
       toast.error(res.error || "Could not save the new order.")
       load()
+      return
     }
+    // The hero follows the order of this list, so a move that changes the
+    // relative order of hero records also reorders the hero.
+    const heroIds = heroIdsInListOrder(next)
+    if (heroIds.length > 1 && heroIds.join() !== heroIdsInHeroOrder(next).join()) {
+      const ho = await work.heroOrder(heroIds)
+      if (!ho.ok) toast.error(ho.error || "The list order saved, but the hero order did not.")
+    }
+    setBusy(false)
+    load()
+  }
+
+  // ── Homepage hero ──────────────────────────────────────────────────────────
+  // Optimistic: the switch flips at once and rolls back if the server refuses,
+  // showing the server's own reason (five already in, or not published).
+  const heroCount = items.filter((x) => x.hero_order != null).length
+
+  const toggleHero = async (row: WorkAdminRow, on: boolean) => {
+    if (heroBusy.includes(row.id)) return
+    const before = items
+    const optimistic = items.map((x) => (x.id === row.id ? { ...x, hero_order: on ? heroCount + 1 : null } : x))
+    setItems(optimistic)
+    setHeroBusy((b) => [...b, row.id])
+    const res = await work.setHero(row.id, on)
+    if (!res.ok) {
+      setItems(before)
+      setHeroBusy((b) => b.filter((x) => x !== row.id))
+      toast.error(res.error || "Could not change the hero.")
+      return
+    }
+    // The server appends a new hero record at the end; bring it into line
+    // with this list's order.
+    if (on) {
+      const withServerOrder = optimistic.map((x) => (x.id === row.id ? { ...x, hero_order: res.data.hero_order } : x))
+      const want = heroIdsInListOrder(withServerOrder)
+      if (want.length > 1 && want.join() !== heroIdsInHeroOrder(withServerOrder).join()) {
+        const ho = await work.heroOrder(want)
+        if (!ho.ok) toast.error(ho.error || "Added to the hero, but its position could not be saved.")
+      }
+    }
+    setHeroBusy((b) => b.filter((x) => x !== row.id))
+    toast.success(on ? `${row.title} added to the hero.` : `${row.title} removed from the hero.`)
+    load()
   }
 
   // ── Images ────────────────────────────────────────────────────────────────
@@ -403,7 +490,8 @@ export default function Work() {
         <div>
           <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Work</h1>
           <p className="text-sm text-muted-foreground">
-            Case studies, products, experiments and writing. Published records appear on the public site.
+            Case studies, products, experiments and writing. Published records appear on the public site; up to five
+            can lead the homepage hero.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -422,6 +510,28 @@ export default function Work() {
         </div>
       )}
 
+      {!loading && !error && (
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-xl border border-border bg-card p-4">
+          <span className="flex gap-1" aria-hidden="true">
+            {Array.from({ length: HERO_MAX }, (_, i) => (
+              <i key={i} className={cn("h-1.5 w-[22px] rounded-full", i < heroCount ? "bg-primary" : "bg-muted")} />
+            ))}
+          </span>
+          <p className="min-w-[200px] flex-1 text-sm">
+            <b className="tabular-nums">
+              {heroCount} of {HERO_MAX}
+            </b>{" "}
+            homepage hero slots used.{" "}
+            <span className="text-muted-foreground">Hero order follows the order of this list.</span>
+          </p>
+          <Button asChild variant="outline" size="sm">
+            <Link to="/app/site">
+              <Eye className="mr-2 h-4 w-4" /> Preview hero
+            </Link>
+          </Button>
+        </div>
+      )}
+
       <div className="overflow-hidden rounded-xl border border-border bg-card">
         {loading ? (
           <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
@@ -432,8 +542,14 @@ export default function Work() {
         ) : (
           <ul className="divide-y">
             {items.map((row, i) => (
-              <li key={row.id} className="flex items-start justify-between gap-4 p-4">
-                <div className="min-w-0">
+              <li key={row.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 p-4">
+                <span
+                  className={cn("h-7 w-7 flex-shrink-0 rounded-lg border border-border", !row.brand_colour && "border-dashed")}
+                  style={row.brand_colour ? { background: row.brand_colour } : undefined}
+                  title={row.brand_colour ? `Brand colour ${row.brand_colour}` : "No brand colour set"}
+                  aria-hidden="true"
+                />
+                <div className="min-w-[200px] flex-1 basis-0">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">{row.title}</span>
                     {row.featured === 1 && <Star className="h-3.5 w-3.5 fill-current text-amber-400" aria-label="Featured" />}
@@ -464,7 +580,16 @@ export default function Work() {
                     {row.summary || <span className="italic">No summary yet.</span>}
                   </p>
                 </div>
-                <div className="flex flex-shrink-0 gap-1">
+                <div className="flex flex-shrink-0 flex-wrap items-center gap-1">
+                  <label className="mr-2 flex items-center gap-2 whitespace-nowrap text-sm">
+                    <Switch
+                      checked={row.hero_order != null}
+                      disabled={heroBusy.includes(row.id)}
+                      onCheckedChange={(v) => toggleHero(row, v)}
+                      aria-label={`Show ${row.title} in the homepage hero`}
+                    />
+                    <span aria-hidden="true">Hero</span>
+                  </label>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -689,6 +814,108 @@ export default function Work() {
                   </div>
                 </div>
               )}
+            </fieldset>
+
+            {/* Homepage hero presentation. Sent only when changed. */}
+            <fieldset className="grid gap-3 rounded-lg border border-border p-4">
+              <legend className="px-1 text-sm font-medium">Homepage hero</legend>
+              <div className="grid grid-cols-[auto_minmax(0,1fr)] items-start gap-3">
+                <div>
+                  <Label htmlFor="w-colour">Brand colour</Label>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    <input
+                      id="w-colour"
+                      type="color"
+                      value={/^#[0-9A-Fa-f]{6}$/.test(hero.brand_colour) ? hero.brand_colour : "#000000"}
+                      onChange={(e) => setH("brand_colour", e.target.value.toUpperCase())}
+                      className="h-9 w-14 cursor-pointer rounded-md border border-input bg-transparent p-1"
+                    />
+                    <Input
+                      aria-label="Brand colour as a hex value"
+                      value={hero.brand_colour}
+                      onChange={(e) => setH("brand_colour", e.target.value)}
+                      placeholder="#3B6FE0"
+                      maxLength={7}
+                      aria-invalid={!!errs.brand_colour}
+                      aria-describedby={errs.brand_colour ? "w-colour-error" : undefined}
+                      className="w-28 font-mono"
+                    />
+                  </div>
+                  <FieldError id="w-colour-error" message={errs.brand_colour} />
+                </div>
+                <div className="min-w-0">
+                  <Label htmlFor="w-heroword">Hero word</Label>
+                  <Input
+                    id="w-heroword"
+                    value={hero.hero_word}
+                    onChange={(e) => setH("hero_word", e.target.value)}
+                    placeholder="e.g. care agencies"
+                    maxLength={40}
+                    aria-invalid={!!errs.hero_word}
+                    aria-describedby={errs.hero_word ? "w-heroword-error w-heroword-help" : "w-heroword-help"}
+                    className="mt-1.5"
+                  />
+                  <FieldError id="w-heroword-error" message={errs.hero_word} />
+                </div>
+              </div>
+              <p id="w-heroword-help" className="text-xs text-muted-foreground">
+                Finishes the headline &ldquo;I design and build websites for &hellip;&rdquo;. Keep it to one or two words.
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {(
+                  [
+                    ["desktop", "Desktop screenshot"],
+                    ["mobile", "Phone screenshot"],
+                  ] as const
+                ).map(([k, label]) => {
+                  const fileKey = `${k}_file_id` as const
+                  const altKey = `${k}_alt` as const
+                  const current = hero[fileKey]
+                  return (
+                    <div key={k} className="grid content-start gap-2">
+                      <div>
+                        <Label htmlFor={`w-hero-${k}`}>{label}</Label>
+                        <select
+                          id={`w-hero-${k}`}
+                          className={cn(selectClass, "mt-1.5")}
+                          value={current ?? ""}
+                          onChange={(e) => setH(fileKey, e.target.value ? Number(e.target.value) : null)}
+                        >
+                          <option value="">None</option>
+                          {current && !library.some((f) => f.id === current) ? (
+                            <option value={current}>Current screenshot (file #{current})</option>
+                          ) : null}
+                          {library.map((f) => (
+                            <option key={f.id} value={f.id}>
+                              {f.name}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      {current ? (
+                        <div>
+                          <Label htmlFor={`w-hero-${k}-alt`}>Alt text (required)</Label>
+                          <Input
+                            id={`w-hero-${k}-alt`}
+                            required
+                            maxLength={200}
+                            value={hero[altKey]}
+                            onChange={(e) => setH(altKey, e.target.value)}
+                            aria-invalid={!!errs[altKey]}
+                            aria-describedby={errs[altKey] ? `w-hero-${k}-alt-error` : undefined}
+                            className="mt-1.5"
+                          />
+                          <FieldError id={`w-hero-${k}-alt-error`} message={errs[altKey]} />
+                        </div>
+                      ) : null}
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Screenshots come from the file library. Choosing one gives it a permanent public link, as attaching an
+                image does.
+              </p>
             </fieldset>
 
             <div className="grid gap-4 sm:grid-cols-2">
