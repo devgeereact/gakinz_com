@@ -185,6 +185,10 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .post:hover{border-color:var(--line-2);transform:translateY(-3px)}
 .gk-site .post h3{font-size:1.35rem}
 .gk-site .post p{color:var(--mute);flex:1}
+.gk-site .quotes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;list-style:none;margin:0;padding:0}
+.gk-site .quote{display:flex;flex-direction:column;gap:20px;height:100%;margin:0;padding:24px;border-radius:20px;background:var(--panel);border:1px solid var(--line)}
+.gk-site .quote blockquote{flex:1;margin:0;font-family:var(--disp);font-size:1.25rem;line-height:1.35;letter-spacing:-.01em;overflow-wrap:anywhere}
+.gk-site .quote figcaption{display:grid;gap:2px;border-top:1px solid var(--line);padding-top:14px}
 .gk-site .band{position:relative;overflow:hidden;border-radius:28px;background:var(--panel);border:1px solid var(--line);padding:clamp(28px,6vw,72px);display:grid;grid-template-columns:minmax(0,1fr) auto;gap:32px;align-items:end}
 .gk-site .band__strip{position:absolute;left:0;right:0;top:0;height:6px;display:flex}
 .gk-site .band__strip i{flex:1}
@@ -303,7 +307,7 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 @keyframes gk-rise-in{from{opacity:0;transform:translateY(16px)}}}
 @media (max-width:1100px){.gk-site .grid-work{grid-template-columns:repeat(2,minmax(0,1fr))}
 .gk-site .card,.gk-site .card--wide{grid-column:span 1}
-.gk-site .svc,.gk-site .plans{grid-template-columns:repeat(2,minmax(0,1fr))}
+.gk-site .svc,.gk-site .plans,.gk-site .quotes{grid-template-columns:repeat(2,minmax(0,1fr))}
 .gk-site .svc a{border-right:0;padding-left:0!important;border-bottom:1px solid var(--line)}
 .gk-site .steps{grid-template-columns:repeat(3,minmax(0,1fr))}
 .gk-site .sectors{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -318,7 +322,7 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .facts{position:static}
 .gk-site .foot__cols{grid-template-columns:1fr 1fr}
 .gk-site .seal{margin:0 auto;max-width:16rem}}
-@media (max-width:560px){.gk-site .grid-work,.gk-site .svc,.gk-site .plans,.gk-site .sectors{grid-template-columns:1fr}
+@media (max-width:560px){.gk-site .grid-work,.gk-site .svc,.gk-site .plans,.gk-site .sectors,.gk-site .quotes{grid-template-columns:1fr}
 .gk-site .steps{grid-template-columns:1fr}
 .gk-site .row2{grid-template-columns:1fr}
 .gk-site .foot__cols{grid-template-columns:1fr}
