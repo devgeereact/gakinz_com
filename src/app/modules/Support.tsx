@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react"
-import { Loader2, Plus, RefreshCw, Send } from "lucide-react"
+import { AlertCircle, Loader2, Plus, RefreshCw, Send } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
+import { PageHeader, StatusBadge } from "@/app/components/page-kit"
+import { TableSkeleton } from "@/app/components/TableSkeleton"
 import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
@@ -39,17 +42,7 @@ const STATUSES: { key: TicketStatus; label: string }[] = [
 ]
 const PRIORITIES: TicketPriority[] = ["urgent", "high", "normal", "low"]
 
-const priorityClass: Record<TicketPriority, string> = {
-  urgent: "bg-destructive/10 text-destructive",
-  high: "bg-primary/10 text-primary",
-  normal: "bg-muted text-muted-foreground",
-  low: "bg-secondary text-secondary-foreground",
-}
-const statusClass: Record<TicketStatus, string> = {
-  open: "bg-primary/10 text-primary",
-  in_progress: "bg-accent text-accent-foreground",
-  resolved: "bg-muted text-muted-foreground",
-}
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1)
 
 function fmt(d: string) {
   return new Date(d.replace(" ", "T")).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
@@ -61,6 +54,7 @@ export default function Support() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
+  const [filter, setFilter] = useState<"all" | TicketStatus>("all")
 
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ subject: "", client_id: "", priority: "normal" as TicketPriority, body: "" })
@@ -105,21 +99,25 @@ export default function Support() {
 
   const onListChanged = () => load()
 
+  const counts = {
+    all: items.length,
+    open: items.filter((t) => t.status === "open").length,
+    in_progress: items.filter((t) => t.status === "in_progress").length,
+    resolved: items.filter((t) => t.status === "resolved").length,
+  }
+  const shown = filter === "all" ? items : items.filter((t) => t.status === filter)
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Support</h1>
-          <p className="text-sm text-muted-foreground">Client issues, tracked to resolution.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={load}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
+    <div>
+      <PageHeader
+        title="Support"
+        subtitle="Client issues, tracked to resolution."
+        actions={
+          <>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" /> New ticket
+              <Button>
+                <Plus /> New ticket
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -156,7 +154,7 @@ export default function Support() {
                       <SelectContent>
                         {PRIORITIES.map((p) => (
                           <SelectItem key={p} value={p}>
-                            {p}
+                            {cap(p)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -170,50 +168,90 @@ export default function Support() {
               </div>
               <DialogFooter>
                 <Button onClick={create} disabled={saving}>
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {saving && <Loader2 className="animate-spin" />}
                   Create ticket
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
+          <Button variant="outline" onClick={load}>
+            <RefreshCw /> Refresh
+          </Button>
+          </>
+        }
+      />
 
       {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the support endpoint and DB must be live on the server.
+        <div role="alert" className="mb-4 flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-bad" />
+          <div className="min-w-[min(100%,200px)] flex-1">
+            <p className="font-semibold">Could not load support tickets.</p>
+            <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
+              {error}. The support endpoint and database must be live on the server.
+            </p>
+          </div>
+          <Button variant="outline" onClick={load}>
+            <RefreshCw /> Try again
+          </Button>
         </div>
       )}
 
-      <div className="grid gap-4 lg:grid-cols-[1fr_1.3fr]">
+      {/* Status filter chips */}
+      <div className="mb-3.5 flex flex-wrap items-center gap-2" role="group" aria-label="Filter by status">
+        {(
+          [
+            ["all", "All"],
+            ["open", "Open"],
+            ["in_progress", "In progress"],
+            ["resolved", "Resolved"],
+          ] as const
+        ).map(([k, l]) => (
+          <button
+            key={k}
+            type="button"
+            aria-pressed={filter === k}
+            onClick={() => setFilter(k)}
+            className={cn(
+              "inline-flex min-h-[34px] items-center whitespace-nowrap rounded-full border bg-card px-3 text-[13px] font-medium transition-colors hover:border-line-strong",
+              filter === k && "border-foreground bg-foreground text-background hover:border-foreground",
+            )}
+          >
+            {l}
+            <span className="ml-1 font-mono text-[11px] tabular-nums opacity-70">{counts[k]}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
         {/* Ticket list */}
-        <div className="rounded-xl border border-border bg-card">
+        <div className="min-w-0 self-start rounded-2xl border bg-card p-1.5">
           {loading ? (
-            <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-              <Loader2 className="h-4 w-4 animate-spin" /> Loading tickets…
-            </div>
+            <TableSkeleton rows={5} cols={2} />
           ) : items.length === 0 ? (
-            <div className="p-10 text-center text-sm text-muted-foreground">No tickets. Raise one above.</div>
+            <p className="px-4 py-10 text-center text-muted-foreground">No tickets. Raise one above.</p>
+          ) : shown.length === 0 ? (
+            <p className="px-4 py-10 text-center text-muted-foreground">No tickets with this status.</p>
           ) : (
-            <ul className="divide-y divide-border">
-              {items.map((t) => (
+            <ul>
+              {shown.map((t) => (
                 <li key={t.id}>
                   <button
+                    type="button"
                     onClick={() => setSelectedId(t.id)}
+                    aria-current={selectedId === t.id ? "true" : undefined}
                     className={cn(
-                      "w-full px-4 py-3 text-left transition-colors hover:bg-accent/40",
-                      selectedId === t.id && "bg-accent/50",
+                      "flex w-full flex-col items-start gap-1 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-secondary focus-visible:bg-secondary focus-visible:outline-none",
+                      selectedId === t.id && "bg-secondary",
                     )}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-medium">{t.subject}</span>
-                      <span className={cn("rounded px-2 py-0.5 text-xs font-medium", priorityClass[t.priority])}>{t.priority}</span>
-                    </div>
-                    <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className={cn("rounded px-1.5 py-0.5", statusClass[t.status])}>{t.status.replace("_", " ")}</span>
-                      <span>{t.client_company || "No client"}</span>
-                      <span>· {fmt(t.created_at)}</span>
-                    </div>
+                    <span className="flex w-full items-start gap-2">
+                      <b className="min-w-0 flex-1 font-semibold [overflow-wrap:anywhere]">{t.subject}</b>
+                      <StatusBadge status={t.priority} />
+                    </span>
+                    <span className="text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
+                      {t.client_company || "No client"} · {fmt(t.created_at)}
+                    </span>
+                    <StatusBadge status={t.status} />
                   </button>
                 </li>
               ))}
@@ -222,11 +260,11 @@ export default function Support() {
         </div>
 
         {/* Detail */}
-        <div className="rounded-xl border border-border bg-card p-5">
+        <div className="min-w-0 rounded-2xl border bg-card p-[18px]">
           {selectedId ? (
             <TicketPanel key={selectedId} id={selectedId} onChanged={onListChanged} />
           ) : (
-            <div className="flex h-full min-h-48 items-center justify-center text-sm text-muted-foreground">
+            <div className="flex h-full min-h-48 items-center justify-center text-center text-muted-foreground">
               Select a ticket to view the thread.
             </div>
           )}
@@ -287,38 +325,49 @@ function TicketPanel({ id, onChanged }: { id: number; onChanged: () => void }) {
 
   if (loading || !ticket) {
     return (
-      <div className="flex items-center gap-2 py-6 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" /> Loading ticket…
+      <div role="status" className="grid gap-3">
+        <Skeleton className="h-4 w-40" />
+        <Skeleton className="h-7 w-3/4" />
+        <Skeleton className="h-20 w-full" />
+        <span className="sr-only">Loading ticket…</span>
       </div>
     )
   }
 
   return (
     <div className="flex h-full flex-col">
-      <div className="border-b border-border pb-4">
-        <h2 className="text-lg font-semibold">{ticket.subject}</h2>
-        <p className="mt-0.5 text-sm text-muted-foreground">{ticket.client_company || "No client"}</p>
-        <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mb-3.5 flex flex-wrap items-end gap-2.5">
+        <div className="min-w-[min(100%,200px)] flex-1">
+          <p className="font-mono text-xs uppercase tracking-[.08em] text-muted-foreground [overflow-wrap:anywhere]">
+            {ticket.client_company || "No client"} · {cap(ticket.priority)}
+          </p>
+          <h2 className="mt-1 font-display text-[1.3rem] font-semibold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">{ticket.subject}</h2>
+        </div>
+        <div className="grid min-w-[140px] gap-1.5 max-sm:flex-1">
+          <Label htmlFor="tst">Status</Label>
           <Select value={ticket.status} onValueChange={(v) => changeStatus(v as TicketStatus)}>
-            <SelectTrigger className="h-8 w-36 text-xs">
+            <SelectTrigger id="tst">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {STATUSES.map((s) => (
-                <SelectItem key={s.key} value={s.key} className="text-xs">
+                <SelectItem key={s.key} value={s.key}>
                   {s.label}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+        </div>
+        <div className="grid min-w-[120px] gap-1.5 max-sm:flex-1">
+          <Label htmlFor="tpr">Priority</Label>
           <Select value={ticket.priority} onValueChange={(v) => changePriority(v as TicketPriority)}>
-            <SelectTrigger className="h-8 w-28 text-xs">
+            <SelectTrigger id="tpr">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {PRIORITIES.map((p) => (
-                <SelectItem key={p} value={p} className="text-xs">
-                  {p}
+                <SelectItem key={p} value={p}>
+                  {cap(p)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -326,40 +375,65 @@ function TicketPanel({ id, onChanged }: { id: number; onChanged: () => void }) {
         </div>
       </div>
 
-      <div className="flex-1 space-y-3 overflow-y-auto py-4">
+      <ul className="m-0 flex-1 list-none p-0">
         {ticket.body && (
-          <div className="rounded-lg bg-muted/40 p-3 text-sm">{ticket.body}</div>
+          <li className="grid grid-cols-[20px_minmax(0,1fr)] gap-2.5 py-2">
+            <span aria-hidden className="ml-[5px] mt-1.5 h-[9px] w-[9px] rounded-full bg-line-strong shadow-[0_0_0_3px_hsl(var(--card))]" />
+            <span className="min-w-0 [overflow-wrap:anywhere]">
+              <b className="font-semibold">{ticket.client_company || "Client"}</b>
+              <small className="text-[12.5px] text-muted-foreground"> · {fmt(ticket.created_at)}</small>
+              <br />
+              <span className="whitespace-pre-line">{ticket.body}</span>
+            </span>
+          </li>
         )}
         {ticket.replies.map((r) => (
-          <div key={r.id} className="rounded-lg border border-border p-3 text-sm">
-            <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
-              <span className="font-medium text-foreground">{r.author || "Staff"}</span>
-              <span>{fmt(r.created_at)}</span>
-            </div>
-            {r.body}
-          </div>
+          <li key={r.id} className="grid grid-cols-[20px_minmax(0,1fr)] gap-2.5 py-2">
+            <span aria-hidden className="ml-[5px] mt-1.5 h-[9px] w-[9px] rounded-full bg-acc shadow-[0_0_0_3px_hsl(var(--card))]" />
+            <span className="min-w-0 [overflow-wrap:anywhere]">
+              <b className="font-semibold">{r.author || "Staff"}</b>
+              <small className="text-[12.5px] text-muted-foreground"> · {fmt(r.created_at)}</small>
+              <br />
+              <span className="whitespace-pre-line">{r.body}</span>
+            </span>
+          </li>
         ))}
         {ticket.replies.length === 0 && !ticket.body && (
-          <p className="text-sm text-muted-foreground">No messages yet.</p>
+          <li className="py-2 text-sm text-muted-foreground">No messages yet.</li>
         )}
-      </div>
+      </ul>
 
-      <div className="flex gap-2 border-t border-border pt-4">
+      <div className="mt-3">
+        <Label htmlFor="treply" className="sr-only">
+          Reply
+        </Label>
+        <Textarea
+          id="treply"
+          rows={4}
+          value={reply}
+          onChange={(e) => setReply(e.target.value)}
+          onKeyDown={(e) => {
+            // Enter sends, as before; Shift+Enter starts a new line.
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+              e.preventDefault()
+              sendReply()
+            }
+          }}
+          placeholder="Write a reply…"
+        />
+      </div>
+      <div className="mt-2 flex flex-wrap justify-end gap-2">
         <AiAssist
           task="ticket_reply"
           title="Draft a reply"
-          label="AI"
+          label="AI draft"
+          size="default"
           input={`Support ticket: ${ticket.subject}\n\nDetails: ${ticket.body || "(none)"}\n\nThread so far:\n${ticket.replies.map((r) => `${r.author || "Staff"}: ${r.body}`).join("\n") || "(no replies yet)"}\n\nDraft the next staff reply to the client: acknowledge the issue, state what we will do or have done, and give a clear next step.`}
           onUse={(text) => setReply(text)}
         />
-        <Input
-          value={reply}
-          onChange={(e) => setReply(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && sendReply()}
-          placeholder="Write a reply…"
-        />
         <Button onClick={sendReply} disabled={sending}>
-          {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          {sending ? <Loader2 className="animate-spin" /> : <Send />}
+          Send reply
         </Button>
       </div>
     </div>
