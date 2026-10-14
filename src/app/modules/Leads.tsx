@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { Loader2, Download, RefreshCw, Mail, Building2, UserPlus, Tag, Flame, CalendarClock } from "lucide-react"
+import { Loader2, Download, RefreshCw, Mail, UserPlus, Tag, CalendarClock, Inbox } from "lucide-react"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
@@ -21,28 +23,33 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { leads, clients, type Lead, type LeadPriority, type LeadStage } from "@/lib/api"
 import { followUpState, formatYmd, localIsoDate } from "@/lib/format"
 import AiAssist from "@/app/components/AiAssist"
+import { EmptyState, LoadError } from "@/app/components/EmptyState"
+import { PageHeader, StatusBadge } from "@/app/components/page-kit"
 import { cn } from "@/lib/utils"
 
-const SCORE_META: Record<number, { label: string; cls: string }> = {
-  0: { label: "Unscored", cls: "bg-muted text-muted-foreground" },
-  1: { label: "Cold", cls: "bg-sky-500/15 text-sky-700 dark:text-sky-300" },
-  2: { label: "Warm", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
-  3: { label: "Hot", cls: "bg-destructive/10 text-destructive" },
+type Tone = "ok" | "warn" | "bad" | "acc" | "secondary"
+
+const SCORE_META: Record<number, { label: string; tone: Tone }> = {
+  0: { label: "Unscored", tone: "secondary" },
+  1: { label: "Cold", tone: "acc" },
+  2: { label: "Warm", tone: "warn" },
+  3: { label: "Hot", tone: "bad" },
 }
 // The owner's own priority, separate from the AI score above.
-const PRIORITY_META: Record<number, { label: string; cls: string }> = {
-  1: { label: "Low", cls: "bg-muted text-muted-foreground" },
-  2: { label: "Normal", cls: "bg-primary/10 text-primary" },
-  3: { label: "High", cls: "bg-destructive/10 text-destructive" },
+const PRIORITY_META: Record<number, { label: string; tone: Tone }> = {
+  1: { label: "Low", tone: "secondary" },
+  2: { label: "Normal", tone: "acc" },
+  3: { label: "High", tone: "bad" },
 }
 const FOLLOW_META = {
-  overdue: { label: "Overdue", cls: "bg-destructive/10 text-destructive" },
-  today: { label: "Due today", cls: "bg-amber-500/15 text-amber-700 dark:text-amber-300" },
-  upcoming: { label: "Next", cls: "bg-muted text-muted-foreground" },
-} as const
+  overdue: { label: "Overdue", tone: "bad" },
+  today: { label: "Due today", tone: "warn" },
+  upcoming: { label: "Next", tone: "secondary" },
+} as const satisfies Record<string, { label: string; tone: Tone }>
 const isDueOn = (l: Lead, today: string) => {
   const st = followUpState(l, today)
   return st === "overdue" || st === "today"
@@ -72,6 +79,8 @@ export default function Leads() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [converting, setConverting] = useState<number | null>(null)
+  // A view filter only; nothing is saved.
+  const [hotOnly, setHotOnly] = useState(false)
 
   // Lost-reason capture
   const [lostFor, setLostFor] = useState<Lead | null>(null)
@@ -206,176 +215,276 @@ export default function Leads() {
   const exportXlsx = () =>
     downloadXlsx("gakinz-leads.xlsx", leadHead, items as unknown as Record<string, unknown>[], "Leads")
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Enquiries</h1>
-          <p className="text-sm text-muted-foreground">
-            Every enquiry from the website, captured and chased to won or lost.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {followUpsReady && (
-            <Button
-              variant={dueOnly ? "default" : "outline"}
-              size="sm"
-              aria-pressed={dueOnly}
-              onClick={() => setDueOnly(!dueOnly)}
-            >
-              <CalendarClock className="mr-2 h-4 w-4" /> Follow-ups due
-              {!loading && !error && <span className="ml-1.5 tabular-nums">({dueCount})</span>}
-            </Button>
-          )}
-          <Button variant="outline" size="sm" onClick={load}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportCsv} disabled={!items.length}>
-            <Download className="mr-2 h-4 w-4" /> CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportXlsx} disabled={!items.length}>
-            <Download className="mr-2 h-4 w-4" /> XLSX
-          </Button>
-        </div>
-      </div>
+  // Drawer, drag and drop. The drawer reads the lead from `items`, so a stage
+  // change made while it is open shows straight away.
+  const [openId, setOpenId] = useState<number | null>(null)
+  const openLead = openId != null ? (items.find((l) => l.id === openId) ?? null) : null
+  const [dragId, setDragId] = useState<number | null>(null)
+  const [overStage, setOverStage] = useState<LeadStage | null>(null)
+  const drop = (stage: LeadStage) => {
+    const lead = items.find((l) => l.id === dragId)
+    setDragId(null)
+    setOverStage(null)
+    if (lead && lead.status !== stage) move(lead, stage)
+  }
+  // Leaving the drawer for one of the existing dialogs.
+  const fromDrawer = (fn: () => void) => {
+    setOpenId(null)
+    fn()
+  }
 
-      {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the leads endpoint and DB must be live on the server.
+  const hotCount = items.filter((l) => l.score === 3).length
+  const chip = (active: boolean) =>
+    cn(
+      "inline-flex min-h-[34px] items-center gap-1 whitespace-nowrap rounded-full border px-3 text-[13px] font-medium transition-colors",
+      active ? "border-foreground bg-foreground text-background" : "border-border bg-card hover:border-line-strong",
+    )
+
+  return (
+    <div>
+      <PageHeader
+        title="Enquiries"
+        subtitle="Every enquiry from the website, captured and chased to won or lost."
+        actions={
+          <>
+            <Button variant="outline" onClick={exportCsv} disabled={!items.length}>
+              <Download /> CSV
+            </Button>
+            <Button variant="outline" onClick={exportXlsx} disabled={!items.length}>
+              <Download /> XLSX
+            </Button>
+            <Button variant="outline" onClick={load} disabled={loading}>
+              <RefreshCw className={cn(loading && "animate-spin")} /> Refresh
+            </Button>
+          </>
+        }
+      />
+
+      {error && <LoadError what="enquiries" detail={`${error}. The leads endpoint and database must be live on the server.`} onRetry={load} className="mb-4" />}
+
+      {!error && (
+        <div className="mb-3.5 flex flex-wrap items-center gap-2" role="group" aria-label="Filter enquiries">
+          <button type="button" className={chip(!dueOnly && !hotOnly)} aria-pressed={!dueOnly && !hotOnly} onClick={() => { setDueOnly(false); setHotOnly(false) }}>
+            All {!loading && <span className="font-mono text-[11px] opacity-70">{items.length}</span>}
+          </button>
+          {followUpsReady && (
+            <button type="button" className={chip(dueOnly)} aria-pressed={dueOnly} onClick={() => setDueOnly(!dueOnly)}>
+              Follow-ups due {!loading && <span className="font-mono text-[11px] opacity-70">{dueCount}</span>}
+            </button>
+          )}
+          <button type="button" className={chip(hotOnly)} aria-pressed={hotOnly} onClick={() => setHotOnly(!hotOnly)}>
+            Hot {!loading && <span className="font-mono text-[11px] opacity-70">{hotCount}</span>}
+          </button>
         </div>
       )}
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading leads…
-        </div>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          {STAGES.map((stage) => (
-            <div key={stage.key} className="rounded-xl border border-border bg-muted/30">
-              <div className="flex items-center justify-between border-b border-border px-3 py-2">
-                <span className="text-sm font-semibold">{stage.label}</span>
-                <span className="rounded-full bg-background px-2 py-0.5 text-xs text-muted-foreground">
-                  {byStage[stage.key].length}
-                </span>
-              </div>
-              <div className="space-y-2 p-2">
-                {byStage[stage.key].length === 0 ? (
-                  <p className="px-1 py-4 text-center text-xs text-muted-foreground">No leads</p>
-                ) : (
-                  byStage[stage.key].map((lead) => (
-                    <div key={lead.id} className="rounded-lg border border-border bg-card p-3 shadow-sm">
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-sm font-medium">{lead.name}</span>
-                        <div className="flex items-center gap-1">
-                          {(lead.priority ?? 0) > 0 && (
-                            <span
-                              className={cn("rounded px-1.5 py-0.5 text-[10px] font-medium", PRIORITY_META[lead.priority ?? 0].cls)}
-                              title="Your priority"
-                            >
-                              {PRIORITY_META[lead.priority ?? 0].label}
-                            </span>
-                          )}
-                          {lead.score > 0 && (
-                            <span className={cn("inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-medium", SCORE_META[lead.score].cls)}>
-                              <Flame className="h-2.5 w-2.5" /> {SCORE_META[lead.score].label}
-                            </span>
-                          )}
-                          <span className="text-xs text-muted-foreground">{formatDate(lead.created_at)}</span>
-                        </div>
-                      </div>
-                      {parseTags(lead.tags).length > 0 && (
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {parseTags(lead.tags).map((t) => (
-                            <span key={t} className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">{t}</span>
-                          ))}
-                        </div>
-                      )}
-                      <FollowUp lead={lead} today={today} />
-                      {lead.status === "lost" && lead.lost_reason && (
-                        <p className="mt-1 text-[11px] italic text-muted-foreground">Lost: {lead.lost_reason}</p>
-                      )}
-                      {lead.company && (
-                        <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                          <Building2 className="h-3 w-3" /> {lead.company}
-                        </div>
-                      )}
-                      <a
-                        href={`mailto:${lead.email}`}
-                        className="mt-0.5 flex items-center gap-1 text-xs text-primary hover:underline"
-                      >
-                        <Mail className="h-3 w-3" /> {lead.email}
-                      </a>
-                      {(lead.project_type || lead.budget) && (
-                        <div className="mt-2 flex flex-wrap gap-1">
-                          {lead.project_type && (
-                            <span className="rounded bg-secondary px-1.5 py-0.5 text-[11px] text-secondary-foreground">
-                              {lead.project_type}
-                            </span>
-                          )}
-                          {lead.budget && (
-                            <span className="rounded bg-accent px-1.5 py-0.5 text-[11px] text-accent-foreground">
-                              {lead.budget}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{lead.message}</p>
-                      <div className="mt-2">
-                        <AiAssist
-                          task="lead_reply"
-                          title={`Reply to ${lead.name}`}
-                          label="AI reply"
-                          variant="ghost"
-                          input={`New enquiry from ${lead.name}${lead.company ? ` at ${lead.company}` : ""} (${lead.email}).${lead.project_type ? `\nProject type: ${lead.project_type}.` : ""}${lead.budget ? `\nBudget: ${lead.budget}.` : ""}\n\nTheir message:\n"${lead.message}"\n\nDraft GAkinz's first reply email: thank them, show we understood the project, ask one or two sharp scoping questions, and propose a short call. Sign off as the GAkinz studio team.`}
-                        />
-                      </div>
-                      <div className="mt-2 flex items-center gap-1.5">
-                        <Select value={lead.status} onValueChange={(v) => move(lead, v as LeadStage)}>
-                          <SelectTrigger className="h-8 flex-1 text-xs">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {STAGES.map((s) => (
-                              <SelectItem key={s.key} value={s.key} className="text-xs">
-                                {s.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8 flex-shrink-0"
-                          title="Tags, score and follow-up"
-                          aria-label={`Tags, score and follow-up for ${lead.name}`}
-                          onClick={() => openEdit(lead)}
-                        >
-                          <Tag className="h-3.5 w-3.5" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="icon"
-                          className="h-8 w-8 flex-shrink-0"
-                          title="Convert to client"
-                          onClick={() => convert(lead)}
-                          disabled={converting === lead.id}
-                        >
-                          {converting === lead.id ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                          ) : (
-                            <UserPlus className="h-3.5 w-3.5" />
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+        <div aria-busy="true" aria-label="Loading enquiries" className="grid auto-cols-[minmax(250px,1fr)] grid-flow-col gap-3.5 overflow-x-auto pb-2">
+          {STAGES.map((s) => (
+            <div key={s.key} className="flex min-h-[200px] flex-col gap-2 rounded-2xl border bg-secondary p-2.5">
+              <Skeleton className="m-1.5 h-5 w-20 rounded-full" />
+              <Skeleton className="h-20 rounded-xl" />
+              <Skeleton className="h-20 rounded-xl" />
             </div>
           ))}
         </div>
-      )}
+      ) : !error && items.length === 0 ? (
+        <EmptyState
+          className="rounded-2xl border border-dashed border-line-strong bg-card py-14" icon={Inbox} title="No enquiries yet" description="The public contact form feeds this board." />
+      ) : !error ? (
+        <>
+          <div className="grid auto-cols-[minmax(250px,1fr)] grid-flow-col gap-3.5 overflow-x-auto pb-2">
+            {STAGES.map((stage) => {
+              const list = byStage[stage.key].filter((l) => !hotOnly || l.score === 3)
+              return (
+                <section
+                  key={stage.key}
+                  aria-label={`${stage.label}, ${list.length}`}
+                  onDragOver={(e) => {
+                    if (dragId == null) return
+                    e.preventDefault()
+                    setOverStage(stage.key)
+                  }}
+                  onDragLeave={() => setOverStage((s) => (s === stage.key ? null : s))}
+                  onDrop={(e) => {
+                    e.preventDefault()
+                    drop(stage.key)
+                  }}
+                  className={cn(
+                    "flex min-h-[200px] min-w-0 flex-col gap-2 rounded-2xl border bg-secondary p-2.5 transition-colors",
+                    overStage === stage.key && "border-acc bg-acc-soft",
+                  )}
+                >
+                  <div className="flex items-center gap-2 px-1.5 pb-2 pt-1">
+                    <StatusBadge status={stage.key}>{stage.label}</StatusBadge>
+                    <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">{list.length}</span>
+                  </div>
+                  {list.length === 0 ? (
+                    <p className="px-1 py-4 text-center text-xs text-muted-foreground">No leads</p>
+                  ) : (
+                    list.map((lead) => {
+                      const st = followUpState(lead, today)
+                      const foot = [
+                        lead.score > 0 ? SCORE_META[lead.score].label : null,
+                        st && lead.next_action_at ? `${FOLLOW_META[st].label} ${formatYmd(lead.next_action_at)}` : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")
+                      return (
+                        <button
+                          key={lead.id}
+                          type="button"
+                          draggable
+                          onDragStart={(e) => {
+                            e.dataTransfer.effectAllowed = "move"
+                            setDragId(lead.id)
+                          }}
+                          onDragEnd={() => {
+                            setDragId(null)
+                            setOverStage(null)
+                          }}
+                          onClick={() => setOpenId(lead.id)}
+                          aria-label={`${lead.company || lead.name}, ${lead.name}. ${stage.label}${foot ? `, ${foot}` : ""}. Open to change the stage.`}
+                          className={cn(
+                            "grid w-full cursor-grab gap-1.5 rounded-xl border bg-card p-3 text-left transition-[border-color,box-shadow] hover:border-line-strong hover:shadow-os",
+                            dragId === lead.id && "opacity-50",
+                          )}
+                        >
+                          <b className="min-w-0 font-semibold [overflow-wrap:anywhere]">{lead.company || lead.name}</b>
+                          <span className="min-w-0 text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
+                            {lead.company ? lead.name : lead.email}
+                            {lead.project_type ? ` · ${lead.project_type}` : ""}
+                          </span>
+                          {(foot || lead.budget) && (
+                            <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[12.5px] text-muted-foreground">
+                              <span className={cn("min-w-0", st === "overdue" && "text-bad", st === "today" && "text-warn")}>{foot}</span>
+                              {lead.budget && <span className="min-w-0 font-mono tabular-nums [overflow-wrap:anywhere]">{lead.budget}</span>}
+                            </span>
+                          )}
+                        </button>
+                      )
+                    })
+                  )}
+                </section>
+              )
+            })}
+          </div>
+          <p className="mt-3 text-[13px] text-muted-foreground">Drag a card to move it between stages, or open it to change the stage.</p>
+        </>
+      ) : null}
+
+      {/* Enquiry drawer */}
+      <Sheet open={!!openLead} onOpenChange={(o) => !o && setOpenId(null)}>
+        <SheetContent className="flex flex-col gap-0 p-0 sm:p-0">
+          {openLead && (
+            <>
+              <SheetHeader className="border-b p-5 pb-4 text-left">
+                <SheetTitle className="[overflow-wrap:anywhere]">{openLead.company || openLead.name}</SheetTitle>
+                <SheetDescription>Enquiry · {STAGES.find((s) => s.key === openLead.status)?.label}</SheetDescription>
+              </SheetHeader>
+              <div className="flex-1 overflow-y-auto p-5">
+                <dl className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-x-4 gap-y-2.5 max-sm:grid-cols-1">
+                  <dt className="text-[13.5px] text-muted-foreground">Contact</dt>
+                  <dd className="m-0 min-w-0 [overflow-wrap:anywhere]">{openLead.name}</dd>
+                  <dt className="text-[13.5px] text-muted-foreground">Email</dt>
+                  <dd className="m-0 min-w-0 [overflow-wrap:anywhere]">
+                    <a href={`mailto:${openLead.email}`} className="inline-flex items-center gap-1 text-acc hover:underline">
+                      <Mail aria-hidden className="size-3.5 shrink-0" /> {openLead.email}
+                    </a>
+                  </dd>
+                  <dt className="text-[13.5px] text-muted-foreground">Wants</dt>
+                  <dd className="m-0 min-w-0 [overflow-wrap:anywhere]">{openLead.project_type || <span className="text-muted-foreground">Not given</span>}</dd>
+                  <dt className="text-[13.5px] text-muted-foreground">Budget</dt>
+                  <dd className="m-0 min-w-0 [overflow-wrap:anywhere]">{openLead.budget || <span className="text-muted-foreground">Not given</span>}</dd>
+                  <dt className="text-[13.5px] text-muted-foreground">Score</dt>
+                  <dd className="m-0">
+                    <Badge variant={SCORE_META[openLead.score]?.tone ?? "secondary"}>{SCORE_META[openLead.score]?.label ?? "Unscored"}</Badge>
+                  </dd>
+                  {(openLead.priority ?? 0) > 0 && (
+                    <>
+                      <dt className="text-[13.5px] text-muted-foreground">Your priority</dt>
+                      <dd className="m-0">
+                        <Badge variant={PRIORITY_META[openLead.priority ?? 0].tone}>{PRIORITY_META[openLead.priority ?? 0].label}</Badge>
+                      </dd>
+                    </>
+                  )}
+                  {followUpsReady && (
+                    <>
+                      <dt className="text-[13.5px] text-muted-foreground">Follow-up</dt>
+                      <dd className="m-0 min-w-0">
+                        <FollowUp lead={openLead} today={today} />
+                      </dd>
+                    </>
+                  )}
+                  {parseTags(openLead.tags).length > 0 && (
+                    <>
+                      <dt className="text-[13.5px] text-muted-foreground">Tags</dt>
+                      <dd className="m-0 flex min-w-0 flex-wrap gap-1.5">
+                        {parseTags(openLead.tags).map((t) => (
+                          <Badge key={t} variant="secondary" className="before:hidden">
+                            {t}
+                          </Badge>
+                        ))}
+                      </dd>
+                    </>
+                  )}
+                  <dt className="text-[13.5px] text-muted-foreground">Received</dt>
+                  <dd className="m-0 font-mono text-[13px] tabular-nums">{formatDate(openLead.created_at)}</dd>
+                  {openLead.status === "lost" && openLead.lost_reason && (
+                    <>
+                      <dt className="text-[13.5px] text-muted-foreground">Lost because</dt>
+                      <dd className="m-0 min-w-0 [overflow-wrap:anywhere]">{openLead.lost_reason}</dd>
+                    </>
+                  )}
+                </dl>
+
+                <p className="mb-1.5 mt-5 font-semibold">Their message</p>
+                <p className="whitespace-pre-wrap text-muted-foreground [overflow-wrap:anywhere]">{openLead.message}</p>
+
+                <div className="mt-5 grid gap-1.5">
+                  <Label htmlFor="lead-stage">Stage</Label>
+                  <Select
+                    value={openLead.status}
+                    onValueChange={(v) => (v === "lost" ? fromDrawer(() => move(openLead, "lost")) : move(openLead, v as LeadStage))}
+                  >
+                    <SelectTrigger id="lead-stage">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STAGES.map((s) => (
+                        <SelectItem key={s.key} value={s.key}>
+                          {s.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <SheetFooter className="m-0 px-5 pb-[calc(14px+env(safe-area-inset-bottom,0px))]">
+                {openLead.status !== "lost" && (
+                  <Button variant="destructive" onClick={() => fromDrawer(() => move(openLead, "lost"))}>
+                    Mark lost
+                  </Button>
+                )}
+                <Button variant="outline" onClick={() => fromDrawer(() => openEdit(openLead))}>
+                  <Tag /> Tags, score and follow-up
+                </Button>
+                <AiAssist
+                  task="lead_reply"
+                  title={`Reply to ${openLead.name}`}
+                  label="AI reply"
+                  size="default"
+                  input={`New enquiry from ${openLead.name}${openLead.company ? ` at ${openLead.company}` : ""} (${openLead.email}).${openLead.project_type ? `\nProject type: ${openLead.project_type}.` : ""}${openLead.budget ? `\nBudget: ${openLead.budget}.` : ""}\n\nTheir message:\n"${openLead.message}"\n\nDraft GAkinz's first reply email: thank them, show we understood the project, ask one or two sharp scoping questions, and propose a short call. Sign off as the GAkinz studio team.`}
+                />
+                <Button onClick={() => convert(openLead)} disabled={converting === openLead.id}>
+                  {converting === openLead.id ? <Loader2 className="animate-spin" /> : <UserPlus />}
+                  Convert to client
+                </Button>
+              </SheetFooter>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Lost-reason capture */}
       <Dialog open={!!lostFor} onOpenChange={(o) => !o && setLostFor(null)}>
@@ -449,7 +558,7 @@ export default function Leads() {
           </div>
           <DialogFooter>
             <Button onClick={saveMeta} disabled={savingMeta}>
-              {savingMeta && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {savingMeta && <Loader2 className="animate-spin" />}
               Save
             </Button>
           </DialogFooter>
@@ -462,14 +571,16 @@ export default function Leads() {
 // Due, overdue or upcoming next action on an open enquiry, with its note.
 function FollowUp({ lead, today }: { lead: Lead; today: string }) {
   const st = followUpState(lead, today)
-  if (!st || !lead.next_action_at) return null
+  if (!st || !lead.next_action_at) return <span className="text-muted-foreground">None set</span>
   return (
-    <div className="mt-1 text-[11px]">
-      <span className={cn("inline-flex items-center gap-1 rounded px-1.5 py-0.5 font-medium", FOLLOW_META[st].cls)}>
-        <CalendarClock className="h-3 w-3" aria-hidden="true" />
-        {FOLLOW_META[st].label} {formatYmd(lead.next_action_at)}
+    <div className="grid gap-1">
+      <span>
+        <Badge variant={FOLLOW_META[st].tone}>
+          <CalendarClock aria-hidden className="size-3" />
+          {FOLLOW_META[st].label} {formatYmd(lead.next_action_at)}
+        </Badge>
       </span>
-      {lead.next_action_note && <p className="mt-0.5 line-clamp-2 text-muted-foreground">{lead.next_action_note}</p>}
+      {lead.next_action_note && <p className="text-[13px] text-muted-foreground [overflow-wrap:anywhere]">{lead.next_action_note}</p>}
     </div>
   )
 }

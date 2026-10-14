@@ -15,8 +15,11 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import { LoadError } from "@/app/components/EmptyState"
+import { PageHeader } from "@/app/components/page-kit"
 import { cn } from "@/lib/utils"
 import {
   mail,
@@ -35,12 +38,6 @@ function when(iso: string | null) {
   return sameDay
     ? d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
     : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" })
-}
-
-function initials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean)
-  if (!parts.length) return "?"
-  return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase()
 }
 
 type Draft = SendMailPayload
@@ -166,36 +163,44 @@ export default function Mailbox() {
 
   const unread = list.filter((m) => !m.seen).length
 
+  // "Try again" after a failed load: re-check the mailbox status first when
+  // that is what failed, otherwise reload the inbox with the current search.
+  const retry = async () => {
+    if (status?.imap) return loadInbox(search)
+    setLoadingList(true)
+    setListError(null)
+    const st = await mail.status()
+    if (st.ok) {
+      setStatus(st.data)
+      if (st.data.imap) loadInbox(search)
+      else setLoadingList(false)
+    } else {
+      setLoadingList(false)
+      setListError(st.error)
+    }
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Mailbox</h1>
-          <p className="text-sm text-muted-foreground">
-            hello@gakinz.com — read and reply without leaving GAkinzOS.
-            {unread > 0 && <span className="ml-1 font-medium text-foreground">{unread} unread.</span>}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => loadInbox(search)}
-            disabled={!status?.imap || loadingList}
-          >
-            <RefreshCw className={cn("mr-2 h-4 w-4", loadingList && "animate-spin")} /> Refresh
-          </Button>
-          <Button
-            size="sm"
-            onClick={startCompose}
-            disabled={!status?.smtp}
-            className="gk-shine shadow-md shadow-primary/20"
-          >
-            <PenSquare className="mr-2 h-4 w-4" /> Compose
-          </Button>
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        title="Mailbox"
+        subtitle={
+          <>
+            The studio inbox, hello@gakinz.com, read and answered without leaving the platform.
+            {unread > 0 && <span className="font-medium text-foreground"> {unread} unread.</span>}
+          </>
+        }
+        actions={
+          <>
+            <Button onClick={startCompose} disabled={!status?.smtp}>
+              <PenSquare /> Compose
+            </Button>
+            <Button variant="outline" onClick={() => loadInbox(search)} disabled={!status?.imap || loadingList}>
+              <RefreshCw className={cn(loadingList && "animate-spin")} /> Refresh
+            </Button>
+          </>
+        }
+      />
 
       {/* Config banners */}
       {status && !status.smtp && (
@@ -216,68 +221,80 @@ export default function Mailbox() {
         </Banner>
       )}
 
-      {/* Two-pane */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,22rem)_1fr]">
-        {/* List */}
-        <div className="gk-app-card overflow-hidden">
-          <form onSubmit={onSearch} className="flex items-center gap-2 border-b p-3">
-            <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search mail…"
-                className="h-9 pl-8"
-                disabled={!status?.imap}
-              />
-            </div>
-          </form>
+      <form onSubmit={onSearch} className="mb-3.5 flex flex-wrap items-center gap-2" role="search">
+        <label className="flex min-h-10 min-w-0 max-w-[340px] flex-1 items-center gap-2 rounded-[10px] border bg-card px-3 focus-within:border-acc focus-within:ring-[3px] focus-within:ring-acc-soft">
+          <Search aria-hidden className="size-[18px] shrink-0 text-muted-foreground" />
+          <span className="sr-only">Search mail</span>
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search mail…"
+            disabled={!status?.imap}
+            className="w-full min-w-0 border-0 bg-transparent outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
+          />
+        </label>
+      </form>
 
-          <div className="max-h-[34rem] divide-y overflow-y-auto">
-            {loadingList ? (
-              <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading inbox…
-              </div>
-            ) : listError ? (
-              <div className="px-4 py-12 text-center text-sm text-muted-foreground">{listError}</div>
-            ) : list.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 px-4 py-16 text-center text-sm text-muted-foreground">
-                <InboxIcon className="h-8 w-8 opacity-40" />
-                {status?.imap ? "No messages." : "Inbox unavailable."}
-              </div>
-            ) : (
-              list.map((m) => (
-                <button
-                  key={m.uid}
-                  onClick={() => openMessage(m.uid)}
-                  className={cn(
-                    "flex w-full gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/60",
-                    selectedUid === m.uid && "bg-primary/5",
-                  )}
-                >
-                  <span className="gk-app-chip mt-0.5 h-9 w-9 shrink-0 text-xs font-semibold">
-                    {initials(m.from_name)}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className={cn("truncate text-sm", !m.seen ? "font-semibold" : "text-foreground")}>
+      {listError && <LoadError what="the inbox" detail={listError} onRetry={retry} className="mb-4" />}
+
+      {/* Two panes */}
+      <div className="grid items-start gap-4 min-[901px]:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+        {/* List */}
+        <div className="min-w-0 rounded-2xl border bg-card p-1.5">
+          {loadingList ? (
+            <div aria-busy="true" aria-label="Loading inbox" className="grid gap-1 p-1">
+              {Array.from({ length: 4 }, (_, i) => (
+                <div key={i} className="grid gap-2 px-2.5 py-2.5">
+                  <Skeleton className="h-3.5 w-1/2" />
+                  <Skeleton className="h-3 w-4/5" />
+                </div>
+              ))}
+            </div>
+          ) : listError ? (
+            <p className="px-3 py-10 text-center text-sm text-muted-foreground">The inbox could not be loaded.</p>
+          ) : list.length === 0 ? (
+            <div className="grid place-items-center gap-2.5 px-4 py-12 text-center">
+              <span aria-hidden className="grid size-12 place-items-center rounded-[14px] bg-acc-soft text-acc">
+                <InboxIcon className="size-[18px]" />
+              </span>
+              <p className="font-display text-[1.05rem] font-semibold">{status?.imap ? "No messages" : "Inbox unavailable"}</p>
+              <p className="max-w-[30ch] text-sm text-muted-foreground">
+                {status?.imap ? "New mail to the studio inbox lands here." : "Set up the inbox on the server to read mail here."}
+              </p>
+            </div>
+          ) : (
+            <ul className="max-h-[34rem] overflow-y-auto">
+              {list.map((m) => (
+                <li key={m.uid}>
+                  <button
+                    type="button"
+                    data-mail-row
+                    onClick={() => openMessage(m.uid)}
+                    aria-current={selectedUid === m.uid || undefined}
+                    className={cn(
+                      "flex min-h-10 w-full flex-col items-start gap-0.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-secondary",
+                      selectedUid === m.uid && "bg-secondary",
+                    )}
+                  >
+                    <span className="flex w-full min-w-0 items-start gap-2">
+                      <b className={cn("min-w-0 flex-1 [overflow-wrap:anywhere]", m.seen ? "font-medium" : "font-bold")}>
+                        {!m.seen && <span className="sr-only">Unread: </span>}
                         {m.from_name || m.from_email}
-                      </span>
-                      <span className="shrink-0 text-xs text-muted-foreground">{when(m.date)}</span>
-                    </div>
-                    <p className={cn("truncate text-sm", !m.seen ? "font-medium text-foreground" : "text-muted-foreground")}>
-                      {m.subject}
-                    </p>
-                  </div>
-                  {!m.seen && <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-primary" />}
-                </button>
-              ))
-            )}
-          </div>
+                      </b>
+                      <span className="shrink-0 pt-0.5 font-mono text-xs tabular-nums text-muted-foreground">{when(m.date)}</span>
+                      {!m.seen && <span aria-hidden className="mt-2 size-2 shrink-0 rounded-full bg-acc" />}
+                    </span>
+                    <span className={cn("w-full min-w-0 text-[13.5px] [overflow-wrap:anywhere]", m.seen && "text-muted-foreground")}>{m.subject}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
-        {/* Reading / compose pane */}
-        <div className="gk-app-card min-h-[28rem] p-0">
+        {/* Reading or compose pane */}
+        <div className="min-h-[24rem] min-w-0 rounded-2xl border bg-card p-[18px]">
           {draft ? (
             <Compose
               draft={draft}
@@ -290,41 +307,29 @@ export default function Mailbox() {
               isReply={!!draft.in_reply_to}
             />
           ) : loadingMsg ? (
-            <div className="flex h-full min-h-[28rem] items-center justify-center text-muted-foreground">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Opening…
-            </div>
+            <p className="flex min-h-[20rem] items-center justify-center gap-2 text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" /> Opening…
+            </p>
           ) : message ? (
-            <article className="flex h-full flex-col">
-              <header className="gk-app-accent border-b p-6">
-                <h2 className="text-lg font-semibold">{message.subject}</h2>
-                <div className="mt-3 flex items-center gap-3">
-                  <span className="gk-app-chip h-10 w-10 text-sm font-semibold">
-                    {initials(message.from_name)}
-                  </span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">
-                      {message.from_name}{" "}
-                      <span className="font-normal text-muted-foreground">&lt;{message.from_email}&gt;</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {message.date ? new Date(message.date).toLocaleString("en-GB") : ""}
-                    </p>
-                  </div>
-                  <Button size="sm" className="ml-auto gk-shine" onClick={startReply} disabled={!status?.smtp}>
-                    <Reply className="mr-2 h-4 w-4" /> Reply
-                  </Button>
-                </div>
-              </header>
-              <div className="flex-1 overflow-y-auto p-6">
-                <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed text-foreground">
-                  {message.text || "(no text content)"}
-                </pre>
+            <article>
+              <h2 className="font-display text-[1.3rem] font-semibold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">{message.subject}</h2>
+              <p className="mb-4 mt-1.5 text-muted-foreground [overflow-wrap:anywhere]">
+                From {message.from_name ? <>{message.from_name} &lt;{message.from_email}&gt;</> : message.from_email}
+                {message.date ? ` · ${new Date(message.date).toLocaleString("en-GB")}` : ""}
+              </p>
+              <pre className="whitespace-pre-wrap font-sans text-[15px] leading-relaxed text-foreground [overflow-wrap:anywhere]">
+                {message.text || "(no text content)"}
+              </pre>
+              <div className="mt-5 flex flex-wrap gap-2">
+                <Button onClick={startReply} disabled={!status?.smtp}>
+                  <Reply /> Reply
+                </Button>
               </div>
             </article>
           ) : (
-            <div className="flex h-full min-h-[28rem] flex-col items-center justify-center gap-3 text-center text-muted-foreground">
-              <Mail className="h-10 w-10 opacity-40" />
-              <p className="text-sm">Select a message to read, or compose a new one.</p>
+            <div className="flex min-h-[20rem] flex-col items-center justify-center gap-3 text-center text-muted-foreground">
+              <Mail aria-hidden className="size-8 opacity-50" />
+              <p>Select a message to read, or compose a new one.</p>
             </div>
           )}
         </div>
@@ -335,9 +340,9 @@ export default function Mailbox() {
 
 function Banner({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-2 rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200">
-      <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-      <span>{children}</span>
+    <div role="status" className="mb-3 flex items-start gap-3 rounded-2xl bg-warn-soft p-4 text-sm text-foreground [overflow-wrap:anywhere]">
+      <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-warn" />
+      <span className="min-w-0">{children}</span>
     </div>
   )
 }
@@ -363,54 +368,35 @@ function Compose({
 }) {
   const set = (k: keyof Draft, v: string) => setDraft((d) => (d ? { ...d, [k]: v } : d))
   return (
-    <div className="flex h-full flex-col">
-      <header className="gk-app-accent flex items-center justify-between border-b p-4">
-        <h2 className="text-base font-semibold">{isReply ? "Reply" : "New message"}</h2>
-        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
-          <X className="h-4 w-4" />
+    <div className="grid gap-3.5">
+      <div className="flex items-center justify-between gap-2">
+        <h2 className="font-display text-[1.3rem] font-semibold leading-tight tracking-[-0.02em]">{isReply ? "Reply" : "New message"}</h2>
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close without sending">
+          <X />
         </Button>
-      </header>
-      <div className="flex-1 space-y-3 overflow-y-auto p-4">
-        <div>
-          <Label htmlFor="m-to">To</Label>
-          <Input
-            id="m-to"
-            value={draft.to}
-            onChange={(e) => set("to", e.target.value)}
-            placeholder="name@example.com"
-            className="mt-1.5"
-          />
-        </div>
-        <div>
-          <Label htmlFor="m-subject">Subject</Label>
-          <Input
-            id="m-subject"
-            value={draft.subject}
-            onChange={(e) => set("subject", e.target.value)}
-            className="mt-1.5"
-          />
-        </div>
-        <div>
-          <Label htmlFor="m-body">Message</Label>
-          <Textarea
-            id="m-body"
-            value={draft.body}
-            onChange={(e) => set("body", e.target.value)}
-            rows={12}
-            className="mt-1.5 font-sans"
-          />
-        </div>
       </div>
-      <footer className="flex items-center justify-between gap-2 border-t p-4">
-        <Button variant="outline" size="sm" onClick={onAiDraft} disabled={drafting}>
-          {drafting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+      <div className="grid gap-1.5">
+        <Label htmlFor="m-to">To</Label>
+        <Input id="m-to" value={draft.to} onChange={(e) => set("to", e.target.value)} placeholder="name@example.com" />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="m-subject">Subject</Label>
+        <Input id="m-subject" value={draft.subject} onChange={(e) => set("subject", e.target.value)} />
+      </div>
+      <div className="grid gap-1.5">
+        <Label htmlFor="m-body">Message</Label>
+        <Textarea id="m-body" value={draft.body} onChange={(e) => set("body", e.target.value)} rows={12} className="font-sans" />
+      </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button variant="outline" onClick={onAiDraft} disabled={drafting}>
+          {drafting ? <Loader2 className="animate-spin" /> : <Sparkles />}
           AI draft
         </Button>
-        <Button onClick={onSend} disabled={sending} className="gk-shine shadow-md shadow-primary/20">
-          {sending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+        <Button onClick={onSend} disabled={sending}>
+          {sending ? <Loader2 className="animate-spin" /> : <Send />}
           Send
         </Button>
-      </footer>
+      </div>
     </div>
   )
 }

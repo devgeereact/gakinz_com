@@ -3,30 +3,20 @@ import { useNavigate } from "react-router-dom"
 import {
   Area,
   AreaChart,
+  Bar,
+  BarChart,
   CartesianGrid,
-  Line,
-  LineChart,
+  Cell,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts"
-import {
-  ArrowRight,
-  Banknote,
-  CalendarClock,
-  Clock,
-  FolderKanban,
-  Inbox,
-  Loader2,
-  LifeBuoy,
-  RefreshCw,
-  Sparkles,
-  AlertTriangle,
-  Megaphone,
-} from "lucide-react"
+import { AlertTriangle, ArrowRight, Loader2, Megaphone, RefreshCw, Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
+import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/page-kit"
 import { cn } from "@/lib/utils"
 import { followUpState, formatYmd, localIsoDate, money } from "@/lib/format"
 import {
@@ -47,12 +37,12 @@ import {
 } from "@/lib/api"
 
 // The GAkinzOS home. Aggregates the live API into a single operational
-// overview — pipeline, delivery, cash, support, utilisation — so staff land on
+// overview (pipeline, delivery, cash, support, utilisation) so staff land on
 // real numbers, not demo content. Every section degrades on its own: a failed
-// endpoint shows a quiet error in its card and the rest of the page still works.
+// endpoint shows a quiet note in its card and the rest of the page still works.
 
 function monthKey(iso: string) {
-  // "2026-06-01 ..." → "2026-06"
+  // "2026-06-01 ..." to "2026-06"
   return iso.slice(0, 7)
 }
 
@@ -63,64 +53,36 @@ function monthLabel(key: string) {
   })
 }
 
-// Tiny inline trend line for a KPI card. No axes, no tooltip — just the shape.
-function Sparkline({ data, color = "hsl(var(--primary))" }: { data: number[]; color?: string }) {
+// Tiny inline trend line for a KPI tile: no axes, no tooltip, just the shape.
+// Plain SVG so it can sit inside the tile's note without a block wrapper.
+function Sparkline({ data }: { data: number[] }) {
   if (data.length < 2 || data.every((n) => n === data[0])) return null
-  const series = data.map((v, i) => ({ i, v }))
+  const W = 72
+  const H = 20
+  const max = Math.max(...data)
+  const min = Math.min(...data)
+  const span = max - min || 1
+  const pts = data
+    .map((v, i) => `${((i / (data.length - 1)) * (W - 2) + 1).toFixed(1)},${(H - 2 - ((v - min) / span) * (H - 4)).toFixed(1)}`)
+    .join(" ")
   return (
-    <div className="mt-2 h-8 w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={series} margin={{ top: 2, bottom: 2, left: 0, right: 0 }}>
-          <Line type="monotone" dataKey="v" stroke={color} strokeWidth={1.75} dot={false} isAnimationActive={false} />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+    <svg aria-hidden width={W} height={H} viewBox={`0 0 ${W} ${H}`} className="shrink-0 opacity-70">
+      <polyline points={pts} fill="none" stroke="hsl(var(--os-acc))" strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
   )
 }
 
-type KpiProps = {
-  label: string
-  value: string
-  hint?: string
-  icon: React.ComponentType<{ className?: string }>
-  to: string
-  accent?: string
-  series?: number[]
-}
-
-function Kpi({ label, value, hint, icon: Icon, to, accent, series }: KpiProps) {
-  const navigate = useNavigate()
-  // Real <button> → native Enter/Space + focus. h-full + flex column keeps every
-  // KPI the same height whether or not it has a sparkline (equal cards).
+// Initials in the prototype's soft accent avatar.
+function Avatar({ name }: { name: string }) {
+  const i = name.trim().split(/\s+/).map((w) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "?"
   return (
-    <button
-      type="button"
-      onClick={() => navigate(to)}
-      aria-label={`${label}: ${value}${hint ? `, ${hint}` : ""}`}
-      className="gk-app-card flex h-full w-full flex-col p-5 text-left"
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="mt-1 truncate text-2xl font-semibold tracking-tight">{value}</p>
-          {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
-        </div>
-        <span
-          aria-hidden
-          className={
-            accent
-              ? `inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${accent}`
-              : "gk-app-chip h-10 w-10 shrink-0"
-          }
-        >
-          <Icon className="h-5 w-5" />
-        </span>
-      </div>
-      {/* Sparkline pinned to the bottom so card bodies stay aligned. */}
-      <div className="mt-auto" aria-hidden>{series && <Sparkline data={series} />}</div>
-    </button>
+    <span aria-hidden className="grid size-8 shrink-0 place-items-center rounded-full bg-acc-soft text-xs font-bold text-acc">
+      {i}
+    </span>
   )
 }
+
+const AXIS_TICK = { fill: "hsl(var(--muted-foreground))", fontSize: 10, fontFamily: '"JetBrains Mono Variable", ui-monospace, monospace' }
 
 const PIPELINE: { key: Lead["status"]; label: string }[] = [
   { key: "new", label: "New" },
@@ -346,253 +308,258 @@ export default function Dashboard() {
     else setBrief(`Couldn't generate a brief (${res.error}).`)
   }
 
+  const updated = loadedAt ? loadedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : null
+
+  const header = (
+    <PageHeader
+      title="Today"
+      subtitle={<>The whole studio at a glance.{updated && <> Updated {updated}.</>}</>}
+      actions={
+        <>
+          <Button
+            onClick={generateBrief}
+            disabled={loading || briefing || errors.length > 0}
+            title={errors.length > 0 ? "Refresh until every figure has loaded before asking for a brief." : undefined}
+          >
+            {briefing ? <Loader2 className="animate-spin" /> : <Sparkles />}
+            AI brief
+          </Button>
+          <Button variant="outline" onClick={load} disabled={loading}>
+            <RefreshCw className={cn(loading && "animate-spin")} /> Refresh
+          </Button>
+        </>
+      }
+    />
+  )
+
   if (loading) {
     return (
-      <div className="flex h-64 items-center justify-center text-muted-foreground">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Loading your overview…
+      <div aria-busy="true" aria-label="Loading your overview">
+        {header}
+        <StatGrid className="grid-cols-1 min-[901px]:grid-cols-3 xl:grid-cols-3">
+          {Array.from({ length: 6 }, (_, i) => (
+            <div key={i} className="grid gap-2.5 rounded-2xl border bg-card px-[18px] py-4">
+              <Skeleton className="h-3 w-1/2" />
+              <Skeleton className="h-7 w-2/3" />
+            </div>
+          ))}
+        </StatGrid>
+        <div className="rounded-2xl border bg-card p-[18px]">
+          {Array.from({ length: 5 }, (_, i) => (
+            <div key={i} className="flex items-center gap-3 py-2.5">
+              <Skeleton className="size-8 rounded-full" />
+              <Skeleton className="h-3 flex-1" style={{ maxWidth: `${60 + (i % 3) * 12}%` }} />
+              <Skeleton className="h-3 w-20" />
+            </div>
+          ))}
+        </div>
       </div>
     )
   }
 
+  const kpis = [
+    {
+      label: "Open leads",
+      value: down("leads") ? NA : String(stats.openLeads),
+      hint: down("leads") ? NA_HINT : "In the pipeline",
+      to: "/app/leads",
+      series: down("leads") ? undefined : spark.leads,
+    },
+    {
+      label: "Active projects",
+      value: down("projects") ? NA : String(stats.activeProjects),
+      hint: down("projects") ? NA_HINT : "Not yet launched",
+      to: "/app/projects",
+      series: down("projects") ? undefined : spark.projects,
+    },
+    {
+      label: "Revenue paid",
+      value: down("invoices") ? NA : money(stats.paid),
+      hint: down("invoices") ? NA_HINT : "All settled invoices",
+      to: "/app/invoicing",
+      series: down("invoices") ? undefined : spark.paid,
+    },
+    {
+      label: "Outstanding",
+      value: down("invoices") ? NA : money(stats.outstanding),
+      hint: down("invoices") ? NA_HINT : stats.overdue ? `${stats.overdue} overdue` : "None overdue",
+      tone: !down("invoices") && stats.overdue ? ("down" as const) : undefined,
+      to: "/app/invoicing",
+      series: down("invoices") ? undefined : spark.outstanding,
+    },
+    {
+      label: "Open tickets",
+      value: down("support") ? NA : String(stats.openTickets),
+      hint: down("support") ? NA_HINT : "Needs a reply",
+      to: "/app/support",
+      series: down("support") ? undefined : spark.tickets,
+    },
+    {
+      label: "Billable (wk)",
+      value: down("time") ? NA : `${stats.billableHours.toFixed(1)}h`,
+      hint: down("time") ? NA_HINT : `${stats.weekHours.toFixed(1)}h logged`,
+      to: "/app/time",
+      series: down("time") ? undefined : spark.billable,
+    },
+  ]
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            <span className="gk-app-grad">Today</span>
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            The whole studio at a glance
-            {loadedAt && <> · updated {loadedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</>}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={load}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
-          <Button
-            size="sm"
-            onClick={generateBrief}
-            disabled={briefing || errors.length > 0}
-            title={errors.length > 0 ? "Refresh until every figure has loaded before asking for a brief." : undefined}
-            className="gk-shine shadow-md shadow-primary/20"
-          >
-            {briefing ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Sparkles className="mr-2 h-4 w-4" />
-            )}
-            AI brief
-          </Button>
-        </div>
-      </div>
+    <div>
+      {header}
 
       {errors.length > 0 && (
-        <div role="alert" className="flex items-start gap-2 rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>
-            Some figures could not be loaded ({errors.join(", ")}). They show as “—” until Refresh succeeds.
-          </span>
+        <div role="alert" className="mb-4 flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
+          <AlertTriangle aria-hidden className="mt-0.5 size-[18px] shrink-0 text-bad" />
+          <div className="min-w-[min(100%,200px)] flex-1">
+            <p className="font-semibold">Some figures could not be loaded ({errors.join(", ")}).</p>
+            <p className="mt-1 text-muted-foreground">They show as “{NA}” until a refresh succeeds. Nothing was changed.</p>
+          </div>
+          <Button variant="outline" onClick={load}>
+            <RefreshCw /> Try again
+          </Button>
         </div>
       )}
 
       {anns.length > 0 && (
-        <div className="space-y-2">
+        <div className="mb-4 grid gap-2">
           {anns.map((a) => (
             <div
               key={a.id}
-              className={cn(
-                "flex items-start gap-2 rounded-lg border p-3 text-sm",
-                a.level === "warning"
-                  ? "border-amber-300/60 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200"
-                  : "border-primary/20 bg-primary/5 text-foreground",
-              )}
+              className={cn("flex items-start gap-3 rounded-2xl p-[18px]", a.level === "warning" ? "bg-warn-soft" : "bg-acc-soft")}
             >
-              <Megaphone className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>
-                <strong>{a.title}</strong>
-                {a.body ? <> — {a.body}</> : null}
-              </span>
+              <Megaphone aria-hidden className={cn("mt-0.5 size-[18px] shrink-0", a.level === "warning" ? "text-warn" : "text-acc")} />
+              <p className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+                <b className="font-semibold">{a.title}</b>
+                {a.body ? <span className="text-muted-foreground"> {a.body}</span> : null}
+              </p>
             </div>
           ))}
         </div>
       )}
 
       {brief && (
-        <div role="status" aria-live="polite" className="gk-app-ring gk-app-accent p-5">
-          <div className="flex gap-3">
-            <span aria-hidden className="gk-app-chip mt-0.5 h-8 w-8 shrink-0">
-              <Sparkles className="h-4 w-4" />
-            </span>
-            <p className="text-sm leading-relaxed">{brief}</p>
+        <div role="status" aria-live="polite" className="mb-4 flex gap-3 rounded-2xl border bg-card p-[18px]">
+          <span aria-hidden className="grid size-9 shrink-0 place-items-center rounded-[10px] bg-acc-soft text-acc">
+            <Sparkles className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="font-mono text-[11px] uppercase tracking-[.08em] text-muted-foreground">Brief for today</p>
+            <p className="mt-1 leading-relaxed">{brief}</p>
+            <p className="mt-2 text-[13px] text-muted-foreground">Written from the figures on this screen. Check before acting on it.</p>
           </div>
         </div>
       )}
 
-      {/* KPI row */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 xl:grid-cols-6">
-        <Kpi
-          label="Open leads"
-          value={down("leads") ? NA : String(stats.openLeads)}
-          hint={down("leads") ? NA_HINT : "In the pipeline"}
-          icon={Inbox}
-          to="/app/leads"
-          series={down("leads") ? undefined : spark.leads}
-        />
-        <Kpi
-          label="Active projects"
-          value={down("projects") ? NA : String(stats.activeProjects)}
-          hint={down("projects") ? NA_HINT : "Not yet launched"}
-          icon={FolderKanban}
-          to="/app/projects"
-          series={down("projects") ? undefined : spark.projects}
-        />
-        <Kpi
-          label="Revenue paid"
-          value={down("invoices") ? NA : money(stats.paid)}
-          hint={down("invoices") ? NA_HINT : "All settled invoices"}
-          icon={Banknote}
-          to="/app/invoicing"
-          accent="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-          series={down("invoices") ? undefined : spark.paid}
-        />
-        <Kpi
-          label="Outstanding"
-          value={down("invoices") ? NA : money(stats.outstanding)}
-          hint={down("invoices") ? NA_HINT : stats.overdue ? `${stats.overdue} overdue` : "None overdue"}
-          icon={Banknote}
-          to="/app/invoicing"
-          accent={
-            stats.overdue
-              ? "bg-red-500/10 text-red-600 dark:text-red-400"
-              : "bg-primary/10 text-primary"
-          }
-          series={down("invoices") ? undefined : spark.outstanding}
-        />
-        <Kpi
-          label="Open tickets"
-          value={down("support") ? NA : String(stats.openTickets)}
-          hint={down("support") ? NA_HINT : "Needs a reply"}
-          icon={LifeBuoy}
-          to="/app/support"
-          series={down("support") ? undefined : spark.tickets}
-        />
-        <Kpi
-          label="Billable (wk)"
-          value={down("time") ? NA : `${stats.billableHours.toFixed(1)}h`}
-          hint={down("time") ? NA_HINT : `${stats.weekHours.toFixed(1)}h logged`}
-          icon={Clock}
-          to="/app/time"
-          series={down("time") ? undefined : spark.billable}
-        />
-      </div>
+      <StatGrid className="grid-cols-1 min-[901px]:grid-cols-3 xl:grid-cols-3">
+        {kpis.map((k) => (
+          <StatTile
+            key={k.label}
+            label={k.label}
+            value={k.value}
+            tone={k.tone}
+            onClick={() => navigate(k.to)}
+            note={
+              <span className="flex items-end justify-between gap-3">
+                <span className="min-w-0">{k.hint}</span>
+                {k.series && <Sparkline data={k.series} />}
+              </span>
+            }
+          />
+        ))}
+      </StatGrid>
 
-      <div className="grid grid-cols-12 gap-6">
-        {/* Revenue trend */}
-        <Card className="gk-app-accent col-span-12 h-full overflow-hidden xl:col-span-7">
-          <CardHeader>
-            <CardTitle className="text-base">Revenue (paid)</CardTitle>
+      <div className="mb-4 grid gap-4 min-[1181px]:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+        <Card>
+          <CardHeader className="flex-row items-center gap-2.5 space-y-0">
+            <CardTitle className="min-w-0">Revenue (paid)</CardTitle>
+            <span className="ml-auto whitespace-nowrap rounded-full border border-dashed border-line-strong px-[7px] py-0.5 font-mono text-[10px] uppercase tracking-[.08em] text-muted-foreground">
+              £ per month
+            </span>
           </CardHeader>
           <CardContent>
             {down("invoices") ? (
-              <p className="py-12 text-center text-sm text-muted-foreground">
-                Invoices could not be loaded. Refresh to try again.
-              </p>
+              <p className="py-12 text-center text-sm text-muted-foreground">Invoices could not be loaded. Refresh to try again.</p>
             ) : revenueSeries.length === 0 ? (
-              <p className="py-12 text-center text-sm text-muted-foreground">
-                No paid invoices yet. Settled invoices will chart here.
-              </p>
+              <p className="py-12 text-center text-sm text-muted-foreground">No paid invoices yet. Settled invoices will chart here.</p>
             ) : (
               <div
                 role="img"
                 aria-label={`Paid revenue over the last ${revenueSeries.length} months, from ${revenueSeries[0]?.month} to ${revenueSeries[revenueSeries.length - 1]?.month}.`}
               >
-              <ResponsiveContainer width="100%" height={260}>
-                <AreaChart data={revenueSeries} margin={{ left: -10, right: 8, top: 8 }}>
-                  <defs>
-                    <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
-                  <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={12} />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    fontSize={12}
-                    tickFormatter={(v) => money(Number(v))}
-                    width={70}
-                  />
-                  <Tooltip
-                    formatter={(v) => money(Number(v))}
-                    contentStyle={{
-                      borderRadius: 8,
-                      border: "1px solid hsl(var(--border))",
-                      background: "hsl(var(--popover))",
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="total"
-                    stroke="hsl(var(--primary))"
-                    strokeWidth={2}
-                    fill="url(#rev)"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+                <ResponsiveContainer width="100%" height={220}>
+                  <AreaChart data={revenueSeries} margin={{ left: -8, right: 8, top: 8 }}>
+                    <defs>
+                      <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(var(--os-acc))" stopOpacity={0.18} />
+                        <stop offset="100%" stopColor="hsl(var(--os-acc))" stopOpacity={0.02} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
+                    <XAxis dataKey="month" tickLine={false} axisLine={false} tick={AXIS_TICK} />
+                    <YAxis tickLine={false} axisLine={false} tick={AXIS_TICK} tickFormatter={(v) => money(Number(v))} width={64} />
+                    <Tooltip
+                      formatter={(v) => money(Number(v))}
+                      contentStyle={{ borderRadius: 12, border: "1px solid hsl(var(--border))", background: "hsl(var(--card))", color: "hsl(var(--foreground))" }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="total"
+                      stroke="hsl(var(--os-acc))"
+                      strokeWidth={2.5}
+                      fill="url(#rev)"
+                      dot={false}
+                      activeDot={{ r: 4.5, fill: "hsl(var(--os-acc))", stroke: "hsl(var(--card))", strokeWidth: 2 }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             )}
           </CardContent>
         </Card>
 
-        {/* Pipeline */}
-        <Card className="col-span-12 h-full xl:col-span-5">
-          <CardHeader>
-            <CardTitle className="text-base">Lead pipeline</CardTitle>
+        <Card>
+          <CardHeader className="flex-row items-center gap-2.5 space-y-0">
+            <CardTitle className="min-w-0">Lead pipeline</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {down("leads") && (
-              <p className="py-8 text-center text-sm text-muted-foreground">Leads could not be loaded. Refresh to try again.</p>
-            )}
-            {!down("leads") && pipeline.map((s) => (
-              <div key={s.key}>
-                <div className="mb-1 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{s.label}</span>
-                  <span className="font-medium">{s.count}</span>
-                </div>
-                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={`h-full rounded-full ${
-                      s.key === "won"
-                        ? "bg-emerald-500"
-                        : s.key === "lost"
-                          ? "bg-muted-foreground/40"
-                          : "bg-primary"
-                    }`}
-                    style={{ width: `${s.pct}%` }}
-                  />
-                </div>
+          <CardContent>
+            {down("leads") ? (
+              <p className="py-12 text-center text-sm text-muted-foreground">Leads could not be loaded. Refresh to try again.</p>
+            ) : (
+              <div role="img" aria-label={`Bar chart: ${pipeline.map((p) => `${p.label} ${p.count}`).join(", ")}`}>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={pipeline} margin={{ left: -24, right: 4, top: 8 }}>
+                    <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
+                    <XAxis dataKey="label" tickLine={false} axisLine={false} tick={AXIS_TICK} interval={0} />
+                    <YAxis tickLine={false} axisLine={false} tick={AXIS_TICK} allowDecimals={false} width={48} />
+                    <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={48} isAnimationActive={false}>
+                      {pipeline.map((p, i) => (
+                        <Cell
+                          key={p.key}
+                          fill={i === pipeline.length - 1 ? "hsl(var(--os-acc))" : "color-mix(in srgb, hsl(var(--os-acc)) 35%, hsl(var(--secondary)))"}
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
+      </div>
 
-        {/* Recent leads */}
-        <Card className="col-span-12 h-full xl:col-span-7">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-base">Recent leads</CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/app/leads")}>
-              View all <ArrowRight className="ml-1 h-4 w-4" />
+      <div className="grid gap-4 min-[901px]:grid-cols-3">
+        <Card>
+          <CardHeader className="flex-row items-center gap-2.5 space-y-0">
+            <CardTitle className="min-w-0">Recent leads</CardTitle>
+            <Button variant="ghost" size="sm" className="ml-auto" onClick={() => navigate("/app/leads")}>
+              All <ArrowRight />
             </Button>
           </CardHeader>
           <CardContent>
             {down("leads") ? (
               <p className="py-8 text-center text-sm text-muted-foreground">Leads could not be loaded. Refresh to try again.</p>
             ) : recentLeads.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                No leads yet. The public contact form feeds this list.
-              </p>
+              <p className="py-8 text-center text-sm text-muted-foreground">No leads yet. The public contact form feeds this list.</p>
             ) : (
               <ul className="divide-y">
                 {recentLeads.map((l) => (
@@ -601,17 +568,19 @@ export default function Dashboard() {
                       type="button"
                       onClick={() => navigate("/app/leads")}
                       aria-label={`Lead ${l.name}${l.company ? `, ${l.company}` : ""}, status ${l.status}. Open leads.`}
-                      className="flex w-full items-center justify-between gap-3 py-2.5 text-left hover:text-primary"
+                      className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3 text-left hover:text-acc"
                     >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{l.name}</p>
-                        <p className="truncate text-xs text-muted-foreground">
-                          {l.company || l.email}
-                        </p>
-                      </div>
-                      <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs capitalize">
-                        {l.status}
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <Avatar name={l.name} />
+                        <span className="min-w-0">
+                          <b className="block font-semibold [overflow-wrap:anywhere]">{l.name}</b>
+                          <small className="block text-[12.5px] leading-snug text-muted-foreground [overflow-wrap:anywhere]">
+                            {l.company || l.email}
+                            {l.project_type ? ` · ${l.project_type}` : ""}
+                          </small>
+                        </span>
                       </span>
+                      <StatusBadge status={l.status} />
                     </button>
                   </li>
                 ))}
@@ -620,52 +589,21 @@ export default function Dashboard() {
           </CardContent>
         </Card>
 
-        {/* Snapshot tiles */}
-        <Card className="col-span-12 h-full xl:col-span-5">
-          <CardHeader>
-            <CardTitle className="text-base">Studio snapshot</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-4">
-            <Snapshot label="Clients" value={down("clients") ? NA : String(clientCount)} to="/app/clients" />
-            <Snapshot
-              label="Projects launched"
-              value={down("projects") ? NA : String(projects.filter((p) => p.status === "launched").length)}
-              to="/app/projects"
-            />
-            <Snapshot
-              label="Active projects"
-              value={down("projects") ? NA : String(stats.activeProjects)}
-              to="/app/projects"
-            />
-            <Snapshot
-              label="Overdue invoices"
-              value={down("invoices") ? NA : String(stats.overdue)}
-              to="/app/invoicing"
-            />
-          </CardContent>
-        </Card>
-
-        {/* Follow-ups due */}
-        <Card className="col-span-12 h-full xl:col-span-7">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <CalendarClock className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-              Follow-ups due
-              <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-normal tabular-nums">
-                {down("leads") || !followUps.ready ? NA : followUps.count}
-              </span>
-            </CardTitle>
-            <Button variant="ghost" size="sm" onClick={() => navigate("/app/leads?due=1")}>
-              View all <ArrowRight className="ml-1 h-4 w-4" />
+        <Card>
+          <CardHeader className="flex-row items-center gap-2.5 space-y-0">
+            <CardTitle className="min-w-0">Follow-ups due</CardTitle>
+            <span className="font-mono text-xs tabular-nums text-muted-foreground">
+              {down("leads") || !followUps.ready ? NA : followUps.count}
+            </span>
+            <Button variant="ghost" size="sm" className="ml-auto" onClick={() => navigate("/app/leads?due=1")}>
+              All <ArrowRight />
             </Button>
           </CardHeader>
           <CardContent>
             {down("leads") ? (
               <p className="py-8 text-center text-sm text-muted-foreground">Follow-ups could not be loaded. Refresh to try again.</p>
             ) : !followUps.ready ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">
-                Follow-ups are not available until the server database update has run.
-              </p>
+              <p className="py-8 text-center text-sm text-muted-foreground">Follow-ups are not available until the server database update has run.</p>
             ) : followUps.top.length === 0 ? (
               <p className="py-8 text-center text-sm text-muted-foreground">Nothing due. No enquiry has a next action today or earlier.</p>
             ) : (
@@ -679,22 +617,15 @@ export default function Dashboard() {
                         type="button"
                         onClick={() => navigate("/app/leads?due=1")}
                         aria-label={`Follow up ${l.name}${l.company ? `, ${l.company}` : ""}, ${overdue ? `overdue since ${when}` : "due today"}. Open enquiries.`}
-                        className="flex w-full items-center justify-between gap-3 py-2.5 text-left hover:text-primary"
+                        className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3 text-left hover:text-acc"
                       >
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">{l.name}</p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {l.next_action_note || l.company || l.email}
-                          </p>
-                        </div>
-                        <span
-                          className={cn(
-                            "shrink-0 rounded-full px-2 py-0.5 text-xs",
-                            overdue ? "bg-destructive/10 text-destructive" : "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-                          )}
-                        >
-                          {overdue ? `Overdue, ${when}` : "Today"}
+                        <span className="min-w-0">
+                          <b className="block font-semibold [overflow-wrap:anywhere]">{l.company || l.name}</b>
+                          <span className="block text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
+                            {l.next_action_note || (l.company ? l.name : l.email)}
+                          </span>
                         </span>
+                        <StatusBadge status={overdue ? "overdue" : "due today"}>{overdue ? `Overdue, ${when}` : "Due today"}</StatusBadge>
                       </button>
                     </li>
                   )
@@ -703,22 +634,49 @@ export default function Dashboard() {
             )}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex-row items-center gap-2.5 space-y-0">
+            <CardTitle className="min-w-0">Studio snapshot</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-2.5">
+              <Snapshot label="Clients" value={down("clients") ? NA : String(clientCount)} to="/app/clients" />
+              <Snapshot
+                label="Projects launched"
+                value={down("projects") ? NA : String(projects.filter((p) => p.status === "launched").length)}
+                to="/app/projects"
+              />
+              <Snapshot label="Active projects" value={down("projects") ? NA : String(stats.activeProjects)} to="/app/projects" />
+              <Snapshot
+                label="Overdue invoices"
+                value={down("invoices") ? NA : String(stats.overdue)}
+                to="/app/invoicing"
+                bad={!down("invoices") && stats.overdue > 0}
+              />
+            </dl>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
 }
 
-function Snapshot({ label, value, to }: { label: string; value: string; to: string }) {
+function Snapshot({ label, value, to, bad }: { label: string; value: string; to: string; bad?: boolean }) {
   const navigate = useNavigate()
   return (
-    <button
-      type="button"
-      onClick={() => navigate(to)}
-      aria-label={`${label}: ${value}`}
-      className="gk-app-card flex h-full flex-col p-4 text-left"
-    >
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="mt-1 text-xl font-semibold">{value}</p>
-    </button>
+    <>
+      <dt className="text-[13.5px] text-muted-foreground">{label}</dt>
+      <dd className="m-0 text-right">
+        <button
+          type="button"
+          onClick={() => navigate(to)}
+          aria-label={`${label}: ${value}`}
+          className={cn("font-mono tabular-nums hover:text-acc hover:underline", bad && "text-bad")}
+        >
+          {value}
+        </button>
+      </dd>
+    </>
   )
 }
