@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Copy, Loader2, RefreshCw, ShieldCheck, ShieldOff, Monitor, LogOut } from "lucide-react"
+import { Copy, Loader2, RefreshCw, Monitor, LogOut } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -115,8 +115,7 @@ export function TwoFactorPanel({ bare = false }: { bare?: boolean }) {
               Add a time-based code (Google Authenticator, 1Password, Authy…) to your sign-in.
             </p>
           </div>
-          <Badge variant={enabled ? "ok" : "warn"} className="shrink-0 gap-1.5">
-            {enabled ? <ShieldCheck className="size-3.5" aria-hidden /> : <ShieldOff className="size-3.5" aria-hidden />}
+          <Badge variant={enabled ? "ok" : "warn"} className="shrink-0">
             {enabled ? "On" : "Off"}
           </Badge>
         </div>
@@ -258,7 +257,7 @@ export function SessionsPanel() {
                     {s.current && <Badge variant="ok">This device</Badge>}
                   </p>
                   <p className="text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
-                    <span className="font-mono">{s.ip || "Unknown IP"}</span> · Last seen {s.last_seen_at ? fmt(s.last_seen_at) : "unknown"}
+                    {s.ip ? <span className="font-mono">{s.ip}</span> : "Unknown IP"} · Last seen {s.last_seen_at ? fmt(s.last_seen_at) : "unknown"}
                   </p>
                 </div>
                 {s.current ? (
