@@ -97,8 +97,8 @@ When this file and the code disagree, the code wins and this file is wrong.
   plus the endpoint.
 - Keep integrations degrading gracefully: an unconfigured key returns 503 and the interface
   hides the feature.
-- `.gk-fadein` is visible by default and animates in only when motion is allowed. Never gate a
-  marketing entrance on JavaScript.
+- Public entrances (`.rise` in `src/marketing/site.css`) are visible at rest and animate only
+  when motion is allowed. Never gate a marketing entrance on JavaScript.
 - The active Tailwind config is `tailwind.config.js`. The `.ts` variant is inert; do not edit
   it.
 

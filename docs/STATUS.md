@@ -442,7 +442,7 @@ New, and the largest functional addition on this branch.
 | Tables `work` and `work_images` | `server/schema.sql`, at the foot | Written. **Not applied to any database** |
 | Endpoint | `server/work.php` | Written, `php -l` clean. **Not uploaded.** Never exercised at runtime |
 | Public route | `/work/:slug`, `src/marketing/pages/WorkDetail.tsx` | Built |
-| Ledger component | `src/marketing/components/Ledger.tsx` | Built |
+| Work cards | `src/marketing/components/site-ui.tsx` (`ProjectCard`); the D-037 ledger was removed under D-046 | Built |
 | Data layer | `src/marketing/data/work.ts` | Built. Reads the API with a typed static fallback |
 | CMS module | `src/app/modules/Work.tsx` | Built, with all five client wirings |
 
