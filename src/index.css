@@ -301,8 +301,15 @@
   letter-spacing: -0.025em;
   line-height: 1.1;
 }
-h1.gk-app-grad {
+/* Every module's page title, whichever classes it carries: the id beats the
+   `text-2xl font-bold` utilities the modules set. */
+h1.gk-app-grad,
+#main h1 {
+  font-family: theme("fontFamily.display");
   font-size: clamp(1.7rem, 2.6vw, 2.2rem);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
 }
 
 /* Card: white surface, hairline, 16px radius. Hover changes the border

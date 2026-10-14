@@ -1,36 +1,24 @@
-"use client"
+import { ChevronDown, LogOut, Monitor, Moon, ShieldCheck, Sun, UserRound } from "lucide-react"
+import { useTheme } from "next-themes"
+import { Link, useNavigate } from "react-router-dom"
 
 import {
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-
-import { LayoutDashboard, LogOut } from "lucide-react"
-
-import { useNavigate } from "react-router-dom"
-import { useAuth } from "@/store/auth.store"
 import { auth as authApi } from "@/lib/api"
-
-const ROLE_LABELS: Record<string, string> = {
-  super_admin: "Super admin",
-  admin: "Admin",
-  manager: "Manager",
-  trainer: "Trainer",
-  editor: "Editor",
-  employee: "Employee",
-  client: "Client",
-}
+import { ROLE_LABEL } from "@/lib/access"
+import { useAuth } from "@/store/auth.store"
 
 function initials(name: string): string {
   return name
-    .split(" ")
+    .split(/\s+/)
     .map((p) => p[0])
     .filter(Boolean)
     .slice(0, 2)
@@ -38,13 +26,16 @@ function initials(name: string): string {
     .toUpperCase()
 }
 
+// The prototype's user pill (D-046): initials, name and role, opening a menu
+// with My account, sign-in security, the theme and Sign out.
 export function UserDropdown() {
   const user = useAuth((s) => s.user)
   const clear = useAuth((s) => s.clear)
   const navigate = useNavigate()
+  const { theme, setTheme } = useTheme()
 
   const name = user?.name ?? "Member"
-  const role = user ? ROLE_LABELS[user.role] ?? user.role : ""
+  const role = user ? ROLE_LABEL[user.role] ?? user.role : ""
 
   const logout = async () => {
     await authApi.logout()
@@ -54,52 +45,63 @@ export function UserDropdown() {
 
   return (
     <DropdownMenu>
-      {/* Trigger */}
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          className="rounded-full h-10 w-10 p-0 overflow-hidden ml-2"
+        <button
+          type="button"
+          aria-label={role ? `${name}, ${role}` : name}
+          className="flex h-10 max-w-[240px] shrink-0 items-center gap-2.5 rounded-full border border-border bg-card pl-1 pr-1.5 text-left hover:border-line-strong max-md:pr-1"
         >
-          <Avatar className="h-10 w-10 border-border rounded-full">
-            <AvatarFallback>{initials(name)}</AvatarFallback>
-          </Avatar>
-        </Button>
+          <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-acc-soft text-xs font-bold text-acc">
+            {initials(name)}
+          </span>
+          <span className="min-w-0 max-md:hidden">
+            <b className="block truncate text-[13px] font-semibold leading-tight">{name}</b>
+            {role && <small className="block truncate text-[11px] leading-none text-muted-foreground">{role}</small>}
+          </span>
+          <ChevronDown aria-hidden className="size-4 shrink-0 text-muted-foreground max-md:hidden" />
+        </button>
       </DropdownMenuTrigger>
 
-      {/* Content */}
-      <DropdownMenuContent align="end" className="w-56 p-3 rounded-xl shadow-xl">
-        
-        {/* Header */}
-        <DropdownMenuLabel className="rounded-xl mb-3 bg-muted/50 border border-border">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-10 w-10">
-              <AvatarFallback>{initials(name)}</AvatarFallback>
-            </Avatar>
-            <div>
-              <p className="text-sm font-medium">{name}</p>
-              <p className="text-xs text-muted-foreground">{role}</p>
-            </div>
-          </div>
+      <DropdownMenuContent align="end" sideOffset={8} className="w-[280px]">
+        <DropdownMenuLabel className="px-2.5 pb-1.5 pt-2.5 font-normal">
+          <b className="gk-os-wrap block font-semibold">{name}</b>
+          {user?.email && <span className="gk-os-wrap block text-[13px] text-muted-foreground">{user.email}</span>}
+          {role && <span className="block text-[13px] text-muted-foreground">{role}</span>}
         </DropdownMenuLabel>
-
-        {/* Items */}
-        <DropdownMenuItem className="gap-2 h-9 cursor-pointer" onClick={() => navigate("/app")}>
-          <LayoutDashboard className="!size-5" />
-          Dashboard
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link to="/app/account">
+            <UserRound aria-hidden />
+            My account
+          </Link>
         </DropdownMenuItem>
-
-        <DropdownMenuSeparator className="border-1 my-2" />
-
-        {/* Logout */}
-        <div className="mt-3">
-          <Button
-           onClick={logout}
-           variant={"default"}
-           className="w-full h-8 justify-center gap-2">
-            <LogOut className="size-4" />
-            Logout
-          </Button>
-        </div>
+        <DropdownMenuItem asChild>
+          <Link to="/app/account#security">
+            <ShieldCheck aria-hidden />
+            Sign-in security
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel className="gk-os-mono px-2.5 py-1.5 font-normal text-muted-foreground">Theme</DropdownMenuLabel>
+        <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={setTheme}>
+          <DropdownMenuRadioItem value="light">
+            <Sun aria-hidden className="mr-2 size-4" />
+            Light
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="dark">
+            <Moon aria-hidden className="mr-2 size-4" />
+            Dark
+          </DropdownMenuRadioItem>
+          <DropdownMenuRadioItem value="system">
+            <Monitor aria-hidden className="mr-2 size-4" />
+            Match my device
+          </DropdownMenuRadioItem>
+        </DropdownMenuRadioGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onSelect={logout}>
+          <LogOut aria-hidden />
+          Sign out
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

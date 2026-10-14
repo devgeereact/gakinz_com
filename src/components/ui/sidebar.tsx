@@ -326,10 +326,12 @@ SidebarRail.displayName = "SidebarRail"
 
 const SidebarInset = React.forwardRef<
   HTMLDivElement,
-  React.ComponentProps<"main">
+  React.ComponentProps<"div">
 >(({ className, ...props }, ref) => {
+  // A div, not <main>: the page's single <main> landmark is inside it, after
+  // the header (D-046).
   return (
-    <main
+    <div
       ref={ref}
       className={cn(
         "relative flex w-full flex-1 flex-col",
