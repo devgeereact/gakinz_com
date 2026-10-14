@@ -10,25 +10,6 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .skip{position:fixed;left:16px;top:-80px;z-index:100;padding:12px 18px;border-radius:999px;background:var(--fg);color:var(--bg);font-weight:600;text-decoration:none;transition:top .15s}
 .gk-site .skip:focus{top:calc(12px + env(safe-area-inset-top,0px))}
 .gk-site main:focus,.gk-site [tabindex="-1"]:focus{outline:none}
-/* Legacy pages (legal, sectors, verify, article) still use the D-037 utility
-   classes. Inside .gk-site they map onto the D-046 tokens, so those pages read
-   correctly on the dark canvas without a rewrite. */
-.gk-site .text-gk-ink,.gk-site .text-gk-set,.gk-site .text-gk-on-dark{color:var(--fg)}
-.gk-site .text-gk-ink-soft{color:color-mix(in srgb,var(--fg) 82%,transparent)}
-.gk-site .text-gk-ink-mute{color:var(--mute)}
-.gk-site .text-gk-come{color:var(--warn)}
-.gk-site .text-gk-paper{color:var(--bg)}
-.gk-site .border-gk-edge{border-color:var(--line-2)}
-.gk-site .border-gk-rule{border-color:var(--line)}
-.gk-site .border-gk-come{border-color:var(--warn)}
-.gk-site .bg-gk-sunk,.gk-site .bg-gk-ink{background-color:var(--panel)}
-.gk-site .bg-gk-paper{background-color:var(--bg)}
-.gk-site .bg-gk-white{background-color:var(--panel-2)}
-.gk-site .bg-gk-set{background-color:var(--fg)}
-.gk-site .bg-gk-signal{background-color:var(--acc)}
-.gk-site .font-display{font-family:var(--disp)}
-.gk-site .font-ui{font-family:var(--body)}
-.gk-site .font-data{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .gk-site main > :first-child:not(.hero):not(.case-hero):not(.phead){padding-top:calc(104px + env(safe-area-inset-top,0px))}
 .gk-site .seg i.run{animation:gk-fill var(--ms,5600ms) linear forwards}
 @keyframes gk-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
