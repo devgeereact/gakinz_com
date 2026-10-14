@@ -1,8 +1,8 @@
 import { useEffect } from "react"
 import { useLocation } from "react-router-dom"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TwoFactorPanel, SessionsPanel } from "@/app/components/AccountSecurity"
+import { PageHeader } from "@/app/components/page-kit"
 import { useAuth } from "@/store/auth.store"
 import { ROLE_LABEL } from "@/lib/access"
 
@@ -20,43 +20,49 @@ export default function Account() {
   }, [hash])
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="gk-app-grad text-2xl font-bold tracking-tight">My account</h1>
-        <p className="text-sm text-muted-foreground">Your profile, sign-in security and signed-in devices.</p>
+    <div>
+      <PageHeader title="My account" subtitle="Your profile, sign-in security and signed-in devices." />
+
+      <div className="grid items-start gap-4 min-[901px]:grid-cols-2">
+        <Card aria-labelledby="account-profile">
+          <CardHeader className="flex-row items-center gap-2.5 space-y-0">
+            <CardTitle id="account-profile">Profile</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-[minmax(0,6rem)_minmax(0,1fr)] gap-x-4 gap-y-2.5 max-sm:grid-cols-1">
+              <dt className="text-[13.5px] text-muted-foreground">Name</dt>
+              <dd className="m-0 min-w-0 [overflow-wrap:anywhere]">{me?.name || <span className="text-muted-foreground">Not set</span>}</dd>
+              <dt className="text-[13.5px] text-muted-foreground">Email</dt>
+              <dd className="m-0 min-w-0 font-mono text-[13.5px] [overflow-wrap:anywhere]">
+                {me?.email || <span className="font-sans text-muted-foreground">Not set</span>}
+              </dd>
+              {me?.role && (
+                <>
+                  <dt className="text-[13.5px] text-muted-foreground">Role</dt>
+                  <dd className="m-0 min-w-0">{ROLE_LABEL[me.role]}</dd>
+                </>
+              )}
+            </dl>
+            <p className="mt-3.5 text-[13px] text-muted-foreground">To change your name or email, contact GAkinz.</p>
+          </CardContent>
+        </Card>
+
+        {/* TwoFactorPanel is shared with Settings and draws its own box; inside
+            this card that box is flattened so the card is the only frame. */}
+        <Card id="security" aria-labelledby="account-security" className="scroll-mt-20">
+          <CardHeader className="flex-row items-center gap-2.5 space-y-0">
+            <CardTitle id="account-security">Sign-in security</CardTitle>
+          </CardHeader>
+          <CardContent className="[&>div>div:first-child]:rounded-none [&>div>div:first-child]:border-0 [&>div>div:first-child]:bg-transparent [&>div>div:first-child]:p-0 [&>div]:max-w-none">
+            <TwoFactorPanel />
+          </CardContent>
+        </Card>
       </div>
 
-      <section aria-labelledby="account-profile" className="max-w-xl space-y-4">
-        <h2 id="account-profile" className="text-lg font-semibold">Profile</h2>
-        <div className="rounded-xl border border-border bg-card p-5">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <Label htmlFor="acc-name">Name</Label>
-              <Input id="acc-name" value={me?.name ?? ""} readOnly className="mt-1.5" />
-            </div>
-            <div>
-              <Label htmlFor="acc-email">Email</Label>
-              <Input id="acc-email" type="email" value={me?.email ?? ""} readOnly className="mt-1.5" />
-            </div>
-          </div>
-          {me?.role && (
-            <p className="mt-4 text-sm text-muted-foreground">
-              Signed in as <span className="font-medium text-foreground">{ROLE_LABEL[me.role]}</span>.
-            </p>
-          )}
-          <p className="mt-2 text-xs text-muted-foreground">
-            To change your name or email, contact GAkinz.
-          </p>
-        </div>
-      </section>
-
-      <section id="security" aria-labelledby="account-security" className="scroll-mt-20 space-y-4">
-        <h2 id="account-security" className="text-lg font-semibold">Sign-in security</h2>
-        <TwoFactorPanel />
-      </section>
-
-      <section aria-labelledby="account-sessions" className="space-y-4">
-        <h2 id="account-sessions" className="text-lg font-semibold">Signed-in devices</h2>
+      <section aria-labelledby="account-sessions" className="mt-6 min-w-0">
+        <h2 id="account-sessions" className="mb-3 font-display text-[1.05rem] font-semibold leading-tight tracking-[-0.01em]">
+          Signed-in devices
+        </h2>
         <SessionsPanel />
       </section>
     </div>
