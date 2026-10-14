@@ -1,7 +1,8 @@
 # Architecture
 
-**Status:** current for the branches stacked into PR #8 as at 2026-10-10, verified by source
-inspection and a local build. Section 8 summarises what was built on 2026-10-10. Counts live in
+**Status:** current for `feat/redesign-2026` (stacked on PR #8) as at 2026-10-14, verified by
+source inspection and a local build. Section 8 summarises what was built on 2026-10-10 and in
+the D-046 redesign. Counts live in
 `docs/STATUS.md` section 0. Runtime behaviour of the deployed system is **UNVERIFIED** from
 this repository.
 
@@ -81,20 +82,20 @@ Measured on the local build of 2026-09-22:
 
 ### Two visual surfaces, two token sets
 
-This changed on 2026-09-22 and the old one-token-set statement no longer holds.
-
-Public pages render inside a `.gk-public` wrapper, which now declares **its own palette** and
-remaps the shadcn tokens to it, so a shared component rendered inside the wrapper inherits
-the public colours. `PublicLayout` and `Login` add `gk-force-light` to `<html>` so the public
-surface never washes out when the CMS has left `html.dark` on. The CMS keeps the `:root` and
-`.dark` token sets, is theme aware, and honours `next-themes`. Neither surface's tokens reach
-the other. See `docs/DESIGN-SYSTEM.md`.
+Since D-046 (2026-10-14, not deployed) public pages render inside a `.gk-site` wrapper
+(`PublicLayout.tsx`, which also marks `<html>` with `gk-site-root`). Its hex variables and
+styles live in `src/marketing/site.css` and reach nothing outside the wrapper. The CMS keeps
+the `:root` and `.dark` token sets (HSL, with `--os-` extras), is theme aware through
+`next-themes`, and offers light and dark only; the sign-in pages follow the same theme. The
+older `.gk-public` wrapper and `gk-force-light` remain only for the shared proposal page
+(`ProposalView.tsx`). Neither surface's tokens reach the other. See `docs/DESIGN-SYSTEM.md`
+sections 10 and 11.
 
 ## 3. Server
 
 PHP files in `server/`, one per resource. Six are shared includes with no route of their own,
-all denied to direct requests by `.htaccess` (K-013). `work.php` was added on 2026-09-22 and
-`_money.php` on 2026-10-10.
+all denied to direct requests by `.htaccess` (K-013). `work.php` was added on 2026-09-22,
+`_money.php` on 2026-10-10 and `site.php` on 2026-10-14.
 
 | Include | Role |
 |---|---|
@@ -156,18 +157,16 @@ applied. See `docs/DEPLOYMENT.md`.
 | Figma | `figma.php` | Preview button reports not configured |
 | Slack | `_slack.php`, `slack.php` | Announcement still posts locally |
 | Calendly | `book.php` | Booking call to action hidden |
-| Google Fonts | `src/index.css` `@import`, now for the CMS families only (K-042) | Falls back to the declared local stacks. Text still renders |
 
 **The two icon webfonts are gone.** `index.html` used to pull Bootstrap Icons from jsDelivr
 and Boxicons from `cdn.boxicons.com` as render-blocking stylesheets, with no integrity
 attribute and no local fallback, and between them they had zero usages. They were removed on
 2026-09-22.
 
-Since the D-037 rebuild the public surface sets Sofia Sans, self-hosted from
-`@fontsource-variable/sofia-sans`. The Google Fonts `@import` now loads only the CMS families
-(Newsreader, Manrope, JetBrains Mono), but it is still in the one shared stylesheet, so it
-still blocks rendering on public pages (K-042). Each family names a local fallback stack, so a
-blocked or slow request costs the typography, not the content.
+There is no third-party font request. Since D-046 both surfaces use Bricolage Grotesque,
+Hanken Grotesk and JetBrains Mono, self-hosted from `@fontsource-variable` and imported in
+`src/main.tsx`; the Google Fonts `@import` and its `preconnect` links are gone (K-042). Layout
+shift after the change is not measured (K-045).
 
 Everything else fails soft. Whether each really degrades as described at runtime is **NOT
 TESTED**; the claim rests on source inspection of the 503 and empty-value paths.
@@ -201,5 +200,18 @@ On the branches stacked into PR #8; none of it is deployed, and server parts nee
 | Public data | A successful CMS answer, empty included, decides what shows; the static fallback is used only on failure | `src/marketing/data/cmsResult.ts`, `blog.ts`, `work.ts` |
 | Article format | A small parser for headings, lists, bold and safe links, rendered as React elements without raw HTML | `src/marketing/lib/articleFormat.ts`, `ResourceDetail.tsx` |
 | Lock screen | Unlock revokes the previous token; a 401 from the login call no longer clears the session | `LockScreen.tsx`, `src/lib/session-revoke.ts`, `api.ts` |
-| Public design | The public surface on D-037; the CMS keeps its own tokens until its redesign | `docs/DESIGN-SYSTEM.md` |
+| Public design | The public surface on D-037 (superseded by D-046, below) | `docs/DESIGN-SYSTEM.md` |
 | Documentation check | `npm run docs:check` in CI: links, and the document-sync rule | `scripts/docs-check.mjs`, `.github/workflows/ci.yml` |
+
+### The D-046 redesign, 2026-10-14
+
+On `feat/redesign-2026`, stacked on PR #8; not merged or deployed, and the two server files
+need SQL 7 and 8 and the upload in `docs/DEPLOYMENT.md` section 5.
+
+| Area | Shape | Where |
+|---|---|---|
+| Public site | `.gk-site` styles; shared parts; projects and hero from Work with a built-in fallback; copy from Site content over built-in defaults | `src/marketing/site.css`, `components/site-ui.tsx`, `components/site-helpers.ts`, `data/showcase.ts`, `data/content.ts` |
+| Homepage hero | Up to five published Work records in CMS order, each in its brand colour | `work.php?action=hero`, `showcase.ts` |
+| Site content | One `site_content` row per section with a draft and a published copy; the public read returns published copy only | `server/site.php`, `src/app/modules/Site.tsx`, `siteContentModel.ts`, `siteContent` in `api.ts` |
+| CMS shell and screens | Graphite sidebar in both themes, new header, `AuthFrame` sign-in pages, a page kit shared by every screen | `src/layouts/AppLayout.tsx`, `src/components/app-sidebar.tsx`, `src/app/components/AuthFrame.tsx`, `src/app/components/page-kit.tsx` |
+| Enquiries | Drag and drop between stages, through the existing `move()` | `src/app/modules/Leads.tsx` |

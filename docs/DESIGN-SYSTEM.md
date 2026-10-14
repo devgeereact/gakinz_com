@@ -1,10 +1,11 @@
 # Design system, as implemented
 
-**Status:** the public surface at `/` implements the D-037 system as of 2026-10-10, on the
-branches stacked into PR #8 and **not yet deployed**. The favicon, the 32px and apple-touch
-icons and the 1200x630 share image (`public/og.png`) use the same palette, and `theme-color`
-is the cream canvas `#F3F0EE`. GAkinzOS at `/app/*` was restyled to its approved prototype
-(D-046) on 2026-10-14; section 11 describes it. Sections 1 to 9 were
+**Status, 2026-10-14:** both surfaces follow D-046 on branch `feat/redesign-2026`, stacked on
+PR #8 and **not merged or deployed**. The public site is described in the note at the top of
+section 10; GAkinzOS at `/app/*` in section 11. The favicon, the 32px and apple-touch icons
+and the 1200x630 share image (`public/og.png`) were made on the D-037 palette on 2026-10-10
+and have not been redrawn for D-046, and `theme-color` in `index.html` is still the D-037
+cream `#F3F0EE`. Sections 1 to 9 describe the D-037 public surface built on 2026-10-10 and were
 read from `src/index.css`, `tailwind.config.js`, `src/marketing/components/primitives.tsx`,
 `action-class.ts`, `PublicNavbar.tsx`, `PublicFooter.tsx` and `FadeIn.tsx` on 2026-10-10, and
 re-checked after six unused primitives were removed. Those files are the authority. If this
@@ -590,9 +591,9 @@ hesitation. Start with one small feedback round.
 
 ## 11. GAkinzOS, as implemented (D-046)
 
-**Status:** built on branch `feat/redesign-cms-shell` on 2026-10-14, from the approved
-prototype (`cms.html` and `cms-modules.js` on the redesign board). **Not merged, not
-deployed.** The authority is `src/index.css`, `tailwind.config.js`, `src/components/ui/*`,
+**Status:** built on 2026-10-14 from the approved prototype (`cms.html` and `cms-modules.js`
+on the redesign board), now on branch `feat/redesign-2026`. **Not merged, not deployed.**
+Checked only against mocked API responses (`docs/KNOWN-ISSUES.md` K-044). The authority is `src/index.css`, `tailwind.config.js`, `src/components/ui/*`,
 `src/layouts/AppLayout.tsx`, `src/components/app-sidebar.tsx`, `nav-main.tsx`,
 `nav-groups.ts` and `src/app/components/AuthFrame.tsx`.
 
@@ -668,9 +669,18 @@ place.", the project colour strip and the London clock, and the form on the canv
 - The sign-in pages follow the light or dark theme instead of forcing light.
 - My account moved from the Settings group to the sidebar footer.
 
-### 11.7 Not yet matched
+### 11.7 Page kit and module screens
 
-KPI tiles, status pills and page-header action order live inside each module
-(`src/app/modules/*`) and were not edited in this change, so they keep their own markup on the
-new tokens. The prototype's per-screen compositions in `cms-modules.js` are the reference for
-that follow-up.
+The shell change above left each module's KPI tiles, status pills and header actions in their
+own markup. A later pass on the same branch restyled every CMS screen to the prototype's
+per-screen compositions and moved those shared pieces into
+`src/app/components/page-kit.tsx`: `PageHeader` (title, subtitle, actions), `StatGrid` and
+`StatTile`, and `StatusBadge`. A new screen uses the kit rather than its own header or tile
+markup.
+
+### 11.8 Known gaps
+
+- At 390px the Site content tab list scrolls sideways with no visible cue (K-048).
+- No accessibility or performance measurement of the CMS or the rebuilt public site exists
+  yet (K-045).
+- The `.gk-fadein` rules in `src/index.css` are unused since D-046 (K-046).

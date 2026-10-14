@@ -1,15 +1,16 @@
 # API specification
 
-**Status:** current for the tracked source as at 2026-10-10, on the branches stacked into
-PR #8. It is verified by source inspection of every PHP file in `server/`. **No endpoint has
+**Status:** current for the tracked source as at 2026-10-14, on `feat/redesign-2026`
+(stacked on PR #8). It is verified by source inspection of every PHP file in `server/`. **No endpoint has
 been exercised against production.** Some areas are also covered by local integration tests in
 `tests/server/`, run with `npm run test:server` against a throwaway `*_test` database: the
 Stripe link and webhook, PayPal being switched off, magic links and two-factor, My account
 self-service, quote acceptance, blog editing, create endpoints returning the new id, enquiry
 follow-ups, the client branch of `support.php`, the work hero actions and `site.php`
-(2026-10-14). Everything else below is source inspection
-only. That applies with particular force to `work.php`, which has never run and
-has no tables behind it on any database.
+(2026-10-14), and `work.php` (`tests/server/work.test.ts`, 2026-10-11). Everything else
+below is source inspection only. `work.php` and `site.php` have run only against local test
+databases; whether their tables and columns exist on the live database is UNVERIFIED, and
+they will not until SQL 3, 4, 7 and 8 in `docs/DEPLOYMENT.md` section 5.2 have run.
 
 The server changes of 2026-09-22 and 2026-10-10 are not known to be uploaded; the list is
 `docs/DEPLOYMENT.md` section 5. Where this
