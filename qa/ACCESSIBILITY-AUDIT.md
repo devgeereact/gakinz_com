@@ -12,6 +12,15 @@ routes at 5 widths for overflow, for AA contrast on every colour pairing, and wi
 mobile (accessibility 100), against a local production build. A full axe sweep of the rebuilt
 surface has NOT been re-run, and the CMS remains NOT TESTED.
 
+**Superseded UI (2026-10-14).** The public site was rebuilt again under D-046 on branch
+`feat/redesign-2026` (not deployed): new palette, type families, hero motion and markup on
+every page, and GAkinzOS was restyled. **Neither the 2026-09-22 figures below nor the
+2026-10-10 re-check describe the current interface.** The redesign was checked only with
+Playwright against mocked API responses at 1440, 1024 and 390px, light and dark, for layout
+and overflow; no axe sweep, contrast measurement, focus check or screen-reader pass has been
+run on it. Re-run section 8 against a local production build of the redesign
+(`docs/KNOWN-ISSUES.md` K-045).
+
 ---
 
 ## Why this file reads the way it does

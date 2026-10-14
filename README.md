@@ -4,13 +4,15 @@ The website and private workspace for **GAkinz**, websites and everyday IT suppo
 businesses, run by Gideon Akinlotan. One Vite application serves two surfaces from one domain
 and one build:
 
-- **Public site** at `/`. The live site is the 2026-09-22 relaunch; a rebuild on the D-037
-  design system is on the branches stacked into PR #8 and not yet deployed. The approved
-  direction (D-038, D-039) is six services under the GAkinz name with Gideon named as the
-  owner; the copy still describes four services in the first person. The copy rule is in the
+- **Public site** at `/`. The live site is the 2026-09-22 relaunch. The approved 2026 redesign
+  (D-046) is on `feat/redesign-2026`, stacked on PR #8, and not yet deployed: a brand-colour
+  hero fed by the CMS Work module, the owner's real projects, and key copy edited in the CMS
+  Site content module. The approved direction (D-038, D-039) is six services under the GAkinz
+  name with Gideon named as the owner; the default copy still describes four services in the
+  first person. The copy rule is in the
   header of `src/marketing/data/site.ts` and is worth reading before changing a word of it.
 - **GAkinzOS** at `/app/*`, the CMS that runs enquiries, clients, projects, quotes,
-  invoicing, support, time, content, the work ledger and a client portal.
+  invoicing, support, time, content, the public work and site copy, and a client portal.
 
 Behind them sits a PHP and MySQL API on cPanel shared hosting.
 
@@ -57,8 +59,10 @@ no Composer dependency. Tests are Vitest. Deploys run on GitHub Actions.
 
 ```
 src/
-  marketing/     public site: layout, pages, copy in data/site.ts, work ledger in data/work.ts
-    components/  site-ui.tsx (shared public parts, styles in ../site.css), Seo.tsx
+  marketing/     public site: layout, pages, site.css (styles, scoped to .gk-site)
+    components/  site-ui.tsx and site-helpers.ts (shared public parts), Seo.tsx
+    data/        site.ts (default copy), content.ts (Site content over the defaults),
+                 showcase.ts (projects and hero), work.ts and blog.ts (API reads)
   app/           GAkinzOS CMS: modules, My account, login, route guard
   components/    shared UI, shadcn primitives under ui/
   layouts/       CMS shell
@@ -100,20 +104,20 @@ once.
 | `docs/KNOWN-ISSUES.md` | Open and fixed problems, with evidence and status |
 | `docs/DECISIONS.md` | Dated decision records, including superseded ones |
 | `docs/PRODUCT-SPEC.md` | The approved scope: services, public pages, CMS journeys, customer access, planned features, exclusions, and the original brief's 175-feature register |
-| `docs/ARCHITECTURE.md` | Shape, client, server, request lifecycle, the two deploy tracks, and what was built on 2026-10-10 |
+| `docs/ARCHITECTURE.md` | Shape, client, server, request lifecycle, the two deploy tracks, and what was built on 2026-10-10 and in the D-046 redesign |
 | `docs/DATA-MODEL.md` | The tables, ownership, share tokens, and the migration situation |
 | `docs/API-SPEC.md` | The endpoints, their actions and their role gates |
 | `docs/SECURITY.md` | Authentication, roles, client isolation, payments, secrets, open gaps |
 | `docs/DEPLOYMENT.md` | Both tracks, release policy, and the one list of server files and SQL not yet uploaded |
 | `docs/OPERATIONS.md` | Local development, cron jobs, monitoring, mail, test environment rules, launch gates, recovery targets |
-| `docs/DESIGN-SYSTEM.md` | The design system as implemented (public surface on D-037) and the status of the D-037 target |
+| `docs/DESIGN-SYSTEM.md` | The design system as implemented: the D-046 public site and GAkinzOS, with the superseded D-037 system kept as record |
 | `docs/DESIGN-REFERENCE-MASTERCARD.md` | The preserved, unedited third-party design reference behind the target system. Do not edit |
 | `docs/CONTENT-AND-GROWTH.md` | Resources standard, affiliate and AdSense pilots, measurement and the social profile kit |
 | `docs/GEE-OS.md` | How this repository uses the GEE OS agent contract, and its documentation profile |
 | `qa/TEST-PLAN.md` | What is tested, what is not, the order to close the gaps, and the J01 to J12 acceptance scenarios |
 | `qa/SECURITY-AUDIT.md` | The 2026-09-04 source-inspection audit, with later status |
-| `qa/ACCESSIBILITY-AUDIT.md` | The 2026-09-22 measured run on the public surface, and what is still NOT TESTED |
-| `qa/PERFORMANCE-AUDIT.md` | The 2026-09-22 bundle and page measurements, and what is unmeasured |
+| `qa/ACCESSIBILITY-AUDIT.md` | The 2026-09-22 measured run on the public surface (predates the D-046 rebuild), and what is still NOT TESTED |
+| `qa/PERFORMANCE-AUDIT.md` | The 2026-09-22 bundle and page measurements (predate the D-046 rebuild), and what is unmeasured |
 | `qa/RELEASE-CHECKLIST.md` | Run this before shipping |
 
 Superseded and completed documents, including the original `GAkinzOS.html` brief and the root
@@ -134,8 +138,9 @@ D-044).
    field is `null`. No stock photograph of a stranger, no invented client, no unsourced
    figure, and no claim the project cannot stand behind. Absent material is left unpublished
    rather than shown as a gap. See `docs/DECISIONS.md` D-027 and D-039.
-8. **Every size on a public page comes from the nine-value type scale** in
-   `tailwind.config.js`. No arbitrary size ships. See `docs/DECISIONS.md` D-024.
+8. **Public styles live in `src/marketing/site.css`**, scoped to `.gk-site`, since D-046. The
+   nine-value Tailwind type scale of D-024 governed the D-037 surface and still applies to
+   anything styled with Tailwind outside the CMS, such as the shared proposal page.
 
 ## State
 

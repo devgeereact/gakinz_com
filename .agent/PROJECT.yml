@@ -24,7 +24,7 @@ exclusions:
 sources_of_truth:
   product: "docs/PRODUCT-SPEC.md (approved 2026-10-10, docs/DECISIONS.md D-043)"
   content_and_growth: "docs/CONTENT-AND-GROWTH.md"
-  public_copy: "src/marketing/data/site.ts"
+  public_copy: "src/marketing/data/site.ts (defaults); published Site content via server/site.php overrides its sections (D-046)"
   routes: "src/routes/index.tsx"
   client_api_boundary: "src/lib/api.ts"
   server_boundary: "server/_bootstrap.php"

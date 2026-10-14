@@ -137,18 +137,22 @@ an unmeasured revenue increase.
 Defined in `src/routes/index.tsx`. Public copy lives in `src/marketing/data/site.ts`; blog
 content and work records are fetched from the API through `src/marketing/data/blog.ts` and
 `src/marketing/data/work.ts`. Since 2026-10-10 a successful API answer, empty included,
-decides what shows, and the static fallback is used only when the request fails (K-036). The
-public surface is styled on the D-037 system (`docs/DESIGN-SYSTEM.md`). None of the 2026-10-10
-changes is deployed yet.
+decides what shows, and the static fallback is used only when the request fails (K-036). Since
+D-046 (2026-10-14, branch `feat/redesign-2026`) the public surface is the approved redesign
+(`docs/DESIGN-SYSTEM.md` section 10 note): projects and the homepage hero come from published
+Work records, falling back to the owner's projects in `src/marketing/data/showcase.ts`, and the
+hero, services, process, pricing, FAQs and contact copy come from published Site content
+(`site.php`) over the defaults in `src/marketing/data/content.ts`. None of the 2026-10-10 or
+2026-10-14 changes is deployed yet.
 
 | Route | Page | Content source |
 |---|---|---|
-| `/` | Home | `site.ts`, live blog and work |
+| `/` | Home | Hero from `work.php?action=hero` or `showcase.ts`; Site content over `content.ts`; live blog and work |
 | `/about` | About | `site.ts` |
-| `/services`, `/services/:slug` | Services index and detail | `site.ts` `services` (four today; six approved, D-038) |
-| `/pricing` | Pricing | `site.ts` `packages`, `addOns`, `alwaysIncluded`, `paymentTerms`, `faqs` |
+| `/services`, `/services/:slug` | Services index and detail | Site content `services`, default from `site.ts` (four today; six approved, D-038) |
+| `/pricing` | Pricing | Site content `packages`, `addons`, `terms`, `faqs`, defaults from `site.ts` |
 | `/sectors` | Sectors | `site.ts` `sectors` |
-| `/work`, `/work/:slug` | Work index and detail | `work.php`, static fallback in `work.ts` |
+| `/work`, `/work/:slug` | Work index and detail | `work.php`, fallback to the built-in projects in `showcase.ts` |
 | `/resources`, `/resources/:slug` | Resources index and article | `site.ts` `insights` plus live blog |
 | `/contact` | Contact | `site.ts`, posts to `contact.php` |
 | `/privacy`, `/terms`, `/cookies` | Legal | `Legal.tsx` |
@@ -214,7 +218,7 @@ month, 40/30/30 terms) await the owner's confirmation and a stated VAT basis.
 | Information | Canonical home | Rule |
 |---|---|---|
 | Identity, contact, social links | `site.ts` today; a small public settings record later | Header, footer, About, legal pages and structured data read an allowlisted public projection; private configuration is never exposed |
-| Service and pricing copy | `site.ts` | A controlled source until frequent changes justify a small editor; no page builder |
+| Service and pricing copy | Site content (`site.php`, D-046), defaults in `site.ts` | Fixed sections edited as drafts and published in the CMS since 2026-10-14; still not a page builder |
 | Portfolio | Existing `work` records | Published and approved only; a private project produces a reviewed draft, never an automatic publication |
 | Blog | Existing posts | Published list, detail and sitemap; drafts stay private; Content Hub is not a second authority |
 | Testimonials | Existing records | Approved, attributed content only, with consent evidence |
@@ -400,6 +404,10 @@ note and an owner priority (0 none to 3 high, separate from the AI score). The b
 overdue and due-today items and filters to follow-ups due; Today has a follow-ups card that
 shows unavailable, never zero, on failure. Needs the enquiries `ALTER` in `docs/DEPLOYMENT.md`
 section 5.2. Conversion integrity is still untested.
+
+**As built on 2026-10-14 (D-046, not deployed):** cards can be dragged between stages on the
+board; the drop calls the same stage move as the existing control. Checked against mocked API
+responses only (K-044).
 
 #### Bookings, inside Enquiries
 
@@ -606,6 +614,12 @@ removes a post or work record from the public site (K-036); articles support `##
 headings, bullet and numbered lists, bold and safe links, with `{sponsored}` for affiliate
 links (K-037). Preview, recommendation blocks and the grouping into Portfolio, Articles,
 Testimonials and Draft ideas are not built.
+
+**As built on 2026-10-14 (D-046, not deployed):** Work chooses up to five published records
+for the homepage hero, with order, brand colour, hero word and desktop and mobile screenshots;
+unpublishing a record takes it off the hero. The new Site content module edits the public
+hero, services, process, pricing, add-ons, payment terms, FAQs and contact copy as drafts and
+publishes them section by section. Checked against mocked API responses only (K-044).
 
 #### Platform to Settings and My account
 
@@ -853,7 +867,7 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 
 | Feature | Why it helps | Today | Phase | Size | Depends on |
 |---|---|---|---|---|---|
-| Target design on both surfaces (D-037), Sofia Sans, one light and one dark CMS theme | One consistent look (`docs/DESIGN-SYSTEM.md` section 10) | Public surface built 2026-10-10; CMS not started | 3 to 4 | M | Font licence confirmed |
+| Target design on both surfaces (D-037, superseded by D-046), one light and one dark CMS theme | One consistent look (`docs/DESIGN-SYSTEM.md` sections 10 and 11) | D-037 public surface built 2026-10-10; both surfaces rebuilt on D-046 on 2026-10-14, not deployed | 3 to 4 | M | Font licence confirmed |
 | Hero and section motion with a reduced-motion fallback | An original feel without hurting speed | Built on the public surface 2026-10-10 | 4 | M | Design tokens |
 | Six service pages with buyer hooks, scope, exclusions and price basis | Services up front for companies | Four pages | 4 | M | Prices approved |
 | Blog edit that keeps the body | Safe content editing | Fixed in source 2026-10-10 (K-016) | 1 | S | None |

@@ -1,12 +1,14 @@
 # Status
 
-**As at:** 2026-10-10. `main` is `c57eb4a`. All later work sits on branches stacked into
-PR #8, ending at `chore/codebase-hygiene` (`8568a6d`): batch 1 (the local half of delivery
-phase 1), the seven-destination navigation, My account, enquiry follow-ups, client portal
-messages, public publishing and the article format, the lock-screen token fix, the public
-redesign on D-037, the favicon and share image, and dead-code removal. **None of it is merged,
-deployed or uploaded.** The owner approved the 2026 plan on 2026-10-10 (`docs/DECISIONS.md`
-D-043).
+**As at:** 2026-10-14. `main` is `c57eb4a`. All later work sits on branches stacked into
+PR #8. `feat/plan-2026-batch-1` (PR #8) holds batch 1 (the local half of delivery phase 1), the
+seven-destination navigation, My account, enquiry follow-ups, client portal messages, public
+publishing and the article format, the lock-screen token fix, the D-037 public redesign, the
+favicon and share image, and dead-code removal. `feat/redesign-2026` (`d314833`), stacked on
+it and pushed, holds the D-046 redesign of 2026-10-12 to 2026-10-14: the public site rebuilt,
+GAkinzOS restyled, Work hero controls, the Site content module and `server/site.php`
+(section 4). **None of it is merged, deployed or uploaded.** The owner approved the 2026 plan
+on 2026-10-10 (`docs/DECISIONS.md` D-043) and the redesign on 2026-10-14 (D-046).
 
 **Method:** local test, build, lint and PHP syntax runs; isolated browser previews with every
 API call stubbed; source inspection for everything else. **No live server, database, mailbox,
@@ -21,25 +23,29 @@ unless someone with server access has checked it.
 
 ## 0. Current measurements
 
-Measured on 2026-10-10 against commit `8568a6d` plus the documentation refresh. Re-measure and
-update this table when a count changes.
+Re-measured on 2026-10-14 on `feat/redesign-2026` at `d314833` (Ubuntu), except where a row
+names another date or computer. Re-measure and update this table when a count changes.
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 128 tests in 8 files (2026-10-14, Site content and Work hero helpers added) |
-| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 140 tests in 12 files (2026-10-14, Ubuntu, MariaDB 10.11, redesign server batch) |
-| Type check and build | `npm run typecheck`, `npm run build` | **PASS** |
-| Lint | `npm run lint:ratchet` | 41 errors, 1 warning, at the ratchet ceiling (2026-10-11). **`npm run lint` still fails** (K-002) |
-| Documentation | `npm run docs:check` | **PASS** |
-| PHP files | `ls server/*.php \| wc -l` | 47: 41 endpoints and 6 `_`-prefixed includes, all passing `php -l` (2026-10-14, `site.php` added) |
-| Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 35 (2026-10-14, `site_content` added) |
-| CMS screens | `src/routes/index.tsx` under `/app` | 26: Today (the index), 24 module routes and My account, in seven navigation groups (2026-10-14, Site content added) |
-| Client API groups | `src/lib/api.ts` | 37 exported groups over one `request()` helper (2026-10-14, `siteContent` added) |
-| Server files changed since `main` | `git diff --name-only c57eb4a -- server` | 25 PHP files, `.htaccess`, `schema.sql`, `README.md` and `config.php.example`; the upload list is `docs/DEPLOYMENT.md` section 5 (2026-10-14) |
-| `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 36 of 47 files, 134 call sites (2026-10-14) |
+| Unit tests | `npm test` | **PASS.** 128 tests in 8 files |
+| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 140 tests in 12 files. Measured 2026-10-14 on local MariaDB 10.11 on the final redesign branch; not re-run for this table, because no local test database is configured on the computer that measured the other rows |
+| Type check | `npx tsc -b` | **PASS** |
+| Build | `npm run build` | **PASS** |
+| Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 41 errors, 1 warning, unchanged since 2026-10-11. **`npm run lint` still fails** (K-002) |
+| Documentation | `npm run docs:check` | **PASS.** 25 documents |
+| PHP files | `ls server/*.php \| wc -l`, then `php -l server/*.php` | 47: 41 endpoints and 6 `_`-prefixed includes, all 47 passing `php -l` |
+| Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 35 (`site_content` added 2026-10-14) |
+| Public routes | `src/routes/index.tsx`, children of `PublicLayout` | 17: the home page, 15 paths and the 404. Outside the layout: `/login`, `/set-password` and `/p/:token` |
+| CMS screens | `src/routes/index.tsx` under `/app` | 26: Today (the index), 24 module routes and My account, in seven navigation groups (Site content added 2026-10-14) |
+| Client API groups | `grep -cE "^export const [a-zA-Z]+ *= *\{" src/lib/api.ts` | 37 exported groups over one `request()` helper (`siteContent` added 2026-10-14) |
+| Server files changed since `main` | `git diff --name-only c57eb4a -- server` | 25 PHP files, `.htaccess`, `schema.sql`, `README.md` and `config.php.example`; the upload list is `docs/DEPLOYMENT.md` section 5 |
+| Server files changed by the redesign | `git diff --stat origin/feat/plan-2026-batch-1...origin/feat/redesign-2026 -- server` | `site.php` (new), `work.php`, `schema.sql`, `README.md` |
+| `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 36 of 47 files, 134 call sites |
 
 Not measured on this run: `npm audit` (last figure in K-041), accessibility and performance
-(last runs in `qa/`), and anything on the live system.
+(last runs in `qa/`, both before the D-046 rebuild, so neither describes the current public
+site), and anything on the live system.
 
 ## 1. Audit and readiness, 2026-10-10
 
@@ -114,13 +120,13 @@ improvements alone cannot close those gaps.
 A sequence of reviewable changes, not authority to make them. Exact dates and effort need
 live-state discovery and owner inputs first; no launch is promised in a fixed number of days.
 
-| Phase | Work and dependency | Exit evidence | State on 2026-10-10 |
+| Phase | Work and dependency | Exit evidence | State on 2026-10-14 |
 |---|---|---|---|
 | 0. Agree scope | Design system and six services; motion contract, core workflows and navigation, positioning and feature dispositions; actual business and pricing facts | Dated decisions with clear exclusions and remaining questions | Plan approved (D-037 to D-044). Business facts outstanding (section 5) |
 | 1. Establish safety | Owner credential actions; reconcile host PHP and SQL; backup and restore; a safe local synthetic backend and mail sink; payment defects and alternative sign-in reviewed | Rotation and revocation confirmed, restoration demonstrated, release manifest and rollback recorded, no accidental production calls in tests | Local fixes built (section 4), not deployed. Owner-side actions open |
 | 2. Complete business journeys | Enquiry follow-up, simple bookings, client conversion, quote acceptance and version, projects and tasks, invoices and reconciliation, verified reference access, scoped messages, updates and feedback, client-linked brief, portal and support isolation | Synthetic end-to-end journey, failure, retry and concurrency tests, and record ownership tests pass | Started. Enquiry follow-ups and client messages built with server tests; bookings, timeline, feedback and the full journey not built |
-| 3. Polish the CMS | Target design foundation, smaller navigation, My account, consistent page and form states, unavailable metrics, quiet optional modules | Owner usability task passes; keyboard, phone, zoom and theme checks on affected screens | Navigation grouped and My account built (K-032, K-023, K-024). CMS redesign on the target system not started |
-| 4. Polish the public site | Hero and section design and motion, company and owner positioning, service copy, complete case studies, consent and legal content, safe publishing, metadata and sitemap | Buyer journey, publish and unpublish, share preview, responsive and accessibility evidence | Public surface rebuilt on D-037; publishing, article format and engineering copy fixed (K-036, K-037, K-038 in part). Six-service copy, case studies and owner material wait for owner inputs |
+| 3. Polish the CMS | Target design foundation, smaller navigation, My account, consistent page and form states, unavailable metrics, quiet optional modules | Owner usability task passes; keyboard, phone, zoom and theme checks on affected screens | Navigation grouped and My account built (K-032, K-023, K-024). Every CMS screen restyled to D-046 on `feat/redesign-2026`, checked against mocked API responses only. Owner usability task, keyboard and zoom checks NOT TESTED |
+| 4. Polish the public site | Hero and section design and motion, company and owner positioning, service copy, complete case studies, consent and legal content, safe publishing, metadata and sitemap | Buyer journey, publish and unpublish, share preview, responsive and accessibility evidence | Rebuilt again on D-046 (2026-10-14): brand-colour hero fed by Work, the owner's real projects with screenshots, copy editable in Site content. Publishing, article format and engineering copy fixed (K-036, K-037, K-038 in part). Six-service copy, client consent records, portrait and legal review dates wait for owner inputs. Accessibility and performance not re-measured since the rebuild |
 | 5. Social and affiliate pilot | Owned profile set-up, approved copy and media, first resources, disclosed links | Exact profile URLs, disclosure and link checks, a repeatable small publishing routine | Not started |
 | 6. AdSense pilot | Account approval and a certified consent platform, article-only slots | Consent and network proof, no scripts on private layouts, performance comparison, reversible switch | Not started |
 | 7. Consolidate and operate | Promote approved requirements to canonical documents, retire duplicates, review monthly | Valid references, one source per fact, accurate task, decision and release records | Documents consolidated 2026-10-10 (D-043, D-044); sync rule and `npm run docs:check` added (D-045) |
@@ -142,47 +148,85 @@ reference access cannot ship until the authentication and ownership gates pass.
    repository-only and the work ledger has no tables behind it.
 4. Restore a backup somewhere isolated and agree the recovery targets (K-010,
    `docs/OPERATIONS.md` section 10).
-5. Review and merge PR #8 once CI passes, knowing that the merge deploys `dist/`, and that the
-   client then expects the server set in step 3.
+5. Review and merge PR #8 and `feat/redesign-2026` once CI passes, knowing that the merge
+   deploys `dist/`, and that the client then expects the server set in step 3. For the
+   redesign, the operator order is in `docs/DEPLOYMENT.md` section 5.1: SQL 7 and 8, upload
+   `site.php` and `work.php`, publish the real projects in Work, switch on up to five for the
+   hero with screenshots attached, and only then merge.
+6. Before merging, the owner tests the redesign on the other computer after
+   `git pull --ff-only`: the Work hero switches, a Site content publish, Enquiries
+   drag-and-drop between stages, and the Client Portal signed in as a client. Development
+   calls the live API, so every save there is real, and nothing in this list has been
+   exercised against real data yet (K-044).
 
 **P1, the core journeys**
 
-6. One tested enquiry to client to quote to project to invoice journey against synthetic data.
+7. One tested enquiry to client to quote to project to invoice journey against synthetic data.
    **Done locally 2026-10-11**: `tests/server/journey.test.ts` runs contact form, conversion,
    quote, acceptance, the VAT-inclusive deposit through the fake Stripe provider and the client
    portal. Not run against the live server.
-7. Booking records inside Enquiries, the client timeline and private feedback
+8. Booking records inside Enquiries, the client timeline and private feedback
    (`docs/PRODUCT-SPEC.md` sections 5.5 and 6).
-8. The remaining token work: `localStorage` exposure, token lifetime and a CSP review (K-033);
+9. The remaining token work: `localStorage` exposure, token lifetime and a CSP review (K-033);
    honest contract labelling (K-034).
 
 **P2, the CMS and the public site**
 
-9. The CMS redesign slice on the target system (`docs/DESIGN-SYSTEM.md` section 10), starting
-   with Today.
-10. Six service pages, authorised case studies, owner portrait and biography, and complete
+10. **Done locally 2026-10-14 (D-046):** every CMS screen restyled on the page kit, on
+    `feat/redesign-2026`. Still open: a check with real data, a keyboard and zoom pass, and a
+    first CMS accessibility check (item 14).
+11. Six service pages, authorised case studies, owner portrait and biography, and complete
     public copy (K-038, owner inputs in section 5); route-specific metadata and a generated
-    sitemap (K-018, K-019); the canonical conflict and font import (K-042, K-043).
-11. After the `.htaccess` upload, confirm `/llms.txt` still serves. The deny rule exempts
+    sitemap (K-018, K-019); the canonical conflict (K-043); Lighthouse and CLS after the font
+    change (K-042, K-045).
+12. After the `.htaccess` upload, confirm `/llms.txt` still serves. The deny rule exempts
     `robots.txt` and `llms.txt` by name (`server/.htaccess`); the live behaviour is UNVERIFIED.
-12. Legal pages reviewed, with genuine dates (K-021).
-13. A screen-reader pass with real assistive technology, and a first CMS accessibility check.
-14. Exercise `work.php` against a real database before relying on it. **Done locally 2026-10-11**:
+13. Legal pages reviewed, with genuine dates (K-021).
+14. A screen-reader pass with real assistive technology, and a first CMS accessibility check.
+15. Exercise `work.php` against a real database before relying on it. **Done locally 2026-10-11**:
     `tests/server/work.test.ts` covers access, client consent, validation, images and ordering
     against a local `*_test` database. The live tables still do not exist until the SQL is run.
 
 **P3, growth**
 
-15. Social profiles, then the affiliate pilot, then the AdSense pilot
+16. Social profiles, then the affiliate pilot, then the AdSense pilot
     (`docs/CONTENT-AND-GROWTH.md`).
 
 **Ongoing:** hold the lint ratchet and bring it down (K-002); decide dependency exposure
 (K-041, K-017); measure performance in the field rather than on a local preview.
 
-## 4. What changed on 2026-10-10
+## 4. What changed since `main`
 
 Contract: `.agent/CURRENT-TASK.md`. Every row is in the repository only: client changes deploy
-when PR #8 merges, and server changes need the manual upload in `docs/DEPLOYMENT.md` section 5.
+when PR #8 (and, for the redesign, `feat/redesign-2026`) merges, and server changes need the
+manual upload in `docs/DEPLOYMENT.md` section 5.
+
+### The D-046 redesign, 2026-10-12 to 2026-10-14
+
+On `feat/redesign-2026`, stacked on `feat/plan-2026-batch-1`, built in batches merged into that
+branch and pushed. Not merged into PR #8, not deployed, no server file uploaded.
+
+| Area | Change | Evidence |
+|---|---|---|
+| Decision | The owner approved direction A "Live Wall" with the brand-colour hero from direction C, through working prototypes; supersedes D-037's visual direction | `docs/DECISIONS.md` D-046 |
+| Public site | Every public page rebuilt, legal, sectors, certificate check, articles and testimonials included: `src/marketing/site.css` scoped to `.gk-site`, shared parts in `site-ui.tsx` and `site-helpers.ts`, the owner's real projects and screenshots in `showcase.ts` and `public/images/work/`, editable copy with built-in defaults in `content.ts`. The D-037 primitives, `FadeIn.tsx` and `action-class.ts` removed | `npm test` (`content.test.ts`), build, browser check with mocked API |
+| Homepage hero | Full-screen hero in the active project's brand colour, up to five published Work records in CMS order, pause, previous and next, arrow keys, still under reduced motion. Falls back to the built-in projects until one record is published | `src/marketing/data/showcase.ts`, browser check with mocked API |
+| Server | `work.php`: hero fields and the `setHero`, `heroOrder` and `hero` actions, at most five, published only. New `site.php`: `site_content` draft and publish. Both degrade until their SQL has run | `tests/server/work-hero.test.ts`, `tests/server/site.test.ts`; SQL 7 and 8 in `docs/DEPLOYMENT.md` section 5 |
+| Client API and access | `siteContent` and the Work hero calls in `api.ts`; `site` in `access.ts`, matching `site.php` EDITORS | `src/lib/access.test.ts` |
+| CMS foundation | D-046 tokens; Bricolage Grotesque (opsz), Hanken Grotesk and JetBrains Mono self-hosted, Google Fonts `@import` removed (K-042); a graphite sidebar in both themes, new header, sign-in pages on `AuthFrame`; shared `ui` primitives restyled; the custom background themes retired, so the CMS is light or dark only | `docs/DESIGN-SYSTEM.md` section 11 |
+| CMS screens | Every screen restyled on the page kit (`src/app/components/page-kit.tsx`: page header, stat tiles, status badges) | Browser check with mocked API |
+| New CMS module | Site content (`/app/site`, `Site.tsx`, `siteContentModel.ts`): hero, services, process, pricing, add-ons, terms, FAQs and contact copy, saved as drafts and published | `siteContentModel.test.ts`, browser check with mocked API |
+| Work module | Homepage hero switches, brand colour, hero word and desktop and mobile screenshots. Fixed: editing no longer crashes on a detail response without images (`24c25ff`) | `tests/server/work-hero.test.ts` for the server half |
+| Enquiries | Drag and drop between stages, a new write path that calls the existing `move()` | Browser check with mocked API only |
+| Fixes | Verify page error state; iPhone and iPad sessions labelled iOS in My account | Browser check with mocked API |
+
+Verification on the final branch: `npx tsc -b`, `npm test` (128), `npm run build`,
+`npm run lint:ratchet` (41 errors, 1 warning, unchanged), `npm run docs:check` and `php -l` over
+47 files PASS on 2026-10-14; `npm run test:server` (140) PASS the same day on local MariaDB
+10.11. The public site and the CMS were checked only with Playwright against mocked API
+responses at 1440, 1024 and 390px, light and dark. **NOT TESTED:** real data, a real sign-in,
+real assistive technology, an axe sweep, Lighthouse and CLS after the font change (K-044,
+K-045). Known leftovers are K-046 to K-048.
 
 ### Batch 1, the local half of delivery phase 1
 
@@ -226,6 +270,7 @@ approval. **Never write a password, key or recovery code here.** Already decided
 2026-10-10: the design system (D-037), the six services (D-038), the GAkinz-led name (D-039),
 the seven-destination navigation (D-040), the content and monetisation policy (D-041), the
 feature list, the "deliberately not doing" list and phase 1 client access by password (D-043).
+On 2026-10-14 the owner approved the redesign that replaces D-037's visual direction (D-046).
 
 **Safety, before any real order (phase 1)**
 
@@ -265,14 +310,22 @@ feature list, the "deliberately not doing" list and phase 1 client access by pas
 **Brand and content (phase 4)**
 
 - [ ] Main homepage message (draft in `docs/PRODUCT-SPEC.md` section 3).
-- [ ] Sofia Sans licence file and weights confirmed (`docs/DESIGN-SYSTEM.md` section 10.3).
+- [x] ~~Sofia Sans licence file and weights confirmed.~~ Moot since D-046 (2026-10-14): the
+      site now uses Bricolage Grotesque, Hanken Grotesk and JetBrains Mono, whose
+      `@fontsource-variable` packages declare OFL-1.1.
 - [ ] Owner portrait and short biography supplied.
 - [ ] Up to three case studies, each with client permission, screenshots and an honest outcome.
+      Screenshots of the owner's projects were captured on 2026-10-13 and ship in
+      `public/images/work/`; the owner confirmed naming the client sites (D-046). Still to do:
+      publish them as Work records with consent stored, so the CMS takes over from the
+      built-in list.
       Say if a project cannot be screenshotted (an internal system, or a client who permits
       naming but not imagery), because it then needs a designed answer rather than an empty
       frame.
 - [ ] Sectors page: keep with genuine examples, or fold into Services.
-- [ ] Motion preview reviewed on desktop and phone before it is applied everywhere.
+- [ ] Motion preview reviewed on desktop and phone before it is applied everywhere. The D-046
+      working prototypes, motion included, were approved on 2026-10-14; whether they were
+      reviewed on a phone is not recorded.
 
 **Product scope (phases 2 and 3)**
 
@@ -406,7 +459,7 @@ dependency, and it has no fix available.
 | Per-route metadata on every public page | Built | `src/marketing/components/Seo.tsx` |
 | CMS, 25 module routes | Built | `src/app/modules/`, all wired into routes, sidebar, global search and `access.ts` |
 | Work module, the 24th | Built. Homepage hero switches, brand colour, hero word and screenshots since 2026-10-14 (D-046) | `src/app/modules/Work.tsx` |
-| Site content module, the 25th | Built on branch `feat/redesign-cms-site`, not merged or deployed. Needs `site.php` and the `site_content` table live; the UI is checked against mocked responses only | `src/app/modules/Site.tsx` |
+| Site content module, the 25th | Built on branch `feat/redesign-2026`, not merged or deployed. Needs `site.php` and the `site_content` table live; the UI is checked against mocked responses only | `src/app/modules/Site.tsx` |
 | Authentication, 7 roles | Built | `src/app/Login.tsx`, `RequireAuth.tsx`, `src/lib/access.ts` |
 | Two-factor, recovery codes | Built. Setup now requires a current code when 2FA is already on | `src/app/modules/Platform.tsx`, `server/auth.php` |
 | Magic-link sign-in | Built | Login page |

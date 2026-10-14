@@ -147,9 +147,20 @@ statements are already live; only someone with server access can (section 5.6).
    `vat_rate > 0` marked paid by the Stripe webhook (`audit_log.action =
    'invoice_paid_stripe'`), compare the amount in the Stripe dashboard with the invoice total
    including VAT, and reconcile any shortfall with the client by hand.
-7. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
+7. **Prepare the redesign content (D-046)**, once SQL 7 and 8 have run and `site.php` and
+   `work.php` are uploaded. In the CMS, publish the owner's real projects in Work with client
+   consent stored, switch on up to five for the homepage hero in the order wanted, and attach
+   the desktop and mobile screenshots with alt text. Publish Site content sections only when
+   their copy is final. A published Work record also shows on the live `/work` page at once,
+   because the client already deployed reads `work.php` too (source inspection of
+   `src/marketing/data/work.ts` at `c57eb4a`), so publish only finished records.
+8. **Owner test before merging**, on the other computer after `git pull --ff-only` on
+   `feat/redesign-2026`: the Work hero switches and order, one Site content publish, Enquiries
+   drag and drop between stages, and the Client Portal signed in as a client. Development
+   calls the live API, so each of these is a real write (`docs/KNOWN-ISSUES.md` K-044).
+9. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
    deploys the client that expects these server changes.
-8. **Walk the post-upload checks** in section 5.6.
+10. **Walk the post-upload checks** in section 5.6.
 
 ### 5.2 SQL, in order
 
@@ -271,7 +282,8 @@ From the branch:
 8. After publishing a work record with an image, open its public page in a signed-out browser
    and confirm the image loads.
 9. `GET /work.php?action=hero` and `GET /site.php?action=get` return `[]` and `{}` from a
-   signed-out browser before anything is flagged or published. A 500 means the upload is
+   signed-out browser before anything is flagged or published, and the flagged records and
+   published sections afterwards. A 500 means the upload is
    wrong, not that a statement is missing: both degrade without their statement.
 10. Do **not** test a real payment or a real send. Stripe behaviour is covered by
    `npm run test:server` against a fake provider; a live check needs Stripe test-mode keys on a

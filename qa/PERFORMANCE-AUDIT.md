@@ -10,6 +10,12 @@ local production build reported performance 96 and first contentful paint 2.1 s 
 the Google Fonts `@import` still render-blocking (K-042) and a duplicate canonical on inner
 routes (K-043). The bundle figures below are from 2026-09-22 and have not been re-measured.
 
+**Superseded UI (2026-10-14).** The public site was rebuilt under D-046 (branch
+`feat/redesign-2026`, not deployed) and every font is now self-hosted, with the Google Fonts
+import removed (K-042). No Lighthouse run, CLS or LCP measurement and no bundle count has been
+made since, so nothing in this file describes the current build (`docs/KNOWN-ISSUES.md`
+K-045).
+
 ---
 
 ## 1. What was measured, and the caveat that governs the rest
