@@ -48,12 +48,18 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-035 | CI ran no tests and the deploy did not wait for CI | High | **Fixed 2026-10-10** |
 | K-036 | Public pages bring back unpublished posts and work from the static fallback | Medium | **Fixed 2026-10-10.** Not deployed |
 | K-037 | The article renderer has no links or lists | Medium | **Fixed 2026-10-10.** Not deployed |
-| K-038 | Public fallback copy shows engineering counts and internal file paths | Medium | **Partly fixed 2026-10-10:** engineering copy removed, not deployed. "To supply" placeholders wait for owner material |
+| K-038 | Public fallback copy shows engineering counts and internal file paths | Medium | **Partly fixed:** engineering copy removed 2026-10-10; portrait, biography and screenshot placeholders gone in the D-046 rebuild (2026-10-14). Only the legal review date placeholder remains. Not deployed |
 | K-039 | Clients cannot message the owner from the portal | High | **Fixed 2026-10-10.** Not deployed or uploaded. Private feedback still open |
 | K-040 | `stored` is a MySQL 8 reserved word, so the schema failed on MySQL | High | **Fixed 2026-10-10.** Not uploaded |
 | K-041 | `npm audit` reports 15 affected packages, ten of them high | Medium | Open. Owner decision |
-| K-042 | The Google Fonts `@import` still blocks rendering on public pages that no longer use those fonts | Low | Fixed in code 2026-10-14 (D-046), not deployed; CLS not re-measured |
+| K-042 | The Google Fonts `@import` still blocks rendering on public pages that no longer use those fonts | Low | **Fixed in code 2026-10-14** (D-046), not deployed; CLS not re-measured (K-045) |
 | K-043 | A static canonical in `index.html` conflicts with the per-route canonical | Low | Open |
+| K-044 | The D-046 redesign is verified only against mocked API responses | Medium | Open. Owner test on real data pending |
+| K-045 | Accessibility and performance audits predate the D-046 rebuild and the font change | Medium | Open |
+| K-046 | Dead redesign residue: `.gk-fadein` rules, the Sofia Sans dependency, D-037 brand assets | Cosmetic | Open |
+| K-047 | Three commit subjects on `feat/redesign-2026` contain a literal `$'\n\n'` | Informational | Open. Cannot be fixed without a history rewrite |
+| K-048 | Site content tabs scroll sideways at 390px with no visible cue | Low | Open |
+| K-049 | Editing a Work record crashed on a detail response without images | Medium | **Fixed 2026-10-14** (`24c25ff`). Not deployed |
 
 
 ---
@@ -812,7 +818,13 @@ no longer shows module and endpoint counts or repository paths (`3eadfd3`). The 
 placeholders remain: "Portrait, to supply" (`Home.tsx`, `About.tsx`), "Biography, to supply"
 (`About.tsx`), "Screenshot, to supply" (`WorkDetail.tsx`) and "review date to supply"
 (`Legal.tsx`). They close when the owner supplies the material (`docs/STATUS.md` section 5)
-or the entries are unpublished. The original finding follows.
+or the entries are unpublished.
+
+**Update 2026-10-14 (D-046, `feat/redesign-2026`, not deployed).** The rebuilt public pages no
+longer render the portrait, biography or screenshot placeholders: About shows the portrait
+only once `site.images.portrait` is set, and the work pages use the owner's real screenshots.
+A search of `src/marketing` for "to supply" finds only `[review date to supply]` in
+`Legal.tsx`, which closes with K-021. The original finding follows.
 
 At the 2026-10-10 audit the visible fallback text included "twenty-four modules … Forty
 server endpoints" and a `qa/ACCESSIBILITY-AUDIT.md` path (`work.ts`), "Portrait, to supply"
@@ -861,8 +873,8 @@ individually, and update compatible versions in small batches with a fresh build
 (`docs/DEPLOYMENT.md` section 2, "Release policy"). Never `npm audit fix --force`.
 
 ## K-042 · The Google Fonts `@import` still blocks rendering on public pages
-**Severity:** low · **Status:** fixed in code on 2026-10-14 on branch
-`feat/redesign-cms-shell` (D-046); not merged or deployed. The `@import` and the two
+**Severity:** low · **Status:** fixed in code on 2026-10-14 (D-046), now on branch
+`feat/redesign-2026`; not merged or deployed. The `@import` and the two
 `preconnect` links in `index.html` are removed; every face is now self-hosted from
 `@fontsource-variable` and imported in `src/main.tsx`. Lighthouse and CLS were **not
 re-measured** after the change.
@@ -888,3 +900,64 @@ https://gakinz.com/contact)`; `/` scored 100 because both values agree there. Fi
 static canonical from `index.html` or have `Seo.tsx` replace it, then re-run the audit on
 several routes. Not caused by the D-037 rebuild.
 
+## K-044 · The D-046 redesign is verified only against mocked API responses
+**Severity:** medium · **Status:** open. Found 2026-10-14.
+
+The rebuilt public site and every restyled CMS screen on `feat/redesign-2026` were checked with
+Playwright against mocked API responses at 1440, 1024 and 390px, light and dark. Nothing was
+exercised against real data or a real sign-in, because development calls the live API. In
+particular the new write paths have no real-data evidence: the Work hero switches and order,
+Site content save and publish, and Enquiries drag and drop between stages (which calls the
+existing `move()`). The server halves of the first two have integration tests
+(`tests/server/work-hero.test.ts`, `tests/server/site.test.ts`); drag and drop has none.
+Resolution: after SQL 7 and 8 and the `site.php` and `work.php` uploads (`docs/DEPLOYMENT.md`
+section 5), the owner tests those flows and the Client Portal as a client on the other
+computer, and records the result in `docs/STATUS.md`.
+
+## K-045 · Accessibility and performance audits predate the D-046 rebuild and the font change
+**Severity:** medium · **Status:** open. Found 2026-10-14.
+
+`qa/ACCESSIBILITY-AUDIT.md` and `qa/PERFORMANCE-AUDIT.md` measured the 2026-09-22 build, with a
+partial re-check after the D-037 rebuild on 2026-10-10. The D-046 rebuild replaced every public
+page, the palette, the type families and the hero motion, and moved all fonts to self-hosted
+files (K-042). No axe sweep, contrast measurement, focus check, Lighthouse run or CLS
+measurement has been made since. The CMS has never been audited (K-008). Resolution: re-run
+the audit method in `qa/ACCESSIBILITY-AUDIT.md` and Lighthouse against a local production
+build of the redesign, then on the live site after merge.
+
+## K-046 · Dead redesign residue: `.gk-fadein` rules, the Sofia Sans dependency, D-037 brand assets
+**Severity:** cosmetic · **Status:** open. Found 2026-10-14.
+
+After D-046 no component uses `.gk-fadein` (a search of `src` for the class finds only its
+rules in `src/index.css`), and `@fontsource-variable/sofia-sans` is still listed in
+`package.json` although nothing imports it (`src/main.tsx` imports only Bricolage Grotesque,
+Hanken Grotesk and JetBrains Mono; one comment in `src/index.css` still names Sofia Sans). The
+`.gk-public` block is not dead: `ProposalView.tsx` still uses it. Related: the favicon, icons,
+share image and the `theme-color` meta (`#F3F0EE`) are still on the D-037 cream palette, which
+no longer matches the graphite public site. Resolution: remove the unused rules and the
+dependency in a small hygiene change, then build and test; redraw the brand assets for D-046
+when the owner approves them.
+
+## K-047 · Three commit subjects on `feat/redesign-2026` contain a literal `$'\n\n'`
+**Severity:** informational · **Status:** open, and left as is.
+
+`dcec0ec`, `a55f398` and `9859760` were committed with the subject and body joined by a literal
+`$'\n\n'`, so `git log --oneline` shows the whole body on one line; `dcec0ec` also says
+"D-044" where D-046 was meant. The code in them is correct. Rewriting them needs a force-push
+of a shared branch, which is not allowed (`AGENTS.md`, `.agent/PROJECT.yml` exclusions).
+Resolution: none needed; a squash merge of the branch would drop the subjects from `main`.
+
+## K-048 · Site content tabs scroll sideways at 390px with no visible cue
+**Severity:** low · **Status:** open. Found 2026-10-14.
+
+Site content (`src/app/modules/Site.tsx`) has eight section tabs. At 390px they do not fit, and
+the shared `TabsList` (`src/components/ui/tabs.tsx`) scrolls inside itself with its scrollbar
+hidden, so the page does not overflow but the later tabs sit off-screen with nothing to show
+they exist. Seen in the mocked browser check. Resolution: wrap the tabs on narrow screens or
+replace them with a select below 640px.
+
+## K-049 · Editing a Work record crashed on a detail response without images
+**Severity:** medium · **Status:** **fixed 2026-10-14** in `24c25ff`, not deployed.
+
+`Work.tsx` read `res.data.images` from the detail response without a default, so a record whose
+detail carried no `images` key broke the edit view. It now falls back to an empty list.

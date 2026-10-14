@@ -157,8 +157,8 @@ and nothing is invented. But they are what the site is for.
       stored consent, so the permission is enforced rather than remembered.
 - [ ] **Screenshots**, or the URLs and consent to capture them. Every image needs real alt
       text; the endpoint rejects an empty one.
-- [ ] **A portrait.** The home page and the about page both currently show a labelled frame
-      saying it is to supply.
+- [ ] **A portrait.** Since D-046 the about page shows the portrait only once
+      `site.images.portrait` is set, and shows no frame without it.
 - [ ] **A telephone number**, or a decision that there is not one. The placeholder
       `+44 20 0000 0000` has been removed rather than replaced.
 - [ ] **A company registration number**, or a decision that the studio is not a registered
@@ -197,11 +197,31 @@ and nothing is invented. But they are what the site is for.
 
 ## E. Re-count these figures whenever they are quoted
 
-The public site states two numbers about GAkinzOS, in `src/marketing/data/work.ts`. They are
-counted from this repository and must be re-counted if either changes, because a number on a
-public page without a source is exactly what this relaunch removed.
+Since 2026-10-10 (K-038) the public site states no module or endpoint count, and since D-046
+it states no fixed count of projects or services either. If a page ever quotes a number about
+this project again, take it from `docs/STATUS.md` section 0 and re-count it when it changes,
+because a number on a public page without a source is exactly what the relaunch removed.
 
-```bash
-ls src/app/modules/*.tsx | wc -l                                      # modules, expect 24
-find server -name '*.php' ! -name '_*' ! -name 'config.php.example' | wc -l   # endpoints, expect 40
-```
+## F. The D-046 redesign (`feat/redesign-2026`)
+
+In this order. Each item needs the owner; an agent does none of them.
+
+- [ ] Run SQL 7 and 8 from `docs/DEPLOYMENT.md` section 5.2 on the live database, after the
+      earlier statements they depend on (statement 3 before 7).
+- [ ] Upload `server/site.php` (new) and `server/work.php`, keeping copies of the files they
+      replace. Then `GET /work.php?action=hero` returns `[]` and `GET /site.php?action=get`
+      returns `{}` from a signed-out browser.
+- [ ] In the CMS, publish the real projects in Work with consent stored, switch on up to five
+      for the hero in order, and attach desktop and mobile screenshots with alt text. A
+      published record shows on the live `/work` page at once.
+- [ ] Publish Site content sections only when their copy is final.
+- [ ] Owner test on the other computer after `git pull --ff-only`: hero switches and order,
+      one Site content publish, Enquiries drag and drop between stages, and the Client Portal
+      signed in as a client (K-044). Record the result in `docs/STATUS.md`.
+- [ ] Merge PR #8 and then the redesign; CI deploys `dist/`.
+- [ ] After the deploy: the home hero shows the flagged projects in their brand colours,
+      pauses on hover and focus and rests under reduced motion; the published Site content
+      appears on Home, Services, Pricing and Contact; the CMS signs in and switches between
+      light and dark.
+- [ ] Re-run the accessibility and performance measurements on the rebuilt site and the CMS
+      (K-045), including CLS after the font change (K-042).
