@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { siteContent } from "@/lib/api"
 import { services as baseServices, packages as basePackages, addOns, paymentTerms, faqs as baseFaqs, processStages, site } from "./site"
 
 /**
@@ -87,8 +88,9 @@ export function mergeCopy(p: PublishedSections | null | undefined): SiteCopy {
   }
 }
 
-/** Loader for published sections. Set by the API wiring; returns null when unavailable. */
-let loader: (() => Promise<PublishedSections | null>) | null = null
+/** Loader for published sections; null when the endpoint is unavailable. Replaceable in tests. */
+let loader: (() => Promise<PublishedSections | null>) | null = () =>
+  siteContent.get().then((r) => (r.ok ? (r.data as PublishedSections) : null))
 export function setSiteCopyLoader(fn: () => Promise<PublishedSections | null>) {
   loader = fn
 }
