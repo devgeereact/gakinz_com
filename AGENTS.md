@@ -28,7 +28,7 @@ One fact, one home. Where two documents disagree, the code is the authority.
 |---|---|
 | Product scope, journeys, planned features and exclusions | `docs/PRODUCT-SPEC.md` |
 | Content, social and monetisation policy | `docs/CONTENT-AND-GROWTH.md` |
-| Public copy | `src/marketing/data/site.ts` |
+| Public copy | `src/marketing/data/site.ts` for defaults; published Site content (`server/site.php`) overrides the sections it covers (D-046) |
 | Routes | `src/routes/index.tsx` |
 | Client API boundary | `src/lib/api.ts` |
 | Server boundary, auth and audit | `server/_bootstrap.php` |
@@ -43,10 +43,10 @@ One fact, one home. Where two documents disagree, the code is the authority.
 | Open problems | `docs/KNOWN-ISSUES.md` |
 | Hosting, DNS, TLS, mail and dev-server ports | the operator's global notes. **This repository states none of these** |
 
-`docs/DESIGN-SYSTEM.md` sections 1 to 9 describe what is in the code. Its section 10 is the
-system the owner chose (D-037) with a status for each part: the public surface implements it
-since 2026-10-10; the CMS and real imagery are still target. Do not restyle the CMS from
-section 10 outside an approved rebuild task.
+`docs/DESIGN-SYSTEM.md` describes the D-046 redesign the owner approved on 2026-10-14: the
+public site in the note at the top of section 10, GAkinzOS in section 11. Sections 1 to 10
+are the superseded D-037 record. Do not restyle either surface away from D-046 without a new
+decision.
 
 ## Commands
 

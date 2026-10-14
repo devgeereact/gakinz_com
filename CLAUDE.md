@@ -52,7 +52,7 @@ When this file and the code disagree, the code wins and this file is wrong.
 | Server boundary and auth | `server/_bootstrap.php` |
 | Role access | the per-endpoint constants in `server/*.php`, mirrored in `src/lib/access.ts` |
 | Data model | `server/schema.sql` |
-| Design tokens | `src/index.css` and `tailwind.config.js` |
+| Design tokens | CMS: `src/index.css` and `tailwind.config.js`. Public site: `src/marketing/site.css` (D-046) |
 | Server configuration keys | `server/config.php.example` |
 | Client deploy | `.github/workflows/deploy.yml` |
 | Server deploy and outstanding work | `docs/DEPLOYMENT.md` |
@@ -90,10 +90,12 @@ When this file and the code disagree, the code wins and this file is wrong.
 
 - TypeScript throughout. `npm run build` runs `tsc -b`, so a type error blocks the build and
   the deploy.
-- Public pages render inside the `.gk-public` wrapper and stay light regardless of the
-  operating system setting. The CMS is theme aware.
+- Public pages render inside the `.gk-site` wrapper (`src/marketing/site.css`, D-046) on a
+  fixed graphite design regardless of the operating system setting. The CMS is light or dark
+  through `next-themes`. `.gk-public` survives only for the shared proposal page.
 - A new CMS module needs five wirings: `src/routes/index.tsx`, `src/lib/access.ts`,
-  `src/components/app-sidebar.tsx`, `src/components/global-search.tsx` and `src/lib/api.ts`,
+  `src/components/nav-groups.ts` (read by `app-sidebar.tsx`), `src/components/global-search.tsx`
+  and `src/lib/api.ts`,
   plus the endpoint.
 - Keep integrations degrading gracefully: an unconfigured key returns 503 and the interface
   hides the feature.
@@ -102,30 +104,31 @@ When this file and the code disagree, the code wins and this file is wrong.
 - The active Tailwind config is `tailwind.config.js`. The `.ts` variant is inert; do not edit
   it.
 
-## Known state, as at 2026-10-12
+## Known state, as at 2026-10-14
 
-Measured on branch `feat/plan-2026-batch-1` at `bfbfae0` (PR #18 merged in), on the Mac with
-MariaDB. The source for every count is `docs/STATUS.md` section 0.
+Measured on branch `feat/redesign-2026` at `d314833` (stacked on `feat/plan-2026-batch-1`, PR
+#8) on the Ubuntu computer. The source for every count is `docs/STATUS.md` section 0.
 
-- `npm test` 102 unit tests PASS; `npm run test:server` 116 server integration tests PASS
-  against a throwaway local `*_test` database; `npm run build`, `npm run typecheck` and
-  `php -l` over 46 PHP files PASS.
+- `npx tsc -b`, `npm run build`, `npm run docs:check` and `php -l` over 47 PHP files PASS;
+  `npm test` 128 unit tests PASS. `npm run test:server` 140 server integration tests PASS,
+  measured the same day against a throwaway local `*_test` database on MariaDB 10.11.
 - **`npm run lint` fails: 41 errors, 1 warning.** `npm run lint:ratchet` holds that ceiling in
   CI, so the count must not grow. See `docs/KNOWN-ISSUES.md` K-002.
 - The 2026-10-10 work (batch 1, navigation, My account, enquiry follow-ups, portal messages,
-  public publishing and article format, the public redesign) is on branches stacked into
-  PR #8. **Not merged, not deployed, and no server file uploaded.** The upload list is
-  `docs/DEPLOYMENT.md` section 5. Merging PR #8 deploys `dist/`, so merge only after the
-  section 5.1 operator steps (SQL and PHP upload) are done.
-- **2026-10-14, D-046 redesign** on `feat/redesign-2026` (stacked on `feat/plan-2026-batch-1`):
-  new public site, restyled CMS, Work hero controls, Site content module and `server/site.php`.
-  `npm test` 128 PASS, `npm run test:server` 140 PASS (local MariaDB), build, lint ratchet
-  (41/1) and `docs:check` PASS. **Not merged, not deployed, no server file uploaded**; it needs
-  `docs/DEPLOYMENT.md` section 5 SQL 7 and 8 and the `site.php` and `work.php` uploads first.
-  CMS checked against mocked API responses only; real data is NOT TESTED.
+  public publishing and article format) is on `feat/plan-2026-batch-1`, PR #8. The D-046
+  redesign of 2026-10-12 to 2026-10-14 (public site rebuilt, every CMS screen restyled, Work
+  hero controls, the Site content module and `server/site.php`, Enquiries drag and drop) is on
+  `feat/redesign-2026`, stacked on it and pushed. **Neither is merged or deployed, and no
+  server file is uploaded.** The upload list and operator order are `docs/DEPLOYMENT.md`
+  section 5: SQL 7 and 8, upload `site.php` and `work.php`, publish the real projects and
+  hero in Work, then merge, because merging deploys `dist/`.
+- **The redesign is checked only against mocked API responses** (Playwright at 1440, 1024 and
+  390px, light and dark). Real data, a real sign-in, Enquiries drag and drop, Site content
+  publish and the Work hero on the live API are NOT TESTED (K-044).
 - Deploy waits for CI (`.github/workflows/deploy.yml`, `workflow_run`).
-- **Accessibility is measured for the public site only** (`qa/ACCESSIBILITY-AUDIT.md`). The
-  CMS and real assistive technology are NOT TESTED.
+- **Accessibility and performance were last measured before the D-046 rebuild**
+  (`qa/ACCESSIBILITY-AUDIT.md`, `qa/PERFORMANCE-AUDIT.md`), so no measurement describes the
+  current public site; the CMS and real assistive technology have never been tested (K-045).
 - **The deployed server state is UNVERIFIED.** Which PHP files are uploaded and which
   migrations have run cannot be known from here.
 - A live super-admin credential was published in an earlier revision of this file and is in
