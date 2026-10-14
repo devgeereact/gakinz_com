@@ -807,3 +807,22 @@ competed in `docs/DEPLOYMENT.md`, and several fixed defects were still listed as
 that a document changed cannot prove it changed correctly; review still has to.
 **Evidence:** `npm run docs:check -- --base refs/remotes/origin/chore/codebase-hygiene` passes
 on the branch, and fails, naming `docs/DEPLOYMENT.md`, when a server file is touched alone.
+
+## D-046 · The public site and GAkinzOS move to the approved 2026 redesign
+**Date:** 2026-10-14 · **Status:** active. **Supersedes D-037** for visual direction; D-023's
+honesty rules (no invented figures, clients or outcomes, labelled gaps) still hold.
+
+The owner reviewed three directions as working prototypes and approved direction A, "Live
+Wall" (slate-blue graphite, one sky accent, Bricolage Grotesque, Hanken Grotesk and JetBrains
+Mono, all self-hosted), with the brand-colour hero from direction C. The public site is built
+from the approved landing prototype, scoped to `.gk-site` in `src/marketing/site.css`; the CMS
+takes the same type and palette with a sidebar that stays dark in both themes, from the
+approved CMS prototype. The hero shows up to five published Work records chosen in the CMS,
+each in the client's own brand colour, and the site's key copy (hero, services, process,
+pricing, FAQs, contact and footer) is edited in the new Site content module and published
+through `server/site.php`. No public copy states a fixed count of projects or services.
+**Why:** the owner judged the D-037 build generic, wanted a full-screen animated hero, an
+informative portfolio of real projects and a CMS of the same standard, and wanted the hero
+and key sections editable without a developer. **Evidence:** prototypes reviewed and approved
+by the owner on 2026-10-14; screenshots of the owner's projects captured from their local
+builds on 2026-10-13. Client sites are named with the owner's confirmation.
