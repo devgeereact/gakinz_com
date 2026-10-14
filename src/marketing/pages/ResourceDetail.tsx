@@ -1,9 +1,11 @@
 import { Fragment } from "react"
 import { Link, useParams } from "react-router-dom"
 import Seo, { SITE_URL } from "@/marketing/components/Seo"
+import { Crumbs, CtaBand, IPrev } from "@/marketing/components/site-ui"
+import { delay } from "@/marketing/components/site-helpers"
 import { useMarketingPost } from "@/marketing/data/blog"
+import { useProjects } from "@/marketing/data/showcase"
 import { parseArticle, type Inline } from "@/marketing/lib/articleFormat"
-import { Action, Label, Measure, Section } from "../components/primitives"
 import NotFound from "./NotFound"
 
 /**
@@ -30,6 +32,10 @@ import NotFound from "./NotFound"
  * Structured data: an Article, carrying only fields that are true of the post.
  * No image, no wordCount, no dateModified. The post record holds none of
  * them, and structured data is a machine-readable claim.
+ *
+ * D-046: the page uses the public design system in src/marketing/site.css.
+ * The body sits in `.article` typography, which styles the headings, lists,
+ * bold and links that the format produces.
  *
  * The generated SVG wireframe that stood in for a cover image is gone with
  * SiteMockup. An article does not need a picture of a pretend website.
@@ -60,10 +66,9 @@ function InlineNodes({ nodes }: { nodes: Inline[] }) {
         href={n.href}
         rel={rel}
         target={n.external ? "_blank" : undefined}
-        className="underline underline-offset-4 hover:text-gk-ink-soft"
       >
         <InlineNodes nodes={n.children} />
-        {n.external && <span className="sr-only"> (opens in a new tab)</span>}
+        {n.external && <span className="sr"> (opens in a new tab)</span>}
       </a>
     )
   })
@@ -72,14 +77,15 @@ function InlineNodes({ nodes }: { nodes: Inline[] }) {
 export default function ResourceDetail() {
   const { slug } = useParams()
   const { post, loading } = useMarketingPost(slug)
+  const { projects } = useProjects()
 
   if (loading && !post) {
     return (
-      <Measure className="py-24">
-        <p aria-live="polite" className="text-lede text-gk-ink-soft">
+      <header className="phead wrap" style={{ minHeight: "50vh" }}>
+        <p aria-live="polite" className="lede">
           Loading the piece…
         </p>
-      </Measure>
+      </header>
     )
   }
 
@@ -110,54 +116,40 @@ export default function ResourceDetail() {
       />
 
       <article>
-        <header className="border-b border-gk-edge">
-          <Measure className="pb-12 pt-12 sm:pb-16 sm:pt-20">
-            <nav aria-label="Breadcrumb" className="mb-8">
-              <ol className="flex items-center gap-2 font-data text-label uppercase text-gk-ink-mute">
-                <li>
-                  <Link to="/" className="hover:text-gk-ink">
-                    Home
-                  </Link>
-                </li>
-                <li aria-hidden>/</li>
-                <li>
-                  <Link to="/resources" className="hover:text-gk-ink">
-                    Writing
-                  </Link>
-                </li>
-                <li aria-hidden>/</li>
-                <li aria-current="page" className="text-gk-ink">
-                  {post.title}
-                </li>
-              </ol>
-            </nav>
-
-            <Label>{post.category || "Writing"}</Label>
-            <h1 className="mt-5 max-w-4xl font-display text-t2 font-normal text-gk-ink lg:text-t1">
-              {post.title}
-            </h1>
-            {post.excerpt && <p className="mt-6 max-w-2xl text-lede text-gk-ink-soft">{post.excerpt}</p>}
+        <header className="phead wrap">
+          <Crumbs items={[["/resources", "Writing"], [null, post.title]]} />
+          <p className="mono mute" style={{ marginBottom: 16 }}>
+            {post.category || "Writing"}
             {published && (
-              <p className="mt-8 border-t border-gk-rule pt-4 font-data text-label uppercase text-gk-ink-mute">
+              <>
+                {" · "}
                 Published <time dateTime={post.date}>{published}</time>
-              </p>
+              </>
             )}
-          </Measure>
+          </p>
+          <h1 className="h-l rise" style={{ maxWidth: "22ch" }}>
+            {post.title}
+          </h1>
+          {post.excerpt && (
+            <p className="lede rise" style={delay(80)}>
+              {post.excerpt}
+            </p>
+          )}
         </header>
 
-        <Section>
-          <div className="max-w-2xl">
+        <section className="sec wrap" style={{ paddingTop: 56 }}>
+          <div className="article">
             {parseArticle(post.bodyParas.join("\n\n")).map((block, i) => {
               if (block.type === "heading" && block.level === 2) {
                 return (
-                  <h2 key={i} className="mt-12 font-display text-t3 text-gk-ink first:mt-0">
+                  <h2 key={i}>
                     <InlineNodes nodes={block.children} />
                   </h2>
                 )
               }
               if (block.type === "heading") {
                 return (
-                  <h3 key={i} className="mt-10 font-display text-t4 text-gk-ink first:mt-0">
+                  <h3 key={i}>
                     <InlineNodes nodes={block.children} />
                   </h3>
                 )
@@ -165,11 +157,7 @@ export default function ResourceDetail() {
               if (block.type === "list") {
                 const List = block.ordered ? "ol" : "ul"
                 return (
-                  <List
-                    key={i}
-                    start={block.ordered && block.start !== 1 ? block.start : undefined}
-                    className={`mt-6 space-y-2 pl-6 text-lede text-gk-ink first:mt-0 ${block.ordered ? "list-decimal" : "list-disc"}`}
-                  >
+                  <List key={i} start={block.ordered && block.start !== 1 ? block.start : undefined}>
                     {block.items.map((item, j) => (
                       <li key={j}>
                         <InlineNodes nodes={item} />
@@ -179,34 +167,27 @@ export default function ResourceDetail() {
                 )
               }
               return (
-                <p key={i} className="mt-6 text-lede text-gk-ink first:mt-0">
+                <p key={i}>
                   <InlineNodes nodes={block.children} />
                 </p>
               )
             })}
-          </div>
-        </Section>
-      </article>
-
-      <Section tone="sunk">
-        <div className="grid max-w-4xl gap-6 md:grid-cols-[1fr_auto] md:items-end">
-          <div>
-            <h2 className="font-display text-t3 text-gk-ink">Working on something similar?</h2>
-            <p className="mt-4 max-w-xl text-body text-gk-ink-soft">
-              Tell me what the site has to do. A paragraph is enough, and if it is not something I
-              should take on I will say so.
+            <p style={{ marginTop: 40 }}>
+              <Link className="link" to="/resources">
+                <IPrev /> All writing
+              </Link>
             </p>
           </div>
-          <Action to="/contact" variant="strong">
-            Start a project
-          </Action>
-        </div>
-        <p className="mt-10 border-t border-gk-edge pt-6">
-          <Link to="/resources" className="text-body text-gk-ink-soft hover:text-gk-ink hover:underline">
-            All writing
-          </Link>
-        </p>
-      </Section>
+        </section>
+      </article>
+
+      <section className="sec wrap">
+        <CtaBand
+          projects={projects}
+          title="Working on something similar?"
+          intro="Tell me what the site has to do. A paragraph is enough, and if it is not something I should take on I will say so."
+        />
+      </section>
     </>
   )
 }

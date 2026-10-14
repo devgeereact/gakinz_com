@@ -268,6 +268,13 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .copy code{font-family:var(--mono);font-size:15px;padding:12px 14px;border-radius:12px;background:var(--panel);border:1px solid var(--line);user-select:all}
 .gk-site .article{max-width:42rem}
 .gk-site .article p{font-size:1.15rem;line-height:1.7;color:color-mix(in srgb,var(--fg) 88%,transparent);margin-bottom:1.3em}
+.gk-site .article h2{font-size:clamp(1.5rem,2.4vw,2rem);margin:1.6em 0 .6em}
+.gk-site .article h3{font-size:1.3rem;margin:1.4em 0 .5em}
+.gk-site .article > :first-child{margin-top:0}
+.gk-site .article ul,.gk-site .article ol{font-size:1.15rem;line-height:1.7;color:color-mix(in srgb,var(--fg) 88%,transparent);margin:0 0 1.3em;padding-left:1.4em;display:grid;gap:.4em}
+.gk-site .article li::marker{color:var(--acc)}
+.gk-site .article p a,.gk-site .article li a,.gk-site .article h2 a,.gk-site .article h3 a{color:var(--acc);text-underline-offset:4px;overflow-wrap:anywhere}
+.gk-site .article strong{color:var(--fg);font-weight:650}
 .gk-site .clauses{border-top:1px solid var(--line)}
 .gk-site .clauses section{display:grid;grid-template-columns:3rem minmax(0,1fr);gap:8px 16px;padding:28px 0;border-bottom:1px solid var(--line)}
 .gk-site .clauses .n{font-family:var(--mono);font-size:13px;color:var(--acc);padding-top:8px}
