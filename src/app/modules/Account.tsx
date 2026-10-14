@@ -47,14 +47,14 @@ export default function Account() {
           </CardContent>
         </Card>
 
-        {/* TwoFactorPanel is shared with Settings and draws its own box; inside
-            this card that box is flattened so the card is the only frame. */}
+        {/* TwoFactorPanel is shared with Settings; `bare` drops its own frame
+            so this card is the only one. */}
         <Card id="security" aria-labelledby="account-security" className="scroll-mt-20">
           <CardHeader className="flex-row items-center gap-2.5 space-y-0">
             <CardTitle id="account-security">Sign-in security</CardTitle>
           </CardHeader>
-          <CardContent className="[&>div>div:first-child]:rounded-none [&>div>div:first-child]:border-0 [&>div>div:first-child]:bg-transparent [&>div>div:first-child]:p-0 [&>div]:max-w-none">
-            <TwoFactorPanel />
+          <CardContent>
+            <TwoFactorPanel bare />
           </CardContent>
         </Card>
       </div>

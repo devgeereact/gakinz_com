@@ -1,17 +1,11 @@
 import { useEffect, useState } from "react"
-import { Loader2, RefreshCw, ShieldCheck, Monitor, LogOut } from "lucide-react"
+import { Copy, Loader2, RefreshCw, ShieldCheck, ShieldOff, Monitor, LogOut } from "lucide-react"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { cn } from "@/lib/utils"
 import { users, auth, type Session } from "@/lib/api"
 import { useAuth } from "@/store/auth.store"
 import { canAccess } from "@/lib/access"
@@ -19,6 +13,8 @@ import { canAccess } from "@/lib/access"
 // Self-service security panels shared by My account (every role) and Settings
 // (Platform). Both call auth.php actions that act only on the caller's own
 // account; the server derives the user from the bearer token, never from input.
+// Styled to the approved CMS prototype (D-046): a `.switch`-style status row,
+// `.rows` lists and semantic badges, all from the shared tokens.
 
 function fmt(d: string) {
   return new Date(d.replace(" ", "T")).toLocaleString("en-GB", {
@@ -30,7 +26,8 @@ function fmt(d: string) {
 }
 
 // Self-service two-factor (TOTP). Any signed-in user can enable/disable their own.
-export function TwoFactorPanel() {
+// `bare` drops the panel's own frame for a host that already draws a card.
+export function TwoFactorPanel({ bare = false }: { bare?: boolean }) {
   const me = useAuth((s) => s.user)
   const [enabled, setEnabled] = useState(false)
   const [secret, setSecret] = useState("")
@@ -107,45 +104,57 @@ export function TwoFactorPanel() {
   }
 
   return (
-    <div className="max-w-xl space-y-4">
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold">Two-factor authentication</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Add a time-based code (Google Authenticator, 1Password, Authy…) to your sign-in.
-        </p>
+    <div className={cn("min-w-0 space-y-4", !bare && "max-w-2xl")}>
+      <div className={cn(!bare && "rounded-2xl border bg-card px-[18px] py-2")}>
+        {/* Status row, the prototype's `.switch`. Turning 2FA on or off needs a
+            code, so the state shows as a badge and the actions sit below. */}
+        <div className="flex items-center justify-between gap-4 py-3">
+          <div className="min-w-0">
+            <h3 className="font-semibold">Two-factor authentication</h3>
+            <p className="text-[13.5px] text-muted-foreground">
+              Add a time-based code (Google Authenticator, 1Password, Authy…) to your sign-in.
+            </p>
+          </div>
+          <Badge variant={enabled ? "ok" : "warn"} className="shrink-0 gap-1.5">
+            {enabled ? <ShieldCheck className="size-3.5" aria-hidden /> : <ShieldOff className="size-3.5" aria-hidden />}
+            {enabled ? "On" : "Off"}
+          </Badge>
+        </div>
 
         {enabled ? (
-          <div className="mt-4 space-y-3">
-            <span className="inline-flex items-center gap-1 rounded bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
-              <ShieldCheck className="h-3 w-3" /> Enabled
-            </span>
-            <div className="flex flex-wrap items-end gap-2">
-              <div>
+          <div className="border-t py-3">
+            <p className="text-[13.5px] text-muted-foreground">
+              Enter a current code from your app to make new recovery codes or to turn two-factor off.
+            </p>
+            <div className="mt-3 flex flex-wrap items-end gap-2">
+              <div className="grid gap-1.5">
                 <Label htmlFor="dcode">Current code</Label>
-                <Input id="dcode" value={code} onChange={(e) => setCode(e.target.value)} className="mt-1.5 w-40" placeholder="123456" inputMode="numeric" autoComplete="one-time-code" />
+                <Input id="dcode" value={code} onChange={(e) => setCode(e.target.value)} className="w-36" placeholder="123456" inputMode="numeric" autoComplete="one-time-code" />
               </div>
               <Button variant="outline" onClick={regen} disabled={busy}>Regenerate codes</Button>
-              <Button variant="outline" onClick={disable} disabled={busy}>
-                {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Disable
+              <Button variant="destructive" onClick={disable} disabled={busy}>
+                {busy && <Loader2 className="animate-spin" />} Disable
               </Button>
             </div>
           </div>
         ) : !secret ? (
-          <Button className="mt-4" onClick={startSetup} disabled={busy}>
-            {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Set up two-factor
-          </Button>
+          <div className="border-t py-3">
+            <Button onClick={startSetup} disabled={busy}>
+              {busy && <Loader2 className="animate-spin" />} Set up two-factor
+            </Button>
+          </div>
         ) : (
-          <div className="mt-4 space-y-3">
+          <div className="space-y-3 border-t py-3">
             <p className="text-sm">Add this secret to your authenticator app, then enter the 6-digit code to confirm:</p>
-            <code className="block break-all rounded bg-muted px-3 py-2 text-sm">{secret}</code>
-            <a href={otpauth} className="text-xs text-primary hover:underline">Open in authenticator app →</a>
+            <code className="block break-all rounded-[10px] border bg-secondary px-3 py-2 font-mono text-[13.5px]">{secret}</code>
+            <a href={otpauth} className="inline-block text-[13px] font-semibold text-acc hover:underline">Open in authenticator app →</a>
             <div className="flex flex-wrap items-end gap-2">
-              <div>
+              <div className="grid gap-1.5">
                 <Label htmlFor="ecode">Code</Label>
-                <Input id="ecode" value={code} onChange={(e) => setCode(e.target.value)} className="mt-1.5 w-40" placeholder="123456" inputMode="numeric" autoComplete="one-time-code" />
+                <Input id="ecode" value={code} onChange={(e) => setCode(e.target.value)} className="w-36" placeholder="123456" inputMode="numeric" autoComplete="one-time-code" />
               </div>
               <Button onClick={enable} disabled={busy}>
-                {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Enable
+                {busy && <Loader2 className="animate-spin" />} Enable
               </Button>
             </div>
           </div>
@@ -153,18 +162,18 @@ export function TwoFactorPanel() {
       </div>
 
       {codes.length > 0 && (
-        <div className="rounded-xl border border-amber-300/60 bg-amber-50 p-5 dark:border-amber-500/30 dark:bg-amber-950/30">
-          <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">Save your recovery codes</h3>
-          <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
+        <div className="rounded-2xl border border-warn/30 bg-warn-soft p-[18px]">
+          <h3 className="font-semibold text-warn">Save your recovery codes</h3>
+          <p className="mt-1 text-[13px] text-muted-foreground">
             Each works once if you lose your authenticator. Stored hashed, so they won't be shown again.
           </p>
-          <div className="mt-3 grid grid-cols-2 gap-2 font-mono text-sm">
+          <div className="mt-3 grid grid-cols-2 gap-2 font-mono text-[13.5px]">
             {codes.map((c) => (
-              <code key={c} className="rounded bg-background px-2 py-1 text-center">{c}</code>
+              <code key={c} className="rounded-lg border bg-card px-2 py-1 text-center">{c}</code>
             ))}
           </div>
           <Button variant="outline" size="sm" className="mt-3" onClick={() => navigator.clipboard?.writeText(codes.join("\n"))}>
-            Copy all
+            <Copy /> Copy all
           </Button>
         </div>
       )}
@@ -216,57 +225,52 @@ export function SessionsPanel() {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Monitor className="h-4 w-4" /> Devices currently signed in to your account.
+          <Monitor className="size-4 shrink-0" aria-hidden /> Devices currently signed in to your account.
         </p>
         <Button variant="outline" size="sm" onClick={load}>
-          <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+          <RefreshCw /> Refresh
         </Button>
       </div>
 
       {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+        <div role="alert" className="rounded-2xl border border-bad/30 bg-bad-soft p-4 text-sm text-bad">
           {error} Your sessions could not be loaded. Please try again later.
         </div>
       )}
 
-      <div className="overflow-x-auto rounded-xl border border-border bg-card">
+      <div className="rounded-2xl border bg-card px-[18px] py-1.5">
         {loading ? (
-          <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading sessions…
+          <div className="flex items-center gap-2 py-5 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" /> Loading sessions…
           </div>
         ) : items.length === 0 ? (
-          <div className="p-10 text-center text-sm text-muted-foreground">No active sessions.</div>
+          <div className="py-8 text-center text-sm text-muted-foreground">No active sessions.</div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Device</TableHead>
-                <TableHead>IP</TableHead>
-                <TableHead>Last seen</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-medium">
-                    {deviceLabel(s.user_agent)}
-                    {s.current && <span className="ml-2 rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">This device</span>}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{s.ip || "Unknown"}</TableCell>
-                  <TableCell className="text-muted-foreground">{s.last_seen_at ? fmt(s.last_seen_at) : "Unknown"}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" disabled={busyId === s.id || s.current} onClick={() => revoke(s)}>
-                      <LogOut className="mr-1 h-3.5 w-3.5" /> {s.current ? "Current" : "Sign out"}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <ul className="m-0 list-none p-0">
+            {items.map((s) => (
+              <li key={s.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t py-3 first:border-t-0">
+                <div className="min-w-0">
+                  <p className="flex flex-wrap items-center gap-2">
+                    <b className="font-semibold">{deviceLabel(s.user_agent)}</b>
+                    {s.current && <Badge variant="ok">This device</Badge>}
+                  </p>
+                  <p className="text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
+                    <span className="font-mono">{s.ip || "Unknown IP"}</span> · Last seen {s.last_seen_at ? fmt(s.last_seen_at) : "unknown"}
+                  </p>
+                </div>
+                {s.current ? (
+                  <span className="text-[13px] text-muted-foreground">Current</span>
+                ) : (
+                  <Button variant="ghost" size="sm" disabled={busyId === s.id} onClick={() => revoke(s)}>
+                    {busyId === s.id ? <Loader2 className="animate-spin" /> : <LogOut />} Sign out
+                  </Button>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </div>
