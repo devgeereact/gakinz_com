@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Loader2, Plus, RefreshCw, Trash2, Send, BadgePoundSterling, FileDown, Download, CreditCard, AlertTriangle, BellRing } from "lucide-react"
+import { Loader2, Plus, RefreshCw, Trash2, Send, BadgePoundSterling, FileDown, Download, CreditCard, AlertTriangle, AlertCircle, BellRing, Receipt, Search } from "lucide-react"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -37,15 +37,29 @@ import {
   type ProposalItemInput,
   type Client,
 } from "@/lib/api"
-import { cn } from "@/lib/utils"
-import { gbp } from "@/lib/format"
+import { gbp, localIsoDate } from "@/lib/format"
+import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/page-kit"
+import { EmptyState } from "@/app/components/EmptyState"
+import { TableSkeleton } from "@/app/components/TableSkeleton"
 import { downloadInvoicePdf } from "./invoicePdf"
 
-const statusClass: Record<InvoiceStatus, string> = {
-  draft: "bg-muted text-muted-foreground",
-  sent: "bg-primary/10 text-primary",
-  paid: "bg-accent text-accent-foreground",
+type Filter = "all" | "sent" | "overdue" | "paid" | "draft"
+const FILTERS: { key: Filter; label: string }[] = [
+  { key: "all", label: "All" },
+  { key: "sent", label: "Sent" },
+  { key: "overdue", label: "Overdue" },
+  { key: "paid", label: "Paid" },
+  { key: "draft", label: "Draft" },
+]
+
+/** Which filter chip an invoice belongs to. Overdue is a sent invoice past its due date. */
+function bucket(inv: Invoice): Exclude<Filter, "all"> {
+  if (inv.status === "paid") return "paid"
+  if (inv.status === "draft") return "draft"
+  return inv.overdue ? "overdue" : "sent"
 }
+
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`
 
 type DraftItem = { description: string; qty: string; unit_price: string }
 const blankItem: DraftItem = { description: "", qty: "1", unit_price: "" }
@@ -87,7 +101,27 @@ export default function Invoicing() {
     clientsApi.list().then((r) => r.ok && setClientList(r.data))
   }, [])
 
-  const outstanding = items.filter((i) => i.status !== "paid").reduce((s, i) => s + i.total, 0)
+  const [filter, setFilter] = useState<Filter>("all")
+  const [query, setQuery] = useState("")
+
+  // Figures for the tiles, all from the loaded list. Outstanding is what has
+  // been sent and not paid; drafts are counted on their own tile.
+  const unpaidSent = items.filter((i) => i.status === "sent")
+  const outstanding = unpaidSent.reduce((s, i) => s + i.total, 0)
+  const outstandingCount = unpaidSent.length
+  const overdueList = items.filter((i) => i.overdue && i.status !== "paid")
+  const overdue = { n: overdueList.length, sum: overdueList.reduce((s, i) => s + i.total, 0) }
+  const monthNow = localIsoDate().slice(0, 7)
+  const paidNow = items.filter((i) => i.status === "paid" && (i.paid_at ?? "").slice(0, 7) === monthNow)
+  const paidThisMonth = { n: paidNow.length, sum: paidNow.reduce((s, i) => s + i.total, 0) }
+  const counts: Record<Filter, number> = { all: items.length, sent: 0, overdue: 0, paid: 0, draft: 0 }
+  for (const i of items) counts[bucket(i)] += 1
+  const q = query.trim().toLowerCase()
+  const shown = items.filter(
+    (i) =>
+      (filter === "all" || bucket(i) === filter) &&
+      (!q || `${i.number ?? ""} ${i.client_company ?? ""}`.toLowerCase().includes(q)),
+  )
   // Clients with at least one overdue invoice → studio "work-pause" flag.
   const overdueClients = Array.from(
     new Set(items.filter((i) => i.overdue && i.client_company).map((i) => i.client_company as string)),
@@ -178,184 +212,252 @@ export default function Invoicing() {
   const exportXlsx = () =>
     downloadXlsx("gakinz-invoices.xlsx", invoiceHead, items as unknown as Record<string, unknown>[], "Invoices")
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Invoicing</h1>
-          <p className="text-sm text-muted-foreground">
-            Outstanding: <span className="font-medium text-foreground">{gbp(outstanding)}</span>
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={load}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportCsv} disabled={!items.length}>
-            <Download className="mr-2 h-4 w-4" /> CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportXlsx} disabled={!items.length}>
-            <Download className="mr-2 h-4 w-4" /> XLSX
-          </Button>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" /> New invoice
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>New invoice</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label>Client</Label>
-                    <Select value={clientId} onValueChange={setClientId}>
-                      <SelectTrigger className="mt-1.5">
-                        <SelectValue placeholder="No client" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {clientList.map((c) => (
-                          <SelectItem key={c.id} value={String(c.id)}>
-                            {c.company}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label htmlFor="idue">Due date</Label>
-                    <Input id="idue" type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} className="mt-1.5" />
-                  </div>
-                  <div>
-                    <Label htmlFor="ivat">VAT rate (%)</Label>
-                    <Input id="ivat" type="number" min="0" max="100" step="0.5" value={vatRate} onChange={(e) => setVatRate(e.target.value)} className="mt-1.5" />
-                  </div>
-                </div>
-
-                <div>
-                  <Label>Line items</Label>
-                  <div className="mt-1.5 space-y-2">
-                    {lines.map((l, i) => (
-                      <div key={i} className="flex gap-2">
-                        <Input placeholder="Description" value={l.description} onChange={(e) => setLine(i, "description", e.target.value)} className="flex-1" />
-                        <Input type="number" placeholder="Qty" value={l.qty} onChange={(e) => setLine(i, "qty", e.target.value)} className="w-20" />
-                        <Input type="number" placeholder="Unit £" value={l.unit_price} onChange={(e) => setLine(i, "unit_price", e.target.value)} className="w-28" />
-                        <Button variant="ghost" size="icon" aria-label="Remove line" onClick={() => setLines((xs) => (xs.length > 1 ? xs.filter((_, idx) => idx !== i) : xs))}>
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ))}
-                    <Button variant="outline" size="sm" onClick={() => setLines((xs) => [...xs, { ...blankItem }])}>
-                      <Plus className="mr-2 h-4 w-4" /> Add line
-                    </Button>
-                  </div>
-                  <div className="mt-2 space-y-0.5 text-right text-sm">
-                    <div className="text-muted-foreground">Subtotal: {gbp(draftSubtotal)}</div>
-                    <div className="text-muted-foreground">VAT ({vatNum}%): {gbp(draftVat)}</div>
-                    <div className="font-medium">Total: {gbp(draftTotal)}</div>
-                  </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="inotes">Notes</Label>
-                  <Textarea id="inotes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} className="mt-1.5" />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button onClick={create} disabled={saving}>
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create invoice
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
-
-      {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the invoices endpoint and DB must be live on the server.
-        </div>
-      )}
-
-      {overdueClients.length > 0 && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>
-            <strong>Work-pause flag:</strong> {overdueClients.join(", ")} {overdueClients.length === 1 ? "has" : "have"} overdue
-            invoices. Studio policy is to pause delivery until settled — chase the invoice below.
-          </span>
-        </div>
-      )}
-
-      <div className="rounded-xl border border-border bg-card">
-        {loading ? (
-          <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading invoices…
+  const newInvoiceDialog = (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus /> New invoice
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>New invoice</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-[14px]">
+          <div className="grid gap-[14px] sm:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label>Client</Label>
+              <Select value={clientId} onValueChange={setClientId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="No client" />
+                </SelectTrigger>
+                <SelectContent>
+                  {clientList.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>
+                      {c.company}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="idue">Due date</Label>
+              <Input id="idue" type="date" value={dueAt} onChange={(e) => setDueAt(e.target.value)} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="ivat">VAT rate (%)</Label>
+              <Input id="ivat" type="number" min="0" max="100" step="0.5" value={vatRate} onChange={(e) => setVatRate(e.target.value)} />
+            </div>
           </div>
-        ) : items.length === 0 ? (
-          <div className="p-10 text-center text-sm text-muted-foreground">
-            No invoices yet. Create one to bill a client.
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Number</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Due</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((inv) => (
-                <TableRow key={inv.id}>
-                  <TableCell className="font-medium">{inv.number || `#${inv.id}`}</TableCell>
-                  <TableCell className="text-muted-foreground">{inv.client_company || "—"}</TableCell>
-                  <TableCell>
-                    <span className={cn("rounded px-2 py-0.5 text-xs font-medium", statusClass[inv.status])}>{inv.status}</span>
-                    {inv.overdue && <span className="ml-1 rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">overdue</span>}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{fmt(inv.due_at)}</TableCell>
-                  <TableCell className="text-right font-medium">
-                    {gbp(inv.total)}
-                    {inv.vat_rate > 0 && <span className="ml-1 text-xs font-normal text-muted-foreground">inc. VAT</span>}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => downloadPdf(inv)} title="Download PDF">
-                        <FileDown className="h-3.5 w-3.5" />
-                      </Button>
-                      {inv.status === "draft" && (
-                        <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => setStatus(inv, "sent")}>
-                          <Send className="mr-1 h-3.5 w-3.5" /> Send
-                        </Button>
-                      )}
-                      {inv.overdue && (
-                        <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => chase(inv)} title="Email the client a payment reminder">
-                          <BellRing className="mr-1 h-3.5 w-3.5" /> Chase
-                        </Button>
-                      )}
-                      {inv.status !== "paid" && (
-                        <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => createPayLink(inv)} title="Create a Stripe payment link">
-                          <CreditCard className="mr-1 h-3.5 w-3.5" /> Pay link
-                        </Button>
-                      )}
-                      {inv.status !== "paid" && (
-                        <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => setStatus(inv, "paid")} title="Mark paid manually (no Stripe)">
-                          <BadgePoundSterling className="mr-1 h-3.5 w-3.5" /> Mark paid
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
+
+          <div className="grid gap-1.5">
+            <Label>Line items</Label>
+            <div className="grid gap-2">
+              {lines.map((l, i) => (
+                <div key={i} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2 sm:grid-cols-[minmax(0,1fr)_4.5rem_6.5rem_auto]">
+                  <Input className="col-span-3 sm:col-span-1" aria-label="Description" placeholder="Description" value={l.description} onChange={(e) => setLine(i, "description", e.target.value)} />
+                  <Input aria-label="Quantity" type="number" placeholder="Qty" value={l.qty} onChange={(e) => setLine(i, "qty", e.target.value)} />
+                  <Input aria-label="Unit price in pounds" type="number" placeholder="Unit £" value={l.unit_price} onChange={(e) => setLine(i, "unit_price", e.target.value)} />
+                  <Button variant="ghost" size="icon" aria-label="Remove line" onClick={() => setLines((xs) => (xs.length > 1 ? xs.filter((_, idx) => idx !== i) : xs))}>
+                    <Trash2 />
+                  </Button>
+                </div>
               ))}
-            </TableBody>
-          </Table>
+              <div>
+                <Button variant="ghost" onClick={() => setLines((xs) => [...xs, { ...blankItem }])}>
+                  <Plus /> Add line
+                </Button>
+              </div>
+            </div>
+          </div>
+
+          <dl className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-x-4 gap-y-2.5 rounded-2xl border bg-secondary p-[18px] text-sm">
+            <dt className="text-muted-foreground">Subtotal</dt>
+            <dd className="text-right font-mono tabular-nums">{gbp(draftSubtotal)}</dd>
+            <dt className="text-muted-foreground">VAT ({vatNum}%)</dt>
+            <dd className="text-right font-mono tabular-nums">{gbp(draftVat)}</dd>
+            <dt className="text-muted-foreground">Total</dt>
+            <dd className="text-right font-mono font-semibold tabular-nums">{gbp(draftTotal)}</dd>
+          </dl>
+
+          <div className="grid gap-1.5">
+            <Label htmlFor="inotes">Notes</Label>
+            <Textarea id="inotes" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={create} disabled={saving}>
+            {saving && <Loader2 className="animate-spin" />}
+            Create invoice
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+
+  return (
+    <div>
+      <PageHeader
+        title="Invoicing"
+        subtitle="Invoices, payments and chasing, in pounds with VAT."
+        actions={
+          <>
+            {newInvoiceDialog}
+            <Button variant="outline" onClick={exportCsv} disabled={!items.length}>
+              <Download /> CSV
+            </Button>
+            <Button variant="outline" onClick={exportXlsx} disabled={!items.length}>
+              <Download /> XLSX
+            </Button>
+            <Button variant="outline" onClick={load}>
+              <RefreshCw /> Refresh
+            </Button>
+          </>
+        }
+      />
+
+      <div className="space-y-4">
+        {error && (
+          <div role="alert" className="flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
+            <AlertCircle className="mt-0.5 size-5 shrink-0 text-bad" aria-hidden="true" />
+            <div className="min-w-[min(100%,200px)] flex-1">
+              <p className="font-semibold">Invoices could not be loaded</p>
+              <p className="mt-1 text-sm text-muted-foreground">{error}. The invoices endpoint and database must be live on the server.</p>
+            </div>
+            <Button variant="outline" onClick={load}>
+              <RefreshCw /> Try again
+            </Button>
+          </div>
+        )}
+
+        {overdueClients.length > 0 && (
+          <div role="status" className="flex flex-wrap items-start gap-3.5 rounded-2xl border border-warn/35 bg-warn-soft p-[18px] text-foreground">
+            <AlertTriangle className="mt-0.5 size-5 shrink-0 text-warn" aria-hidden="true" />
+            <p className="min-w-[min(100%,200px)] flex-1">
+              <b>Work-pause flag:</b> {overdueClients.join(", ")} {overdueClients.length === 1 ? "has an overdue invoice" : "have overdue invoices"}.
+              Studio policy is to pause delivery until it is settled. Chase it below.
+            </p>
+          </div>
+        )}
+
+        {!loading && !error && items.length > 0 && (
+          <StatGrid className="mb-0">
+            <StatTile label="Paid this month" value={gbp(paidThisMonth.sum)} note={plural(paidThisMonth.n, "invoice")} tone={paidThisMonth.n ? "up" : undefined} />
+            <StatTile label="Outstanding" value={gbp(outstanding)} note={plural(outstandingCount, "invoice")} />
+            <StatTile label="Overdue" value={gbp(overdue.sum)} note={plural(overdue.n, "invoice")} tone={overdue.n ? "down" : undefined} />
+            <StatTile label="Drafts" value={String(counts.draft)} note="Not sent yet" />
+          </StatGrid>
+        )}
+
+        {loading ? (
+          <div className="overflow-hidden rounded-[14px] border bg-card">
+            <TableSkeleton rows={5} cols={5} />
+          </div>
+        ) : error ? null : items.length === 0 ? (
+          <EmptyState
+            icon={Receipt}
+            title="No invoices yet"
+            description="Create one to bill a client."
+            className="rounded-2xl border border-dashed border-line-strong bg-card py-14"
+          />
+        ) : (
+          <>
+            <div className="flex flex-wrap items-center gap-2">
+              {FILTERS.map((f) => (
+                <button
+                  key={f.key}
+                  type="button"
+                  aria-pressed={filter === f.key}
+                  onClick={() => setFilter(f.key)}
+                  className="inline-flex min-h-[34px] items-center whitespace-nowrap rounded-full border bg-card px-3 text-[13px] font-medium transition-colors hover:border-line-strong aria-pressed:border-foreground aria-pressed:bg-foreground aria-pressed:text-background"
+                >
+                  {f.label}
+                  <span className="ml-1 font-mono text-[11px] tabular-nums opacity-70">{counts[f.key]}</span>
+                </button>
+              ))}
+              <label className="flex min-h-10 min-w-0 max-w-[340px] flex-1 basis-[200px] items-center gap-2 rounded-[10px] border bg-card px-3 text-muted-foreground focus-within:border-acc focus-within:shadow-[0_0_0_3px_hsl(var(--os-acc-soft))]">
+                <Search className="size-4 shrink-0" aria-hidden="true" />
+                <span className="sr-only">Search invoices</span>
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search invoices…"
+                  className="w-full min-w-0 border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                />
+              </label>
+            </div>
+
+            <div className="overflow-hidden rounded-[14px] border bg-card">
+              <Table className="min-w-[760px]">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Number</TableHead>
+                    <TableHead>Client</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Due</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {shown.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="py-10 text-center text-muted-foreground">
+                        No invoices match this filter.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {shown.map((inv) => (
+                    <TableRow key={inv.id}>
+                      <TableCell className="whitespace-nowrap font-mono font-semibold">{inv.number || `#${inv.id}`}</TableCell>
+                      <TableCell className="min-w-[10rem] max-w-[16rem] [overflow-wrap:anywhere]">{inv.client_company || <span className="text-muted-foreground">No client</span>}</TableCell>
+                      <TableCell>
+                        <StatusBadge status={inv.overdue && inv.status !== "paid" ? "overdue" : inv.status} />
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {inv.due_at ? fmt(inv.due_at) : <span className="text-muted-foreground">{inv.status === "draft" ? "Not sent" : "No date"}</span>}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-right font-mono tabular-nums">
+                        {gbp(inv.total)}
+                        {inv.vat_rate > 0 && <span className="ml-1 font-sans text-xs text-muted-foreground">inc. VAT</span>}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => downloadPdf(inv)} title="Download PDF" aria-label={`Download PDF of ${inv.number || `invoice ${inv.id}`}`}>
+                            <FileDown />
+                          </Button>
+                          {inv.status === "draft" && (
+                            <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => setStatus(inv, "sent")}>
+                              <Send /> Send
+                            </Button>
+                          )}
+                          {inv.overdue && (
+                            <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => chase(inv)} title="Email the client a payment reminder">
+                              <BellRing /> Chase
+                            </Button>
+                          )}
+                          {inv.status !== "paid" && (
+                            <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => createPayLink(inv)} title="Create a Stripe payment link">
+                              <CreditCard /> Pay link
+                            </Button>
+                          )}
+                          {inv.status !== "paid" && (
+                            <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => setStatus(inv, "paid")} title="Mark paid manually (no Stripe)">
+                              <BadgePoundSterling /> Mark paid
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
         )}
       </div>
     </div>

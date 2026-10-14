@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
-import { Loader2, Plus, RefreshCw, Send, PenLine, FileDown, Trash2, ShieldAlert } from "lucide-react"
+import { Loader2, Plus, RefreshCw, Send, PenLine, FileDown, Trash2, AlertCircle, FileSignature } from "lucide-react"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -34,24 +35,21 @@ import {
   projects as projectsApi,
   type Contract,
   type ContractDetail,
-  type ContractStatus,
   type ContractKind,
   type Client,
   type Project,
 } from "@/lib/api"
-import { cn } from "@/lib/utils"
+import { PageHeader, StatusBadge } from "@/app/components/page-kit"
+import { EmptyState } from "@/app/components/EmptyState"
+import { TableSkeleton } from "@/app/components/TableSkeleton"
 
-const statusClass: Record<ContractStatus, string> = {
-  draft: "bg-muted text-muted-foreground",
-  sent: "bg-primary/10 text-primary",
-  signed: "bg-accent text-accent-foreground",
-  void: "bg-destructive/10 text-destructive",
+// NDA triage flag, shown as a pill in the semantic tone for its risk.
+const TRIAGE: Record<"green" | "yellow" | "red", { label: string; variant: "ok" | "warn" | "bad" }> = {
+  green: { label: "Green", variant: "ok" },
+  yellow: { label: "Yellow", variant: "warn" },
+  red: { label: "Red", variant: "bad" },
 }
-const triageClass: Record<string, string> = {
-  green: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  yellow: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  red: "bg-destructive/10 text-destructive",
-}
+const KIND_LABEL: Record<ContractKind, string> = { agreement: "Service Agreement", nda: "Mutual NDA" }
 
 // Client-side template library with merge fields ({{client}}, {{project}}, {{date}}).
 const TEMPLATES: Record<string, { kind: ContractKind; title: string; body: string }> = {
@@ -187,169 +185,195 @@ export default function Contracts() {
     else toast.error(res.error || "Could not load the contract.")
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Contracts</h1>
-          <p className="text-sm text-muted-foreground">Agreements &amp; NDAs with typed e-signature and an audit trail.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={load}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" /> New contract
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>New contract</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <Label>Template</Label>
-                    <Select value={template} onValueChange={setTemplate}>
-                      <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="service">Service Agreement</SelectItem>
-                        <SelectItem value="nda">Mutual NDA</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Client</Label>
-                    <Select value={clientId} onValueChange={setClientId}>
-                      <SelectTrigger className="mt-1.5"><SelectValue placeholder="No client" /></SelectTrigger>
-                      <SelectContent>
-                        {clientList.map((c) => (
-                          <SelectItem key={c.id} value={String(c.id)}>{c.company}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div>
-                    <Label>Project</Label>
-                    <Select value={projectId} onValueChange={setProjectId}>
-                      <SelectTrigger className="mt-1.5"><SelectValue placeholder="No project" /></SelectTrigger>
-                      <SelectContent>
-                        {projectList.map((p) => (
-                          <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  {template === "nda" && (
-                    <div>
-                      <Label>NDA triage</Label>
-                      <Select value={triage} onValueChange={setTriage}>
-                        <SelectTrigger className="mt-1.5"><SelectValue placeholder="Risk flag" /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="green">Green — standard</SelectItem>
-                          <SelectItem value="yellow">Yellow — review</SelectItem>
-                          <SelectItem value="red">Red — legal review</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  )}
-                </div>
-                <div>
-                  <Label htmlFor="ctitle">Title</Label>
-                  <Input id="ctitle" value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1.5" />
-                </div>
-                <div>
-                  <Label htmlFor="cbody">Body</Label>
-                  <Textarea id="cbody" rows={8} value={body} onChange={(e) => setBody(e.target.value)} className="mt-1.5 font-mono text-xs" />
-                </div>
-                <div>
-                  <Label htmlFor="csigner">Signer name (expected)</Label>
-                  <Input id="csigner" value={signerName} onChange={(e) => setSignerName(e.target.value)} className="mt-1.5" />
-                </div>
+  const newContractDialog = (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button>
+          <Plus /> New contract
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>New contract</DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-[14px]">
+          <div className="grid gap-[14px] sm:grid-cols-2">
+            <div className="grid gap-1.5">
+              <Label>Template</Label>
+              <Select value={template} onValueChange={setTemplate}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="service">Service Agreement</SelectItem>
+                  <SelectItem value="nda">Mutual NDA</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Client</Label>
+              <Select value={clientId} onValueChange={setClientId}>
+                <SelectTrigger><SelectValue placeholder="No client" /></SelectTrigger>
+                <SelectContent>
+                  {clientList.map((c) => (
+                    <SelectItem key={c.id} value={String(c.id)}>{c.company}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Project</Label>
+              <Select value={projectId} onValueChange={setProjectId}>
+                <SelectTrigger><SelectValue placeholder="No project" /></SelectTrigger>
+                <SelectContent>
+                  {projectList.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {template === "nda" && (
+              <div className="grid gap-1.5">
+                <Label>NDA triage</Label>
+                <Select value={triage} onValueChange={setTriage}>
+                  <SelectTrigger><SelectValue placeholder="Risk flag" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="green">Green: standard</SelectItem>
+                    <SelectItem value="yellow">Yellow: review</SelectItem>
+                    <SelectItem value="red">Red: legal review</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <DialogFooter>
-                <Button onClick={create} disabled={saving}>
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+            )}
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="ctitle">Title</Label>
+            <Input id="ctitle" value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="cbody">Body</Label>
+            <Textarea id="cbody" rows={8} value={body} onChange={(e) => setBody(e.target.value)} className="font-mono text-xs" />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="csigner">Signer name (expected)</Label>
+            <Input id="csigner" value={signerName} onChange={(e) => setSignerName(e.target.value)} />
+          </div>
         </div>
-      </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Cancel
+          </Button>
+          <Button onClick={create} disabled={saving}>
+            {saving && <Loader2 className="animate-spin" />}
+            Create
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 
-      {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the contracts endpoint and DB must be live on the server.
-        </div>
-      )}
+  return (
+    <div>
+      <PageHeader
+        title="Contracts"
+        subtitle="Agreements and NDAs with typed e-signature and an audit trail."
+        actions={
+          <>
+            {newContractDialog}
+            <Button variant="outline" onClick={load}>
+              <RefreshCw /> Refresh
+            </Button>
+          </>
+        }
+      />
 
-      <div className="rounded-xl border border-border bg-card">
+      <div className="space-y-4">
+        {error && (
+          <div role="alert" className="flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
+            <AlertCircle className="mt-0.5 size-5 shrink-0 text-bad" aria-hidden="true" />
+            <div className="min-w-[min(100%,200px)] flex-1">
+              <p className="font-semibold">Contracts could not be loaded</p>
+              <p className="mt-1 text-sm text-muted-foreground">{error}. The contracts endpoint and database must be live on the server.</p>
+            </div>
+            <Button variant="outline" onClick={load}>
+              <RefreshCw /> Try again
+            </Button>
+          </div>
+        )}
+
         {loading ? (
-          <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading contracts…
+          <div className="overflow-hidden rounded-[14px] border bg-card">
+            <TableSkeleton rows={4} cols={4} />
           </div>
-        ) : items.length === 0 ? (
-          <div className="p-10 text-center text-sm text-muted-foreground">
-            No contracts yet. Create one from a template to get a signable document.
-          </div>
+        ) : error ? null : items.length === 0 ? (
+          <EmptyState
+            icon={FileSignature}
+            title="No contracts yet"
+            description="Create one from a template to get a signable document."
+            className="rounded-2xl border border-dashed border-line-strong bg-card py-14"
+          />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Title</TableHead>
-                <TableHead>Client</TableHead>
-                <TableHead>Kind</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Signed</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium">
-                    {c.title}
-                    {c.nda_triage && (
-                      <span className={cn("ml-2 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium", triageClass[c.nda_triage])}>
-                        <ShieldAlert className="h-3 w-3" /> {c.nda_triage}
-                      </span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{c.client_company || "—"}</TableCell>
-                  <TableCell className="capitalize text-muted-foreground">{c.kind}</TableCell>
-                  <TableCell>
-                    <span className={cn("rounded px-2 py-0.5 text-xs font-medium", statusClass[c.status])}>{c.status}</span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {c.signed_at ? `${c.signer_name ?? ""} · ${fmt(c.signed_at)}` : "—"}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="sm" disabled={busyId === c.id} onClick={() => downloadPdf(c)} title="Download PDF">
-                        <FileDown className="h-3.5 w-3.5" />
-                      </Button>
-                      {c.status === "draft" && (
-                        <Button variant="ghost" size="sm" disabled={busyId === c.id} onClick={() => setStatus(c, "sent")}>
-                          <Send className="mr-1 h-3.5 w-3.5" /> Send
-                        </Button>
-                      )}
-                      {c.status !== "signed" && c.status !== "void" && (
-                        <Button variant="ghost" size="sm" disabled={busyId === c.id} onClick={() => { setSignFor(c); setSignedName(c.signer_name ?? "") }}>
-                          <PenLine className="mr-1 h-3.5 w-3.5" /> Sign
-                        </Button>
-                      )}
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(c)} aria-label="Delete contract">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          <div className="overflow-hidden rounded-[14px] border bg-card">
+            <Table className="min-w-[820px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Client</TableHead>
+                  <TableHead>Kind</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Signed</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {items.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="min-w-[12rem]">
+                      <span className="font-semibold [overflow-wrap:anywhere]">{c.title}</span>
+                      {c.nda_triage && (
+                        <Badge variant={TRIAGE[c.nda_triage].variant} className="ml-2 align-middle">
+                          {TRIAGE[c.nda_triage].label}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="min-w-[9rem] [overflow-wrap:anywhere]">{c.client_company || <span className="text-muted-foreground">No client</span>}</TableCell>
+                    <TableCell className="whitespace-nowrap">{KIND_LABEL[c.kind] ?? c.kind}</TableCell>
+                    <TableCell>
+                      <StatusBadge status={c.status} />
+                    </TableCell>
+                    <TableCell className="min-w-[9rem]">
+                      {c.signed_at ? (
+                        <>
+                          <span className="[overflow-wrap:anywhere]">{c.signer_name ?? ""}</span>
+                          <span className="block whitespace-nowrap text-[12.5px] text-muted-foreground">{fmt(c.signed_at)}</span>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground">Not yet</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        <Button variant="ghost" size="sm" disabled={busyId === c.id} onClick={() => downloadPdf(c)} title="Download PDF" aria-label={`Download PDF of ${c.title}`}>
+                          <FileDown />
+                        </Button>
+                        {c.status === "draft" && (
+                          <Button variant="ghost" size="sm" disabled={busyId === c.id} onClick={() => setStatus(c, "sent")}>
+                            <Send /> Send
+                          </Button>
+                        )}
+                        {c.status !== "signed" && c.status !== "void" && (
+                          <Button variant="ghost" size="sm" disabled={busyId === c.id} onClick={() => { setSignFor(c); setSignedName(c.signer_name ?? "") }}>
+                            <PenLine /> Sign
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm" className="text-bad hover:text-bad" onClick={() => remove(c)} aria-label={`Delete ${c.title}`} title="Delete contract">
+                          <Trash2 />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
 
@@ -358,19 +382,22 @@ export default function Contracts() {
           <DialogHeader>
             <DialogTitle>Sign “{signFor?.title}”</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">
-              Typing your full name below and confirming is your electronic signature. The name, date and
-              IP address are recorded as an audit trail.
-            </p>
-            <div>
+          <div className="grid gap-[14px]">
+            <div className="grid gap-1.5">
               <Label htmlFor="signed">Full name</Label>
-              <Input id="signed" value={signedName} onChange={(e) => setSignedName(e.target.value)} className="mt-1.5" placeholder="e.g. Jane Smith" />
+              <Input id="signed" value={signedName} onChange={(e) => setSignedName(e.target.value)} placeholder="e.g. Jane Smith" autoComplete="name" />
             </div>
+            <p className="text-[13px] text-muted-foreground">
+              Typing your full name and pressing Sign electronically has the same effect as a handwritten signature. The
+              name, date and IP address are recorded as an audit trail.
+            </p>
           </div>
           <DialogFooter>
+            <Button variant="outline" onClick={() => setSignFor(null)}>
+              Cancel
+            </Button>
             <Button onClick={sign} disabled={busyId === signFor?.id}>
-              {busyId === signFor?.id && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {busyId === signFor?.id && <Loader2 className="animate-spin" />}
               Sign electronically
             </Button>
           </DialogFooter>

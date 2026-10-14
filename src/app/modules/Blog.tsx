@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Loader2, Plus, RefreshCw, Pencil, Trash2, Eye, EyeOff, ExternalLink } from "lucide-react"
+import { Loader2, Plus, RefreshCw, Pencil, Trash2, Eye, EyeOff, ExternalLink, AlertCircle, BookOpen } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,7 +14,17 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { blog, type BlogAdminRow, type BlogInput } from "@/lib/api"
-import { cn } from "@/lib/utils"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { PageHeader, StatusBadge } from "@/app/components/page-kit"
+import { EmptyState } from "@/app/components/EmptyState"
+import { TableSkeleton } from "@/app/components/TableSkeleton"
 
 const COVERS = ["article", "studio", "retail", "pro", "health"]
 const blank: BlogInput & { id: number } = {
@@ -119,89 +129,100 @@ export default function Blog() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Blog</h1>
-          <p className="text-sm text-muted-foreground">Write posts here; published ones appear on the public site.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={load}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
-          <Button size="sm" onClick={startNew}>
-            <Plus className="mr-2 h-4 w-4" /> New post
-          </Button>
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        title="Blog"
+        subtitle="Write posts here; published ones appear on the public site."
+        actions={
+          <>
+            <Button onClick={startNew}>
+              <Plus /> New post
+            </Button>
+            <Button asChild variant="outline">
+              <a href="/resources" target="_blank" rel="noopener noreferrer">
+                <ExternalLink /> View live
+              </a>
+            </Button>
+            <Button variant="outline" onClick={load}>
+              <RefreshCw /> Refresh
+            </Button>
+          </>
+        }
+      />
 
-      {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the blog endpoint and DB must be live on the server.
-        </div>
-      )}
-
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
-        {loading ? (
-          <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+      <div className="space-y-4">
+        {error && (
+          <div role="alert" className="flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
+            <AlertCircle className="mt-0.5 size-5 shrink-0 text-bad" aria-hidden="true" />
+            <div className="min-w-[min(100%,200px)] flex-1">
+              <p className="font-semibold">Posts could not be loaded</p>
+              <p className="mt-1 text-sm text-muted-foreground">{error}. The blog endpoint and database must be live on the server.</p>
+            </div>
+            <Button variant="outline" onClick={load}>
+              <RefreshCw /> Try again
+            </Button>
           </div>
-        ) : items.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">No posts yet. Write the first one.</div>
+        )}
+
+        {loading ? (
+          <div className="overflow-hidden rounded-[14px] border bg-card">
+            <TableSkeleton rows={4} cols={3} />
+          </div>
+        ) : error ? null : items.length === 0 ? (
+          <EmptyState
+            icon={BookOpen}
+            title="No posts yet"
+            description="Write the first one."
+            className="rounded-2xl border border-dashed border-line-strong bg-card py-14"
+          />
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3 font-semibold">Title</th>
-                <th className="hidden px-4 py-3 font-semibold sm:table-cell">Category</th>
-                <th className="px-4 py-3 font-semibold">Status</th>
-                <th className="px-4 py-3 text-right font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((a) => (
-                <tr key={a.id} className="border-t border-border">
-                  <td className="px-4 py-3 font-medium">
-                    {a.title}
-                    <span className="block text-xs text-muted-foreground">/{a.slug}</span>
-                  </td>
-                  <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">{a.category}</td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={cn(
-                        "rounded-full px-2 py-0.5 text-xs font-medium",
-                        a.status === "published"
-                          ? "bg-emerald-500/12 text-emerald-600"
-                          : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {a.status}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-1">
-                      {a.status === "published" && (
-                        <Button asChild variant="ghost" size="icon" className="h-8 w-8" title="View live">
-                          <a href={`/resources/${a.slug}`} target="_blank" rel="noreferrer">
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </a>
+          <div className="overflow-hidden rounded-[14px] border bg-card">
+            <Table className="min-w-[640px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((a) => (
+                  <TableRow key={a.id}>
+                    <TableCell className="min-w-[14rem]">
+                      <span className="font-semibold [overflow-wrap:anywhere]">{a.title}</span>
+                      <span className="block font-mono text-xs text-muted-foreground [overflow-wrap:anywhere]">/{a.slug}</span>
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">{a.category}</TableCell>
+                    <TableCell>
+                      <StatusBadge status={a.status} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        {a.status === "published" && (
+                          <Button asChild variant="ghost" size="sm" title="View live">
+                            <a href={`/resources/${a.slug}`} target="_blank" rel="noreferrer" aria-label={`View ${a.title} live`}>
+                              <ExternalLink />
+                            </a>
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={() => togglePublish(a)}>
+                          {a.status === "published" ? <EyeOff /> : <Eye />}
+                          {a.status === "published" ? "Unpublish" : "Publish"}
                         </Button>
-                      )}
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => togglePublish(a)} title={a.status === "published" ? "Unpublish" : "Publish"}>
-                        {a.status === "published" ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEdit(a)} title="Edit">
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(a)} title="Delete">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                        <Button variant="ghost" size="sm" onClick={() => startEdit(a)} aria-label={`Edit ${a.title}`} title="Edit">
+                          <Pencil />
+                        </Button>
+                        <Button variant="ghost" size="sm" className="text-bad hover:text-bad" onClick={() => remove(a)} aria-label={`Delete ${a.title}`} title="Delete">
+                          <Trash2 />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
 
@@ -216,7 +237,7 @@ export default function Blog() {
             </p>
           )}
           {postError && (
-            <div role="alert" className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+            <div role="alert" className="rounded-xl border border-bad/30 bg-bad-soft p-3 text-sm text-foreground">
               {postError} Close this window and try again. Nothing has been changed.
             </div>
           )}
@@ -272,6 +293,9 @@ export default function Blog() {
             </div>
           </div>
           <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={save} disabled={saving || loadingPost || postError !== null}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {form.id ? "Save changes" : "Create post"}

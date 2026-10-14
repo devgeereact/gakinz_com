@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Loader2, Plus, RefreshCw, Pencil, Trash2, Check, X, Star } from "lucide-react"
+import { Loader2, Plus, RefreshCw, Pencil, Trash2, AlertCircle, Quote } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,7 +14,18 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { testimonials, type TestimonialAdmin, type TestimonialInput } from "@/lib/api"
-import { cn } from "@/lib/utils"
+import { Skeleton } from "@/components/ui/skeleton"
+import { PageHeader, StatusBadge } from "@/app/components/page-kit"
+import { EmptyState } from "@/app/components/EmptyState"
+
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase()
 
 const blank: TestimonialInput & { id: number } = {
   id: 0,
@@ -86,7 +97,7 @@ export default function Testimonials() {
   const toggleApprove = async (t: TestimonialAdmin) => {
     const res = await testimonials.approve(t.id, t.approved !== 1)
     if (res.ok) {
-      toast.success(t.approved === 1 ? "Hidden from site." : "Approved — now live.")
+      toast.success(t.approved === 1 ? "Hidden from the public site." : "Approved. Now shows on the public site.")
       load()
     } else toast.error(res.error || "Could not update.")
   }
@@ -100,75 +111,90 @@ export default function Testimonials() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Testimonials</h1>
-          <p className="text-sm text-muted-foreground">Curated client quotes. Approved ones show on the public site.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={load}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
-          <Button size="sm" onClick={startNew}>
-            <Plus className="mr-2 h-4 w-4" /> New testimonial
-          </Button>
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        title="Testimonials"
+        subtitle="Curated client quotes. Approved ones show on the public site."
+        actions={
+          <>
+            <Button onClick={startNew}>
+              <Plus /> New testimonial
+            </Button>
+            <Button variant="outline" onClick={load}>
+              <RefreshCw /> Refresh
+            </Button>
+          </>
+        }
+      />
 
-      {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the testimonials endpoint and DB must be live on the server.
-        </div>
-      )}
-
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
-        {loading ? (
-          <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+      <div className="space-y-4">
+        {error && (
+          <div role="alert" className="flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
+            <AlertCircle className="mt-0.5 size-5 shrink-0 text-bad" aria-hidden="true" />
+            <div className="min-w-[min(100%,200px)] flex-1">
+              <p className="font-semibold">Testimonials could not be loaded</p>
+              <p className="mt-1 text-sm text-muted-foreground">{error}. The testimonials endpoint and database must be live on the server.</p>
+            </div>
+            <Button variant="outline" onClick={load}>
+              <RefreshCw /> Try again
+            </Button>
           </div>
-        ) : items.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">No testimonials yet. Add the first.</div>
+        )}
+
+        {loading ? (
+          <div className="grid gap-4 lg:grid-cols-2" aria-busy="true" aria-label="Loading testimonials">
+            <Skeleton className="h-44 rounded-2xl" />
+            <Skeleton className="h-44 rounded-2xl" />
+          </div>
+        ) : error ? null : items.length === 0 ? (
+          <EmptyState
+            icon={Quote}
+            title="No testimonials yet"
+            description="Add the first, once a client has agreed to be quoted."
+            className="rounded-2xl border border-dashed border-line-strong bg-card py-14"
+          />
         ) : (
-          <ul className="divide-y">
-            {items.map((t) => (
-              <li key={t.id} className="flex items-start justify-between gap-4 p-4">
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{t.author}</span>
-                    {(t.role || t.company) && (
-                      <span className="truncate text-xs text-muted-foreground">{[t.role, t.company].filter(Boolean).join(", ")}</span>
-                    )}
-                    <span className="flex text-amber-400">
-                      {Array.from({ length: Math.max(1, Math.min(5, t.rating)) }).map((_, j) => (
-                        <Star key={j} className="h-3 w-3 fill-current" />
-                      ))}
+          <div className="grid gap-4 lg:grid-cols-2">
+            {items.map((t) => {
+              const sub = [t.role, t.company].filter(Boolean).join(", ")
+              const stars = Math.max(1, Math.min(5, t.rating))
+              return (
+                <figure key={t.id} className="m-0 grid min-w-0 content-between gap-3.5 rounded-2xl border bg-card p-[18px]">
+                  <blockquote className="m-0 font-display text-[1.25rem] leading-[1.3] tracking-[-0.01em] [overflow-wrap:anywhere]">
+                    “{t.quote}”
+                  </blockquote>
+                  <figcaption className="flex flex-wrap items-center justify-between gap-2.5">
+                    <span className="flex min-w-0 flex-1 basis-[12rem] items-center gap-2.5">
+                      <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-acc-soft text-xs font-bold text-acc">
+                        {initials(t.author)}
+                      </span>
+                      <span className="min-w-0">
+                        <b className="block font-semibold [overflow-wrap:anywhere]">{t.author}</b>
+                        <small className="block text-[12.5px] leading-[1.35] text-muted-foreground [overflow-wrap:anywhere]">
+                          {sub && `${sub} · `}
+                          <span className="whitespace-nowrap" aria-label={`Rated ${stars} out of 5`}>
+                            {"★".repeat(stars)}
+                          </span>
+                        </small>
+                      </span>
                     </span>
-                    <span
-                      className={cn(
-                        "rounded-full px-2 py-0.5 text-xs font-medium",
-                        t.approved === 1 ? "bg-emerald-500/12 text-emerald-600" : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {t.approved === 1 ? "live" : "hidden"}
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      <StatusBadge status={t.approved === 1 ? "approved" : "pending"} />
+                      <Button variant="outline" size="sm" onClick={() => toggleApprove(t)}>
+                        {t.approved === 1 ? "Hide" : "Approve"}
+                      </Button>
+                      <Button variant="ghost" size="sm" onClick={() => startEdit(t)} aria-label={`Edit the quote from ${t.author}`} title="Edit">
+                        <Pencil />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="text-bad hover:text-bad" onClick={() => remove(t)} aria-label={`Delete the quote from ${t.author}`} title="Delete">
+                        <Trash2 />
+                      </Button>
                     </span>
-                  </div>
-                  <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">&ldquo;{t.quote}&rdquo;</p>
-                </div>
-                <div className="flex flex-shrink-0 gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toggleApprove(t)} title={t.approved === 1 ? "Hide" : "Approve"}>
-                    {t.approved === 1 ? <X className="h-3.5 w-3.5" /> : <Check className="h-3.5 w-3.5" />}
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => startEdit(t)} title="Edit">
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(t)} title="Delete">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>
+                  </figcaption>
+                </figure>
+              )
+            })}
+          </div>
         )}
       </div>
 
@@ -219,6 +245,9 @@ export default function Testimonials() {
             </label>
           </div>
           <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={save} disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {form.id ? "Save changes" : "Add testimonial"}

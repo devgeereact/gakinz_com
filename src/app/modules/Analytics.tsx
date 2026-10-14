@@ -1,19 +1,28 @@
 import { useEffect, useMemo, useState } from "react"
 import {
+  Area,
+  AreaChart,
   Bar,
   BarChart,
   CartesianGrid,
-  Cell,
-  Pie,
-  PieChart,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from "recharts"
-import { Loader2, RefreshCw, TrendingUp, Target, Receipt, Clock, Download } from "lucide-react"
+import { AlertCircle, RefreshCw, Download } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { PageHeader, StatGrid, StatTile } from "@/app/components/page-kit"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { money } from "@/lib/format"
 import {
@@ -55,33 +64,6 @@ const STATUS_LABEL: Record<Project["status"], string> = {
   in_progress: "In progress",
   on_hold: "On hold",
   launched: "Launched",
-}
-
-function Stat({
-  label,
-  value,
-  hint,
-  icon: Icon,
-}: {
-  label: string
-  value: string
-  hint?: string
-  icon: React.ComponentType<{ className?: string }>
-}) {
-  return (
-    <div className="gk-app-card">
-      <div className="flex items-start justify-between gap-3 p-5">
-        <div className="min-w-0">
-          <p className="text-sm text-muted-foreground">{label}</p>
-          <p className="mt-1 truncate text-2xl font-semibold tracking-tight">{value}</p>
-          {hint && <p className="mt-1 text-xs text-muted-foreground">{hint}</p>}
-        </div>
-        <span className="gk-app-chip h-10 w-10">
-          <Icon className="h-5 w-5" />
-        </span>
-      </div>
-    </div>
-  )
 }
 
 export default function Analytics() {
@@ -230,230 +212,234 @@ export default function Analytics() {
   // Revenue by month (pipeline/forecast): paid vs outstanding.
   const revenueRows = useMemo(() => revenue.map((r) => ({ month: r.month, paid: r.paid, outstanding: r.outstanding })), [revenue])
 
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center text-muted-foreground">
-        <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Crunching the numbers…
-      </div>
-    )
+  const reportsList: { key: string; title: string; filename: string; head: string[]; labels: string[]; money: string[]; rows: Record<string, unknown>[] }[] = [
+    {
+      key: "profit",
+      title: "Project profitability",
+      filename: "gakinz-project-profitability",
+      head: ["project", "client", "revenue", "cost", "margin"],
+      labels: ["Project", "Client", "Revenue", "Cost", "Margin"],
+      money: ["revenue", "cost", "margin"],
+      rows: profit as unknown as Record<string, unknown>[],
+    },
+    {
+      key: "ltv",
+      title: "Client lifetime value",
+      filename: "gakinz-client-ltv",
+      head: ["client", "paid", "outstanding", "invoices"],
+      labels: ["Client", "Paid", "Outstanding", "Invoices"],
+      money: ["paid", "outstanding"],
+      rows: clientLtv as unknown as Record<string, unknown>[],
+    },
+    {
+      key: "mrr",
+      title: "Recurring revenue (care plans)",
+      filename: "gakinz-recurring-revenue",
+      head: ["client", "contact", "paid"],
+      labels: ["Client", "Contact", "Paid"],
+      money: ["paid"],
+      rows: recurring as unknown as Record<string, unknown>[],
+    },
+    {
+      key: "month",
+      title: "Revenue by month (paid vs outstanding)",
+      filename: "gakinz-revenue-by-month",
+      head: ["month", "paid", "outstanding"],
+      labels: ["Month", "Paid", "Outstanding"],
+      money: ["paid", "outstanding"],
+      rows: revenueRows as unknown as Record<string, unknown>[],
+    },
+    {
+      key: "mix",
+      title: "Project mix",
+      filename: "gakinz-project-mix",
+      head: ["label", "count"],
+      labels: ["Status", "Projects"],
+      money: [],
+      rows: projectMix.map((m) => ({ label: m.label, count: m.count })),
+    },
+  ]
+  const TAB_LABEL: Record<string, string> = {
+    profit: "Project profitability",
+    ltv: "Client lifetime value",
+    mrr: "Recurring revenue",
+    month: "Revenue by month",
+    mix: "Project mix",
   }
+  const allFailed = errors.length >= 5
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Analytics &amp; Reporting</h1>
-          <p className="text-sm text-muted-foreground">
-            Revenue, pipeline conversion, delivery mix and utilisation.
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={load}>
-          <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-        </Button>
-      </div>
+    <div>
+      <PageHeader
+        title="Analytics & Reporting"
+        subtitle="Revenue, pipeline conversion, delivery mix and utilisation."
+        actions={
+          <Button variant="outline" onClick={load} disabled={loading}>
+            <RefreshCw className={loading ? "animate-spin" : undefined} /> Refresh
+          </Button>
+        }
+      />
 
-      {errors.length > 0 && (
-        <div className="rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200">
-          Couldn’t reach: {errors.join(", ")}. Showing what loaded.
+      {loading ? (
+        <div className="space-y-4" aria-busy="true" aria-label="Loading figures">
+          <StatGrid className="mb-0">
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-[104px] rounded-2xl" />
+            ))}
+          </StatGrid>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Skeleton className="h-[280px] rounded-2xl" />
+            <Skeleton className="h-[280px] rounded-2xl" />
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {errors.length > 0 && (
+            <div
+              role="alert"
+              className={
+                allFailed
+                  ? "flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground"
+                  : "flex flex-wrap items-start gap-3.5 rounded-2xl border border-warn/35 bg-warn-soft p-[18px] text-foreground"
+              }
+            >
+              <AlertCircle className={allFailed ? "mt-0.5 size-5 shrink-0 text-bad" : "mt-0.5 size-5 shrink-0 text-warn"} aria-hidden="true" />
+              <div className="min-w-[min(100%,200px)] flex-1">
+                <p className="font-semibold">{allFailed ? "The figures could not be loaded" : "Some figures are missing"}</p>
+                <p className="mt-1 text-sm text-muted-foreground">Could not reach: {errors.join(", ")}. {allFailed ? "The endpoints must be live on the server." : "Showing what loaded."}</p>
+              </div>
+              <Button variant="outline" onClick={load}>
+                <RefreshCw /> Try again
+              </Button>
+            </div>
+          )}
+
+          {!allFailed && (
+            <>
+              <StatGrid className="mb-0">
+                <StatTile label="Revenue paid" value={money(kpis.paid)} note="All settled invoices" tone={kpis.paid > 0 ? "up" : undefined} />
+                <StatTile label="Win rate" value={`${kpis.winRate.toFixed(0)}%`} note={`${kpis.wonCount} of ${kpis.decidedCount} decided enquiries`} />
+                <StatTile label="Avg invoice" value={money(kpis.avgInvoice)} note="Per settled invoice" />
+                <StatTile
+                  label="Utilisation"
+                  value={`${kpis.utilisation.toFixed(0)}%`}
+                  note={`${kpis.billableHours.toFixed(0)}h billable of ${kpis.totalHours.toFixed(0)}h`}
+                />
+              </StatGrid>
+
+              <div className="grid gap-4 lg:grid-cols-2">
+                <ChartCard
+                  title="Revenue, paid vs outstanding"
+                  extra={
+                    <span className="flex flex-wrap gap-3 text-[12.5px] text-muted-foreground">
+                      <span className="inline-flex items-center gap-1.5"><i className="size-2.5 rounded-[3px] bg-acc" aria-hidden="true" />Paid</span>
+                      <span className="inline-flex items-center gap-1.5"><i className="size-2.5 rounded-[3px] bg-acc/35" aria-hidden="true" />Outstanding</span>
+                    </span>
+                  }
+                >
+                  {revenue.length === 0 ? (
+                    <p className="py-12 text-center text-sm text-muted-foreground">No invoice data yet.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <BarChart data={revenue} margin={{ left: 0, right: 4, top: 8, bottom: 0 }} barCategoryGap="40%" maxBarSize={56}>
+                        <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
+                        <XAxis dataKey="month" tickLine={false} axisLine={false} tick={TICK} />
+                        <YAxis tickLine={false} axisLine={false} width={56} tick={TICK} tickFormatter={(v) => shortGbp(Number(v))} />
+                        <Tooltip
+                          cursor={{ fill: "hsl(var(--secondary))" }}
+                          formatter={(v: number, n) => [money(v), n === "paid" ? "Paid" : "Outstanding"]}
+                          contentStyle={TOOLTIP}
+                        />
+                        <Bar isAnimationActive={false} dataKey="paid" stackId="a" fill="hsl(var(--os-acc))" />
+                        <Bar isAnimationActive={false} dataKey="outstanding" stackId="a" fill="hsl(var(--os-acc) / 0.35)" radius={[4, 4, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </ChartCard>
+
+                <ChartCard title="Billable utilisation by week" extra={<span className="rounded-full border border-dashed border-line-strong px-[7px] py-0.5 font-mono text-[10px] uppercase tracking-[.08em] text-muted-foreground">%</span>}>
+                  {utilByWeek.length === 0 ? (
+                    <p className="py-12 text-center text-sm text-muted-foreground">No time entries yet. Logged time will chart here.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={220}>
+                      <AreaChart data={utilByWeek} margin={{ left: 0, right: 20, top: 8, bottom: 0 }}>
+                        <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
+                        <XAxis dataKey="week" tickLine={false} axisLine={false} tick={TICK} minTickGap={16} />
+                        <YAxis tickLine={false} axisLine={false} width={40} domain={[0, 100]} tick={TICK} tickFormatter={(v) => `${v}%`} />
+                        <Tooltip formatter={(v: number) => [`${v}%`, "Billable"]} contentStyle={TOOLTIP} />
+                        <Area
+                          isAnimationActive={false}
+                          type="linear"
+                          dataKey="pct"
+                          stroke="hsl(var(--os-acc))"
+                          strokeWidth={2.5}
+                          fill="hsl(var(--os-acc) / 0.14)"
+                          dot={false}
+                          activeDot={{ r: 4.5, fill: "hsl(var(--os-acc))", stroke: "hsl(var(--card))", strokeWidth: 2 }}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </ChartCard>
+              </div>
+
+              <Tabs defaultValue="profit">
+                <TabsList className="mb-4 flex w-full">
+                  {reportsList.map((r) => (
+                    <TabsTrigger key={r.key} value={r.key}>
+                      {TAB_LABEL[r.key]}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+                {reportsList.map((r) => (
+                  <TabsContent key={r.key} value={r.key} className="mt-0">
+                    <ReportTable {...r} />
+                  </TabsContent>
+                ))}
+              </Tabs>
+              <p className="text-[13px] text-muted-foreground">Profitability uses the per-person cost rates set in Settings, Team.</p>
+            </>
+          )}
         </div>
       )}
-
-      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
-        <Stat label="Revenue paid" value={money(kpis.paid)} icon={TrendingUp} hint="All settled invoices" />
-        <Stat
-          label="Win rate"
-          value={`${kpis.winRate.toFixed(0)}%`}
-          icon={Target}
-          hint={`${kpis.wonCount}/${kpis.decidedCount} decided leads`}
-        />
-        <Stat label="Avg invoice" value={money(kpis.avgInvoice)} icon={Receipt} hint="Per settled invoice" />
-        <Stat
-          label="Utilisation"
-          value={`${kpis.utilisation.toFixed(0)}%`}
-          icon={Clock}
-          hint={`${kpis.billableHours.toFixed(0)}h billable of ${kpis.totalHours.toFixed(0)}h`}
-        />
-      </div>
-
-      <div className="grid grid-cols-12 gap-6">
-        <Card className="col-span-12 xl:col-span-8">
-          <CardHeader>
-            <CardTitle className="text-base">Revenue — paid vs outstanding</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {revenue.length === 0 ? (
-              <p className="py-12 text-center text-sm text-muted-foreground">No invoice data yet.</p>
-            ) : (
-              <ResponsiveContainer width="100%" height={280}>
-                <BarChart data={revenue} margin={{ left: -10, right: 8, top: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
-                  <XAxis dataKey="month" tickLine={false} axisLine={false} fontSize={12} />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    fontSize={12}
-                    width={70}
-                    tickFormatter={(v) => money(Number(v))}
-                  />
-                  <Tooltip
-                    formatter={(v: number, n) => [money(v), n === "paid" ? "Paid" : "Outstanding"]}
-                    contentStyle={{
-                      borderRadius: 8,
-                      border: "1px solid hsl(var(--border))",
-                      background: "hsl(var(--popover))",
-                    }}
-                  />
-                  <Bar dataKey="paid" stackId="a" fill="#10b981" radius={[0, 0, 0, 0]} />
-                  <Bar dataKey="outstanding" stackId="a" fill="#5A6B4A" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="col-span-12 xl:col-span-4">
-          <CardHeader>
-            <CardTitle className="text-base">Project mix</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {projectMix.length === 0 ? (
-              <p className="py-12 text-center text-sm text-muted-foreground">No projects yet.</p>
-            ) : (
-              <>
-                <ResponsiveContainer width="100%" height={200}>
-                  <PieChart>
-                    <Pie
-                      data={projectMix}
-                      dataKey="count"
-                      nameKey="label"
-                      innerRadius={50}
-                      outerRadius={80}
-                      paddingAngle={2}
-                    >
-                      {projectMix.map((s) => (
-                        <Cell key={s.status} fill={s.color} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        borderRadius: 8,
-                        border: "1px solid hsl(var(--border))",
-                        background: "hsl(var(--popover))",
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-                <ul className="mt-2 space-y-1">
-                  {projectMix.map((s) => (
-                    <li key={s.status} className="flex items-center justify-between text-sm">
-                      <span className="flex items-center gap-2">
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
-                        {s.label}
-                      </span>
-                      <span className="font-medium">{s.count}</span>
-                    </li>
-                  ))}
-                </ul>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="col-span-12">
-          <CardHeader>
-            <CardTitle className="text-base">Billable utilisation by week</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {utilByWeek.length === 0 ? (
-              <p className="py-12 text-center text-sm text-muted-foreground">
-                No time entries yet. Logged time will chart here.
-              </p>
-            ) : (
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={utilByWeek} margin={{ left: -10, right: 8, top: 8 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
-                  <XAxis dataKey="week" tickLine={false} axisLine={false} fontSize={12} />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    fontSize={12}
-                    width={40}
-                    domain={[0, 100]}
-                    tickFormatter={(v) => `${v}%`}
-                  />
-                  <Tooltip
-                    formatter={(v: number) => [`${v}%`, "Billable"]}
-                    contentStyle={{
-                      borderRadius: 8,
-                      border: "1px solid hsl(var(--border))",
-                      background: "hsl(var(--popover))",
-                    }}
-                  />
-                  <Bar dataKey="pct" fill="#5A6B4A" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Named, exportable reports */}
-      <div>
-        <h2 className="gk-app-grad text-lg font-semibold tracking-tight">Reports</h2>
-        <p className="mb-3 text-sm text-muted-foreground">
-          Export-ready tables (CSV / XLSX). Profitability uses per-person cost rates set in Platform → Team.
-        </p>
-        <div className="grid grid-cols-12 gap-6">
-          <ReportCard
-            className="col-span-12"
-            title="Project profitability"
-            filename="gakinz-project-profitability"
-            head={["project", "client", "revenue", "cost", "margin"]}
-            labels={["Project", "Client", "Revenue", "Cost", "Margin"]}
-            money={["revenue", "cost", "margin"]}
-            rows={profit as unknown as Record<string, unknown>[]}
-          />
-          <ReportCard
-            className="col-span-12 xl:col-span-6"
-            title="Client lifetime value"
-            filename="gakinz-client-ltv"
-            head={["client", "paid", "outstanding", "invoices"]}
-            labels={["Client", "Paid", "Outstanding", "Invoices"]}
-            money={["paid", "outstanding"]}
-            rows={clientLtv as unknown as Record<string, unknown>[]}
-          />
-          <ReportCard
-            className="col-span-12 xl:col-span-6"
-            title="Recurring revenue (care plans)"
-            filename="gakinz-recurring-revenue"
-            head={["client", "contact", "paid"]}
-            labels={["Client", "Contact", "Paid"]}
-            money={["paid"]}
-            rows={recurring as unknown as Record<string, unknown>[]}
-          />
-          <ReportCard
-            className="col-span-12"
-            title="Revenue by month (paid vs outstanding)"
-            filename="gakinz-revenue-by-month"
-            head={["month", "paid", "outstanding"]}
-            labels={["Month", "Paid", "Outstanding"]}
-            money={["paid", "outstanding"]}
-            rows={revenueRows as unknown as Record<string, unknown>[]}
-          />
-        </div>
-      </div>
     </div>
   )
 }
 
-function ReportCard({
+const TICK = { fill: "hsl(var(--muted-foreground))", fontSize: 10, fontFamily: "\"JetBrains Mono Variable\", ui-monospace, monospace" }
+const TOOLTIP = {
+  borderRadius: 10,
+  border: "1px solid hsl(var(--border))",
+  background: "hsl(var(--popover))",
+  color: "hsl(var(--popover-foreground))",
+  fontSize: 13,
+}
+
+/** Axis label: £2.1k rather than £2,100.00, so the axis stays narrow. */
+function shortGbp(n: number) {
+  if (Math.abs(n) >= 1000) return `£${(n / 1000).toFixed(Math.abs(n) >= 10000 ? 0 : 1)}k`
+  return `£${Math.round(n)}`
+}
+
+function ChartCard({ title, extra, children }: { title: string; extra?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="min-w-0 rounded-2xl border bg-card">
+      <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 px-[18px] pb-3 pt-4">
+        <h2 className="font-display text-[1.05rem] font-semibold tracking-[-0.01em]">{title}</h2>
+        {extra && <div className="ml-auto">{extra}</div>}
+      </div>
+      <div className="px-[18px] pb-[18px]">{children}</div>
+    </section>
+  )
+}
+
+function ReportTable({
   title,
   filename,
   head,
   labels,
   money: moneyCols,
   rows,
-  className,
 }: {
   title: string
   filename: string
@@ -461,50 +447,58 @@ function ReportCard({
   labels: string[]
   money: string[]
   rows: Record<string, unknown>[]
-  className?: string
 }) {
   const isMoney = (k: string) => moneyCols.includes(k)
+  const isNum = (k: string) => isMoney(k) || k === "invoices" || k === "count"
   return (
-    <Card className={className}>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">{title}</CardTitle>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" disabled={!rows.length} onClick={() => downloadCsv(`${filename}.csv`, head, rows)}>
-            <Download className="mr-1 h-3.5 w-3.5" /> CSV
-          </Button>
-          <Button variant="outline" size="sm" disabled={!rows.length} onClick={() => downloadXlsx(`${filename}.xlsx`, head, rows, title.slice(0, 31))}>
-            <Download className="mr-1 h-3.5 w-3.5" /> XLSX
-          </Button>
+    <div>
+      {rows.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-line-strong bg-card px-5 py-10 text-center text-sm text-muted-foreground">
+          No data yet. Reports fill in once invoices and time entries exist.
         </div>
-      </CardHeader>
-      <CardContent>
-        {rows.length === 0 ? (
-          <p className="py-8 text-center text-sm text-muted-foreground">No data yet.</p>
-        ) : (
-          <div className="max-h-72 overflow-y-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-                  {labels.map((l, i) => (
-                    <th key={l} className={i === 0 ? "py-2" : "py-2 text-right"}>{l}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r, idx) => (
-                  <tr key={idx} className="border-b border-border/50">
-                    {head.map((k, i) => (
-                      <td key={k} className={i === 0 ? "py-1.5 font-medium" : "py-1.5 text-right"}>
-                        {isMoney(k) ? money(Number(r[k] ?? 0)) : String(r[k] ?? "—")}
-                      </td>
-                    ))}
-                  </tr>
+      ) : (
+        <div className="overflow-hidden rounded-[14px] border bg-card">
+          <Table className="min-w-[560px]">
+            <TableHeader>
+              <TableRow>
+                {head.map((k, i) => (
+                  <TableHead key={k} className={isNum(k) ? "text-right" : undefined}>
+                    {labels[i]}
+                  </TableHead>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {rows.map((r, idx) => (
+                <TableRow key={idx}>
+                  {head.map((k, i) => (
+                    <TableCell
+                      key={k}
+                      className={
+                        isNum(k)
+                          ? "whitespace-nowrap text-right font-mono tabular-nums"
+                          : i === 0
+                            ? "min-w-[10rem] font-semibold [overflow-wrap:anywhere]"
+                            : "min-w-[8rem] [overflow-wrap:anywhere]"
+                      }
+                    >
+                      {isMoney(k) ? money(Number(r[k] ?? 0)) : String(r[k] ?? "None")}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+      <div className="mt-2.5 flex flex-wrap gap-2">
+        <Button variant="outline" disabled={!rows.length} onClick={() => downloadCsv(`${filename}.csv`, head, rows)}>
+          <Download /> CSV
+        </Button>
+        <Button variant="outline" disabled={!rows.length} onClick={() => downloadXlsx(`${filename}.xlsx`, head, rows, title.slice(0, 31))}>
+          <Download /> XLSX
+        </Button>
+      </div>
+    </div>
   )
 }

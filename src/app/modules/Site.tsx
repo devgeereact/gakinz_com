@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { siteContent, work, type SiteContent, type SiteDrafts, type SiteSection } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { PageHeader } from "@/app/components/page-kit"
 import {
   HERO_MAX,
   SECTION_TAB,
@@ -431,25 +432,24 @@ export default function Site() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="min-w-0">
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Site content</h1>
-          <p className="text-sm text-muted-foreground">
-            The words and lists the public website shows. Edit, then publish when you are happy.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" onClick={publish} disabled={!ready || working !== null}>
-            {working === "publish" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Publish to website
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <a href="/" target="_blank" rel="noopener noreferrer">
-              <ExternalLink className="mr-2 h-4 w-4" /> View site
-            </a>
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        className="pb-0"
+        title="Site content"
+        subtitle="The words and lists the public website shows. Edit, then publish when you are happy."
+        actions={
+          <>
+            <Button onClick={publish} disabled={!ready || working !== null}>
+              {working === "publish" && <Loader2 className="animate-spin" />}
+              Publish to website
+            </Button>
+            <Button asChild variant="outline">
+              <a href="/" target="_blank" rel="noopener noreferrer">
+                <ExternalLink /> View site
+              </a>
+            </Button>
+          </>
+        }
+      />
 
       {loading ? (
         <div aria-busy="true" aria-label="Loading site content" className="space-y-4">
