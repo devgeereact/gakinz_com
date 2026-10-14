@@ -14,6 +14,7 @@ import {
   Trash2,
 } from "lucide-react"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -38,6 +39,7 @@ import {
   type WorkStatus,
 } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { PageHeader, StatusBadge } from "@/app/components/page-kit"
 import {
   HERO_MAX,
   blankHero,
@@ -485,28 +487,26 @@ export default function Work() {
   }, [detailImages, form.cover_file_id])
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Work</h1>
-          <p className="text-sm text-muted-foreground">
-            Case studies, products, experiments and writing. Published records appear on the public site; up to five
-            can lead the homepage hero.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={refresh}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
-          <Button size="sm" onClick={startNew}>
-            <Plus className="mr-2 h-4 w-4" /> New work
-          </Button>
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        title="Work"
+        subtitle="Case studies, products, experiments and writing. Published records appear on the public site; up to five can lead the homepage hero."
+        actions={
+          <>
+            <Button onClick={startNew}>
+              <Plus /> New work
+            </Button>
+            <Button variant="outline" onClick={refresh}>
+              <RefreshCw /> Refresh
+            </Button>
+          </>
+        }
+      />
+      <div className="space-y-4">
 
       {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the work endpoint and its tables must be live on the server.
+        <div role="alert" className="rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-sm text-foreground">
+          {error}. The work endpoint and its tables must be live on the server.
         </div>
       )}
 
@@ -514,7 +514,7 @@ export default function Work() {
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2.5 rounded-xl border border-border bg-card p-4">
           <span className="flex gap-1" aria-hidden="true">
             {Array.from({ length: HERO_MAX }, (_, i) => (
-              <i key={i} className={cn("h-1.5 w-[22px] rounded-full", i < heroCount ? "bg-primary" : "bg-muted")} />
+              <i key={i} className={cn("h-1.5 w-[22px] rounded-full", i < heroCount ? "bg-acc" : "bg-line-strong")} />
             ))}
           </span>
           <p className="min-w-[200px] flex-1 text-sm">
@@ -553,27 +553,13 @@ export default function Work() {
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-medium">{row.title}</span>
                     {row.featured === 1 && <Star className="h-3.5 w-3.5 fill-current text-amber-400" aria-label="Featured" />}
-                    <span className="gk-app-chip rounded-full px-2 py-0.5 text-xs">{KIND_LABEL[row.kind]}</span>
-                    <span
-                      className={cn(
-                        "rounded-full px-2 py-0.5 text-xs font-medium",
-                        row.status === "published"
-                          ? "bg-emerald-500/12 text-emerald-600"
-                          : "bg-muted text-muted-foreground",
-                      )}
-                    >
-                      {row.status}
-                    </span>
+                    <Badge variant="secondary">{KIND_LABEL[row.kind]}</Badge>
+                    <StatusBadge status={row.status} />
                     {row.client_name && (
-                      <span
-                        className={cn(
-                          "rounded-full px-2 py-0.5 text-xs font-medium",
-                          row.client_consent === 1 ? "bg-emerald-500/12 text-emerald-600" : "bg-amber-500/15 text-amber-700",
-                        )}
-                      >
+                      <Badge variant={row.client_consent === 1 ? "ok" : "warn"} className="max-w-full whitespace-normal [overflow-wrap:anywhere]">
                         {row.client_name}
                         {row.client_consent === 1 ? " · consent recorded" : " · no consent"}
-                      </span>
+                      </Badge>
                     )}
                   </div>
                   <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
@@ -653,6 +639,7 @@ export default function Work() {
             ))}
           </ul>
         )}
+      </div>
       </div>
 
       {/* ── Record form ───────────────────────────────────────────────────── */}
