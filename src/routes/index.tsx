@@ -100,6 +100,7 @@ export const router = createBrowserRouter([
       { path: "blog", lazy: lz(() => import("@/app/modules/Blog")) },
       { path: "testimonials", lazy: lz(() => import("@/app/modules/Testimonials")) },
       { path: "work", lazy: lz(() => import("@/app/modules/Work")) },
+      { path: "site", lazy: lz(() => import("@/app/modules/Site")) },
       { path: "files", lazy: lz(() => import("@/app/modules/Files")) },
       { path: "careplan", lazy: lz(() => import("@/app/modules/CarePlan")) },
       { path: "platform", lazy: lz(() => import("@/app/modules/Platform")) },

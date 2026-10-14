@@ -26,14 +26,14 @@ update this table when a count changes.
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 104 tests in 6 files (2026-10-14, redesign server batch) |
+| Unit tests | `npm test` | **PASS.** 128 tests in 8 files (2026-10-14, Site content and Work hero helpers added) |
 | Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 140 tests in 12 files (2026-10-14, Ubuntu, MariaDB 10.11, redesign server batch) |
 | Type check and build | `npm run typecheck`, `npm run build` | **PASS** |
 | Lint | `npm run lint:ratchet` | 41 errors, 1 warning, at the ratchet ceiling (2026-10-11). **`npm run lint` still fails** (K-002) |
 | Documentation | `npm run docs:check` | **PASS** |
 | PHP files | `ls server/*.php \| wc -l` | 47: 41 endpoints and 6 `_`-prefixed includes, all passing `php -l` (2026-10-14, `site.php` added) |
 | Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 35 (2026-10-14, `site_content` added) |
-| CMS screens | `src/routes/index.tsx` under `/app` | 25: Today (the index), 23 module routes and My account, in seven navigation groups |
+| CMS screens | `src/routes/index.tsx` under `/app` | 26: Today (the index), 24 module routes and My account, in seven navigation groups (2026-10-14, Site content added) |
 | Client API groups | `src/lib/api.ts` | 37 exported groups over one `request()` helper (2026-10-14, `siteContent` added) |
 | Server files changed since `main` | `git diff --name-only c57eb4a -- server` | 25 PHP files, `.htaccess`, `schema.sql`, `README.md` and `config.php.example`; the upload list is `docs/DEPLOYMENT.md` section 5 (2026-10-14) |
 | `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 36 of 47 files, 134 call sites (2026-10-14) |
@@ -404,8 +404,9 @@ dependency, and it has no fix available.
 | Public site, 16 routes under `PublicLayout` including the 404 | Built, rebuilt on the new design system | `src/routes/index.tsx`, `src/marketing/` |
 | Public work detail, `/work/:slug` | Built. The one route this relaunch adds | `src/marketing/pages/WorkDetail.tsx` |
 | Per-route metadata on every public page | Built | `src/marketing/components/Seo.tsx` |
-| CMS, 24 module routes | Built | `src/app/modules/`, all wired into routes, sidebar, global search and `access.ts` |
-| Work module, the 24th | Built | `src/app/modules/Work.tsx` |
+| CMS, 25 module routes | Built | `src/app/modules/`, all wired into routes, sidebar, global search and `access.ts` |
+| Work module, the 24th | Built. Homepage hero switches, brand colour, hero word and screenshots since 2026-10-14 (D-046) | `src/app/modules/Work.tsx` |
+| Site content module, the 25th | Built on branch `feat/redesign-cms-site`, not merged or deployed. Needs `site.php` and the `site_content` table live; the UI is checked against mocked responses only | `src/app/modules/Site.tsx` |
 | Authentication, 7 roles | Built | `src/app/Login.tsx`, `RequireAuth.tsx`, `src/lib/access.ts` |
 | Two-factor, recovery codes | Built. Setup now requires a current code when 2FA is already on | `src/app/modules/Platform.tsx`, `server/auth.php` |
 | Magic-link sign-in | Built | Login page |
