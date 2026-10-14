@@ -52,7 +52,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-039 | Clients cannot message the owner from the portal | High | **Fixed 2026-10-10.** Not deployed or uploaded. Private feedback still open |
 | K-040 | `stored` is a MySQL 8 reserved word, so the schema failed on MySQL | High | **Fixed 2026-10-10.** Not uploaded |
 | K-041 | `npm audit` reports 15 affected packages, ten of them high | Medium | Open. Owner decision |
-| K-042 | The Google Fonts `@import` still blocks rendering on public pages that no longer use those fonts | Low | Open |
+| K-042 | The Google Fonts `@import` still blocks rendering on public pages that no longer use those fonts | Low | Fixed in code 2026-10-14 (D-046), not deployed; CLS not re-measured |
 | K-043 | A static canonical in `index.html` conflicts with the per-route canonical | Low | Open |
 
 
@@ -348,8 +348,9 @@ FullCalendar reset went with FullCalendar. The five unused custom properties and
 misnamed `--gk-violet` / `--gk-indigo` / `--gk-sky` override on `.gk-public` are gone.
 
 The effect classes themselves (`.gk-aurora`, `.gk-grid`, `.gk-shine`, `.gk-grad-text`)
-remain, because `src/app/Login.tsx` and `SetPassword.tsx` still use them. They must not
-appear on a public page.
+remained at the time because `src/app/Login.tsx` and `SetPassword.tsx` used them. On
+2026-10-14 (D-046) the sign-in pages were restyled, those classes were deleted, `.gk-shine`
+became a no-op, and the gradient helpers and the custom background themes went too.
 
 **The original finding, for the record.**
 
@@ -860,7 +861,11 @@ individually, and update compatible versions in small batches with a fresh build
 (`docs/DEPLOYMENT.md` section 2, "Release policy"). Never `npm audit fix --force`.
 
 ## K-042 · The Google Fonts `@import` still blocks rendering on public pages
-**Severity:** low · **Status:** open.
+**Severity:** low · **Status:** fixed in code on 2026-10-14 on branch
+`feat/redesign-cms-shell` (D-046); not merged or deployed. The `@import` and the two
+`preconnect` links in `index.html` are removed; every face is now self-hosted from
+`@fontsource-variable` and imported in `src/main.tsx`. Lighthouse and CLS were **not
+re-measured** after the change.
 
 Since the D-037 public rebuild (2026-10-10) the public surface sets Sofia Sans, self-hosted
 from `@fontsource-variable/sofia-sans`. The `@import` at the top of `src/index.css` now loads

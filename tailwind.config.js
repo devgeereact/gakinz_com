@@ -55,28 +55,24 @@ var config = {
             },
             // Reference elevation levels 1 and 2: atmospheric, never hard.
             boxShadow: {
+                // The CMS's one elevation, for popovers, drawers and toasts.
+                os: 'var(--os-shadow)',
                 float: '0 4px 24px 0 rgba(0, 0, 0, 0.04)',
                 lifted: '0 24px 48px 0 rgba(0, 0, 0, 0.08)',
             },
             fontFamily: {
-                // CMS families. Unchanged — the public rebrand does not
-                // propagate into GAkinzOS.
-                sans: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
-                // `serif` previously mapped to Space Grotesk, a sans-serif
-                // face with no serif fallback, which meant `font-serif`
-                // silently rendered a sans. It names an actual serif, used
-                // by three CMS headings only.
-                serif: ['Newsreader', 'ui-serif', 'Georgia', 'serif'],
-                // Public-surface families (D-037). One family carries all
-                // three slots, as the reference requires: Sofia Sans
-                // variable, self-hosted, standing in for the proprietary
-                // MarkForMC, with Manrope as the fallback. The three names
-                // survive so pages need no edits; `font-data` still turns on
-                // tabular figures in index.css.
-                display: ['"Sofia Sans Variable"', 'Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                ui: ['"Sofia Sans Variable"', 'Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                data: ['"Sofia Sans Variable"', 'Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                // D-046: one type system for both surfaces, self-hosted from
+                // @fontsource-variable (src/main.tsx). Bricolage Grotesque for
+                // display, Hanken Grotesk for text, JetBrains Mono for figures
+                // and labels. `sans` is the CMS body face.
+                sans: ['"Hanken Grotesk Variable"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                mono: ['"JetBrains Mono Variable"', '"JetBrains Mono"', 'ui-monospace', 'Menlo', 'monospace'],
+                // No serif face ships. `font-serif` maps to the display face
+                // so the few headings that still name it read as display.
+                serif: ['"Bricolage Grotesque Variable"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                display: ['"Bricolage Grotesque Variable"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                ui: ['"Hanken Grotesk Variable"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                data: ['"JetBrains Mono Variable"', '"JetBrains Mono"', 'ui-monospace', 'Menlo', 'monospace'],
             },
             colors: {
                 // ── Public brand ─────────────────────────────────────────
@@ -112,7 +108,29 @@ var config = {
                     'set-on-dark': '#F3F0EE',    // 16.25:1 on ink
                     'come-on-dark': '#F37338',   // 6.43:1 on ink
                 },
-                // ── CMS tokens. Unchanged. ───────────────────────────────
+                // ── CMS tokens (D-046), values in src/index.css ─────────
+                // The prototype's single accent and its soft semantic tones.
+                acc: {
+                    DEFAULT: 'hsl(var(--os-acc))',
+                    soft: 'hsl(var(--os-acc-soft))',
+                    foreground: 'hsl(var(--os-on-acc))'
+                },
+                ok: {
+                    DEFAULT: 'hsl(var(--os-ok))',
+                    soft: 'hsl(var(--os-ok-soft))'
+                },
+                warn: {
+                    DEFAULT: 'hsl(var(--os-warn))',
+                    soft: 'hsl(var(--os-warn-soft))'
+                },
+                bad: {
+                    DEFAULT: 'hsl(var(--os-bad))',
+                    soft: 'hsl(var(--os-bad-soft))'
+                },
+                line: {
+                    DEFAULT: 'hsl(var(--border))',
+                    strong: 'hsl(var(--os-line-2))'
+                },
                 background: 'hsl(var(--background))',
                 foreground: 'hsl(var(--foreground))',
                 card: {
@@ -161,7 +179,8 @@ var config = {
                     accent: 'hsl(var(--sidebar-accent))',
                     'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
                     border: 'hsl(var(--sidebar-border))',
-                    ring: 'hsl(var(--sidebar-ring))'
+                    ring: 'hsl(var(--sidebar-ring))',
+                    muted: 'hsl(var(--os-side-mute))'
                 }
             }
         }

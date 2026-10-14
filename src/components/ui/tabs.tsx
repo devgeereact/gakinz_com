@@ -15,7 +15,7 @@ const TabsList = React.forwardRef<
       // max-w-full + overflow-x-auto: a long tab row scrolls inside itself on a
       // phone instead of widening the page (K-031). justify-start so the
       // first tabs stay reachable when it overflows.
-      "inline-flex h-9 max-w-full items-center justify-start overflow-x-auto rounded-lg bg-muted p-1 text-muted-foreground",
+      "inline-flex max-w-full items-end justify-start gap-1 overflow-x-auto border-b border-border text-muted-foreground [scrollbar-width:none]",
       className
     )}
     {...props}
@@ -30,7 +30,7 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      "inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow",
+      "-mb-px inline-flex min-h-[42px] shrink-0 items-center justify-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-3 text-sm font-semibold transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-acc data-[state=active]:text-foreground",
       className
     )}
     {...props}

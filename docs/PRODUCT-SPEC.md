@@ -306,6 +306,11 @@ Enquiries, Quotes and Settings, hides a group the role cannot use, and keeps eve
 (K-032). A client sees Client Portal and My account. Moving supporting tools inside their
 records, and record search, are not built.
 
+**As restyled on 2026-10-14 (D-046, not deployed):** My account and Sign out sit in the
+sidebar footer rather than under Settings, and the Website group opens with Site content
+(`/app/site`, `site` in `src/lib/access.ts`). Group headers fold and remember their state;
+Enquiries and Support show counts of new enquiries and open tickets.
+
 | Destination | Contents | Default view |
 |---|---|---|
 | Today | Follow-ups, calls, deadlines, waiting approvals, overdue invoices | Actions needing attention, then a few accurate totals |
