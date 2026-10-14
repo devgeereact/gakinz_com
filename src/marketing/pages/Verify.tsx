@@ -1,9 +1,8 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useParams } from "react-router-dom"
 import { api } from "@/lib/api"
 import Seo from "@/marketing/components/Seo"
-import { Label, PageHero, Section } from "../components/primitives"
-import { cn } from "@/lib/utils"
+import { PageHead } from "@/marketing/components/site-ui"
 
 /**
  * /verify/:id: public certificate verification (GAkinzOS §6.8). No login.
@@ -24,9 +23,12 @@ import { cn } from "@/lib/utils"
  *    the certificate reference is kept out of the description so an arbitrary
  *    URL segment cannot end up in a meta tag.
  *
- * The dl/dt/dd markup was already right and is unchanged in structure. The
- * spine colour follows the same convention as the work ledger: navy for a
- * record that is settled, red oxide where there is no material behind it.
+ * The dl/dt/dd markup was already right and is unchanged in structure.
+ *
+ * D-046: the page is built from src/marketing/site.css. A found certificate
+ * is a `.facts` card; "no matching certificate" (404, or an empty reference)
+ * and "the register could not be reached" (anything else) are now separate
+ * states, so a network fault is never reported as a forged certificate.
  */
 
 type Cert = {
@@ -36,10 +38,17 @@ type Cert = {
   issued_at: string
 }
 
+type State = "loading" | "valid" | "invalid" | "error"
+
 export default function Verify() {
   const { id } = useParams()
-  const [state, setState] = useState<"loading" | "valid" | "invalid">("loading")
+  const [state, setState] = useState<State>("loading")
   const [cert, setCert] = useState<Cert | null>(null)
+  const [attempt, setAttempt] = useState(0)
+  const retry = useCallback(() => {
+    setState("loading")
+    setAttempt((n) => n + 1)
+  }, [])
 
   useEffect(() => {
     let alive = true
@@ -48,14 +57,16 @@ export default function Verify() {
       if (res.ok && res.data?.id) {
         setCert(res.data)
         setState("valid")
-      } else {
+      } else if (res.ok || res.status === 404 || res.status === 400) {
         setState("invalid")
+      } else {
+        setState("error")
       }
     })
     return () => {
       alive = false
     }
-  }, [id])
+  }, [id, attempt])
 
   return (
     <>
@@ -66,62 +77,68 @@ export default function Verify() {
         noIndex
       />
 
-      <PageHero
-        eyebrow="Verification"
-        breadcrumb="Verification"
+      <PageHead
+        crumbs={[[null, "Verification"]]}
         title="Certificate check"
-        intro="Every certificate carries a reference. Enter it in the address and this page reports what the register holds against it."
+        lede="Every certificate carries a reference. Enter it in the address and this page reports what the register holds against it."
       />
 
-      <Section>
-        <div className="max-w-xl">
-          <Label>Reference</Label>
-          <p className="mt-2 font-data text-body text-gk-ink">{id || "none given"}</p>
+      <section className="sec wrap" style={{ paddingTop: 56 }}>
+        <div style={{ maxWidth: "36rem" }}>
+          <p className="mono mute">Reference</p>
+          <p className="mono" style={{ fontSize: 15, marginTop: 8, overflowWrap: "anywhere" }}>
+            {id || "none given"}
+          </p>
 
-          <div
-            aria-live="polite"
-            aria-busy={state === "loading"}
-            className={cn(
-              "mt-8 border border-gk-edge border-l-2 p-6 sm:p-8",
-              state === "valid" && "border-l-gk-set",
-              state === "invalid" && "border-l-gk-come",
-              state === "loading" && "border-l-gk-edge",
-            )}
-          >
-            {state === "loading" && <p className="text-lede text-gk-ink-soft">Checking the register…</p>}
+          <div aria-live="polite" aria-busy={state === "loading"} style={{ marginTop: 32 }}>
+            {state === "loading" && <p className="lede">Checking the register…</p>}
 
             {state === "valid" && cert && (
-              <>
-                <h2 className="font-display text-t3 text-gk-set">Valid certificate</h2>
-                <dl className="mt-6 border-t border-gk-rule font-data text-label">
-                  <div className="flex items-baseline justify-between gap-6 border-b border-gk-rule py-3">
-                    <dt className="uppercase text-gk-ink-mute">Recipient</dt>
-                    <dd className="text-right text-gk-ink">{cert.recipient}</dd>
+              <div>
+                <p className="pill pill--live">Found in the register</p>
+                <h2 className="h-m" style={{ margin: "14px 0 20px" }}>
+                  Valid certificate
+                </h2>
+                <dl className="facts" style={{ position: "static" }}>
+                  <div>
+                    <dt>Recipient</dt>
+                    <dd>{cert.recipient}</dd>
                   </div>
-                  <div className="flex items-baseline justify-between gap-6 border-b border-gk-rule py-3">
-                    <dt className="uppercase text-gk-ink-mute">Programme</dt>
-                    <dd className="text-right text-gk-ink">{cert.programme}</dd>
+                  <div>
+                    <dt>Programme</dt>
+                    <dd>{cert.programme}</dd>
                   </div>
-                  <div className="flex items-baseline justify-between gap-6 py-3">
-                    <dt className="uppercase text-gk-ink-mute">Issued</dt>
-                    <dd className="text-right text-gk-ink">{cert.issued_at}</dd>
+                  <div>
+                    <dt>Issued</dt>
+                    <dd>{cert.issued_at}</dd>
                   </div>
                 </dl>
-              </>
+              </div>
             )}
 
             {state === "invalid" && (
-              <>
-                <h2 className="font-display text-t3 text-gk-come">No matching certificate</h2>
-                <p className="mt-4 text-body text-gk-ink-soft">
-                  The register holds nothing against that reference. Check the code on the
-                  certificate and try again.
+              <div className="notice notice--bad">
+                <h2 className="h-m">No matching certificate</h2>
+                <p className="mute" style={{ marginTop: 12 }}>
+                  The register holds nothing against that reference. Check the code on the certificate and try again.
                 </p>
-              </>
+              </div>
+            )}
+
+            {state === "error" && (
+              <div className="notice notice--warn">
+                <h2 className="h-m">The register could not be checked</h2>
+                <p className="mute" style={{ marginTop: 12 }}>
+                  This is a fault at my end, not a judgement on the certificate. Try again in a minute.
+                </p>
+                <button className="btn" type="button" style={{ marginTop: 20 }} onClick={retry}>
+                  Try again
+                </button>
+              </div>
             )}
           </div>
         </div>
-      </Section>
+      </section>
     </>
   )
 }
