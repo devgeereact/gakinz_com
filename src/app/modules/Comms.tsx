@@ -1,23 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import {
-  Loader2,
-  RefreshCw,
-  Plus,
-  Send,
-  Archive,
-  ArchiveRestore,
-  Mail,
-  MessageSquare,
-  Phone,
-  Users2,
-  StickyNote,
-  CalendarDays,
-  ArrowDownLeft,
-  ArrowUpRight,
-} from "lucide-react"
+import { Loader2, RefreshCw, Plus, Send, Archive, ArchiveRestore, MessagesSquare, NotebookPen } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -26,7 +13,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import {
   Select,
@@ -47,15 +33,18 @@ import {
   type Project,
 } from "@/lib/api"
 import AiAssist from "@/app/components/AiAssist"
+import { EmptyState, LoadError } from "@/app/components/EmptyState"
+import { PageHeader } from "@/app/components/page-kit"
+import { cn } from "@/lib/utils"
 
-const CHANNELS: { key: CommChannel; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { key: "email", label: "Email", icon: Mail },
-  { key: "sms", label: "SMS", icon: MessageSquare },
-  { key: "whatsapp", label: "WhatsApp", icon: MessageSquare },
-  { key: "call", label: "Call", icon: Phone },
-  { key: "meeting", label: "Meeting", icon: CalendarDays },
-  { key: "client", label: "Client", icon: Users2 },
-  { key: "internal", label: "Internal", icon: StickyNote },
+const CHANNELS: { key: CommChannel; label: string }[] = [
+  { key: "email", label: "Email" },
+  { key: "sms", label: "SMS" },
+  { key: "whatsapp", label: "WhatsApp" },
+  { key: "call", label: "Call" },
+  { key: "meeting", label: "Meeting" },
+  { key: "client", label: "Client" },
+  { key: "internal", label: "Internal" },
 ]
 
 const DIRECTIONS: { key: CommDirection; label: string }[] = [
@@ -63,6 +52,7 @@ const DIRECTIONS: { key: CommDirection; label: string }[] = [
   { key: "out", label: "We sent" },
   { key: "in", label: "They sent" },
 ]
+const DIRECTION_LABEL = Object.fromEntries(DIRECTIONS.map((d) => [d.key, d.label])) as Record<CommDirection, string>
 
 function channelMeta(c: CommChannel) {
   return CHANNELS.find((x) => x.key === c) ?? CHANNELS.find((x) => x.key === "internal")!
@@ -239,315 +229,334 @@ export default function Comms() {
     return `${head}\n\n${log}`
   }, [detail])
 
+  // View filters only; nothing is fetched or saved.
+  const [channelFilter, setChannelFilter] = useState<CommChannel | "all">("all")
+  const channelsInUse = useMemo(() => CHANNELS.filter((c) => threads.some((t) => t.channel === c.key)), [threads])
+  const listed = visible.filter((t) => channelFilter === "all" || t.channel === channelFilter)
+  const chip = (active: boolean) =>
+    cn(
+      "inline-flex min-h-[34px] items-center gap-1 whitespace-nowrap rounded-full border px-3 text-[13px] font-medium transition-colors",
+      active ? "border-foreground bg-foreground text-background" : "border-border bg-card hover:border-line-strong",
+    )
+
+  const newButton = (
+    <Button onClick={() => setOpen(true)}>
+      <Plus /> New conversation
+    </Button>
+  )
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Communication Hub</h1>
-          <p className="text-sm text-muted-foreground">
-            Every conversation — emails, calls, client messages, internal notes — tied to its client
-            and project.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowArchived((v) => !v)}>
-            {showArchived ? "Hide archived" : "Show archived"}
-          </Button>
-          <Button variant="outline" size="sm" onClick={loadThreads}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" /> New conversation
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>New conversation</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-3">
-                <Input
-                  placeholder="Subject"
-                  value={form.subject}
-                  onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
-                />
-                <div className="grid grid-cols-2 gap-3">
-                  <Select
-                    value={form.channel}
-                    onValueChange={(v) => setForm((f) => ({ ...f, channel: v as CommChannel }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Channel" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CHANNELS.map((c) => (
-                        <SelectItem key={c.key} value={c.key}>
-                          {c.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={form.client_id}
-                    onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Client (optional)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clientList.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>
-                          {c.company}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Select
-                  value={form.project_id}
-                  onValueChange={(v) => setForm((f) => ({ ...f, project_id: v }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Project (optional)" />
+    <div>
+      <PageHeader
+        title="Communication Hub"
+        subtitle="Every conversation, emails, calls, client messages and internal notes, tied to its client and project."
+        actions={
+          <>
+            {newButton}
+            <Button variant="outline" onClick={loadThreads} disabled={loading}>
+              <RefreshCw className={cn(loading && "animate-spin")} /> Refresh
+            </Button>
+          </>
+        }
+      />
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New conversation</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-3.5">
+            <div className="grid gap-1.5">
+              <Label htmlFor="comm-subject">Subject</Label>
+              <Input
+                id="comm-subject"
+                value={form.subject}
+                onChange={(e) => setForm((f) => ({ ...f, subject: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-3.5 sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <Label htmlFor="comm-channel">Channel</Label>
+                <Select value={form.channel} onValueChange={(v) => setForm((f) => ({ ...f, channel: v as CommChannel }))}>
+                  <SelectTrigger id="comm-channel">
+                    <SelectValue placeholder="Channel" />
                   </SelectTrigger>
                   <SelectContent>
-                    {projectList.map((p) => (
-                      <SelectItem key={p.id} value={String(p.id)}>
-                        {p.name}
+                    {CHANNELS.map((c) => (
+                      <SelectItem key={c.key} value={c.key}>
+                        {c.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                <Textarea
-                  placeholder="First note (optional)"
-                  rows={4}
-                  value={form.body}
-                  onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
-                />
               </div>
-              <DialogFooter>
-                <Button onClick={createThread} disabled={saving}>
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Start
-                </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
-      </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="comm-client">Client</Label>
+                <Select value={form.client_id} onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}>
+                  <SelectTrigger id="comm-client">
+                    <SelectValue placeholder="Client (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clientList.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.company}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="comm-project">Project</Label>
+              <Select value={form.project_id} onValueChange={(v) => setForm((f) => ({ ...f, project_id: v }))}>
+                <SelectTrigger id="comm-project">
+                  <SelectValue placeholder="Project (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  {projectList.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="comm-body">First note</Label>
+              <Textarea
+                id="comm-body"
+                placeholder="Optional"
+                rows={4}
+                value={form.body}
+                onChange={(e) => setForm((f) => ({ ...f, body: e.target.value }))}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={createThread} disabled={saving}>
+              {saving && <Loader2 className="animate-spin" />} Start conversation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {error && (
-        <div className="rounded-lg border border-amber-300/60 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-950/30 dark:text-amber-200">
-          {error}. If you’re running locally, make sure <code>comms.php</code> is uploaded and the
-          schema migration has run.
-        </div>
+        <LoadError
+          what="conversations"
+          detail={`${error}. Make sure comms.php is uploaded and the schema migration has run.`}
+          onRetry={loadThreads}
+          className="mb-4"
+        />
       )}
 
-      <div className="grid grid-cols-12 gap-6">
-        {/* Thread list */}
-        <div className="col-span-12 lg:col-span-4 xl:col-span-3">
-          <div className="rounded-xl border bg-card">
-            {loading ? (
-              <div className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-              </div>
-            ) : visible.length === 0 ? (
-              <div className="px-4 py-16 text-center text-sm text-muted-foreground">
-                No conversations yet. Start one to keep a thread of every touchpoint.
-              </div>
-            ) : (
-              <ul className="max-h-[70vh] divide-y overflow-auto">
-                {visible.map((t) => {
-                  const Meta = channelMeta(t.channel)
-                  const active = t.id === selectedId
-                  return (
-                    <li key={t.id}>
-                      <button
-                        onClick={() => loadDetail(t.id)}
-                        className={`flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors hover:bg-muted/50 ${
-                          active ? "bg-muted" : ""
-                        }`}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="flex min-w-0 items-center gap-1.5">
-                            <Meta.icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                            <span className="truncate text-sm font-medium">{t.subject}</span>
-                          </span>
-                          <span className="shrink-0 text-xs text-muted-foreground">
-                            {timeAgo(t.last_message_at ?? t.created_at)}
-                          </span>
-                        </div>
-                        {(t.client_company || t.project_name) && (
-                          <span className="truncate text-xs text-muted-foreground">
-                            {[t.client_company, t.project_name].filter(Boolean).join(" · ")}
-                          </span>
-                        )}
-                        {t.preview && (
-                          <span className="truncate text-xs text-muted-foreground/80">{t.preview}</span>
-                        )}
-                        {t.status === "archived" && (
-                          <Badge variant="secondary" className="mt-0.5 w-fit text-[10px]">
-                            Archived
-                          </Badge>
-                        )}
-                      </button>
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
+      {!loading && !error && threads.length === 0 ? (
+        <EmptyState
+          icon={MessagesSquare}
+          title="No conversations yet"
+          description="Start one to keep a thread of every touchpoint."
+          action={newButton}
+        />
+      ) : (
+        <>
+          <div className="mb-3.5 flex flex-wrap items-center gap-2" role="group" aria-label="Filter conversations">
+            <button type="button" className={chip(channelFilter === "all")} aria-pressed={channelFilter === "all"} onClick={() => setChannelFilter("all")}>
+              All
+            </button>
+            {channelsInUse.map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                className={chip(channelFilter === c.key)}
+                aria-pressed={channelFilter === c.key}
+                onClick={() => setChannelFilter(c.key)}
+              >
+                {c.label}
+              </button>
+            ))}
+            <span aria-hidden className="mx-1 h-5 w-px bg-border" />
+            <button type="button" className={chip(showArchived)} aria-pressed={showArchived} onClick={() => setShowArchived((v) => !v)}>
+              Show archived
+            </button>
           </div>
-        </div>
 
-        {/* Thread detail */}
-        <div className="col-span-12 lg:col-span-8 xl:col-span-9">
-          {!detail ? (
-            <div className="flex h-[60vh] items-center justify-center rounded-xl border border-dashed bg-muted/20 text-sm text-muted-foreground">
-              {detailLoading ? (
-                <span className="flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" /> Opening…
-                </span>
+          <div className="grid items-start gap-4 min-[901px]:grid-cols-[minmax(0,22rem)_minmax(0,1fr)]">
+            {/* Thread list */}
+            <div className="min-w-0 rounded-2xl border bg-card p-1.5">
+              {loading ? (
+                <div aria-busy="true" aria-label="Loading conversations" className="grid gap-1 p-1">
+                  {Array.from({ length: 4 }, (_, i) => (
+                    <div key={i} className="grid gap-2 px-2.5 py-2.5">
+                      <Skeleton className="h-3.5 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                  ))}
+                </div>
+              ) : listed.length === 0 ? (
+                <p className="px-3 py-10 text-center text-sm text-muted-foreground">No conversations match this filter.</p>
               ) : (
-                "Select a conversation to read and reply."
+                <ul className="max-h-[70vh] overflow-y-auto">
+                  {listed.map((t) => {
+                    const active = t.id === selectedId
+                    return (
+                      <li key={t.id}>
+                        <button
+                          type="button"
+                          onClick={() => loadDetail(t.id)}
+                          aria-current={active || undefined}
+                          className={cn(
+                            "flex min-h-10 w-full flex-col items-start gap-0.5 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-secondary",
+                            active && "bg-secondary",
+                          )}
+                        >
+                          <span className="flex w-full min-w-0 items-start gap-2">
+                            <b className="min-w-0 flex-1 font-semibold [overflow-wrap:anywhere]">{t.subject}</b>
+                            <span className="shrink-0 pt-0.5 font-mono text-xs tabular-nums text-muted-foreground">
+                              {timeAgo(t.last_message_at ?? t.created_at)}
+                            </span>
+                          </span>
+                          <span className="w-full min-w-0 text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
+                            {[t.client_company, t.project_name, channelMeta(t.channel).label].filter(Boolean).join(" · ")}
+                          </span>
+                          {t.preview && <span className="line-clamp-1 w-full min-w-0 text-[12.5px] text-muted-foreground">{t.preview}</span>}
+                          {t.status === "archived" && (
+                            <Badge variant="secondary" className="mt-1">
+                              Archived
+                            </Badge>
+                          )}
+                        </button>
+                      </li>
+                    )
+                  })}
+                </ul>
               )}
             </div>
-          ) : (
-            <div className="flex h-[72vh] flex-col rounded-xl border bg-card">
-              {/* Header */}
-              <div className="flex items-start justify-between gap-3 border-b p-4">
-                <div className="min-w-0">
-                  <h2 className="flex items-center gap-2 text-lg font-semibold">
-                    {(() => {
-                      const M = channelMeta(detail.channel)
-                      return <M.icon className="h-4 w-4 text-muted-foreground" />
-                    })()}
-                    <span className="truncate">{detail.subject}</span>
-                  </h2>
-                  <p className="text-xs text-muted-foreground">
-                    {[detail.client_company, detail.project_name].filter(Boolean).join(" · ") ||
-                      "No client or project linked"}
-                  </p>
-                </div>
-                <Button variant="outline" size="sm" onClick={toggleArchive}>
-                  {detail.status === "archived" ? (
-                    <>
-                      <ArchiveRestore className="mr-2 h-4 w-4" /> Reopen
-                    </>
+
+            {/* Thread detail */}
+            <div className="min-w-0 rounded-2xl border bg-card p-[18px]">
+              {!detail ? (
+                <p className="py-16 text-center text-muted-foreground">
+                  {detailLoading ? (
+                    <span className="inline-flex items-center gap-2">
+                      <Loader2 className="size-4 animate-spin" /> Opening…
+                    </span>
                   ) : (
-                    <>
-                      <Archive className="mr-2 h-4 w-4" /> Archive
-                    </>
+                    "Select a conversation to read and reply."
                   )}
-                </Button>
-              </div>
-
-              {/* Feed */}
-              <div ref={feedRef} className="flex-1 space-y-3 overflow-auto p-4">
-                {detail.messages.length === 0 ? (
-                  <p className="py-8 text-center text-sm text-muted-foreground">
-                    No messages yet. Add the first note below.
-                  </p>
-                ) : (
-                  detail.messages.map((m) => (
-                    <div
-                      key={m.id}
-                      className={`flex flex-col ${m.direction === "in" ? "items-start" : "items-end"}`}
-                    >
-                      <div
-                        className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm ${
-                          m.direction === "note"
-                            ? "bg-muted text-foreground"
-                            : m.direction === "in"
-                              ? "bg-secondary text-secondary-foreground"
-                              : "bg-primary text-primary-foreground"
-                        }`}
-                      >
-                        <p className="whitespace-pre-wrap break-words">{m.body}</p>
-                      </div>
-                      <span className="mt-1 flex items-center gap-1 text-[11px] text-muted-foreground">
-                        {m.direction === "in" ? (
-                          <ArrowDownLeft className="h-3 w-3" />
-                        ) : m.direction === "out" ? (
-                          <ArrowUpRight className="h-3 w-3" />
-                        ) : (
-                          <StickyNote className="h-3 w-3" />
-                        )}
-                        {m.author ?? "—"} · {timeAgo(m.created_at)}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-
-              {/* Composer */}
-              <div className="border-t p-3">
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <Select value={direction} onValueChange={(v) => setDirection(v as CommDirection)}>
-                    <SelectTrigger className="h-8 w-40 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DIRECTIONS.map((d) => (
-                        <SelectItem key={d.key} value={d.key}>
-                          {d.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <AiAssist
-                    task="comm_reply"
-                    title="Draft a reply"
-                    label="AI draft"
-                    input={aiContext}
-                    system="You are a GAkinz studio account manager. Given the conversation log, draft a concise, warm, professional reply we (the studio) would send next. Plain text, no greetings boilerplate unless natural."
-                    onUse={(t) => {
-                      setComposer(t)
-                      setDirection("out")
-                    }}
-                  />
-                </div>
-                <div className="flex items-end gap-2">
-                  <Textarea
-                    placeholder="Write a message or note…"
-                    rows={2}
-                    value={composer}
-                    onChange={(e) => setComposer(e.target.value)}
-                    onKeyDown={(e) => {
-                      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") post()
-                    }}
-                    className="resize-none"
-                  />
-                  {canSend && (
-                    <Button
-                      onClick={sendMessage}
-                      disabled={sending || posting || !composer.trim()}
-                      title="Deliver this to the client and record it"
-                    >
-                      {sending ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : detail?.channel === "sms" ? (
-                        <MessageSquare className="mr-2 h-4 w-4" />
+                </p>
+              ) : (
+                <>
+                  <div className="mb-1.5 flex flex-wrap items-center gap-2.5">
+                    <h2 className="min-w-[min(100%,12rem)] flex-1 font-display text-[1.25rem] font-semibold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">
+                      {detail.subject}
+                    </h2>
+                    <Badge variant="secondary">{channelMeta(detail.channel).label}</Badge>
+                    <Button variant="ghost" onClick={toggleArchive}>
+                      {detail.status === "archived" ? (
+                        <>
+                          <ArchiveRestore /> Reopen
+                        </>
                       ) : (
-                        <Mail className="mr-2 h-4 w-4" />
+                        <>
+                          <Archive /> Archive
+                        </>
                       )}
-                      {sendLabel}
                     </Button>
-                  )}
-                  <Button
-                    onClick={post}
-                    disabled={posting || sending || !composer.trim()}
-                    size="icon"
-                    variant={canSend ? "outline" : "default"}
-                    title="Record as a message or note (nothing sent)"
-                  >
-                    {posting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-                  </Button>
-                </div>
-              </div>
+                  </div>
+                  <p className="mb-3.5 text-muted-foreground [overflow-wrap:anywhere]">
+                    {[detail.client_company, detail.project_name].filter(Boolean).join(" · ") || "No client or project linked"}
+                  </p>
+
+                  {/* Feed */}
+                  <div ref={feedRef} className="max-h-[50vh] overflow-y-auto">
+                    {detail.messages.length === 0 ? (
+                      <p className="py-6 text-center text-sm text-muted-foreground">No messages yet. Add the first note below.</p>
+                    ) : (
+                      <ul className="m-0 list-none p-0">
+                        {detail.messages.map((m) => (
+                          <li key={m.id} className="grid grid-cols-[20px_minmax(0,1fr)] gap-2.5 py-2">
+                            <span
+                              aria-hidden
+                              className={cn(
+                                "ml-[5px] mt-1.5 size-[9px] rounded-full shadow-[0_0_0_3px_hsl(var(--card))]",
+                                m.direction === "out" ? "bg-acc" : "bg-line-strong",
+                              )}
+                            />
+                            <span className="min-w-0">
+                              <b className="font-semibold">{DIRECTION_LABEL[m.direction]}</b>{" "}
+                              <small className="text-[12.5px] text-muted-foreground">
+                                · {m.author ?? "—"} · {timeAgo(m.created_at)}
+                              </small>
+                              <span className="mt-0.5 block whitespace-pre-wrap [overflow-wrap:anywhere]">{m.body}</span>
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+
+                  {/* Composer */}
+                  <div className="mt-3 grid gap-1.5">
+                    <Label htmlFor="comm-composer" className="sr-only">
+                      Message
+                    </Label>
+                    <Textarea
+                      id="comm-composer"
+                      placeholder="Write a message or note…"
+                      rows={3}
+                      value={composer}
+                      onChange={(e) => setComposer(e.target.value)}
+                      onKeyDown={(e) => {
+                        if ((e.metaKey || e.ctrlKey) && e.key === "Enter") post()
+                      }}
+                    />
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+                    <Select value={direction} onValueChange={(v) => setDirection(v as CommDirection)}>
+                      <SelectTrigger aria-label="Record as" className="mr-auto w-40">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {DIRECTIONS.map((d) => (
+                          <SelectItem key={d.key} value={d.key}>
+                            {d.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <AiAssist
+                      task="comm_reply"
+                      title="Draft a reply"
+                      label="AI draft"
+                      size="default"
+                      input={aiContext}
+                      system="You are a GAkinz studio account manager. Given the conversation log, draft a concise, warm, professional reply we (the studio) would send next. Plain text, no greetings boilerplate unless natural."
+                      onUse={(t) => {
+                        setComposer(t)
+                        setDirection("out")
+                      }}
+                    />
+                    <Button
+                      onClick={post}
+                      disabled={posting || sending || !composer.trim()}
+                      variant={canSend ? "outline" : "default"}
+                      title="Record as a message or note (nothing sent)"
+                    >
+                      {posting ? <Loader2 className="animate-spin" /> : <NotebookPen />}
+                      Record (nothing sent)
+                    </Button>
+                    {canSend && (
+                      <Button onClick={sendMessage} disabled={sending || posting || !composer.trim()} title="Deliver this to the client and record it">
+                        {sending ? <Loader2 className="animate-spin" /> : <Send />}
+                        {sendLabel}
+                      </Button>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
-          )}
-        </div>
-      </div>
+          </div>
+        </>
+      )}
     </div>
   )
 }
