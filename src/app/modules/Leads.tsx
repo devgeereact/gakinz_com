@@ -289,7 +289,8 @@ export default function Leads() {
           ))}
         </div>
       ) : !error && items.length === 0 ? (
-        <EmptyState icon={Inbox} title="No enquiries yet" description="The public contact form feeds this board." />
+        <EmptyState
+          className="rounded-2xl border border-dashed border-line-strong bg-card py-14" icon={Inbox} title="No enquiries yet" description="The public contact form feeds this board." />
       ) : !error ? (
         <>
           <div className="grid auto-cols-[minmax(250px,1fr)] grid-flow-col gap-3.5 overflow-x-auto pb-2">

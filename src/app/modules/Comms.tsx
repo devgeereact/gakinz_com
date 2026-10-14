@@ -351,6 +351,7 @@ export default function Comms() {
 
       {!loading && !error && threads.length === 0 ? (
         <EmptyState
+          className="rounded-2xl border border-dashed border-line-strong bg-card py-14"
           icon={MessagesSquare}
           title="No conversations yet"
           description="Start one to keep a thread of every touchpoint."

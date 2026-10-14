@@ -3,9 +3,11 @@ import { AlertTriangle, RefreshCw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-// Empty state for GAkinzOS modules (history: docs/DECISIONS.md D-006), in the
-// approved prototype's `.empty` look (D-046): a dashed card, a soft accent icon
-// tile, a display title, one muted line and an optional action.
+// Empty state for GAkinzOS modules (history: docs/DECISIONS.md D-006), with the
+// approved prototype's `.empty` contents (D-046): a soft accent icon tile, a
+// display title, one muted line and an optional action. It draws no frame, so it
+// can sit inside a card; a full-page empty state passes the dashed card classes
+// (rounded-2xl border border-dashed border-line-strong bg-card py-14).
 type EmptyStateProps = {
   icon?: ComponentType<{ className?: string }>
   title: string
@@ -19,7 +21,7 @@ export function EmptyState({ icon: Icon, title, description, action, className }
   return (
     <div
       className={cn(
-        "grid place-items-center gap-2.5 rounded-2xl border border-dashed border-line-strong bg-card px-5 py-14 text-center",
+        "grid place-items-center gap-2.5 px-5 py-12 text-center",
         className,
       )}
     >
@@ -28,7 +30,7 @@ export function EmptyState({ icon: Icon, title, description, action, className }
           <Icon className="size-[18px]" />
         </span>
       )}
-      <h2 className="font-display text-[1.2rem] font-semibold leading-tight tracking-[-0.025em] text-foreground">{title}</h2>
+      <p className="font-display text-[1.2rem] font-semibold leading-tight tracking-[-0.025em] text-foreground">{title}</p>
       {description && <p className="max-w-[46ch] text-muted-foreground">{description}</p>}
       {action && <div className="mt-1 flex flex-wrap justify-center gap-2">{action}</div>}
     </div>

@@ -180,11 +180,13 @@ export default function Portal() {
       )}
 
       {!isClient && !clientId && !error && (
-        <EmptyState icon={Eye} title="Choose a client to preview" description="Pick a client above to see their portal exactly as they do." />
+        <EmptyState
+          className="rounded-2xl border border-dashed border-line-strong bg-card py-14" icon={Eye} title="Choose a client to preview" description="Pick a client above to see their portal exactly as they do." />
       )}
 
       {isClient && user?.client_id == null && !error && (
-        <EmptyState icon={Link2Off} title="Your account isn’t linked to a client yet" description="Please contact GAkinz and we will link it." />
+        <EmptyState
+          className="rounded-2xl border border-dashed border-line-strong bg-card py-14" icon={Link2Off} title="Your account isn’t linked to a client yet" description="Please contact GAkinz and we will link it." />
       )}
 
       {data && (

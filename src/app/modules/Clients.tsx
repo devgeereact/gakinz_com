@@ -251,13 +251,15 @@ export default function Clients() {
         </div>
       ) : error ? null : items.length === 0 ? (
         <EmptyState
+          className="rounded-2xl border border-dashed border-line-strong bg-card py-14"
           icon={Building2}
           title="No clients yet"
           description="Add one, or convert a won lead from the Enquiries board."
           action={addButton}
         />
       ) : shown.length === 0 ? (
-        <EmptyState icon={Search} title="No matching clients" description={`Nothing matches “${query.trim()}”. Try a company, contact or email.`} />
+        <EmptyState
+          className="rounded-2xl border border-dashed border-line-strong bg-card py-14" icon={Search} title="No matching clients" description={`Nothing matches “${query.trim()}”. Try a company, contact or email.`} />
       ) : (
         <div className="overflow-hidden rounded-[14px] border bg-card">
           <Table className="min-w-[640px]">
