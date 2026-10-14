@@ -58,7 +58,7 @@ no Composer dependency. Tests are Vitest. Deploys run on GitHub Actions.
 ```
 src/
   marketing/     public site: layout, pages, copy in data/site.ts, work ledger in data/work.ts
-    components/  primitives.tsx (the public design system), Seo.tsx, Ledger.tsx
+    components/  site-ui.tsx (shared public parts, styles in ../site.css), Seo.tsx
   app/           GAkinzOS CMS: modules, My account, login, route guard
   components/    shared UI, shadcn primitives under ui/
   layouts/       CMS shell

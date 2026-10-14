@@ -1,6 +1,6 @@
 import Seo from "@/marketing/components/Seo"
 import { site } from "@/marketing/data/site"
-import { Gap, Label, PageHero, Section } from "../components/primitives"
+import { PageHead } from "@/marketing/components/site-ui"
 
 /**
  * /privacy, /terms and /cookies: three routes from one component.
@@ -23,6 +23,10 @@ import { Gap, Label, PageHero, Section } from "../components/primitives"
  * Changed: first person singular throughout, because there is no "we". The old
  * copy spoke for a studio on pages that state who is legally responsible.
  *
+ * Changed (D-046): the layout moved to the public design system in
+ * src/marketing/site.css, with the clauses beside a facts card. The missing
+ * review date still renders as the site's labelled `.gap` marker.
+ *
  * NOT changed: the substance of any clause. Several of them are thin, and one
  * may not be enforceable as written. Those are recorded in the handover report
  * rather than quietly rewritten, because a policy is a legal instrument and
@@ -30,6 +34,8 @@ import { Gap, Label, PageHero, Section } from "../components/primitives"
  */
 
 type Block = { h: string; p: string[] }
+
+const pad = (n: number) => String(n).padStart(2, "0")
 
 function LegalPage({
   title,
@@ -45,54 +51,51 @@ function LegalPage({
 }) {
   return (
     <>
-      <PageHero eyebrow="Legal" title={title} intro={intro} breadcrumb={title} />
-      <Section>
-        <div className="grid gap-10 lg:grid-cols-[22rem_1fr] lg:gap-16">
-          <div className="lg:sticky lg:top-24 lg:self-start">
-            <Label>Last reviewed</Label>
-            <p className="mt-3 font-data text-body text-gk-ink">
-              {reviewed ? (
-                <time dateTime={reviewed}>
-                  {new Date(reviewed).toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </time>
-              ) : (
-                <Gap>review date to supply</Gap>
-              )}
-            </p>
-            <p className="mt-6 text-body text-gk-ink-soft">
-              Questions about this policy? Email{" "}
-              <a className="text-gk-set underline hover:text-gk-ink" href={`mailto:${site.contact.email}`}>
-                {site.contact.email}
-              </a>
-              .
-            </p>
-          </div>
-
-          <div className="min-w-0 border-t border-gk-edge">
+      <PageHead crumbs={[[null, title]]} title={title} lede={intro} />
+      <section className="sec wrap" style={{ paddingTop: 56 }}>
+        <div className="case-body">
+          <div className="clauses">
             {blocks.map((b, i) => (
-              <section key={b.h} className="border-b border-gk-edge py-8">
-                <div className="flex items-baseline gap-4">
-                  <span className="font-data text-label text-gk-ink-mute">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <h2 className="font-display text-t4 text-gk-ink">{b.h}</h2>
-                </div>
-                <div className="mt-4 max-w-2xl pl-8">
+              <section key={b.h}>
+                <span className="n">{pad(i + 1)}</span>
+                <div>
+                  <h2>{b.h}</h2>
                   {b.p.map((para, j) => (
-                    <p key={j} className="mt-4 text-body text-gk-ink-soft first:mt-0">
-                      {para}
-                    </p>
+                    <p key={j}>{para}</p>
                   ))}
                 </div>
               </section>
             ))}
           </div>
+          <dl className="facts">
+            <div>
+              <dt>Last reviewed</dt>
+              <dd>
+                {reviewed ? (
+                  <time dateTime={reviewed}>
+                    {new Date(reviewed).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </time>
+                ) : (
+                  <span className="gap">[review date to supply]</span>
+                )}
+              </dd>
+            </div>
+            <div>
+              <dt>Questions</dt>
+              <dd>
+                Email{" "}
+                <a className="link" href={`mailto:${site.contact.email}`} style={{ overflowWrap: "anywhere" }}>
+                  {site.contact.email}
+                </a>
+              </dd>
+            </div>
+          </dl>
         </div>
-      </Section>
+      </section>
     </>
   )
 }

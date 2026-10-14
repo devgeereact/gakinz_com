@@ -1,9 +1,14 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { useParams } from "react-router-dom"
 import { proposals, type PublicProposal } from "@/lib/api"
 import Seo from "@/marketing/components/Seo"
 import BrandMark from "@/marketing/components/BrandMark"
-import { Measure } from "../components/primitives"
+import { cn } from "@/lib/utils"
+
+/** The page's centred column. Kept local when the D-037 primitives were removed, same classes. */
+function Measure({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn("mx-auto w-full max-w-[76rem] px-4 sm:px-8 lg:px-12", className)}>{children}</div>
+}
 
 const gbp = (n: number, ccy = "GBP") =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency: ccy }).format(n)

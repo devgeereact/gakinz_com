@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react"
 import { testimonials as testimonialsApi, type Testimonial } from "@/lib/api"
-import { Label, Section } from "./primitives"
 
 /**
  * CMS-curated client testimonials.
@@ -17,8 +16,8 @@ import { Label, Section } from "./primitives"
  * information that one short line of type carries better on a page built out
  * of type.
  *
- * Restyled from a two-column card grid to a ruled quote list, in keeping with
- * the ledger the rest of the site is built from.
+ * D-046: a band of quote cards built from src/marketing/site.css (`.quotes`),
+ * in step with the post cards on the same page.
  *
  * BEHAVIOUR KEPT: the component renders nothing at all until the API returns
  * at least one approved testimonial. An absent section is correct here. An
@@ -27,11 +26,9 @@ import { Label, Section } from "./primitives"
 export default function Testimonials({
   eyebrow = "In their words",
   title = "What clients say",
-  muted = false,
 }: {
   eyebrow?: string
   title?: string
-  muted?: boolean
 }) {
   const [items, setItems] = useState<Testimonial[]>([])
 
@@ -49,28 +46,25 @@ export default function Testimonials({
   const shown = items.slice(0, 6)
 
   return (
-    <Section tone={muted ? "sunk" : "paper"}>
-      <div className="pb-10">
-        <Label>{eyebrow}</Label>
-        <h2 className="mt-5 max-w-2xl font-display text-t2 text-gk-ink">{title}</h2>
+    <section className="sec wrap">
+      <div className="sec__head">
+        <div>
+          <p className="eyebrow mono">{eyebrow}</p>
+          <h2 className="h-l">{title}</h2>
+        </div>
       </div>
-
-      <ul className="border-t border-gk-edge">
+      <ul className="quotes">
         {shown.map((t) => {
           const rating = Math.max(1, Math.min(5, t.rating))
           const attribution = [t.role, t.company].filter(Boolean).join(", ")
           return (
-            <li key={t.id} className="border-b border-gk-edge">
-              <figure className="grid gap-4 py-8 lg:grid-cols-[1fr_16rem] lg:gap-12">
-                <blockquote className="max-w-3xl font-display text-t4 text-gk-ink">
-                  &ldquo;{t.quote}&rdquo;
-                </blockquote>
-                <figcaption className="lg:pt-2">
-                  <span className="block text-body text-gk-ink">{t.author}</span>
-                  {attribution && (
-                    <span className="mt-1 block text-body text-gk-ink-soft">{attribution}</span>
-                  )}
-                  <span className="mt-3 block font-data text-label uppercase text-gk-ink-mute">
+            <li key={t.id}>
+              <figure className="quote">
+                <blockquote>&ldquo;{t.quote}&rdquo;</blockquote>
+                <figcaption>
+                  <b>{t.author}</b>
+                  {attribution && <span className="mute">{attribution}</span>}
+                  <span className="mono mute" style={{ marginTop: 8 }}>
                     Rated {rating} out of 5
                   </span>
                 </figcaption>
@@ -79,6 +73,6 @@ export default function Testimonials({
           )
         })}
       </ul>
-    </Section>
+    </section>
   )
 }

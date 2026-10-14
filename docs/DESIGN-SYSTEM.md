@@ -8,7 +8,8 @@ is the cream canvas `#F3F0EE`. GAkinzOS at `/app/*` was restyled to its approved
 read from `src/index.css`, `tailwind.config.js`, `src/marketing/components/primitives.tsx`,
 `action-class.ts`, `PublicNavbar.tsx`, `PublicFooter.tsx` and `FadeIn.tsx` on 2026-10-10, and
 re-checked after six unused primitives were removed. Those files are the authority. If this
-document and they disagree, they win.
+document and they disagree, they win. Since D-046 the public site uses none of those files (see the note at
+the top of section 10), so sections 1 to 9 are history for the public surface.
 
 > **Sections 1 to 8 describe the public surface at `/` only.**
 >
@@ -367,9 +368,15 @@ stock image standing in for real work (section 10.2).
 > (labels, figures), all self-hosted. The home hero is one full screen in the active
 > project's brand colour, up to five published Work records in CMS order, with pause,
 > previous/next, arrow keys, pause on hover and focus, and a still rest state under reduced
-> motion. Pages carry no fixed project or service counts. Legacy pages (legal, sectors,
-> verify, articles) keep their markup and pick up the new palette through utility mappings in
-> `site.css`. Sections 1 to 10 remain as the record of D-037 until those pages are rebuilt.
+> motion. Pages carry no fixed project or service counts. **Every public page is now on the
+> D-046 system** (2026-10-14): the legal pages, sectors, certificate check, articles and the
+> home-page testimonials band were rebuilt with the `site.css` classes, and `.article` styles
+> the headings, lists, bold and links that `articleFormat.ts` produces. Removed with them: the
+> utility mappings in `site.css`, `src/marketing/components/primitives.tsx`, `FadeIn.tsx` and
+> `action-class.ts`. `.gk-public` and its rules in `src/index.css` stay, because the
+> proposal share page (`ProposalView.tsx`, outside the public layout) still uses them, with a
+> local `Measure` wrapper. The `.gk-fadein` rules in `src/index.css` no longer have a user.
+> Sections 1 to 10 are kept only as the record of D-037; the code they cite is gone.
 
 **Status:** decided by the owner on 2026-10-10. The public-surface foundation and motion were
 built on 2026-10-10 and are described in sections 1 to 9. The CMS column, real imagery and the

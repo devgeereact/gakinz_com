@@ -41,7 +41,7 @@ Every data need becomes a PHP endpoint plus a call through `src/lib/api.ts`.
 | Role map | `src/lib/access.ts` |
 | CMS navigation | `src/components/app-sidebar.tsx`, seven groups (D-040) |
 | Public surface | `src/marketing/` |
-| Public design primitives | `src/marketing/components/primitives.tsx` |
+| Public design system (D-046) | `src/marketing/site.css`, `src/marketing/components/site-ui.tsx` |
 | Public per-route metadata | `src/marketing/components/Seo.tsx` |
 | CMS surface | `src/app/`, lazy modules in `src/app/modules/`, plus My account |
 | CMS shell | `src/layouts/AppLayout.tsx` |
