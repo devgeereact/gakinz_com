@@ -38,6 +38,7 @@ import {
   Newspaper,
   Quote,
   Briefcase,
+  PanelTop,
   HeartPulse,
   UserRound,
   ChevronRight,
@@ -48,7 +49,7 @@ import { canAccess } from "@/lib/access"
 
 // The real GAkinzOS modules (same set + role keys as the sidebar). Cmd/Ctrl+K
 // jumps to any module the signed-in role can open — no dead or demo links.
-type Cmd = { key: string; label: string; path: string; icon: LucideIcon }
+type Cmd = { key: string; label: string; path: string; icon: LucideIcon; keywords?: string[] }
 const COMMANDS: Cmd[] = [
   { key: "dashboard", label: "Today", path: "/app", icon: LayoutDashboard },
   { key: "leads", label: "Enquiries", path: "/app/leads", icon: Inbox },
@@ -71,6 +72,13 @@ const COMMANDS: Cmd[] = [
   { key: "blog", label: "Blog", path: "/app/blog", icon: Newspaper },
   { key: "testimonials", label: "Testimonials", path: "/app/testimonials", icon: Quote },
   { key: "work", label: "Work", path: "/app/work", icon: Briefcase },
+  {
+    key: "site",
+    label: "Site content",
+    path: "/app/site",
+    icon: PanelTop,
+    keywords: ["hero", "homepage", "pricing", "faqs", "services"],
+  },
   { key: "files", label: "Files", path: "/app/files", icon: FolderOpen },
   { key: "analytics", label: "Analytics", path: "/app/analytics", icon: BarChart3 },
   { key: "platform", label: "Settings", path: "/app/platform", icon: Settings },
@@ -130,6 +138,7 @@ export function GlobalSearch() {
                 <CommandItem
                   key={c.key}
                   value={c.label}
+                  keywords={c.keywords}
                   onSelect={() => go(c.path)}
                   className="group cursor-pointer"
                 >
