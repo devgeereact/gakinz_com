@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { auth } from "@/lib/api"
-import BrandMark from "@/marketing/components/BrandMark"
+import AuthFrame from "@/app/components/AuthFrame"
 
 // Used by the invite email + the forgot-password flow. The token rides in the
 // URL hash (#token=…) so it never hits the server logs as a query string.
@@ -19,10 +19,8 @@ export default function SetPassword() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    document.documentElement.classList.add("gk-force-light")
     const params = new URLSearchParams(window.location.hash.replace(/^#/, ""))
     setToken(params.get("token") ?? "")
-    return () => document.documentElement.classList.remove("gk-force-light")
   }, [])
 
   const submit = async (e: React.FormEvent) => {
@@ -43,41 +41,35 @@ export default function SetPassword() {
   }
 
   return (
-    <div className="gk-public relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-12">
-      <div className="gk-aurora" aria-hidden />
-      <div className="relative w-full max-w-sm">
-        <Link to="/" className="mb-8 flex items-center justify-center gap-2" aria-label="GAkinz home">
-          <BrandMark className="h-9 w-9" />
-          <span className="text-xl font-extrabold tracking-tight">GAkin<span className="text-primary">z</span></span>
-        </Link>
-        <div className="gk-ring p-6 shadow-xl shadow-primary/10 sm:p-8">
-          <h1 className="font-serif text-2xl font-bold tracking-tight">Set your password</h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">Choose a password to access the GAkinz platform.</p>
-          {done ? (
-            <p className="mt-6 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
-              Password set — taking you to sign in…
-            </p>
-          ) : (
-            <form onSubmit={submit} className="mt-6 space-y-4">
-              <div>
-                <Label htmlFor="pw">New password</Label>
-                <Input id="pw" type="password" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} className="mt-1.5" required />
-              </div>
-              <div>
-                <Label htmlFor="pw2">Confirm password</Label>
-                <Input id="pw2" type="password" autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} className="mt-1.5" required />
-              </div>
-              {error && (
-                <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">{error}</div>
-              )}
-              <Button type="submit" className="gk-shine w-full" disabled={busy}>
-                {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Set password
-              </Button>
-            </form>
+    <AuthFrame>
+      <h2 className="font-display text-[1.8rem] font-semibold tracking-[-0.025em]">Set your password</h2>
+      <p className="mb-6 mt-2 text-muted-foreground">Choose a password to access the GAkinz platform.</p>
+      {done ? (
+        <p role="status" className="rounded-[10px] border border-ok/30 bg-ok-soft px-3 py-2 text-sm text-foreground">
+          Password set. Taking you to sign in…
+        </p>
+      ) : (
+        <form onSubmit={submit} className="grid gap-3.5">
+          <div className="grid gap-1.5">
+            <Label htmlFor="pw">New password</Label>
+            <Input id="pw" type="password" autoComplete="new-password" value={pw} onChange={(e) => setPw(e.target.value)} required />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="pw2">Confirm password</Label>
+            <Input id="pw2" type="password" autoComplete="new-password" value={pw2} onChange={(e) => setPw2(e.target.value)} required />
+          </div>
+          {error && (
+            <div role="alert" className="gk-os-wrap rounded-[10px] border border-bad/30 bg-bad-soft px-3 py-2 text-sm text-foreground">{error}</div>
           )}
-        </div>
-      </div>
-    </div>
+          <Button type="submit" size="lg" className="w-full" disabled={busy}>
+            {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+            Set password
+          </Button>
+        </form>
+      )}
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        <Link to="/login" className="rounded-[6px] hover:text-foreground">Back to sign in</Link>
+      </p>
+    </AuthFrame>
   )
 }
