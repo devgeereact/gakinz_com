@@ -184,7 +184,8 @@ export function TwoFactorPanel({ bare = false }: { bare?: boolean }) {
 function deviceLabel(ua: string | null): string {
   if (!ua) return "Unknown device"
   const browser = /Edg/.test(ua) ? "Edge" : /Chrome/.test(ua) ? "Chrome" : /Firefox/.test(ua) ? "Firefox" : /Safari/.test(ua) ? "Safari" : "Browser"
-  const os = /Windows/.test(ua) ? "Windows" : /Mac OS X|Macintosh/.test(ua) ? "macOS" : /iPhone|iPad|iOS/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Linux/.test(ua) ? "Linux" : ""
+  // iPhone and iPad user agents also contain "Mac OS X", so they are checked first.
+  const os = /iPhone|iPad|iPod/.test(ua) ? "iOS" : /Windows/.test(ua) ? "Windows" : /Mac OS X|Macintosh/.test(ua) ? "macOS" : /Android/.test(ua) ? "Android" : /Linux/.test(ua) ? "Linux" : ""
   return os ? `${browser} · ${os}` : browser
 }
 
