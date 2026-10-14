@@ -1052,6 +1052,16 @@ export type WorkCover = {
   mime: string | null
 }
 
+// A homepage hero screenshot, folded the same way as the cover. Served publicly
+// at /files.php?token=<share_token>; work.php issues a permanent token when one
+// is attached, and alt text is required for it.
+export type WorkHeroShot = {
+  file_id: number
+  alt: string
+  share_token: string | null
+  mime: string | null
+}
+
 export type WorkImage = {
   id: number
   file_id: number
@@ -1082,6 +1092,15 @@ type WorkBase = {
   created_at: string
   updated_at: string
   cover: WorkCover | null
+  // Homepage hero (2026-10-14). All null until the schema step has run.
+  // `hero_order` is 1..5 while the record is in the hero, otherwise null.
+  hero_order: number | null
+  brand_colour: string | null // #RRGGBB
+  hero_word: string | null // one or two words finishing "I design and build websites for …"
+  hero_desktop_file_id: number | null
+  hero_mobile_file_id: number | null
+  hero_desktop: WorkHeroShot | null
+  hero_mobile: WorkHeroShot | null
 }
 
 // Public rows: `client_consent` is removed, and `client_name` is OMITTED
@@ -1097,6 +1116,26 @@ export type WorkDetail = WorkSummary & {
 // `?action=listAll` keeps the client name and the consent flag, but does NOT
 // select problem/built/outcome — only the public `get` returns those.
 export type WorkAdminRow = WorkBase & { client_name: string; client_consent: number }
+
+// `?action=hero`: published records in the hero, in hero order, at most five.
+// Only the fields the hero renders; `client_name` follows the same consent rule
+// as the public list (key absent without consent).
+export type WorkHeroRow = {
+  id: number
+  slug: string
+  kind: WorkKind
+  title: string
+  client_name?: string
+  sector: string | null
+  summary: string | null
+  live_url: string | null
+  status: "published"
+  hero_order: number
+  brand_colour: string | null
+  hero_word: string | null
+  hero_desktop: WorkHeroShot | null
+  hero_mobile: WorkHeroShot | null
+}
 
 export type WorkInput = {
   title: string
@@ -1118,6 +1157,15 @@ export type WorkInput = {
   cover_file_id?: number | null
   featured?: boolean
   sort_order?: number
+  // Hero presentation. Each is written only when its key is sent, so leaving
+  // them out keeps what is stored; null or "" clears. A screenshot file id must
+  // be sent with its alt text, and clearing the file clears the alt.
+  brand_colour?: string | null
+  hero_word?: string | null
+  hero_desktop_file_id?: number | null
+  hero_desktop_alt?: string | null
+  hero_mobile_file_id?: number | null
+  hero_mobile_alt?: string | null
 }
 
 export type WorkImageInput = {
@@ -1143,10 +1191,13 @@ export const work = {
   get: (slug: string) => api.get<WorkDetail>(`/work.php?action=get&slug=${encodeURIComponent(slug)}`),
   listAll: () => api.get<WorkAdminRow[]>("/work.php?action=listAll"),
   create: (p: WorkInput) => api.post<{ id: number; slug: string }>("/work.php?action=create", p),
-  update: (id: number, p: WorkInput) => api.post<{ ok: boolean; slug: string }>("/work.php?action=update", { id, ...p }),
+  // `hero_removed` is true when saving the record as a draft took it out of the hero.
+  update: (id: number, p: WorkInput) =>
+    api.post<{ ok: boolean; slug: string; hero_removed: boolean }>("/work.php?action=update", { id, ...p }),
   // Re-reads the STORED row, so a 409 here means consent is missing on the record.
+  // Unpublishing also takes the record out of the hero (`hero_removed`).
   publish: (id: number, status: WorkStatus) =>
-    api.post<{ ok: boolean; status: WorkStatus }>("/work.php?action=publish", { id, status }),
+    api.post<{ ok: boolean; status: WorkStatus; hero_removed: boolean }>("/work.php?action=publish", { id, status }),
   remove: (id: number) => api.post<{ ok: boolean }>("/work.php?action=remove", { id }),
   reorder: (ids: number[]) => api.post<{ ok: boolean; count: number }>("/work.php?action=reorder", { ids }),
   // Alt text is mandatory server-side; an empty string is a 400. Attaching also
@@ -1154,4 +1205,65 @@ export const work = {
   // previous Files share had set), so the image cannot quietly 404 later.
   addImage: (p: WorkImageInput) => api.post<WorkAddImageResult>("/work.php?action=addImage", p),
   removeImage: (id: number) => api.post<{ ok: boolean }>("/work.php?action=removeImage", { id }),
+  // Public. An empty list before the schema step has run.
+  hero: () => api.get<WorkHeroRow[]>("/work.php?action=hero"),
+  // 409 when the record is not published, or when switching on a sixth; 503
+  // before the schema step. Switching off closes the gap in the order.
+  setHero: (id: number, on: boolean) =>
+    api.post<{ ok: boolean; hero_order: number | null }>("/work.php?action=setHero", { id, on }),
+  // `ids` must be exactly the records currently in the hero, in the new order.
+  heroOrder: (ids: number[]) => api.post<{ ok: boolean; count: number }>("/work.php?action=heroOrder", { ids }),
+}
+
+// ── Site content (public-site copy, edited in the CMS) ───────────────────────
+// Mirrors server/site.php. Each section is saved as a draft and goes public only
+// when published. `get` is public and returns published sections only (a
+// section never published is absent); `draft`, `save` and `publish` are for
+// super_admin, admin, manager and editor. The server validates every shape
+// strictly: unknown keys, empty required text, over-long text (300 for short
+// fields, 1200 for long ones) and lists over 12 rows are refused, not trimmed.
+export type SiteHero = { status: string; lead: string; cta1: string; cta2: string; secs: number } // secs 4..10
+export type SiteService = { title: string; summary: string }
+export type SiteProcessStep = { title: string; detail: string }
+export type SitePackage = { name: string; price: string; best: string; featured?: boolean }
+export type SiteAddon = { name: string; price: string }
+export type SiteTerm = { stage: string; share: string }
+export type SiteFaq = { q: string; a: string }
+export type SiteContact = { email: string; reply: string; footer: string }
+
+export type SiteContent = {
+  hero: SiteHero
+  services: SiteService[]
+  process: SiteProcessStep[]
+  packages: SitePackage[]
+  addons: SiteAddon[]
+  terms: SiteTerm[]
+  faqs: SiteFaq[]
+  contact: SiteContact
+}
+export type SiteSection = keyof SiteContent
+export const SITE_SECTIONS: SiteSection[] = ["hero", "services", "process", "packages", "addons", "terms", "faqs", "contact"]
+
+// One section as the CMS sees it. `draft` equal to `published` means no
+// unpublished changes. Names are null when the user has since been removed.
+export type SiteSectionState<S extends SiteSection = SiteSection> = {
+  draft: SiteContent[S] | null
+  published: SiteContent[S] | null
+  updated_at: string | null
+  updated_by_name: string | null
+  published_at: string | null
+  published_by_name: string | null
+}
+export type SiteDrafts = { [S in SiteSection]: SiteSectionState<S> }
+
+export const siteContent = {
+  // Public. `{}` when nothing is published or the table does not exist yet, so
+  // the public site keeps its built-in copy. Never includes a draft.
+  get: () => api.get<Partial<SiteContent>>("/site.php?action=get"),
+  draft: () => api.get<SiteDrafts>("/site.php?action=draft"),
+  save: <S extends SiteSection>(section: S, data: SiteContent[S]) =>
+    api.post<{ ok: boolean; section: S; draft: SiteContent[S] }>("/site.php?action=save", { section, data }),
+  // Omit `sections` to publish every section that has a saved draft.
+  publish: (sections?: SiteSection[]) =>
+    api.post<{ ok: boolean; published: SiteSection[] }>("/site.php?action=publish", sections ? { sections } : {}),
 }

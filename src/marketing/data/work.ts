@@ -80,7 +80,18 @@ export type WorkRecord = {
   images: WorkImage[]
   /** What is still missing, in the owner's words. Rendered as a labelled gap. */
   awaiting: string | null
+  /** Position on the homepage hero, 1..5, or null when not in it. */
+  heroOrder?: number | null
+  /** #RRGGBB brand colour for the hero, or null. */
+  brandColour?: string | null
+  /** One or two words finishing "I design and build websites for …". */
+  heroWord?: string | null
+  /** Hero screenshots. Present only with both a public token and alt text. */
+  heroDesktop?: HeroShot | null
+  heroMobile?: HeroShot | null
 }
+
+export type HeroShot = { src: string; alt: string }
 
 /** A record is settled when every one of its three rows has real content. */
 export function spineFor(r: WorkRecord): Spine {
@@ -171,6 +182,11 @@ type ApiWork = {
   completed_on?: string | null
   cover?: { share_token?: string | null; alt?: string | null; caption?: string | null } | null
   images?: { share_token?: string | null; alt?: string | null; caption?: string | null }[]
+  hero_order?: number | null
+  brand_colour?: string | null
+  hero_word?: string | null
+  hero_desktop?: { share_token?: string | null; alt?: string | null } | null
+  hero_mobile?: { share_token?: string | null; alt?: string | null } | null
 }
 
 const KINDS: WorkKind[] = ["case_study", "product", "experiment", "writing"]
@@ -182,7 +198,16 @@ function toImage(i: { share_token?: string | null; alt?: string | null; caption?
   return { src: `/files.php?token=${encodeURIComponent(i.share_token)}`, alt: i.alt, caption: i.caption ?? null }
 }
 
-function fromApi(r: ApiWork): WorkRecord {
+/** A hero screenshot only renders with both a share token and real alt text. */
+function toShot(i: { share_token?: string | null; alt?: string | null } | null | undefined): HeroShot | null {
+  if (!i?.share_token || !i.alt) return null
+  return { src: `/files.php?token=${encodeURIComponent(i.share_token)}`, alt: i.alt }
+}
+
+const HEX_COLOUR = /^#[0-9A-Fa-f]{6}$/
+
+/** Normalise one work.php row (list, get or hero) into a WorkRecord. */
+export function fromApi(r: ApiWork): WorkRecord {
   const year = (r.completed_on ?? r.started_on ?? "").slice(0, 4) || null
   const rows: [string | null, string | null, string | null] = [
     r.problem || null,
@@ -204,6 +229,11 @@ function fromApi(r: ApiWork): WorkRecord {
     cover: toImage(r.cover),
     images: (r.images ?? []).map(toImage).filter((i): i is WorkImage => i !== null),
     awaiting: missing ? "Still being written up." : null,
+    heroOrder: typeof r.hero_order === "number" ? r.hero_order : null,
+    brandColour: r.brand_colour && HEX_COLOUR.test(r.brand_colour) ? r.brand_colour : null,
+    heroWord: r.hero_word || null,
+    heroDesktop: toShot(r.hero_desktop),
+    heroMobile: toShot(r.hero_mobile),
   }
 }
 
