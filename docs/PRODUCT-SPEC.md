@@ -289,7 +289,8 @@ screens is in `docs/STATUS.md` section 0.
 | `content` | `/app/content` | `Content.tsx` | No. AI content hub |
 | `blog` | `/app/blog` | `Blog.tsx` | No. Public blog authoring |
 | `testimonials` | `/app/testimonials` | `Testimonials.tsx` | No. Public testimonials |
-| `work` | `/app/work` | `Work.tsx` | No. The public work ledger |
+| `work` | `/app/work` | `Work.tsx` | No. The public work ledger, and which records lead the homepage hero (2026-10-14) |
+| `site` | `/app/site` | `Site.tsx` | No. Site content: the public site's hero, services, process, pricing, FAQs and contact copy, saved as drafts and published (2026-10-14, D-046) |
 | `files` | `/app/files` | `Files.tsx` | No. Per-project and per-client file storage |
 | `careplan` | `/app/careplan` | `CarePlan.tsx` | No. Uptime, TLS expiry, care-plan revenue |
 | `account` | `/app/account` | `Account.tsx` | No. My account for every role, client included: profile, two-factor, own sessions (2026-10-10) |

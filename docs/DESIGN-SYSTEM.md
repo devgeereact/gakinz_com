@@ -545,6 +545,14 @@ Use the existing shadcn and Radix primitives and the shared `EmptyState` and `Ta
 components where they fit. Extract a repeated form or state pattern only after the same
 problem appears on several screens. No universal form engine and no component-library rebuild.
 
+Site content (`src/app/modules/Site.tsx`, 2026-10-14, D-046) adds two CMS patterns built from
+existing primitives and theme tokens only. The list editor is a bordered row per item with
+labelled up, down and remove icon buttons; focus follows a moved row, a new row focuses its
+first field, and one row is always kept. The publish bar is a sticky bar at the foot of the
+page with the last-published line, an unsaved or unpublished notice, Save draft and Publish.
+The live hero preview shows a brand colour behind the headline and cycles every 2.4 seconds,
+holding still under reduced motion.
+
 ### 10.7 Responsive and accessibility acceptance
 
 Test 320, 390, 768, 1024 and 1440 CSS-pixel widths, portrait and landscape, long content and
