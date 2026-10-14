@@ -357,6 +357,20 @@ stock image standing in for real work (section 10.2).
 
 ## 10. Target system (D-037): implementation status
 
+> **Superseded for the public site by D-046 (2026-10-14).** The public surface no longer uses
+> the D-037 cream system described in sections 1 to 10. It is built from the approved landing
+> prototype: styles in `src/marketing/site.css`, scoped to `.gk-site`; shared parts in
+> `src/marketing/components/site-ui.tsx`; data in `src/marketing/data/showcase.ts` (projects,
+> hero) and `src/marketing/data/content.ts` (copy edited in the CMS Site content module).
+> Palette: graphite `#0F151D` canvas, `#16202B` panels, chalk `#ECE9E2` text, sky `#8EC5FF`
+> accent; type: Bricolage Grotesque (display, opsz), Hanken Grotesk (text), JetBrains Mono
+> (labels, figures), all self-hosted. The home hero is one full screen in the active
+> project's brand colour, up to five published Work records in CMS order, with pause,
+> previous/next, arrow keys, pause on hover and focus, and a still rest state under reduced
+> motion. Pages carry no fixed project or service counts. Legacy pages (legal, sectors,
+> verify, articles) keep their markup and pick up the new palette through utility mappings in
+> `site.css`. Sections 1 to 10 remain as the record of D-037 until those pages are rebuilt.
+
 **Status:** decided by the owner on 2026-10-10. The public-surface foundation and motion were
 built on 2026-10-10 and are described in sections 1 to 9. The CMS column, real imagery and the
 service-overview constellation are still target. Each row below says which. This section

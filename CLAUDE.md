@@ -117,6 +117,12 @@ MariaDB. The source for every count is `docs/STATUS.md` section 0.
   PR #8. **Not merged, not deployed, and no server file uploaded.** The upload list is
   `docs/DEPLOYMENT.md` section 5. Merging PR #8 deploys `dist/`, so merge only after the
   section 5.1 operator steps (SQL and PHP upload) are done.
+- **2026-10-14, D-046 redesign** on `feat/redesign-2026` (stacked on `feat/plan-2026-batch-1`):
+  new public site, restyled CMS, Work hero controls, Site content module and `server/site.php`.
+  `npm test` 128 PASS, `npm run test:server` 140 PASS (local MariaDB), build, lint ratchet
+  (41/1) and `docs:check` PASS. **Not merged, not deployed, no server file uploaded**; it needs
+  `docs/DEPLOYMENT.md` section 5 SQL 7 and 8 and the `site.php` and `work.php` uploads first.
+  CMS checked against mocked API responses only; real data is NOT TESTED.
 - Deploy waits for CI (`.github/workflows/deploy.yml`, `workflow_run`).
 - **Accessibility is measured for the public site only** (`qa/ACCESSIBILITY-AUDIT.md`). The
   CMS and real assistive technology are NOT TESTED.
