@@ -6,6 +6,9 @@
  * PUBLIC (no auth) — published rows only:
  *   GET  /work.php?action=list[&kind=case_study]  → published records, newest/ordered
  *   GET  /work.php?action=get&slug=foo            → one published record + its images
+ *   GET  /work.php?action=hero                    → up to 5 published records flagged for
+ *                 the homepage hero, in hero order, with their brand colour, hero word and
+ *                 desktop and phone screenshots
  *
  * STAFF (require_auth EDITORS):
  *   GET  /work.php?action=listAll                 → every record incl. drafts, consent visible
@@ -20,16 +23,31 @@
  *        — also gives the file a non-expiring public share token if it has none,
  *          so attaching an image is one step and cannot leave a broken picture.
  *   POST /work.php?action=removeImage {id}  -- a work_images row id
+ *   POST /work.php?action=setHero     {id, on}     -- put a published record in the hero, or take it out
+ *   POST /work.php?action=heroOrder   {ids: [4, 2]} -- the full hero set, in its new order
+ *
+ * create and update also accept the hero presentation fields: brand_colour
+ * (#RRGGBB), hero_word (one or two words), hero_desktop_file_id with
+ * hero_desktop_alt, and hero_mobile_file_id with hero_mobile_alt. Each is
+ * written only when its key is sent, so an older form that does not know about
+ * them cannot wipe them. A screenshot is made publicly reachable the same way
+ * addImage does it, and needs alt text.
  *
  * Consent rule: a record that names a client cannot be published unless
  * client_consent is set. A forgotten permission must fail closed — a refused
  * publish, never a named client on a public page.
+ *
+ * Hero rule: at most HERO_MAX records, all published. Unpublishing or removing a
+ * record takes it out of the hero and closes the gap in the order.
  */
 require __DIR__ . '/_bootstrap.php';
 
 const EDITORS = ['super_admin', 'admin', 'manager', 'editor'];
 const KINDS = ['case_study', 'product', 'experiment', 'writing'];
 const STATUSES = ['draft', 'published'];
+const HERO_MAX = 5;
+const HERO_MIGRATION =
+  'The homepage hero needs the 2026-10-14 work schema step. Run it (docs/DEPLOYMENT.md section 5), then try again.';
 
 function slugify(string $s): string {
   $s = strtolower(trim($s));
@@ -77,7 +95,163 @@ function shape_work(array $r): array {
   $r['sort_order'] = (int)$r['sort_order'];
   $r['post_id'] = $r['post_id'] !== null ? (int)$r['post_id'] : null;
   $r['cover_file_id'] = $r['cover_file_id'] !== null ? (int)$r['cover_file_id'] : null;
+  foreach (['hero_order', 'hero_desktop_file_id', 'hero_mobile_file_id'] as $k) {
+    if (array_key_exists($k, $r)) $r[$k] = $r[$k] !== null ? (int)$r[$k] : null;
+  }
   return $r;
+}
+
+/**
+ * True once the 2026-10-14 hero columns exist. Until that schema step runs,
+ * every existing action keeps working with the hero fields reported as NULL.
+ * Cached for the request.
+ */
+function hero_ready(mysqli $conn): bool {
+  static $ready = null;
+  if ($ready !== null) return $ready;
+  try {
+    // LIMIT 0 reads no rows; it only proves the columns are there.
+    $res = $conn->query('SELECT hero_order, hero_mobile_alt FROM work LIMIT 0');
+    $ready = $res !== false; // older mysqli reporting returns false instead of throwing
+  } catch (mysqli_sql_exception $e) {
+    if ($e->getCode() !== 1054) throw $e; // ER_BAD_FIELD_ERROR only
+    $ready = false;
+  }
+  return $ready;
+}
+
+/**
+ * The hero columns for a SELECT, with the screenshot files joined. On an
+ * un-migrated database the same aliases are selected as NULL so every branch
+ * returns one stable shape.
+ */
+function hero_select(mysqli $conn): array {
+  if (!hero_ready($conn)) {
+    return [
+      'NULL AS hero_order, NULL AS brand_colour, NULL AS hero_word,
+       NULL AS hero_desktop_file_id, NULL AS hero_desktop_alt, NULL AS hero_desktop_token, NULL AS hero_desktop_mime,
+       NULL AS hero_mobile_file_id, NULL AS hero_mobile_alt, NULL AS hero_mobile_token, NULL AS hero_mobile_mime',
+      '',
+    ];
+  }
+  return [
+    'w.hero_order, w.brand_colour, w.hero_word,
+     w.hero_desktop_file_id, w.hero_desktop_alt, hd.share_token AS hero_desktop_token, hd.mime AS hero_desktop_mime,
+     w.hero_mobile_file_id, w.hero_mobile_alt, hm.share_token AS hero_mobile_token, hm.mime AS hero_mobile_mime',
+    ' LEFT JOIN files hd ON hd.id = w.hero_desktop_file_id AND hd.deleted_at IS NULL
+      LEFT JOIN files hm ON hm.id = w.hero_mobile_file_id AND hm.deleted_at IS NULL',
+  ];
+}
+
+/**
+ * Fold the joined screenshot columns into `hero_desktop` and `hero_mobile`
+ * objects, the same shape as `cover`: {file_id, alt, share_token, mime} or null.
+ */
+function fold_hero(array $r): array {
+  foreach (['desktop', 'mobile'] as $k) {
+    $fid = $r["hero_{$k}_file_id"] ?? null;
+    $shot = null;
+    if ($fid !== null && (int)$fid > 0) {
+      $shot = [
+        'file_id' => (int)$fid,
+        'alt' => (string)($r["hero_{$k}_alt"] ?? ''),
+        'share_token' => $r["hero_{$k}_token"] !== null ? (string)$r["hero_{$k}_token"] : null,
+        'mime' => $r["hero_{$k}_mime"] !== null ? (string)$r["hero_{$k}_mime"] : null,
+      ];
+    }
+    unset($r["hero_{$k}_alt"], $r["hero_{$k}_token"], $r["hero_{$k}_mime"]);
+    $r["hero_$k"] = $shot;
+  }
+  return $r;
+}
+
+/** Renumber the hero 1..n in its current order, closing any gap. */
+function hero_compact(mysqli $conn): void {
+  $res = $conn->query('SELECT id FROM work WHERE hero_order IS NOT NULL ORDER BY hero_order ASC, id ASC');
+  // `updated_at = updated_at`: moving in the hero is not an edit of the record.
+  $upd = $conn->prepare('UPDATE work SET hero_order = ?, updated_at = updated_at WHERE id = ?');
+  $n = 0;
+  while ($row = $res->fetch_assoc()) {
+    $n++;
+    $id = (int)$row['id'];
+    $upd->bind_param('ii', $n, $id);
+    if (!$upd->execute()) fail('Could not save the hero order.', 500);
+  }
+}
+
+/**
+ * Take one record out of the hero and close the gap. Returns true when it was
+ * in the hero. A no-op on an un-migrated database.
+ */
+function hero_drop(mysqli $conn, int $id): bool {
+  if (!hero_ready($conn)) return false;
+  $stmt = $conn->prepare('UPDATE work SET hero_order = NULL, updated_at = updated_at WHERE id = ? AND hero_order IS NOT NULL');
+  $stmt->bind_param('i', $id);
+  if (!$stmt->execute()) fail('Could not update the hero.', 500);
+  if ($stmt->affected_rows < 1) return false;
+  hero_compact($conn);
+  return true;
+}
+
+/**
+ * Read the hero presentation fields from a create/update body. Only keys that
+ * were sent are returned, so an older client that omits them leaves the stored
+ * values alone. Column names are the fixed keys below, never request input.
+ */
+function read_hero_fields(array $in): array {
+  $out = [];
+
+  if (array_key_exists('brand_colour', $in)) {
+    $v = $in['brand_colour'];
+    if ($v !== null && !is_string($v)) fail('brand_colour must be a colour such as #1A2B3C.');
+    $v = trim((string)$v);
+    if ($v !== '' && !preg_match('/^#[0-9A-Fa-f]{6}$/', $v)) fail('brand_colour must be a colour such as #1A2B3C.');
+    $out['brand_colour'] = $v === '' ? null : strtoupper($v);
+  }
+
+  if (array_key_exists('hero_word', $in)) {
+    $v = $in['hero_word'];
+    if ($v !== null && !is_string($v)) fail('hero_word must be text.');
+    $v = trim(preg_replace('/\s+/u', ' ', (string)$v));
+    if (mb_strlen($v) > 40) fail('The hero word must be 40 characters or fewer.');
+    if ($v !== '' && count(explode(' ', $v)) > 2) fail('The hero word must be one or two words.');
+    $out['hero_word'] = $v === '' ? null : $v;
+  }
+
+  foreach (['desktop', 'mobile'] as $k) {
+    $fileKey = "hero_{$k}_file_id";
+    $altKey = "hero_{$k}_alt";
+    $hasFile = array_key_exists($fileKey, $in);
+    if (!$hasFile && array_key_exists($altKey, $in)) fail("$altKey must be sent together with $fileKey.");
+    if (!$hasFile) continue;
+    $fid = nullable_id($in, $fileKey);
+    if ($fid === null) {
+      $out[$fileKey] = null;
+      $out[$altKey] = null;
+      continue;
+    }
+    $alt = $in[$altKey] ?? '';
+    if (!is_string($alt)) fail('Alt text is required for every image.');
+    $alt = trim($alt);
+    if ($alt === '') fail('Alt text is required for every image.');
+    if (mb_strlen($alt) > 200) fail("$altKey must be 200 characters or fewer.");
+    $out[$fileKey] = $fid;
+    $out[$altKey] = $alt;
+  }
+
+  return $out;
+}
+
+/** Write the hero presentation fields read by read_hero_fields(). */
+function write_hero_fields(mysqli $conn, int $id, array $h): void {
+  if (!$h) return;
+  $set = implode(', ', array_map(fn($k) => "$k = ?", array_keys($h)));
+  $types = implode('', array_map(fn($k) => substr($k, -8) === '_file_id' ? 'i' : 's', array_keys($h))) . 'i';
+  $vals = array_values($h);
+  $vals[] = $id;
+  $stmt = $conn->prepare("UPDATE work SET $set WHERE id = ?");
+  $stmt->bind_param($types, ...$vals);
+  if (!$stmt->execute()) fail('Could not save the hero details.', 500);
 }
 
 /**
@@ -282,13 +456,17 @@ const COVER_JOIN =
 const COVER_COLUMNS =
   'ci.alt AS cover_alt, ci.caption AS cover_caption, f.share_token AS cover_token, f.mime AS cover_mime';
 
+// The hero columns and their screenshot joins, or NULL placeholders before the
+// 2026-10-14 schema step has run. Fixed SQL fragments, never request input.
+[$HERO_COLUMNS, $HERO_JOIN] = hero_select($conn);
+
 // ── Public: published list ───────────────────────────────────────────────────
 if ($method === 'GET' && ($action === 'list' || $action === '')) {
   $kind = str_field($_GET, 'kind', 20);
   if ($kind !== '' && !in_array($kind, KINDS, true)) fail('Invalid kind.');
 
-  $sql = 'SELECT ' . WORK_COLUMNS . ', ' . COVER_COLUMNS . '
-          FROM work w ' . COVER_JOIN . '
+  $sql = 'SELECT ' . WORK_COLUMNS . ', ' . COVER_COLUMNS . ', ' . $HERO_COLUMNS . '
+          FROM work w ' . COVER_JOIN . $HERO_JOIN . '
           WHERE w.status = ?';
   if ($kind !== '') $sql .= ' AND w.kind = ?';
   $sql .= ' ORDER BY w.featured DESC, w.sort_order ASC, w.id DESC LIMIT 200';
@@ -304,7 +482,7 @@ if ($method === 'GET' && ($action === 'list' || $action === '')) {
   $res = $stmt->get_result();
   $rows = [];
   while ($r = $res->fetch_assoc()) {
-    $rows[] = public_view(fold_cover(shape_work($r)));
+    $rows[] = public_view(fold_hero(fold_cover(shape_work($r))));
   }
   ok($rows);
 }
@@ -316,17 +494,43 @@ if ($method === 'GET' && $action === 'get') {
   $slug = str_field($_GET, 'slug', 160);
   if ($slug === '') fail('A slug is required.');
   $stmt = $conn->prepare(
-    'SELECT ' . WORK_COLUMNS . ', w.problem, w.built, w.outcome, ' . COVER_COLUMNS . '
-     FROM work w ' . COVER_JOIN . '
+    'SELECT ' . WORK_COLUMNS . ', w.problem, w.built, w.outcome, ' . COVER_COLUMNS . ', ' . $HERO_COLUMNS . '
+     FROM work w ' . COVER_JOIN . $HERO_JOIN . '
      WHERE w.slug = ? AND w.status = "published" LIMIT 1'
   );
   $stmt->bind_param('s', $slug);
   $stmt->execute();
   $r = $stmt->get_result()->fetch_assoc();
   if (!$r) fail('Work not found.', 404);
-  $r = public_view(fold_cover(shape_work($r)));
+  $r = public_view(fold_hero(fold_cover(shape_work($r))));
   $r['images'] = work_images($conn, $r['id']);
   ok($r);
+}
+
+// ── Public: the homepage hero ────────────────────────────────────────────────
+// Published records with a hero_order, in that order, at most HERO_MAX. The
+// status filter is a hard-coded literal, as in `get`, and public_view() applies
+// the same consent rule as `list`. Only the fields the hero renders are sent.
+if ($method === 'GET' && $action === 'hero') {
+  if (!hero_ready($conn)) ok([]); // un-migrated: no hero yet, the site uses its own
+  $stmt = $conn->prepare(
+    'SELECT w.id, w.slug, w.kind, w.title, w.client_name, w.client_consent, w.sector, w.summary,
+            w.live_url, w.status, ' . $HERO_COLUMNS . '
+     FROM work w' . $HERO_JOIN . '
+     WHERE w.status = "published" AND w.hero_order IS NOT NULL
+     ORDER BY w.hero_order ASC, w.id ASC LIMIT ' . HERO_MAX
+  );
+  $stmt->execute();
+  $res = $stmt->get_result();
+  $rows = [];
+  while ($r = $res->fetch_assoc()) {
+    $r['id'] = (int)$r['id'];
+    $r['hero_order'] = (int)$r['hero_order'];
+    $r = fold_hero($r);
+    unset($r['hero_desktop_file_id'], $r['hero_mobile_file_id']);
+    $rows[] = public_view($r);
+  }
+  ok($rows);
 }
 
 // ── Staff: everything, drafts included, consent visible ──────────────────────
@@ -336,13 +540,13 @@ if ($method === 'GET' && $action === 'listAll') {
   // has listed. EDITORS-gated, so there is no disclosure question; the cost is
   // payload size, and the edit form should prefer getAdmin for a single record.
   $res = $conn->query(
-    'SELECT ' . WORK_COLUMNS . ', w.problem, w.built, w.outcome, ' . COVER_COLUMNS . '
-     FROM work w ' . COVER_JOIN . '
+    'SELECT ' . WORK_COLUMNS . ', w.problem, w.built, w.outcome, ' . COVER_COLUMNS . ', ' . $HERO_COLUMNS . '
+     FROM work w ' . COVER_JOIN . $HERO_JOIN . '
      ORDER BY w.featured DESC, w.sort_order ASC, w.id DESC LIMIT 500'
   );
   $rows = [];
   while ($r = $res->fetch_assoc()) {
-    $rows[] = fold_cover(shape_work($r));
+    $rows[] = fold_hero(fold_cover(shape_work($r)));
   }
   ok($rows);
 }
@@ -362,8 +566,8 @@ if ($method === 'GET' && $action === 'getAdmin') {
 
   // The ternary picks a column name, never a value. Both are bound.
   $stmt = $conn->prepare(
-    'SELECT ' . WORK_COLUMNS . ', w.problem, w.built, w.outcome, ' . COVER_COLUMNS . '
-     FROM work w ' . COVER_JOIN . '
+    'SELECT ' . WORK_COLUMNS . ', w.problem, w.built, w.outcome, ' . COVER_COLUMNS . ', ' . $HERO_COLUMNS . '
+     FROM work w ' . COVER_JOIN . $HERO_JOIN . '
      WHERE ' . ($id > 0 ? 'w.id = ?' : 'w.slug = ?') . ' LIMIT 1'
   );
   if ($id > 0) {
@@ -376,7 +580,7 @@ if ($method === 'GET' && $action === 'getAdmin') {
   if (!$r) fail('Work not found.', 404);
   // No public_view(): staff need to see client_name and the consent state in
   // order to decide whether the record can be published at all.
-  $r = fold_cover(shape_work($r));
+  $r = fold_hero(fold_cover(shape_work($r)));
   $r['images'] = work_images($conn, $r['id']);
   ok($r);
 }
@@ -386,7 +590,23 @@ if ($method === 'POST' && ($action === 'create' || $action === 'update')) {
   $user = require_auth($conn, EDITORS);
   $in = body();
   $f = read_fields($in);
+  $h = read_hero_fields($in);
   $uid = $user['id'];
+
+  if (!hero_ready($conn)) {
+    // Before the schema step, an empty hero field is harmless and ignored; a
+    // real value must not be silently dropped.
+    foreach ($h as $v) {
+      if ($v !== null) fail(HERO_MIGRATION, 503);
+    }
+    $h = [];
+  }
+  // Make each screenshot publicly reachable BEFORE it is recorded, exactly as
+  // addImage does, so a hero can never point at a file that will not load.
+  // This also 404s a missing or deleted file.
+  foreach (['hero_desktop_file_id', 'hero_mobile_file_id'] as $k) {
+    if (!empty($h[$k])) ensure_public_share($conn, (int)$h[$k], $uid);
+  }
 
   $slugIn = str_field($in, 'slug', 160);
   $slug = slugify($slugIn !== '' ? $slugIn : $f['title']);
@@ -409,6 +629,7 @@ if ($method === 'POST' && ($action === 'create' || $action === 'update')) {
     );
     if (!$stmt->execute()) fail('Could not create the work record.', 500);
     $newId = $conn->insert_id;
+    write_hero_fields($conn, $newId, $h);
     audit($conn, $uid, 'work_create', "#$newId $slug");
     ok(['id' => $newId, 'slug' => $slug], 201);
   }
@@ -437,8 +658,12 @@ if ($method === 'POST' && ($action === 'create' || $action === 'update')) {
     $chk->execute();
     if (!$chk->get_result()->fetch_assoc()) fail('Work not found.', 404);
   }
+  write_hero_fields($conn, $id, $h);
   audit($conn, $uid, 'work_update', "#$id");
-  ok(['ok' => true, 'slug' => $slug]);
+  // A draft cannot sit in the hero: saving one takes it out and closes the gap.
+  $heroRemoved = $f['status'] !== 'published' && hero_drop($conn, $id);
+  if ($heroRemoved) audit($conn, $uid, 'work_hero_off', "#$id unpublished");
+  ok(['ok' => true, 'slug' => $slug, 'hero_removed' => $heroRemoved]);
 }
 
 // ── Staff: publish / unpublish ───────────────────────────────────────────────
@@ -466,7 +691,10 @@ if ($method === 'POST' && $action === 'publish') {
   $stmt->bind_param('si', $status, $id);
   if (!$stmt->execute()) fail('Could not change the status.', 500);
   audit($conn, $user['id'], 'work_publish', "#$id -> $status");
-  ok(['ok' => true, 'status' => $status]);
+  // Unpublishing takes the record out of the hero and closes the gap.
+  $heroRemoved = $status !== 'published' && hero_drop($conn, $id);
+  if ($heroRemoved) audit($conn, $user['id'], 'work_hero_off', "#$id unpublished");
+  ok(['ok' => true, 'status' => $status, 'hero_removed' => $heroRemoved]);
 }
 
 // ── Staff: remove ────────────────────────────────────────────────────────────
@@ -479,6 +707,8 @@ if ($method === 'POST' && $action === 'remove') {
   $stmt->bind_param('i', $id);
   if (!$stmt->execute()) fail('Could not remove the work record.', 500);
   if ($stmt->affected_rows < 1) fail('Work not found.', 404);
+  // If it was in the hero, close the gap it left.
+  if (hero_ready($conn)) hero_compact($conn);
   audit($conn, $user['id'], 'work_remove', "#$id");
   ok(['ok' => true]);
 }
@@ -557,6 +787,107 @@ if ($method === 'POST' && $action === 'removeImage') {
   if ($stmt->affected_rows < 1) fail('Image not found.', 404);
   audit($conn, $user['id'], 'work_remove_image', "#$id");
   ok(['ok' => true]);
+}
+
+// ── Staff: put a record in the homepage hero, or take it out ─────────────────
+// The limit and the published-only rule are checked inside a transaction with
+// the hero rows locked, so two editors switching records on at once cannot
+// push the hero past HERO_MAX or hand out the same position twice.
+if ($method === 'POST' && $action === 'setHero') {
+  $user = require_auth($conn, EDITORS);
+  if (!hero_ready($conn)) fail(HERO_MIGRATION, 503);
+  $in = body();
+  $id = (int)($in['id'] ?? 0);
+  if ($id <= 0) fail('A work id is required.');
+  if (!array_key_exists('on', $in) || !is_bool($in['on'])) fail('Say whether the record goes in the hero: on must be true or false.');
+  $on = $in['on'];
+
+  $conn->begin_transaction();
+  $stop = function (string $msg, int $code) use ($conn): void {
+    $conn->rollback();
+    fail($msg, $code);
+  };
+
+  $stmt = $conn->prepare('SELECT status, hero_order FROM work WHERE id = ? LIMIT 1 FOR UPDATE');
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  $row = $stmt->get_result()->fetch_assoc();
+  if (!$row) $stop('Work not found.', 404);
+  $current = $row['hero_order'] !== null ? (int)$row['hero_order'] : null;
+
+  if ($on) {
+    if ($current !== null) {
+      $conn->commit();
+      ok(['ok' => true, 'hero_order' => $current]); // already in the hero
+    }
+    if ($row['status'] !== 'published') $stop('Publish this record before putting it in the hero.', 409);
+    $cnt = $conn->query('SELECT COUNT(*) AS c, COALESCE(MAX(hero_order), 0) AS m FROM work WHERE hero_order IS NOT NULL FOR UPDATE')->fetch_assoc();
+    if ((int)$cnt['c'] >= HERO_MAX) $stop('The hero holds ' . HERO_MAX . ' projects. Switch one off first.', 409);
+    $next = (int)$cnt['m'] + 1;
+    $upd = $conn->prepare('UPDATE work SET hero_order = ?, updated_at = updated_at WHERE id = ?');
+    $upd->bind_param('ii', $next, $id);
+    if (!$upd->execute()) $stop('Could not update the hero.', 500);
+    hero_compact($conn); // keeps 1..n even if an older gap was left behind
+    $conn->commit();
+    $re = $conn->prepare('SELECT hero_order FROM work WHERE id = ?');
+    $re->bind_param('i', $id);
+    $re->execute();
+    $order = (int)$re->get_result()->fetch_assoc()['hero_order'];
+    audit($conn, $user['id'], 'work_hero_on', "#$id at $order");
+    ok(['ok' => true, 'hero_order' => $order]);
+  }
+
+  if ($current === null) {
+    $conn->commit();
+    ok(['ok' => true, 'hero_order' => null]); // already out
+  }
+  hero_drop($conn, $id);
+  $conn->commit();
+  audit($conn, $user['id'], 'work_hero_off', "#$id");
+  ok(['ok' => true, 'hero_order' => null]);
+}
+
+// ── Staff: reorder the homepage hero ─────────────────────────────────────────
+// `ids` must be exactly the records currently in the hero, each once, in the
+// new order. A partial list is refused rather than guessed at.
+if ($method === 'POST' && $action === 'heroOrder') {
+  $user = require_auth($conn, EDITORS);
+  if (!hero_ready($conn)) fail(HERO_MIGRATION, 503);
+  $ids = body()['ids'] ?? null;
+  if (!is_array($ids) || !$ids) fail('An ordered list of ids is required.');
+  if (count($ids) > HERO_MAX) fail('The hero holds at most ' . HERO_MAX . ' projects.');
+  $clean = [];
+  foreach ($ids as $raw) {
+    if (!is_int($raw) && !(is_string($raw) && ctype_digit($raw))) fail('Every id in the list must be a positive integer.');
+    $v = (int)$raw;
+    if ($v <= 0) fail('Every id in the list must be a positive integer.');
+    if (in_array($v, $clean, true)) fail('Each project may appear in the hero order only once.');
+    $clean[] = $v;
+  }
+
+  $conn->begin_transaction();
+  $res = $conn->query('SELECT id FROM work WHERE hero_order IS NOT NULL FOR UPDATE');
+  $inHero = [];
+  while ($r = $res->fetch_assoc()) $inHero[] = (int)$r['id'];
+  $a = $clean;
+  sort($a);
+  sort($inHero);
+  if ($a !== $inHero) {
+    $conn->rollback();
+    fail('The order must list every project currently in the hero, and only those.', 409);
+  }
+  $upd = $conn->prepare('UPDATE work SET hero_order = ?, updated_at = updated_at WHERE id = ?');
+  foreach ($clean as $i => $id) {
+    $order = $i + 1;
+    $upd->bind_param('ii', $order, $id);
+    if (!$upd->execute()) {
+      $conn->rollback();
+      fail('Could not save the hero order.', 500);
+    }
+  }
+  $conn->commit();
+  audit($conn, $user['id'], 'work_hero_order', implode(',', $clean));
+  ok(['ok' => true, 'count' => count($clean)]);
 }
 
 fail('Method not allowed.', 405);
