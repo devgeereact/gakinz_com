@@ -3,8 +3,8 @@
 **Status:** the public surface at `/` implements the D-037 system as of 2026-10-10, on the
 branches stacked into PR #8 and **not yet deployed**. The favicon, the 32px and apple-touch
 icons and the 1200x630 share image (`public/og.png`) use the same palette, and `theme-color`
-is the cream canvas `#F3F0EE`. GAkinzOS at `/app/*` is unchanged and keeps its own palette; its
-redesign on the target system is the next CMS slice and has not started. Sections 1 to 9 were
+is the cream canvas `#F3F0EE`. GAkinzOS at `/app/*` was restyled to its approved prototype
+(D-046) on 2026-10-14; section 11 describes it. Sections 1 to 9 were
 read from `src/index.css`, `tailwind.config.js`, `src/marketing/components/primitives.tsx`,
 `action-class.ts`, `PublicNavbar.tsx`, `PublicFooter.tsx` and `FadeIn.tsx` on 2026-10-10, and
 re-checked after six unused primitives were removed. Those files are the authority. If this
@@ -12,10 +12,10 @@ document and they disagree, they win.
 
 > **Sections 1 to 8 describe the public surface at `/` only.**
 >
-> GAkinzOS at `/app/*` keeps the mono and duo palette, Manrope, JetBrains Mono, Tailwind's
-> default type sizes, the 12px radius and the `.gk-app-*` utility family. Section 9 lists what
-> the two surfaces still have in common. Section 10 records which parts of the D-037 target
-> are built and which are still target, including the whole CMS column.
+> GAkinzOS at `/app/*` is described in section 11 (D-046): its own token set, Bricolage,
+> Hanken and JetBrains Mono, and a flat `.gk-app-*` family. Section 9 lists what the two
+> surfaces still have in common. Section 10 records the D-037 target; its CMS column is
+> superseded by D-046.
 
 The public direction is the Mastercard-inspired GetDesign system the owner chose on 2026-10-10
 (`docs/DECISIONS.md` D-037), followed as closely as possible with only the substitutions in
@@ -95,9 +95,8 @@ structural line and every input, select and textarea border. `.gk-public` sets b
 
 Navy `#2A3160`, red oxide `#933C2F`, warm paper `#F6F3ED`, the square-cornered document idiom
 and the "two-chromatic convention" are gone from the public surface. Lavender and rose were
-retired earlier (D-023). `--gk-violet`, `--gk-indigo` and `--gk-sky` still exist at `:root`
-only because `src/app/Login.tsx` and `src/app/SetPassword.tsx` use `.gk-grad-text`,
-`.gk-aurora` and `.gk-grid`.
+retired earlier (D-023). `--gk-violet` and the gradient effect classes that used it went with
+the GAkinzOS restyle (D-046), once the two sign-in pages stopped using them.
 
 ## 3. Type
 
@@ -331,23 +330,17 @@ and `/services/web-design`, no `.gk-fadein` element was left hidden.
 
 ## 8. Residue worth knowing
 
-- `src/index.css` still carries the Pulse-kit `gradient-red` to `gradient-cyan` helpers and a
-  `.dark-blue`, `.gaussian-black`, `.classic-light` scrollbar rule, which belong to neither
-  brand.
-- `--gk-violet`, `--gk-indigo` and `--gk-sky` survive at `:root` for the two auth pages named
-  in section 2.
 - `gk-set-on-dark`, `gk-come-on-dark` and the `hero` type step exist but no page uses them.
 - `Rule`, `RuleEyebrow`, `GradientText`, `Contents`, `FeatureRow` and `QuoteBand` were removed
   on 2026-10-10 because nothing used them (`knip`). Add a primitive back only with a caller.
-- The Google Fonts `@import` at the top of `src/index.css` now serves only the CMS (Newsreader
-  for three `font-serif` headings, Manrope, JetBrains Mono) but still blocks rendering on
-  public pages. See `docs/KNOWN-ISSUES.md` K-042.
+- The Google Fonts `@import` is gone (D-046). Every face is self-hosted from
+  `@fontsource-variable` and imported in `src/main.tsx`.
 
 ### What must never appear on a public page
 
-`.gk-aurora`, `.gk-grid`, `.gk-dots`, `.gk-glass`, `.gk-ring`, `.gk-card`, `.gk-glow`,
-`.gk-shine`, `.gk-marquee`, `.gk-float`, `.gk-pill`, `.gk-underline`, `.gk-grad-text`,
-`.gk-grain` and the whole `.gk-app-*` family. They exist for GAkinzOS. Nor may the Mastercard
+`.gk-shine`, the `.gk-os-*` shell classes and the whole `.gk-app-*` family. They exist for
+GAkinzOS. The other effect classes this list used to name (`.gk-aurora`, `.gk-grid`,
+`.gk-grad-text` and the rest) were deleted with D-046. Nor may the Mastercard
 mark colours, an interlocking or overlapping pair of circles, card or payment imagery, or any
 stock image standing in for real work (section 10.2).
 
@@ -355,13 +348,10 @@ stock image standing in for real work (section 10.2).
 
 - Everything in section 7 except the two `.gk-public` focus rules, the public motion classes
   and the public tokens; plus the wrapper mechanics in section 1.
-- One stylesheet, `src/index.css`, including the Google Fonts `@import`. The public Sofia Sans
-  `@font-face` rules are imported in `src/main.tsx`, so they are declared for the CMS as well.
-  The CMS never sets that family, and browsers fetch a web font only when text uses it, but
-  whether the CMS downloads it is NOT TESTED.
+- One stylesheet, `src/index.css`, and one set of self-hosted faces imported in
+  `src/main.tsx`: Bricolage Grotesque, Hanken Grotesk and JetBrains Mono.
 - `BrandMark`, which takes `currentColor` and renders in both surfaces.
-- `.gk-app-grad` no longer names Space Grotesk, which was never loaded; CMS titles using it
-  inherit the CMS family, Manrope.
+- `.gk-app-grad` is now plain ink in Bricolage Grotesque (section 11).
 
 ---
 
@@ -442,7 +432,8 @@ no font is fetched from another brand's website.
 on both surfaces, so the website and CMS share one family; Manrope stays as the fallback.
 **Public: implemented** with `@fontsource-variable/sofia-sans` 5.3.0, licence OFL-1.1, at
 weights 450 and 500 (700 for labels). The stray Space Grotesk reference is removed. **CMS:
-target**; it still sets Manrope, JetBrains Mono and, for three headings, Newsreader.
+target** at the time; superseded by D-046, which sets Bricolage, Hanken and JetBrains Mono
+(section 11).
 
 **Accessible adaptations take precedence over copied measurements.** Low-contrast Dust Taupe
 and ghost headlines are decorative only, never labels, placeholder instructions or business
@@ -455,7 +446,9 @@ harder than acceptance.
 ships several themes today (dark, dark-blue, gaussian-black, classic-light, semi-dark); reduce
 them to one light and one dark theme. Derive the dark theme from the same tokens (ink
 `#141413` as the surface, cream as text, orange accents unchanged), then contrast-test it. The
-public site stays light only. **Status:** public light-only, implemented; CMS themes, target.
+public site stays light only. **Status:** public light-only, implemented. CMS: reduced to one
+light and one dark theme by D-046 (section 11), on the prototype's palette rather than this
+derivation.
 
 ### 10.4 Hero and section composition
 
@@ -563,3 +556,92 @@ Sample users: the owner completes an enquiry and quote task without coaching; a 
 buyer finds the relevant scope and submits a synthetic enquiry; a synthetic client finds its
 invoice and support route without staff controls. Record completion, mistakes and points of
 hesitation. Start with one small feedback round.
+
+---
+
+## 11. GAkinzOS, as implemented (D-046)
+
+**Status:** built on branch `feat/redesign-cms-shell` on 2026-10-14, from the approved
+prototype (`cms.html` and `cms-modules.js` on the redesign board). **Not merged, not
+deployed.** The authority is `src/index.css`, `tailwind.config.js`, `src/components/ui/*`,
+`src/layouts/AppLayout.tsx`, `src/components/app-sidebar.tsx`, `nav-main.tsx`,
+`nav-groups.ts` and `src/app/components/AuthFrame.tsx`.
+
+### 11.1 Tokens
+
+Light on `:root`, dark on `.dark`, written as HSL triplets for the shadcn names. The extra
+tokens carry an `--os-` prefix so they never collide with the public site's hex variables on
+`.gk-site`.
+
+| Role | Light | Dark | Token |
+|---|---|---|---|
+| Canvas | `#F4F5F7` | `#0F151D` | `--background` |
+| Surface | `#FFFFFF` | `#16202B` | `--card`, `--popover` |
+| Surface 2 | `#F8F9FB` | `#1B2733` | `--secondary`, `--muted` |
+| Ink | `#121821` | `#ECE9E2` | `--foreground`, `--primary` |
+| Muted text | `#5B6472` | `#9AA3B0` | `--muted-foreground` |
+| Line | `#E2E5EA` | `#26313E` | `--border` |
+| Line 2 (form borders) | `#CDD2DA` | `#334252` | `--input`, `--os-line-2` |
+| Accent | `#2F6FD6` | `#8EC5FF` | `--ring`, `--os-acc` |
+| Accent soft | `#E6EEFB` | `#1C2E44` | `--accent`, `--os-acc-soft` |
+| OK / soft | `#1C7F52` / `#E3F3EA` | `#7FD6A5` / `#173326` | `--os-ok`, `--os-ok-soft` |
+| Warn / soft | `#8F5B00` / `#FBF0DA` | `#F2C46B` / `#3A2F17` | `--os-warn`, `--os-warn-soft` |
+| Bad / soft | `#B8322C` / `#FBE7E5` | `#FF9C95` / `#3B1E1D` | `--os-bad`, `--os-bad-soft`, `--destructive` |
+| Sidebar | `#0F151D` | `#0B1017` | `--sidebar-background` |
+| Sidebar 2 | `#16202B` | `#141C26` | `--sidebar-accent` |
+| Sidebar ink / muted | `#ECE9E2` / `#8C96A4` | same | `--sidebar-foreground`, `--os-side-mute` |
+| Sidebar active bar | `#8EC5FF` | same | `--sidebar-primary` |
+
+Tailwind exposes them as `acc`, `acc-soft`, `acc-foreground`, `ok`, `ok-soft`, `warn`,
+`warn-soft`, `bad`, `bad-soft`, `line`, `line-strong`, `sidebar-muted` and the shadow `os`.
+The primary action is ink on canvas and turns blue on hover. There are no gradients anywhere
+in the CMS.
+
+### 11.2 Type and shape
+
+- `font-display` Bricolage Grotesque Variable (headings, `font-serif` maps here too),
+  `font-sans` and `font-ui` Hanken Grotesk Variable (body, 15px), `font-mono` and `font-data`
+  JetBrains Mono Variable (labels and figures, tabular). Self-hosted; no third-party fetch.
+- Every module's `h1` takes `clamp(1.7rem, 2.6vw, 2.2rem)` in Bricolage, weight 650.
+- Cards 16px radius, controls 10px, popovers 14px. One shadow token, for overlays only.
+
+### 11.3 Components (`src/components/ui`)
+
+APIs are unchanged. Buttons are 40px high (`sm` 36px, `lg` 48px, `icon` 40px square), never
+wrap and never shrink; a row of buttons wraps instead. Badges are 24px pills with a status
+dot and gain `ok`, `warn`, `bad` and `acc` tones. Inputs are 42px with a 3px soft-accent focus
+ring. Table heads are mono uppercase 10.5px on surface 2. Tabs are underline tabs. Dialog and
+sheet footers wrap on phones. The `.gk-app-*` family is flat: `grad` is plain ink, `card` is a
+hairline card whose hover changes the border only, `chip` is a soft accent tile, `ring` is a
+plain border, `accent` and `.gk-shine` draw nothing.
+
+### 11.4 Shell
+
+A graphite sidebar in both themes: brand tile and "GAkinzOS / Studio platform", groups with
+mono uppercase headers that fold (remembered in `localStorage` under `gkos-groups`), 40px rows
+with the sky active bar, count pills for new enquiries and open tickets, and a footer with My
+account and Sign out. It collapses to a 72px icon rail and becomes a drawer below 768px.
+A sticky 64px header carries the sidebar toggle, a search button that opens GlobalSearch
+(Ctrl K), the London clock, notifications, the sun and moon theme toggle and the user pill.
+Each page shows a mono "Group / Title" crumb. The weather pill and the footer are no longer
+shown.
+
+### 11.5 Sign-in pages
+
+Login and SetPassword share `AuthFrame`: a graphite panel with the mark, "The studio, in one
+place.", the project colour strip and the London clock, and the form on the canvas.
+
+### 11.6 Behaviour changes
+
+- **Custom background themes retired.** `dark-blue`, `classic-light`, `gaussian-black` and
+  `semi-dark`, and their background images, are gone. The CMS is light or dark through
+  next-themes; a browser that saved an old theme has the choice cleared once.
+- The sign-in pages follow the light or dark theme instead of forcing light.
+- My account moved from the Settings group to the sidebar footer.
+
+### 11.7 Not yet matched
+
+KPI tiles, status pills and page-header action order live inside each module
+(`src/app/modules/*`) and were not edited in this change, so they keep their own markup on the
+new tokens. The prototype's per-screen compositions in `cms-modules.js` are the reference for
+that follow-up.
