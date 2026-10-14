@@ -7,6 +7,7 @@ import { kindName, onColour, useProjects, type Project } from "@/marketing/data/
 import { useSiteCopy } from "@/marketing/data/content"
 import { howIWork, site } from "@/marketing/data/site"
 import { useMarketingBlog } from "@/marketing/data/blog"
+import Testimonials from "@/marketing/components/Testimonials"
 
 /** "2026-05-12" becomes "12 May 2026". Returns the input unchanged if it will not parse. */
 function readableDate(iso: string): string {
@@ -19,7 +20,7 @@ const pad = (n: number) => String(n).padStart(2, "0")
 const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
 /**
- * The brand-colour hero (D-044). One full screen; the background, the last
+ * The brand-colour hero (D-046). One full screen; the background, the last
  * word of the headline and the device frames all change together for each of
  * up to five projects chosen in the CMS. It pauses on hover and focus, can be
  * paused outright, answers the arrow keys, and stays still for anyone who has
@@ -303,6 +304,9 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      {/* Approved quotes from the CMS. Renders nothing until a client has approved one. */}
+      <Testimonials />
 
       <section className="sec wrap">
         <CtaBand projects={projects} />

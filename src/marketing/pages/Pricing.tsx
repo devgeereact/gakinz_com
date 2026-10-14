@@ -4,7 +4,7 @@ import { CtaBand, IArrow, PageHead, Ticks } from "@/marketing/components/site-ui
 import { useSiteCopy } from "@/marketing/data/content"
 import { useProjects } from "@/marketing/data/showcase"
 
-/** Packages, add-ons, payment stages and FAQs, all editable in the CMS (D-044). */
+/** Packages, add-ons, payment stages and FAQs, all editable in the CMS (D-046). */
 export default function Pricing() {
   const copy = useSiteCopy()
   const { projects } = useProjects()

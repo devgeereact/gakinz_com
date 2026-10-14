@@ -5,7 +5,7 @@ import { kindName, onColour, type Project } from "@/marketing/data/showcase"
 import { useSiteCopy } from "@/marketing/data/content"
 
 /**
- * Shared pieces of the public site (D-044). Markup and class names follow the
+ * Shared pieces of the public site (D-046). Markup and class names follow the
  * approved prototype one for one; the styles live in src/marketing/site.css.
  */
 

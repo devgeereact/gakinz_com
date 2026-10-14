@@ -7,7 +7,7 @@ import { alwaysIncluded } from "@/marketing/data/site"
 
 const pad = (n: number) => String(n).padStart(2, "0")
 
-/** What I do, from the editable copy (D-044). Numbers come from the list, not the copy. */
+/** What I do, from the editable copy (D-046). Numbers come from the list, not the copy. */
 export default function Services() {
   const copy = useSiteCopy()
   const { projects } = useProjects()

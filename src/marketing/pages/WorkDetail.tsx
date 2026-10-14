@@ -6,7 +6,7 @@ import { delay, useNavTone } from "@/marketing/components/site-helpers"
 import { kindName, onColour, useProjects } from "@/marketing/data/showcase"
 import NotFound from "./NotFound"
 
-/** One project's write-up, in the client's own colour (D-044). */
+/** One project's write-up, in the client's own colour (D-046). */
 export default function WorkDetail() {
   const { slug } = useParams()
   const { projects, loading } = useProjects()

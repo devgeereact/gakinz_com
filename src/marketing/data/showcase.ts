@@ -1,7 +1,7 @@
 import { useWork, type WorkRecord } from "./work"
 
 /**
- * The projects the public site shows (D-044).
+ * The projects the public site shows (D-046).
  *
  * Source of truth is the Work table, edited in the CMS. Until that table holds
  * at least one published record, the site shows the built-in list below, which
@@ -77,7 +77,7 @@ export const SHOWCASE: Project[] = [
 
 export const HERO_MAX = 5
 
-/** The fields the server batch adds to a work record (D-044). Optional until every caller has them. */
+/** The fields the server batch adds to a work record (D-046). Optional until every caller has them. */
 type HeroFields = {
   heroOrder?: number | null
   brandColour?: string | null

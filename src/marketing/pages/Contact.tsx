@@ -6,7 +6,7 @@ import { useSiteCopy } from "@/marketing/data/content"
 import { whatHappensNext } from "@/marketing/data/site"
 
 /**
- * Contact (D-044). The request shape sent to contact.send() is unchanged; the
+ * Contact (D-046). The request shape sent to contact.send() is unchanged; the
  * enquiry lands in the CMS Enquiries board as before. Errors show under each
  * field and focus moves to the first one (WCAG 3.3.1, 2.4.3).
  */

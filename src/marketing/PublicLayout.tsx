@@ -5,7 +5,7 @@ import { useProjects } from "./data/showcase"
 import "./site.css"
 
 /**
- * The public site frame (D-044): navigation, page, footer, all inside the
+ * The public site frame (D-046): navigation, page, footer, all inside the
  * `.gk-site` scope so its styles never reach GAkinzOS.
  *
  * On a route change the window returns to the top and focus moves to the new

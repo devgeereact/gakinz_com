@@ -3,7 +3,7 @@ import { siteContent } from "@/lib/api"
 import { services as baseServices, packages as basePackages, addOns, paymentTerms, faqs as baseFaqs, processStages, site } from "./site"
 
 /**
- * The copy the CMS can edit (D-044, "Site content").
+ * The copy the CMS can edit (D-046, "Site content").
  *
  * Defaults come from site.ts so the site always has real words to show. When
  * the site_content endpoint answers, each published section replaces its

@@ -4,7 +4,7 @@ import { delay } from "@/marketing/components/site-helpers"
 import { useProjects } from "@/marketing/data/showcase"
 import { howIWork, sectors, site } from "@/marketing/data/site"
 
-/** About (D-044). The portrait seal shows the real photograph once supplied, never a stand-in. */
+/** About (D-046). The portrait seal shows the real photograph once supplied, never a stand-in. */
 export default function About() {
   const { projects } = useProjects()
   const portrait = site.images.portrait

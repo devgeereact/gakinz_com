@@ -9,7 +9,7 @@ function readableDate(iso: string): string {
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
 }
 
-/** Writing (D-044). Posts come from the CMS Blog, with the built-in pieces as fallback. */
+/** Writing (D-046). Posts come from the CMS Blog, with the built-in pieces as fallback. */
 export default function Resources() {
   const { posts, loading } = useMarketingBlog()
   return (

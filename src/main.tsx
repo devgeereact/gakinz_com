@@ -7,7 +7,7 @@ import { Toaster } from "sonner"
 import UIThemeProvider from "@/providers/ui-theme-provider"
 
 import { router } from "@/routes"
-// D-044 type, self-hosted for both surfaces; the browser downloads only the
+// D-046 type, self-hosted for both surfaces; the browser downloads only the
 // unicode ranges a page uses. Bricolage Grotesque for display, Hanken Grotesk
 // for text, JetBrains Mono for figures and labels.
 // The optical-size build: weight and opsz axes, so display sizes get the
