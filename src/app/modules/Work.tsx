@@ -204,7 +204,7 @@ export default function Work() {
       setImgListable(false)
       return { problem: "", built: "", outcome: "" }
     }
-    setDetailImages(res.data.images)
+    setDetailImages(res.data.images ?? [])
     setNarrativeLoaded(true)
     setImgListable(true)
     return {
