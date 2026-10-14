@@ -53,7 +53,7 @@ export const MODULE_ROLES: Record<string, Role[]> = {
   testimonials: ["super_admin", "admin", "manager", "editor"],
   // work.php EDITORS — the portfolio record type behind the public /work pages
   work: ["super_admin", "admin", "manager", "editor"],
-  // site.php EDITORS — "Site content": the public site's editable copy
+  // site.php EDITORS, labelled "Site content": the public site's editable copy
   site: ["super_admin", "admin", "manager", "editor"],
   // files.php STAFF — no `trainer`; the server list omits it, so showing the
   // nav item only walked a trainer into a 403.

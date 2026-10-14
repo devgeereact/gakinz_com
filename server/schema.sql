@@ -656,7 +656,7 @@ CREATE TABLE IF NOT EXISTS payment_events (
 -- hold JSON as MEDIUMTEXT rather than a JSON column because the host's MySQL
 -- version is unverified (the same reasoning as work_images above); site.php
 -- validates every section against a fixed shape before it is stored.
--- New table only — safe to run as-is on the live DB (CREATE TABLE IF NOT
+-- New table only, so safe to run as-is on the live DB (CREATE TABLE IF NOT
 -- EXISTS). Until it runs, the public `get` returns {} so the site keeps its
 -- built-in copy, and the CMS actions refuse with a message asking for this step.
 CREATE TABLE IF NOT EXISTS site_content (
