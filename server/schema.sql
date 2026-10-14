@@ -648,3 +648,23 @@ CREATE TABLE IF NOT EXISTS payment_events (
 --     ADD COLUMN hero_mobile_alt      VARCHAR(200) NULL DEFAULT NULL AFTER hero_mobile_file_id,
 --     ADD KEY idx_hero (hero_order);
 
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-10-14 · Editable public-site copy (site.php).
+-- One row per public section (hero, services, process, packages, addons, terms,
+-- faqs, contact). The CMS saves to `draft`; publishing copies `draft` to
+-- `published`, and only `published` is ever served to the public site. Both
+-- hold JSON as MEDIUMTEXT rather than a JSON column because the host's MySQL
+-- version is unverified (the same reasoning as work_images above); site.php
+-- validates every section against a fixed shape before it is stored.
+-- New table only — safe to run as-is on the live DB (CREATE TABLE IF NOT
+-- EXISTS). Until it runs, the public `get` returns {} so the site keeps its
+-- built-in copy, and the CMS actions refuse with a message asking for this step.
+CREATE TABLE IF NOT EXISTS site_content (
+  section       VARCHAR(32)   NOT NULL PRIMARY KEY,   -- hero | services | process | packages | addons | terms | faqs | contact
+  draft         MEDIUMTEXT    NULL,                   -- JSON, last saved from the CMS
+  published     MEDIUMTEXT    NULL,                   -- JSON, what the public site shows
+  updated_by    INT UNSIGNED  NULL,                   -- users.id of the last save
+  updated_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  published_by  INT UNSIGNED  NULL,                   -- users.id of the last publish
+  published_at  TIMESTAMP     NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
