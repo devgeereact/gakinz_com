@@ -552,9 +552,17 @@ CREATE TABLE IF NOT EXISTS work (
   featured       TINYINT(1)    NOT NULL DEFAULT 0,
   sort_order     INT           NOT NULL DEFAULT 0,
   status         VARCHAR(10)   NOT NULL DEFAULT 'draft',       -- draft | published
+  hero_order     TINYINT UNSIGNED NULL,                        -- 1..5 on the homepage hero, NULL when off (2026-10-14)
+  brand_colour   CHAR(7)       NULL,                           -- #RRGGBB, validated by work.php
+  hero_word      VARCHAR(40)   NULL,                           -- one or two words finishing the hero headline
+  hero_desktop_file_id INT UNSIGNED NULL,                      -- files.id, served by share token like work images
+  hero_desktop_alt     VARCHAR(200) NULL,
+  hero_mobile_file_id  INT UNSIGNED NULL,
+  hero_mobile_alt      VARCHAR(200) NULL,
   created_at     TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at     TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   KEY idx_public (status, kind, sort_order),
+  KEY idx_hero (hero_order),
   KEY idx_slug (slug)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -614,3 +622,49 @@ CREATE TABLE IF NOT EXISTS payment_events (
 --     ADD COLUMN next_action_at   DATE NULL DEFAULT NULL AFTER lost_reason,
 --     ADD COLUMN next_action_note VARCHAR(300) NULL DEFAULT NULL AFTER next_action_at,
 --     ADD COLUMN priority         TINYINT NOT NULL DEFAULT 0 AFTER next_action_note;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-10-14 · Homepage hero from the Work table.
+-- Up to five PUBLISHED work records are flagged for the homepage hero, in the
+-- order given by `hero_order` (1..5, NULL when not in the hero). Each carries a
+-- brand colour, a one-to-two word "hero word" that finishes the headline, and a
+-- desktop and a phone screenshot. The screenshots are `files` rows served by
+-- share token (files.php?token=…) exactly as work images are: work.php issues a
+-- permanent token when a screenshot is attached, and requires alt text for it.
+-- work.php enforces the limit of five and the published-only rule, and drops a
+-- record from the hero when it is unpublished or removed.
+-- Fresh installs get the columns from the CREATE TABLE above. Additive and safe
+-- to run once against the live DB (see docs/DEPLOYMENT.md). Until it runs,
+-- work.php serves every existing action with the hero fields as NULL, the
+-- public `hero` action returns an empty list, and setHero / heroOrder refuse
+-- with a message asking for this step.
+--   ALTER TABLE work
+--     ADD COLUMN hero_order           TINYINT UNSIGNED NULL DEFAULT NULL AFTER status,
+--     ADD COLUMN brand_colour         CHAR(7)      NULL DEFAULT NULL AFTER hero_order,
+--     ADD COLUMN hero_word            VARCHAR(40)  NULL DEFAULT NULL AFTER brand_colour,
+--     ADD COLUMN hero_desktop_file_id INT UNSIGNED NULL DEFAULT NULL AFTER hero_word,
+--     ADD COLUMN hero_desktop_alt     VARCHAR(200) NULL DEFAULT NULL AFTER hero_desktop_file_id,
+--     ADD COLUMN hero_mobile_file_id  INT UNSIGNED NULL DEFAULT NULL AFTER hero_desktop_alt,
+--     ADD COLUMN hero_mobile_alt      VARCHAR(200) NULL DEFAULT NULL AFTER hero_mobile_file_id,
+--     ADD KEY idx_hero (hero_order);
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-10-14 · Editable public-site copy (site.php).
+-- One row per public section (hero, services, process, packages, addons, terms,
+-- faqs, contact). The CMS saves to `draft`; publishing copies `draft` to
+-- `published`, and only `published` is ever served to the public site. Both
+-- hold JSON as MEDIUMTEXT rather than a JSON column because the host's MySQL
+-- version is unverified (the same reasoning as work_images above); site.php
+-- validates every section against a fixed shape before it is stored.
+-- New table only, so safe to run as-is on the live DB (CREATE TABLE IF NOT
+-- EXISTS). Until it runs, the public `get` returns {} so the site keeps its
+-- built-in copy, and the CMS actions refuse with a message asking for this step.
+CREATE TABLE IF NOT EXISTS site_content (
+  section       VARCHAR(32)   NOT NULL PRIMARY KEY,   -- hero | services | process | packages | addons | terms | faqs | contact
+  draft         MEDIUMTEXT    NULL,                   -- JSON, last saved from the CMS
+  published     MEDIUMTEXT    NULL,                   -- JSON, what the public site shows
+  updated_by    INT UNSIGNED  NULL,                   -- users.id of the last save
+  updated_at    TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  published_by  INT UNSIGNED  NULL,                   -- users.id of the last publish
+  published_at  TIMESTAMP     NULL DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

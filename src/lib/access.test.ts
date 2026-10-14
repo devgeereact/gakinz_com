@@ -84,6 +84,20 @@ describe("work (the 24th module)", () => {
   })
 })
 
+describe("site content", () => {
+  it("mirrors the EDITORS list in server/site.php", () => {
+    expect(MODULE_ROLES.site).toEqual(["super_admin", "admin", "manager", "editor"])
+  })
+
+  it("keeps trainer, employee and client out, and maps /app/site", () => {
+    for (const role of ["trainer", "employee", "client"] as Role[]) {
+      expect(canAccess(role, "site")).toBe(false)
+    }
+    expect(canAccess("editor", "site")).toBe(true)
+    expect(moduleKeyForPath("/app/site")).toBe("site")
+  })
+})
+
 describe("recorded access mismatches", () => {
   it("no longer offers Files to a trainer (server/files.php STAFF omits it)", () => {
     expect(MODULE_ROLES.files).not.toContain("trainer")

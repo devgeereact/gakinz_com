@@ -166,6 +166,8 @@ is UNVERIFIED, so check them before step 1.
 | 4 | `CREATE TABLE IF NOT EXISTS work_images (...)` | 2026-09-22 relaunch | After `work`; it carries a foreign key to it |
 | 5 | `CREATE TABLE IF NOT EXISTS payment_events (...)` | 2026-10-10, K-025 | Additive, safe to run twice. Until it runs, the Stripe webhook still checks amounts but cannot de-duplicate redelivered events or keep the evidence row |
 | 6 | `ALTER TABLE enquiries ADD COLUMN next_action_at ..., ADD COLUMN next_action_note ..., ADD COLUMN priority ...;` | 2026-10-10, enquiry follow-ups | Additive. Run once only; a second run fails on the duplicate column. Until it runs, `leads.php` lists and updates enquiries but answers `followup: false` and stores no follow-up |
+| 7 | `ALTER TABLE work ADD COLUMN hero_order ..., ADD COLUMN brand_colour ..., ADD COLUMN hero_word ..., ADD COLUMN hero_desktop_file_id ..., ADD COLUMN hero_desktop_alt ..., ADD COLUMN hero_mobile_file_id ..., ADD COLUMN hero_mobile_alt ..., ADD KEY idx_hero (hero_order);` | 2026-10-14, homepage hero | After statement 3. Additive. Run once only; a second run fails on the duplicate column. The full statement is the commented block at the foot of `server/schema.sql`. Until it runs, `work.php` serves every existing action with the hero fields as `null`, `?action=hero` returns `[]`, and `setHero` / `heroOrder` (or a create/update carrying a hero value) answer 503 |
+| 8 | `CREATE TABLE IF NOT EXISTS site_content (...)` | 2026-10-14, editable site copy | New table, safe to run twice. Until it runs, `site.php?action=get` returns `{}` (the public site keeps its built-in copy) and the CMS actions answer 503 |
 
 No existing data is migrated by any of these statements.
 
@@ -180,9 +182,14 @@ _money.php (new)  auth.php         blog.php         clients.php
 comms.php         contact.php      content.php      contracts.php
 design.php        dev.php          files.php        knowledge.php
 leads.php         oauth.php        payments.php     projects.php
-proposals.php     resourcing.php   support.php      tasks.php
-testimonials.php  time.php         users.php
+proposals.php     resourcing.php   site.php (new)   support.php
+tasks.php         testimonials.php time.php         users.php
+work.php
 ```
+
+`site.php` and `work.php` are the 2026-10-14 redesign batch (homepage hero and editable site
+copy). Upload them **after** SQL statements 7 and 8 if you want the new features at once;
+either order is safe, because both degrade until their statement has run.
 
 **If the 2026-09-22 relaunch set was never uploaded**, which is UNVERIFIED, also upload these
 ten files from `main`. The other relaunch files are in the list above already.
@@ -241,6 +248,11 @@ From the branch:
 - **Enquiries carry a next-action date, a note and an owner priority** once SQL statement 6
   has run.
 - **`auth.php?action=me` also returns `totp_enabled`**, which My account reads (K-024).
+- **Work records can go on the homepage hero** (2026-10-14): at most five, published only.
+  Unpublishing or removing a record takes it out of the hero. Attaching a hero screenshot
+  makes that file permanently public, exactly as attaching a work image does.
+- **Public-site copy can be edited in the CMS** through `site.php` (2026-10-14). Nothing
+  changes on the public site until a section is published.
 
 ### 5.6 Post-upload checks
 
@@ -258,7 +270,10 @@ From the branch:
    away. No test record needs creating on the live system for this.
 8. After publishing a work record with an image, open its public page in a signed-out browser
    and confirm the image loads.
-9. Do **not** test a real payment or a real send. Stripe behaviour is covered by
+9. `GET /work.php?action=hero` and `GET /site.php?action=get` return `[]` and `{}` from a
+   signed-out browser before anything is flagged or published. A 500 means the upload is
+   wrong, not that a statement is missing: both degrade without their statement.
+10. Do **not** test a real payment or a real send. Stripe behaviour is covered by
    `npm run test:server` against a fake provider; a live check needs Stripe test-mode keys on a
    non-production copy.
 

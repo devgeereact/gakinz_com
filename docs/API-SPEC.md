@@ -6,7 +6,8 @@ been exercised against production.** Some areas are also covered by local integr
 `tests/server/`, run with `npm run test:server` against a throwaway `*_test` database: the
 Stripe link and webhook, PayPal being switched off, magic links and two-factor, My account
 self-service, quote acceptance, blog editing, create endpoints returning the new id, enquiry
-follow-ups and the client branch of `support.php`. Everything else below is source inspection
+follow-ups, the client branch of `support.php`, the work hero actions and `site.php`
+(2026-10-14). Everything else below is source inspection
 only. That applies with particular force to `work.php`, which has never run and
 has no tables behind it on any database.
 
@@ -66,13 +67,13 @@ include can only run when an endpoint requires it.
 | 403 | Authenticated but not allowed, inactive account, a bad cron key, or a magic link redeemed by a non-client or two-factor account |
 | 404 | Not found, or an expired or invalid share token |
 | 405 | Method not allowed |
-| 409 | A work slug is already in use; a work record names a client and has no stored consent, so it may not be published; a quote that is not sent, has expired or is no longer open is accepted; or an accepted quote is given a new status |
+| 409 | A work slug is already in use; a work record names a client and has no stored consent, so it may not be published; a draft work record is put in the hero, a sixth is switched on, or a hero order does not list exactly the records in the hero; a site section with no saved draft is published; a quote that is not sent, has expired or is no longer open is accepted; or an accepted quote is given a new status |
 | 413 | Upload over 20 MB |
 | 415 | Upload whose extension is outside the allowlist, or whose sniffed type contradicts it |
 | 429 | Login throttle, the contact-form IP throttle, or the per-role AI daily cap |
 | 500 | Write failed |
 | 502 | Upstream provider error |
-| 503 | Integration not configured on the server, or PayPal checkout switched off |
+| 503 | Integration not configured on the server, PayPal checkout switched off, or a 2026-10-14 feature (work hero, site content) used before its schema step has run |
 
 ## 3. Role vocabulary
 
@@ -87,7 +88,7 @@ server; `src/lib/access.ts` is the client mirror and is not a boundary.
 | `MAIL_ROLES` | super_admin, admin, manager | `mail.php` |
 | `PAY_STAFF` | super_admin, admin, manager | `payments.php` |
 | `STAFF` | varies by file, see below | most modules |
-| `EDITORS` | super_admin, admin, manager, editor | `blog.php`, `testimonials.php`, `content.php`, `work.php` |
+| `EDITORS` | super_admin, admin, manager, editor | `blog.php`, `testimonials.php`, `content.php`, `work.php`, `site.php` |
 | `PORTAL_PREVIEW_ROLES` | super_admin, admin, manager | `portal.php` staff branch. Narrowed on 2026-09-22 |
 | `STAFF_OR_CLIENT` | `support.php`'s STAFF plus `client` | `support.php` GET, `create` and `reply`, so a client caller reaches its own branch. Added 2026-10-10 |
 | `MAGIC_ROLES` | client | `auth.php` magic links |
@@ -119,6 +120,8 @@ Treat these as the internet-facing attack surface.
 | `files.php` | GET `?token=` | Streams a shared file while the token is unexpired. A token issued by `work.php?action=addImage` has **no expiry**, so it streams indefinitely. See section 7 |
 | `work.php` | GET `?action=list[&kind=]` | Published work records, cover folded in, ordered by featured, then `sort_order`, then id, limit 200 |
 | `work.php` | GET `?action=get&slug=` | One published record with its ordered image set |
+| `work.php` | GET `?action=hero` | Up to five published records flagged for the homepage hero, in hero order, with brand colour, hero word and screenshots. `[]` before the schema step |
+| `site.php` | GET `?action=get` | Published site copy as `{section: data}`, never a draft. `{}` when nothing is published or the table does not exist. `Cache-Control: public, max-age=60`. See section 7a |
 | `payments.php` | POST `?action=webhook` | Stripe webhook. HMAC verified, 5 minute replay window. Marks an invoice paid only when the amount and currency Stripe took match the VAT-inclusive payable total. See section 5, Money |
 | `payments.php` | GET `?action=paypal_return` | PayPal capture on return. Marks the invoice paid only on a completed capture whose `custom_id`, amount and currency match. Not gated by `$PAYPAL_ENABLED`, but with checkout switched off no new order is created |
 | `oauth.php` | GET `?action=status`, `start`, `callback` | Google SSO. Matches an existing active user only, never provisions. Refuses an account with two-factor on, redirecting with `#sso_error=two_factor`, so Google never stands in for the second factor. Carries a CSRF `state` parameter in a short-lived HttpOnly cookie, and validates the id_token's `aud` and `iss` |
@@ -272,7 +275,8 @@ Grouped by area. Actions are the `?action=` value on POST unless stated.
 | `blog.php` | GET `?all=1`, GET `?id=`, `create`, `update`, `publish`, `delete` | EDITORS. `?all=1` lists every post without its body; `?id=` returns one post at any status with its body, for the edit form. An `update` that omits `excerpt` or `body` keeps the stored value, so saving other fields never wipes the article |
 | `testimonials.php` | GET `?all=1`, `create`, `update`, `approve`, `delete` | EDITORS |
 | `content.php` | GET list, `create`, `update`, `delete` | EDITORS |
-| `work.php` | `listAll`, `getAdmin`, `create`, `update`, `publish`, `remove`, `reorder`, `addImage`, `removeImage` | EDITORS. See section 7 |
+| `work.php` | `listAll`, `getAdmin`, `create`, `update`, `publish`, `remove`, `reorder`, `addImage`, `removeImage`, `setHero`, `heroOrder` | EDITORS. See section 7 |
+| `site.php` | GET `?action=draft`, `save`, `publish` | EDITORS. See section 7a |
 | `knowledge.php` | GET list with `?q=` and `?category=`, GET `?id=`, `create`, `update`, `delete` | STAFF |
 | `announcements.php` | GET list, `create`, `delete` | ALL_STAFF to read, AUTHORS to write |
 
@@ -321,6 +325,30 @@ has, and because **it has never been executed**: there are no `work` tables on a
 | `reorder` | POST | EDITORS | `{ ids: [...] }`, up to 500, writes each position as `sort_order` |
 | `addImage` | POST | EDITORS | `{ work_id, file_id, alt, caption?, sort_order? }`, 201. Alt text is mandatory |
 | `removeImage` | POST | EDITORS | `{ id }`, a `work_images` row id |
+| `hero` | GET | none | Published records with a `hero_order`, ordered by it, limit 5. Returns `id`, `slug`, `kind`, `title`, `sector`, `summary`, `live_url`, `status`, `hero_order`, `brand_colour`, `hero_word`, `hero_desktop`, `hero_mobile`, and `client_name` only with consent |
+| `setHero` | POST | EDITORS | `{ id, on }`, `on` a JSON boolean. On: 409 "Publish this record before putting it in the hero." for a draft, 409 "The hero holds 5 projects. Switch one off first." for a sixth, otherwise appended as max + 1. Off: cleared and the rest renumbered 1..n. Returns `{ ok, hero_order }`. Runs in a transaction with the hero rows locked |
+| `heroOrder` | POST | EDITORS | `{ ids: [...] }`, at most 5, each once, and exactly the records currently in the hero (409 otherwise). Writes 1..n in the order given |
+
+### The homepage hero (2026-10-14)
+
+`list`, `get`, `listAll` and `getAdmin` also return `hero_order`, `brand_colour`,
+`hero_word`, `hero_desktop_file_id`, `hero_mobile_file_id`, and the screenshots folded as
+`hero_desktop` and `hero_mobile`, each `{ file_id, alt, share_token, mime }` or `null`, the
+same shape as `cover`. A screenshot is served at `files.php?token=<share_token>`.
+
+`create` and `update` accept `brand_colour` (`#RRGGBB`, stored upper case), `hero_word`
+(one or two words, 40 characters at most), and `hero_desktop_file_id` with
+`hero_desktop_alt`, `hero_mobile_file_id` with `hero_mobile_alt` (alt required, 200
+characters at most). **Each is written only when its key is sent**, so an older form cannot
+wipe them; `null` or `""` clears, and clearing a file clears its alt. Attaching a screenshot
+issues the file a permanent share token exactly as `addImage` does, and 404s a missing file.
+
+Unpublishing through `publish`, saving as a draft through `update`, or `remove` takes the
+record out of the hero and renumbers the rest. `publish` and `update` report this as
+`hero_removed`. Audit actions: `work_hero_on`, `work_hero_off`, `work_hero_order`.
+
+Before the schema step runs the hero fields read as `null`, `hero` returns `[]`, and
+`setHero`, `heroOrder` or a non-empty hero value on `create`/`update` answer 503.
 
 ### The consent rule
 
@@ -359,6 +387,36 @@ rather than the value rendered. Dates must match `YYYY-MM-DD`. `kind` and `statu
 checked with `in_array(..., true)` against the constants at the top of the file, because the
 schema uses `VARCHAR` with a trailing comment rather than an `ENUM`, in keeping with the rest
 of the schema.
+
+## 7a. `site.php` in detail
+
+New on 2026-10-14. Editable public-site copy, one row per section in `site_content`. The CMS
+saves a draft; only `publish` copies it to the public column.
+
+| Action | Method | Auth | Behaviour |
+|---|---|---|---|
+| `get` (also the default) | GET | none | `{section: data}` for every section with published content; sections never published are absent. Selects the `published` column only, so a draft cannot leak. `{}` before the table exists |
+| `draft` | GET | EDITORS | Every known section as `{ draft, published, updated_at, updated_by_name, published_at, published_by_name }`, nulls where nothing is stored |
+| `save` | POST | EDITORS | `{ section, data }`. Validates, stores as the draft, audits `site_save`. Returns `{ ok, section, draft }` with the cleaned data |
+| `publish` | POST | EDITORS | `{ sections? }`. Copies draft to published for the sections named, or for every section with a draft. Re-validates each draft first. 409 when a named section has no draft or nothing is saved. Audits `site_publish`. Returns `{ ok, published }` |
+
+Section shapes. Text is trimmed and refused, not cut, when empty or over its limit: 300
+characters for short fields, 1200 for `lead`, `summary`, `detail`, `best`, `a` and `footer`.
+Lists hold 1 to 12 rows. Unknown sections and unknown keys are refused.
+
+| Section | Shape |
+|---|---|
+| `hero` | `{ status, lead, cta1, cta2, secs }`, `secs` a whole number from 4 to 10 |
+| `services` | `[{ title, summary }]` |
+| `process` | `[{ title, detail }]` |
+| `packages` | `[{ name, price, best, featured? }]`, `featured` a boolean |
+| `addons` | `[{ name, price }]` |
+| `terms` | `[{ stage, share }]` |
+| `faqs` | `[{ q, a }]` |
+| `contact` | `{ email, reply, footer }`, `email` a valid address |
+
+Before the table exists, `get` answers `{}` and the staff actions answer 503 with a message
+naming the schema step.
 
 ## 8. Adding an endpoint
 
