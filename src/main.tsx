@@ -7,9 +7,14 @@ import { Toaster } from "sonner"
 import UIThemeProvider from "@/providers/ui-theme-provider"
 
 import { router } from "@/routes"
-// Sofia Sans, the public family (D-037). Self-hosted; the browser downloads
-// only the unicode ranges a page uses.
-import "@fontsource-variable/sofia-sans"
+// D-044 type, self-hosted for both surfaces; the browser downloads only the
+// unicode ranges a page uses. Bricolage Grotesque for display, Hanken Grotesk
+// for text, JetBrains Mono for figures and labels.
+// The optical-size build: weight and opsz axes, so display sizes get the
+// tighter letterforms the design was approved with.
+import "@fontsource-variable/bricolage-grotesque/opsz.css"
+import "@fontsource-variable/hanken-grotesk"
+import "@fontsource-variable/jetbrains-mono"
 import "@/index.css"
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
