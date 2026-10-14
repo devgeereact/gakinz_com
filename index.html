@@ -51,17 +51,6 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <!-- Warm paper, matching the page, so a mobile browser's chrome does not flash white. -->
     <meta name="theme-color" content="#F3F0EE" />
-
-    <!--
-      Preconnect only. The font stylesheet itself is @import-ed from
-      src/index.css, and that is deliberate: linking it here instead measured
-      CLS 0.151 on the home page against 0.00 with the import, because the text
-      paints in a fallback and reflows when Newsreader arrives. The preconnect
-      still shortens the handshake once the CSS discovers the request.
-      See qa/PERFORMANCE-AUDIT.md.
-    -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   </head>
   <body>
     <div id="root"></div>
