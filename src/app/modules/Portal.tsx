@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { Loader2, CreditCard, ArrowLeft, Send, Plus, Eye, Link2Off } from "lucide-react"
+import { Loader2, CreditCard, ArrowLeft, Send, Plus, Eye, Link2Off, MessageSquarePlus } from "lucide-react"
 import { toast } from "sonner"
 import {
   Select,
@@ -25,6 +25,9 @@ import {
   type Client,
   type ClientThread,
 } from "@/lib/api"
+import { feedback as feedbackApi } from "@/lib/api"
+import { FeedbackFields } from "@/app/components/ClientFeedback"
+import { EMPTY_FEEDBACK, feedbackPayload, feedbackReady, type FeedbackFormState } from "@/app/modules/bookingModel"
 import { useAuth } from "@/store/auth.store"
 import { EmptyState, LoadError } from "@/app/components/EmptyState"
 import { PageHeader, StatusBadge } from "@/app/components/page-kit"
@@ -288,7 +291,10 @@ export default function Portal() {
 
           {/* A client messages the studio here; staff previewing see the ticket list. */}
           {isClient ? (
-            <ClientMessages composing={composing} setComposing={setComposing} />
+            <>
+              <ClientMessages composing={composing} setComposing={setComposing} />
+              <PortalFeedback projects={data.projects} />
+            </>
           ) : (
             <Card>
               <CardHeader className="flex-row items-center gap-2.5 space-y-0">
@@ -579,6 +585,80 @@ function Thread({
         </div>
       </form>
     </div>
+  )
+}
+
+/**
+ * Private feedback from the client (feedback.php, client branch). Send-only:
+ * the server never returns feedback to a client, so nothing is listed here.
+ * Permission to quote is a separate switch, off by default.
+ */
+function PortalFeedback({ projects }: { projects: { id: number; name: string }[] }) {
+  const [open, setOpen] = useState(false)
+  const [form, setForm] = useState<FeedbackFormState>(EMPTY_FEEDBACK)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [sent, setSent] = useState(false)
+  const inFlight = useRef(false)
+
+  const send = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!feedbackReady(form) || inFlight.current) return
+    inFlight.current = true
+    setSending(true)
+    setError(null)
+    const res = await feedbackApi.send(feedbackPayload(form))
+    inFlight.current = false
+    setSending(false)
+    if (res.ok) {
+      setSent(true)
+      setOpen(false)
+      setForm(EMPTY_FEEDBACK)
+    } else {
+      // Keep what they wrote so nothing is lost.
+      setError(res.status === 503 ? "Feedback cannot be sent just yet. Please try again later, or message us instead." : res.error || "Your feedback was not sent.")
+    }
+  }
+
+  return (
+    <Card aria-labelledby="portal-feedback-heading">
+      <CardHeader className="flex-row flex-wrap items-center gap-2.5 space-y-0">
+        <CardTitle id="portal-feedback-heading">Feedback</CardTitle>
+        {!open && (
+          <Button size="sm" variant="outline" className="ml-auto" onClick={() => { setOpen(true); setSent(false) }}>
+            <MessageSquarePlus /> Give feedback
+          </Button>
+        )}
+      </CardHeader>
+      <CardContent>
+        {open ? (
+          <form onSubmit={send} className="grid gap-3.5">
+            <p className="text-sm text-muted-foreground">Only the studio reads this. It is never published unless you say so below.</p>
+            <FeedbackFields form={form} set={(p) => setForm((f) => ({ ...f, ...p }))} idPrefix="portal-fb" projects={projects} disabled={sending} audience="client" />
+            {error && (
+              <p role="alert" className="text-sm text-bad">
+                {error} Your feedback is still here, so you can try again.
+              </p>
+            )}
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={sending}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={!feedbackReady(form) || sending}>
+                {sending ? <Loader2 className="animate-spin" /> : <Send />}
+                {sending ? "Sending…" : "Send privately"}
+              </Button>
+            </div>
+          </form>
+        ) : sent ? (
+          <p role="status" className="py-2 text-sm">
+            Thank you. Your feedback reached the studio privately.
+          </p>
+        ) : (
+          <p className="py-2 text-sm text-muted-foreground">Tell us how the work went. Your feedback is private to the studio.</p>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
