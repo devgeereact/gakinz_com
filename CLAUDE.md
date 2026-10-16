@@ -36,7 +36,7 @@ through `src/lib/api.ts`.
 | Test | `npm test` (unit), `npm run test:server` (needs local MySQL or MariaDB) |
 | Lint ratchet | `npm run lint:ratchet` |
 | Documentation check | `npm run docs:check` |
-| Type check and build | `npm run build` (runs `tsc -b` first) |
+| Type check, build and prerender | `npm run build` (`tsc -b`, `vite build`, the SSR build, then `scripts/prerender.mjs`; no network) |
 | Lint | `npm run lint` |
 | PHP syntax gate | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` |
 
@@ -110,7 +110,7 @@ Measured on branch `feat/redesign-2026` at `d314833` (stacked on `feat/plan-2026
 #8) on the Ubuntu computer. The source for every count is `docs/STATUS.md` section 0.
 
 - `npx tsc -b`, `npm run build`, `npm run docs:check` and `php -l` over 47 PHP files PASS;
-  `npm test` 128 unit tests PASS. `npm run test:server` 140 server integration tests PASS,
+  `npm test` 128 unit tests PASS (143 on `perf/prerender-public`, 2026-10-16). `npm run test:server` 140 server integration tests PASS,
   measured the same day against a throwaway local `*_test` database on MariaDB 10.11.
 - **`npm run lint` fails: 41 errors, 1 warning.** `npm run lint:ratchet` holds that ceiling in
   CI, so the count must not grow. See `docs/KNOWN-ISSUES.md` K-002.

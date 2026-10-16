@@ -53,7 +53,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-040 | `stored` is a MySQL 8 reserved word, so the schema failed on MySQL | High | **Fixed 2026-10-10.** Not uploaded |
 | K-041 | `npm audit` reports 15 affected packages, ten of them high | Medium | Open. Owner decision |
 | K-042 | The Google Fonts `@import` still blocks rendering on public pages that no longer use those fonts | Low | **Fixed in code 2026-10-14** (D-046), not deployed. CLS measured 2026-10-16: see K-052 |
-| K-043 | A static canonical in `index.html` conflicts with the per-route canonical | Low | Open. Costs SEO 92 on inner routes (Lighthouse, 2026-10-16) |
+| K-043 | A static canonical in `index.html` conflicts with the per-route canonical | Low | **Fixed 2026-10-16** (prerender), not deployed. SEO 100 on `/`, `/work`, `/contact` |
 | K-044 | The D-046 redesign is verified only against mocked API responses | Medium | Open. Owner test on real data pending |
 | K-045 | Accessibility and performance audits predate the D-046 rebuild and the font change | Medium | **Closed 2026-10-16.** Re-measured; five fixes, open findings are K-050 to K-053 |
 | K-046 | Dead redesign residue: `.gk-fadein` rules, the Sofia Sans dependency, D-037 brand assets | Cosmetic | Open |
@@ -62,8 +62,8 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-049 | Editing a Work record crashed on a detail response without images | Medium | **Fixed 2026-10-14** (`24c25ff`). Not deployed |
 | K-050 | RotaFlow blue `#3B6FE0` fails contrast for the reduced-opacity white text on it | Medium | Open. Owner decision (brand colour) |
 | K-051 | Amber hero slide: dark bar text on the dark bottom shading | Medium | Open. Owner decision (design) |
-| K-052 | Home CLS 0.114 from the font swap moving the hero, and LCP 4.9 s simulated | Medium | Open |
-| K-053 | The LCP image on `/work` is lazy-loaded | Low | Open |
+| K-052 | Home CLS 0.114 from the font swap moving the hero, and LCP 4.9 s simulated | Medium | CLS **fixed**, FCP 2.7 to 1.8 s with the prerender (2026-10-16), not deployed. Home LCP still 4.5 to 4.8 s: open |
+| K-053 | The LCP image on `/work` is lazy-loaded | Low | Prerendered 2026-10-16: `/work` LCP 3.4 s, Performance 90 to 91. Eager first card re-measured, still no faster; lazy kept |
 
 
 ---
@@ -894,7 +894,19 @@ first contentful paint 2.1 s, performance 96. Fix: load those three families onl
 `@import` records that moving fonts once raised CLS.
 
 ## K-043 · A static canonical in `index.html` conflicts with the per-route canonical
-**Severity:** low · **Status:** open.
+**Severity:** low · **Status:** **fixed 2026-10-16** on `perf/prerender-public`, not deployed.
+
+**Resolution.** The static canonical and `og:url` are gone from `index.html`. The public pages
+are prerendered at build time (`docs/ARCHITECTURE.md` section 2), and each page's head carries
+the tags `Seo.tsx` declares: one `<title>`, one description, one canonical. After hydration
+React adopts those tags rather than adding a second set; checked with Playwright on all 30
+prerendered pages, with JavaScript off and on, and after client-side navigation (one title and
+one canonical each time). Lighthouse 12.8.2 mobile, 3 runs each, local production build behind
+a gzip server that applies the `.htaccess` rules: SEO **100** on `/`, `/work` and `/contact`
+(was 100, 92, 92). Client-only routes (`/verify/:id`, the CMS) get their canonical from React
+once JavaScript runs, and the shell carries none.
+
+History:
 
 `index.html` declares `<link rel="canonical" href="https://gakinz.com/" />` and `Seo.tsx`
 renders a per-route canonical as well. On any route other than `/` the page then carries two
@@ -1022,7 +1034,32 @@ Options for the owner: render the slide bar in light text whenever the slide tex
 (white on the shaded band measures 6.73:1), or leave the shading off dark-text slides.
 
 ## K-052 · Home CLS 0.114 from the font swap moving the hero, and LCP 4.9 s simulated
-**Severity:** medium · **Status:** **CLS fixed 2026-10-16**, not deployed; LCP open. Metric-matched Arial fallbacks ("Bricolage Fallback", "Hanken Fallback" in `site.css`, measured in Chromium) stop the font swap moving the hero. Lighthouse mobile on the local preview, 3 runs after the K-054 fix: `/` CLS 0 to 0.052 (was 0.114), LCP 4.4 to 5.0 s, Performance 75 to 80; `/work` LCP 3.5 to 3.6 s, Performance 86 to 87. LCP needs prerendering of the public pages. Found 2026-10-16 (K-045 audit).
+**Severity:** medium · **Status:** CLS fixed, first paint faster, home LCP still open. Prerender on `perf/prerender-public`, 2026-10-16, not deployed.
+
+**Prerender, 2026-10-16.** The public pages now arrive as HTML (`docs/ARCHITECTURE.md`
+section 2). Lighthouse 12.8.2 mobile, simulated throttling, 3 runs each, local production
+builds behind the same gzip server (before: `origin/feat/redesign-2026` at `c38d425`):
+
+| Page | Performance | LCP | CLS | FCP |
+|---|---|---|---|---|
+| `/` before | 76 to 80 | 4.43 to 4.96 s | 0 | 2.71 s |
+| `/` after | 81 to 83 | 4.45 to 4.83 s | 0 | 1.81 to 1.85 s |
+| `/work` before | 86 to 87 | 3.48 to 3.63 s | 0 to 0.001 | 2.71 s |
+| `/work` after | 90 to 91 | 3.38 to 3.45 s | 0 | 1.80 to 1.81 s |
+| `/contact` before | 92 | 2.73 to 2.74 s | 0 to 0.018 | 2.70 s |
+| `/contact` after | 94 | 2.85 s | 0 | 1.80 s |
+
+Painting before JavaScript exposed two shifts the client render had hidden, both fixed: the
+fonts arrived after the first paint (now preloaded, the three Latin files, about 150 KB), and
+the London clock, empty in the HTML, rewrapped the hero's status line when it filled in (an
+invisible `00:00` now holds its width). **Home LCP is not better.** The hero screenshot is in
+the HTML and preloaded, but Lighthouse's simulation still counts the bundle and fonts ahead of
+it on a slow connection. Two follow-ups were measured and dropped as no faster: preloading only
+the slide on show, and an eager first card on `/work`. Next candidates: preload fewer font
+files, or make the bundle smaller. `/contact` LCP is 0.1 s later, its LCP being a form label
+painted once the fonts arrive.
+
+Earlier entry: Metric-matched Arial fallbacks ("Bricolage Fallback", "Hanken Fallback" in `site.css`, measured in Chromium) stop the font swap moving the hero. Lighthouse mobile on the local preview, 3 runs after the K-054 fix: `/` CLS 0 to 0.052 (was 0.114), LCP 4.4 to 5.0 s, Performance 75 to 80; `/work` LCP 3.5 to 3.6 s, Performance 86 to 87. LCP needs prerendering of the public pages. Found 2026-10-16 (K-045 audit).
 
 Lighthouse 12.8.2, mobile, simulated throttling, local build: `/` scores performance 73 to 74,
 **CLS 0.114** (over 0.1) and **LCP 4.9 s**. The single shift is the hero's `.laptop` device
@@ -1037,7 +1074,7 @@ rather than centre; prerendering (`qa/PERFORMANCE-AUDIT.md` section 6) addresses
 Re-measure after any of them.
 
 ## K-053 · The LCP image on `/work` is lazy-loaded
-**Severity:** low · **Status:** open, measured 2026-10-16. Loading the first card eagerly with high fetch priority made `/work` slower on the local preview (LCP 3.8 s against 3.5 to 3.6 s lazy, 3 runs each), because the page is rendered by JavaScript and the request only competes with scripts and fonts. Lazy loading is kept; the fix is the same prerendering as K-052. Found 2026-10-16 (K-045 audit).
+**Severity:** low · **Status:** prerendered 2026-10-16 on `perf/prerender-public`, not deployed. `/work` LCP 3.38 to 3.45 s and Performance 90 to 91 (was 3.48 to 3.63 s and 86 to 87; K-052 table). With the page prerendered, an eager first card with high fetch priority was measured again, and was still slower (LCP 3.53 to 3.54 s, 3 runs), so lazy loading stays. Earlier entry: measured 2026-10-16. Loading the first card eagerly with high fetch priority made `/work` slower on the local preview (LCP 3.8 s against 3.5 to 3.6 s lazy, 3 runs each), because the page is rendered by JavaScript and the request only competes with scripts and fonts. Lazy loading is kept; the fix is the same prerendering as K-052. Found 2026-10-16 (K-045 audit).
 
 On `/work` the LCP element is the first project card's screenshot, and `ProjectCard` gives every
 card image `loading="lazy"`, so Lighthouse fails `lcp-lazy-loaded` (LCP 3.5 s simulated,

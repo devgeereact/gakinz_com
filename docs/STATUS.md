@@ -28,7 +28,7 @@ names another date or computer. Re-measure and update this table when a count ch
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 128 tests in 8 files |
+| Unit tests | `npm test` | **PASS.** 143 tests in 10 files (2026-10-16, `perf/prerender-public`: 15 added for the prerender path list and HTML assembly) |
 | Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 140 tests in 12 files. Measured 2026-10-14 on local MariaDB 10.11 on the final redesign branch; not re-run for this table, because no local test database is configured on the computer that measured the other rows |
 | Type check | `npx tsc -b` | **PASS** |
 | Build | `npm run build` | **PASS** |
@@ -616,7 +616,7 @@ whether the code path exists in the repository.
 | Accessibility, automated | PARTIAL on the D-046 build, measured 2026-10-16: two brand-colour contrast failures open (K-050, K-051). See section 6.3 and `qa/ACCESSIBILITY-AUDIT.md` section 9 |
 | Accessibility, assistive technology | **NOT TESTED.** No screen-reader pass has been run |
 | Accessibility, GAkinzOS at `/app/*` | PARTIAL. First automated check 2026-10-16: 8 screens in empty states, light and dark, 0 axe violations after fixes. Data-filled screens, dialogs and 390px NOT TESTED |
-| Performance, lab | Lighthouse mobile with simulated throttling on a local preview, 2026-10-16: 73 to 92. See section 6.3 |
+| Performance, lab | Lighthouse mobile with simulated throttling on a local preview, 2026-10-16: 73 to 92. See section 6.3. With the prerender (`perf/prerender-public`): 81 to 94, CLS 0, SEO 100 on `/`, `/work`, `/contact`; home LCP still 4.5 to 4.8 s (`docs/KNOWN-ISSUES.md` K-052) |
 | Performance, field | **NOT TESTED.** No real-user measurement exists |
 | Security | Source inspection only, and the changes are not deployed. See `qa/SECURITY-AUDIT.md` |
 
@@ -624,7 +624,7 @@ whether the code path exists in the repository.
 
 | Item | Reason |
 |---|---|
-| Server-side rendering or a prerender step | None. The site is a client-rendered SPA, so a crawler that does not execute JavaScript sees an empty document. `public/llms.txt` exists as a hand-written mitigation, not a fix |
+| Server-side rendering | None at request time. Since 2026-10-16 (`perf/prerender-public`, not merged or deployed) the 30 public pages are prerendered at build time from the built-in content; the CMS, `/verify/:id` and CMS-only records are still client-rendered. See `docs/ARCHITECTURE.md` section 2 |
 | Generated sitemap entries for `/work/:slug` and `/resources/:slug` | `public/sitemap.xml` is hand-maintained and lists static routes only. Database-backed URLs would need a generator or a server-rendered sitemap |
 | Xero and QuickBooks accounting sync | Needs a full OAuth application and a sandbox account |
 | Google Drive, Box, Dropbox storage | Same. Local file storage exists instead |
