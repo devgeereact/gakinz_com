@@ -87,9 +87,29 @@ export function LondonClock() {
 }
 
 
-/** Laptop and phone frames. With several projects, `active` picks the one on show. */
+/**
+ * Laptop and phone frames. With several projects, `active` picks the one on show.
+ *
+ * Only the active slide's screenshots are in the first render, with the laptop
+ * one fetched at high priority: it is the home page's largest element (K-052).
+ * The other slides' images join once the page has loaded, well before the
+ * slideshow first advances. The server and the first client render agree,
+ * because `warm` starts false on both.
+ */
 export function Devices({ list, active = 0 }: { list: Project[]; active?: number }) {
   const cur = list[active] ?? list[0]
+  const [warm, setWarm] = useState(false)
+  useEffect(() => {
+    if (list.length < 2) return
+    const on = () => setWarm(true)
+    if (document.readyState === "complete") {
+      const t = window.setTimeout(on, 0)
+      return () => window.clearTimeout(t)
+    }
+    window.addEventListener("load", on, { once: true })
+    return () => window.removeEventListener("load", on)
+  }, [list.length])
+  const shown = (i: number) => i === active || warm
   return (
     <>
       <div className="laptop">
@@ -101,15 +121,15 @@ export function Devices({ list, active = 0 }: { list: Project[]; active?: number
         </div>
         <div className="screen">
           {list.map((q, i) =>
-            q.desktop ? (
-              <img key={q.slug} src={q.desktop.src} alt="" data-on={i === active} loading={i < 2 ? "eager" : "lazy"} width={1200} height={750} />
+            q.desktop && shown(i) ? (
+              <img key={q.slug} src={q.desktop.src} alt="" data-on={i === active} fetchPriority={i === active && !warm ? "high" : undefined} width={1200} height={750} />
             ) : null,
           )}
         </div>
       </div>
       <div className="phone">
         {list.map((q, i) =>
-          q.mobile ? <img key={q.slug} src={q.mobile.src} alt="" data-on={i === active} loading={i < 2 ? "eager" : "lazy"} width={390} height={844} /> : null,
+          q.mobile && shown(i) ? <img key={q.slug} src={q.mobile.src} alt="" data-on={i === active} width={390} height={844} /> : null,
         )}
       </div>
     </>
