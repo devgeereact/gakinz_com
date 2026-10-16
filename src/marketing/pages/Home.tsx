@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react"
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react"
 import { Link } from "react-router-dom"
 import Seo, { personSchema, websiteSchema } from "@/marketing/components/Seo"
 import { CtaBand, Devices, IArrow, INext, IPause, IPlay, IPrev, LondonClock, ProjectCard } from "@/marketing/components/site-ui"
@@ -13,11 +13,16 @@ import Testimonials from "@/marketing/components/Testimonials"
 function readableDate(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
 }
 
 const pad = (n: number) => String(n).padStart(2, "0")
 const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+const onMotionChange = (fn: () => void) => {
+  const q = window.matchMedia("(prefers-reduced-motion: reduce)")
+  q.addEventListener("change", fn)
+  return () => q.removeEventListener("change", fn)
+}
 
 /**
  * The brand-colour hero (D-046). One full screen; the background, the last
@@ -33,7 +38,12 @@ function Hero({ list }: { list: Project[] }) {
   const [prev, setPrev] = useState(-1)
   const [shown, setShown] = useState(0)
   const [out, setOut] = useState(false)
-  const [paused, setPaused] = useState(reduced)
+  // Playing in the prerendered markup and in the render that hydrates it, so
+  // both match; a reduced-motion preference then pauses it at once. Once the
+  // visitor presses play or pause, their choice wins.
+  const stillByDefault = useSyncExternalStore(onMotionChange, reduced, () => false)
+  const [chosen, setChosen] = useState<boolean | null>(null)
+  const paused = chosen ?? stillByDefault
   const [hold, setHold] = useState(false)
   const [cycle, setCycle] = useState(0)
   const [hidden, setHidden] = useState(false)
@@ -178,7 +188,7 @@ function Hero({ list }: { list: Project[] }) {
           <span className="count">
             {pad(i + 1)} / {pad(n)}
           </span>
-          <button className="ctrl" type="button" aria-label={paused ? "Play slideshow" : "Pause slideshow"} onClick={() => setPaused((v) => !v)}>
+          <button className="ctrl" type="button" aria-label={paused ? "Play slideshow" : "Pause slideshow"} onClick={() => setChosen(!paused)}>
             {paused ? <IPlay /> : <IPause />}
           </button>
           <button className="ctrl js-next" type="button" aria-label="Next project" onClick={() => go(i + 1)}>

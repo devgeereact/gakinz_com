@@ -77,6 +77,7 @@ function LegalPage({
                       day: "numeric",
                       month: "long",
                       year: "numeric",
+                      timeZone: "UTC",
                     })}
                   </time>
                 ) : (

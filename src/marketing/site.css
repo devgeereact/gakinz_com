@@ -83,6 +83,8 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .hero__in{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.12fr);gap:clamp(24px,4vw,72px);align-items:center;padding-top:calc(96px + env(safe-area-inset-top,0px));padding-bottom:16px}
 .gk-site .hero__status{display:flex;flex-wrap:wrap;gap:8px 20px;margin-bottom:28px;opacity:.85}
 .gk-site .hero__status i{display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:8px;vertical-align:1px;animation:gk-pulse 2.4s ease-in-out infinite}
+/* The clock is empty in the prerendered page and fills in after hydration. An invisible 00:00, in the same face and letter-spacing, holds its width, so filling it in cannot rewrap the status line and move the hero (K-052). */
+.gk-site .clock:empty::before{content:"00:00";visibility:hidden}
 @keyframes gk-pulse{50%{opacity:.35}}
 .gk-site .hero h1{font-size:clamp(2.5rem,5.4vw,5rem);font-weight:720;letter-spacing:-.045em;line-height:.99}
 .gk-site .swap{display:inline-grid;vertical-align:bottom}

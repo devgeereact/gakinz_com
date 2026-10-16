@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { blog, type BlogSummary, type BlogPost } from "@/lib/api"
 import { insights, type Insight } from "./site"
 import { resolveList, resolveOne } from "./cmsResult"
+import { seedFromFallback } from "./seed"
 
 /**
  * One normalised shape the writing pages render, whether a post comes from the
@@ -75,16 +76,19 @@ const staticPosts = insights.map(fromStatic)
  * answer, so an unpublished post disappears from the site. The curated static
  * posts appear only when the request fails; see ./cmsResult.ts.
  *
- * Nothing is rendered from the static list before the request settles. Showing
- * it first would flash a post that may have been unpublished, then remove it.
- * The pages show a loading line instead, and this is a client-rendered app, so
- * there is no no-JavaScript render that the static list was serving.
+ * In the browser nothing is rendered from the static list before the request
+ * settles. Showing it first would flash a post that may have been unpublished,
+ * then remove it, so the pages show a loading line instead. The exception is
+ * the build-time prerender and the hydration of its markup (./seed.ts): a
+ * prerendered page has to carry real content, so it carries the static posts
+ * until the CMS answer replaces them.
  */
 
 // List hook: CMS posts when the CMS answers, otherwise the curated fallback.
 export function useMarketingBlog() {
-  const [posts, setPosts] = useState<MarketingPost[]>([])
-  const [loading, setLoading] = useState(true)
+  // Seeded only for the prerender and the hydration of its markup (./seed.ts).
+  const [posts, setPosts] = useState<MarketingPost[]>(() => (seedFromFallback() ? staticPosts : []))
+  const [loading, setLoading] = useState(() => !seedFromFallback())
   const [fromCms, setFromCms] = useState(false)
 
   useEffect(() => {
@@ -112,7 +116,9 @@ export function useMarketingBlog() {
 // keyed by slug, so moving to another article never shows the previous one
 // while the next loads.
 export function useMarketingPost(slug: string | undefined) {
-  const [result, setResult] = useState<{ slug: string; post: MarketingPost | null } | null>(null)
+  const [result, setResult] = useState<{ slug: string; post: MarketingPost | null } | null>(() =>
+    slug && seedFromFallback() ? { slug, post: staticPosts.find((p) => p.slug === slug) ?? null } : null,
+  )
 
   useEffect(() => {
     if (!slug) return
