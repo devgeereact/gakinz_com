@@ -37,6 +37,7 @@ export function q(v: string | number | null): string {
 }
 
 const TABLES = [
+  "client_feedback", "booking_events", "bookings", "comm_messages", "comm_threads",
   "site_content", "payment_events", "audit_log", "magic_links", "auth_tokens", "invoice_items", "invoices",
   "ticket_replies", "tickets", "work_images", "work", "files",
   "proposal_items", "proposals", "tasks", "projects", "posts", "users", "clients", "enquiries",
