@@ -12,10 +12,10 @@ const TabsList = React.forwardRef<
   <TabsPrimitive.List
     ref={ref}
     className={cn(
-      // max-w-full + overflow-x-auto: a long tab row scrolls inside itself on a
-      // phone instead of widening the page (K-031). justify-start so the
-      // first tabs stay reachable when it overflows.
-      "inline-flex max-w-full items-end justify-start gap-1 overflow-x-auto border-b border-border text-muted-foreground [scrollbar-width:none]",
+      // A long tab row wraps onto a second line on a phone, so every tab stays
+      // visible and the page never widens (K-031, K-048). A hidden sideways
+      // scroll gave no cue that more tabs existed.
+      "inline-flex h-auto max-w-full flex-wrap items-end justify-start gap-x-1 border-b border-border text-muted-foreground",
       className
     )}
     {...props}
