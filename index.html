@@ -7,22 +7,26 @@
     <!--
       THIS HEAD IS THE FALLBACK, NOT THE SOURCE OF TRUTH.
 
-      Every public route renders its own title, description, canonical, Open Graph
-      and Twitter Card tags through src/marketing/components/Seo.tsx, and React 19
-      hoists them here, replacing what is below.
+      Every public route declares its own title, description, canonical, Open
+      Graph and Twitter Card tags in src/marketing/components/Seo.tsx.
 
-      What is below is what a client sees BEFORE any JavaScript runs, and for a
-      client that never runs it at all, it is all they will ever see. That includes
-      most social scrapers and most LLM crawlers. So it must describe the site
-      correctly on its own, and it must not be left saying something the site no
-      longer is. See docs/KNOWN-ISSUES.md K-018.
+      At build time scripts/prerender.mjs renders each public page and replaces
+      everything between the seo:start and seo:end markers with that page's own
+      tags, so a crawler that never runs JavaScript still reads the right ones.
+      What is left here is only for the SPA shell (dist/app-shell.html), which
+      serves the CMS and any path that was not prerendered; React adds the page's
+      tags once it runs.
+
+      There is deliberately no canonical and no og:url here. A static
+      canonical named the home page on every client-rendered route, beside the
+      route's own (K-043). Keep the markers: the prerender fails without them.
     -->
+    <!--seo:start-->
     <title>Gideon Akinlotan · designer and developer, London</title>
     <meta
       name="description"
       content="I design and build websites for British businesses, and I stay on afterwards so they keep working. Selected work, what I do, and how to get in touch."
     />
-    <link rel="canonical" href="https://gakinz.com/" />
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Gideon Akinlotan" />
@@ -32,7 +36,6 @@
       property="og:description"
       content="I design and build websites for British businesses, and I stay on afterwards so they keep working."
     />
-    <meta property="og:url" content="https://gakinz.com/" />
     <meta property="og:image" content="https://gakinz.com/og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -45,6 +48,7 @@
       content="I design and build websites for British businesses, and I stay on afterwards so they keep working."
     />
     <meta name="twitter:image" content="https://gakinz.com/og.png" />
+    <!--seo:end-->
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
@@ -54,6 +58,7 @@
   </head>
   <body>
     <div id="root"></div>
+    <!--noscript:start-->
     <noscript>
       <!--
         Not a substitute for the site, and not pretending to be. It exists so that a
@@ -75,6 +80,7 @@
         </p>
       </main>
     </noscript>
+    <!--noscript:end-->
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { work as workApi, type ApiResult } from "@/lib/api"
 import { resolveList, resolveOne } from "./cmsResult"
+import { seedFromFallback } from "./seed"
 
 /**
  * The work ledger.
@@ -246,8 +247,9 @@ export function fromApi(r: ApiWork): WorkRecord {
  * never flashes up first.
  */
 export function useWork() {
-  const [records, setRecords] = useState<WorkRecord[]>([])
-  const [loading, setLoading] = useState(true)
+  // Seeded only for the prerender and the hydration of its markup (./seed.ts).
+  const [records, setRecords] = useState<WorkRecord[]>(() => (seedFromFallback() ? fallbackWork : []))
+  const [loading, setLoading] = useState(() => !seedFromFallback())
   const [fromCms, setFromCms] = useState(false)
 
   useEffect(() => {
@@ -276,7 +278,9 @@ export function useWork() {
 // slug is used only when the request fails. Keyed by slug, so a previous record
 // never shows while the next one loads.
 export function useWorkRecord(slug: string | undefined) {
-  const [result, setResult] = useState<{ slug: string; record: WorkRecord | null } | null>(null)
+  const [result, setResult] = useState<{ slug: string; record: WorkRecord | null } | null>(() =>
+    slug && seedFromFallback() ? { slug, record: fallbackWork.find((r) => r.slug === slug) ?? null } : null,
+  )
 
   useEffect(() => {
     if (!slug) return

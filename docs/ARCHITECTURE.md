@@ -34,8 +34,10 @@ Every data need becomes a PHP endpoint plus a call through `src/lib/api.ts`.
 
 | Concern | Where |
 |---|---|
-| Entry | `src/main.tsx` |
-| Routing | `src/routes/index.tsx`, `createBrowserRouter` |
+| Entry | `src/main.tsx`: hydrates a prerendered public page, renders everything else from scratch |
+| Providers shared by browser and prerender | `src/AppRoot.tsx` |
+| Routing | `src/routes/index.tsx`, `createBrowserRouter`; the public branch is `src/routes/public.tsx` |
+| Prerender | `src/entry-server.tsx`, `scripts/prerender.mjs`, `src/marketing/prerender-paths.ts`, `src/prerender/html.ts` |
 | API boundary | `src/lib/api.ts`, one exported group per resource over one `request()` helper |
 | Auth state | `src/store/auth.store.ts` |
 | Route guard | `src/app/RequireAuth.tsx` |
@@ -80,6 +82,54 @@ Measured on the local build of 2026-09-22:
 35.92 MiB of unreferenced assets were removed. See `qa/PERFORMANCE-AUDIT.md` and
 `docs/DECISIONS.md` D-032.
 
+### Build-time prerender (K-043, K-052, K-053)
+
+`npm run build` runs four steps: `tsc -b`, `vite build` (the browser bundle, `dist/`),
+`vite build --ssr src/entry-server.tsx --outDir dist-ssr` (a Node renderer), then
+`node scripts/prerender.mjs`. The last step:
+
+1. reads `dist/index.html` as the template and adds a preload for the three Latin font files
+   the first screen is set in;
+2. writes `dist/app-shell.html`, the SPA shell: the default head, an empty `#root`, and the
+   `<noscript>` notice;
+3. renders every path in `prerenderPaths()` with `react-dom/server` `renderToString`, through a
+   memory router over the same public route branch and the same providers as the browser, and
+   writes `dist/<path>/index.html` (`/` overwrites `dist/index.html`);
+4. moves the `<title>`, `<meta>` and `<link>` tags React writes at the start of the output into
+   the head, in place of the defaults between `<!--seo:start-->` and `<!--seo:end-->` in
+   `index.html`, so each page carries exactly one title and one canonical. JSON-LD stays where
+   React rendered it, inside the page;
+5. deletes `dist-ssr/`.
+
+The paths are `/`, `/work`, `/services`, `/pricing`, `/about`, `/resources`, `/contact`,
+`/sectors`, `/privacy`, `/terms`, `/cookies`, and a detail page for every built-in project,
+service and post: 30 pages on 2026-10-16. The CMS (`/app/*`), `/login`, `/set-password`,
+`/p/:token` and `/verify/:id` are never prerendered.
+
+**The build makes no network request.** Data hooks fetch only inside effects, which
+`renderToString` never runs, and the script replaces `fetch` and `XMLHttpRequest` with
+functions that throw, so a render-time fetch fails the build. A page is rendered from the
+built-in content: `src/marketing/data/seed.ts` makes the blog and work hooks start from their
+fallbacks during the prerender, and during the browser's first render over that markup, so
+the two match.
+
+In the browser, `#root` carries `data-prerendered="<path>"`. When that matches the address,
+`main.tsx` calls `hydrateRoot` and React adopts the markup and the head tags; otherwise (the
+shell, or a server that sent the wrong page) it calls `createRoot` and React replaces whatever
+is there. After hydration the hooks fetch as before, and a CMS answer replaces the built-in
+content. Anything that differs between the build and the visitor's first render has to wait
+for hydration: the London clock renders empty and fills in (`useSyncExternalStore` with a
+server snapshot, and an invisible `00:00` holds its width), the hero's reduced-motion pause is
+read the same way, dates format in UTC, and the footer year is the build's until the next
+render.
+
+**Consequence: the HTML shows built-in content, not CMS content.** A crawler that does not run
+JavaScript, and every visitor until the bundle has loaded and the CMS has answered, sees the
+built-in projects, services, copy and posts. A record published, edited or withdrawn in the CMS
+reaches the prerendered HTML only on the next build, and a record that exists only in the CMS
+has no prerendered page: it is served the shell and renders in the browser, as every page did
+before.
+
 ### Two visual surfaces, two token sets
 
 Since D-046 (2026-10-14, not deployed) public pages render inside a `.gk-site` wrapper
@@ -117,8 +167,10 @@ mirrors them for navigation only.
 
 ## 4. Request lifecycle
 
-1. Apache or LiteSpeed serves the request. `server/.htaccess` lets real files and PHP through
-   and sends everything else to `index.html` so React Router handles the path.
+1. Apache or LiteSpeed serves the request. `server/.htaccess` serves a prerendered public
+   page from its own `index.html` (`/work` and `/work/` both get `work/index.html`, with no
+   redirect), lets real files and PHP through, and sends everything else to `app-shell.html`
+   so React Router handles the path in the browser.
 2. The `.htaccess` re-exposes the `Authorization` header into `HTTP_AUTHORIZATION`, because
    the CGI and FastCGI setup strips it. Without this every bearer check would fail with 401.
 3. `_bootstrap.php` reflects the request origin only if it appears in `ALLOWED_ORIGINS`, sets
@@ -173,13 +225,12 @@ TESTED**; the claim rests on source inspection of the 503 and empty-value paths.
 
 ## 7. What is deliberately not here
 
-- No server-side rendering and no prerender step. The site is a static build plus PHP
-  endpoints. This has a consequence worth stating in the architecture rather than only in the
-  SEO notes: **a crawler that does not execute JavaScript sees an empty document.** Per-route
-  metadata is declared in React and hoisted into the head at runtime by React 19
-  (`src/marketing/components/Seo.tsx`, and `docs/DECISIONS.md` D-026), which works for
-  Googlebot and not for most social scrapers or LLM crawlers. `public/llms.txt` is a
-  hand-written mitigation, not a fix.
+- No server-side rendering at request time. The site is a static build plus PHP endpoints;
+  the public pages are prerendered once, at build time (section 2). Until 2026-10-16 there was
+  no prerender at all, and a crawler that did not run JavaScript saw an empty document. It now
+  sees each public page's content and metadata, as built. The CMS and the client-only routes
+  (`/verify/:id`, a CMS-only record) still send an empty shell to such a crawler.
+  `public/llms.txt` remains a hand-written summary.
 - No service worker, no manifest. Not a Progressive Web App.
 - No migration runner, no ORM, no Composer dependency. The PHP is dependency free by choice,
   including the SMTP and TOTP implementations.

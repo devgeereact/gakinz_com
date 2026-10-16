@@ -57,7 +57,7 @@ decision.
 | Test | `npm test` (unit), `npm run test:server` (needs local MySQL or MariaDB) |
 | Lint ratchet | `npm run lint:ratchet` |
 | Documentation check | `npm run docs:check` (add `-- --base origin/<branch>` to apply the sync rule locally) |
-| Type check and build | `npm run build` (runs `tsc -b` first) |
+| Type check, build and prerender | `npm run build` (`tsc -b`, `vite build`, the SSR build, then `scripts/prerender.mjs`; no network) |
 | Lint | `npm run lint` |
 | PHP syntax gate | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` |
 

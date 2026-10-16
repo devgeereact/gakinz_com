@@ -9,10 +9,12 @@
  * `<script>`, so it renders in place. That is valid — structured data may sit
  * anywhere in the document.
  *
- * NOTE ON CRAWLERS: this is a client-rendered SPA with no prerender step, so a
- * crawler that does not execute JavaScript sees none of this. Recorded in
- * docs/KNOWN-ISSUES.md. Googlebot renders; most social scrapers and LLM
- * crawlers do not.
+ * CRAWLERS: the public pages are prerendered at build time
+ * (scripts/prerender.mjs), which moves these tags into the head of each page's
+ * HTML, so a crawler that never runs JavaScript reads them too. In the browser,
+ * React adopts the tags already in the head when it hydrates. A path that is
+ * not prerendered (a CMS-only record, /verify/:id) still gets them only once
+ * JavaScript runs.
  */
 
 export const SITE_URL = "https://gakinz.com"
@@ -65,6 +67,9 @@ export default function Seo({
       <meta property="og:description" content={description} />
       <meta property="og:url" content={url} />
       <meta property="og:image" content={image} />
+      {image === OG_IMAGE && <meta property="og:image:width" content="1200" />}
+      {image === OG_IMAGE && <meta property="og:image:height" content="630" />}
+      {image === OG_IMAGE && <meta property="og:image:alt" content="Gideon Akinlotan, designer and developer, London" />}
 
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={fullTitle} />

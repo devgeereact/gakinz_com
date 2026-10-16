@@ -1,6 +1,6 @@
 # Deployment
 
-**Status:** current as at 2026-10-10. The two tracks are read from
+**Status:** current as at 2026-10-10, with the prerendered client build of 2026-10-16. The two tracks are read from
 `.github/workflows/deploy.yml`, `.github/workflows/ci.yml`, `server/README.md` and
 `server/.htaccess`. Section 5 is the one list of server work not yet uploaded. **Everything about the live server state is
 UNVERIFIED**: no server, database, FTP account or DNS record was contacted during this work.
@@ -39,6 +39,35 @@ if: CI concluded success AND the CI run was a push
 
 Credentials come from `secrets.FTP_SERVER`, `secrets.FTP_USERNAME` and
 `secrets.FTP_PASSWORD`. None of the three values belongs in this repository.
+
+### What `dist/` holds (prerendered since 2026-10-16)
+
+`npm run build` prerenders the public site (`docs/ARCHITECTURE.md` section 2, "Build-time
+prerender"), so `dist/` now holds, besides `assets/` and the files from `public/`:
+
+| File | Served for |
+|---|---|
+| `index.html` | `/`, prerendered |
+| `<path>/index.html`, e.g. `work/index.html`, `work/rotaflow/index.html` | each prerendered public page, 30 on 2026-10-16 |
+| `app-shell.html` | everything else: `/app/*`, `/login`, `/set-password`, `/p/:token`, `/verify/:id`, a CMS-only record, unknown paths |
+
+The build makes no network request and needs no browser, so it runs unchanged in CI and in
+the deploy workflow. `dist-ssr/` is a build intermediate, deleted by the build, and never
+shipped.
+
+**A prerendered page shows the built-in content, not the CMS.** Projects, services, site copy
+and posts in the HTML come from `src/marketing/data/`. In the browser, the CMS answer replaces
+them once the bundle has loaded, exactly as before. A crawler that does not run JavaScript
+sees only the built-in version, so **a CMS change reaches the HTML only on the next deploy**:
+push any commit to `main`, or re-run the deploy workflow, after publishing something that
+crawlers should see. A record that exists only in the CMS has no prerendered page; it is
+served `app-shell.html` and renders in the browser.
+
+`server/.htaccess` routes these files (section 5.3). It is uploaded by hand, like every server
+file, and does not ship in `dist/`. Either order is safe: with the old `.htaccess`, `/work` is
+redirected to `/work/` and served its page, and an unknown path is sent the prerendered home
+page, which the client replaces with the right page; the new `.htaccess` falls back to
+`index.html` until `app-shell.html` exists.
 
 Everyday loop:
 
@@ -135,7 +164,9 @@ statements are already live; only someone with server access can (section 5.6).
    change it, and revoke the account's sessions. Confirm the credential from git history is
    rotated at the same time (K-001).
 2. **Upload `server/.htaccess` first.** It denies `.txt` except `robots.txt` and `llms.txt` (2026-09-22) and
-   every `_*.php` include (K-013), so both are in force before anything else lands.
+   every `_*.php` include (K-013), so both are in force before anything else lands. Since
+   2026-10-16 it also routes the prerendered public pages and the SPA shell (section 2); those
+   rules are safe before or after the client deploy.
 3. **Run the SQL in section 5.2**, in the order given.
 4. **Set or check the configuration in section 5.4.** In particular leave `$PAYPAL_ENABLED`
    unset or `false` (K-026).
@@ -197,6 +228,11 @@ proposals.php     resourcing.php   site.php (new)   support.php
 tasks.php         testimonials.php time.php         users.php
 work.php
 ```
+
+`.htaccess` changed again on 2026-10-16 (`perf/prerender-public`): prerendered pages are served
+from their own `index.html` with no redirect, and the fallback is `app-shell.html`, or
+`index.html` until a build with the shell is live. The Cloudflare origin lock, the
+`Authorization` pass-through, the PHP exemptions and both deny blocks are unchanged.
 
 `site.php` and `work.php` are the 2026-10-14 redesign batch (homepage hero and editable site
 copy). Upload them **after** SQL statements 7 and 8 if you want the new features at once;
@@ -264,6 +300,9 @@ From the branch:
   makes that file permanently public, exactly as attaching a work image does.
 - **Public-site copy can be edited in the CMS** through `site.php` (2026-10-14). Nothing
   changes on the public site until a section is published.
+- **Public pages arrive as HTML** (2026-10-16, with the client deploy and this `.htaccess`).
+  Each prerendered page carries its own title, description and one canonical, and shows the
+  built-in content until the bundle loads and the CMS answers (section 2).
 
 ### 5.6 Post-upload checks
 
@@ -285,7 +324,14 @@ From the branch:
    signed-out browser before anything is flagged or published, and the flagged records and
    published sections afterwards. A 500 means the upload is
    wrong, not that a statement is missing: both degrade without their statement.
-10. Do **not** test a real payment or a real send. Stripe behaviour is covered by
+10. Prerendered pages, from a signed-out browser with JavaScript off, or with `curl`:
+   `/work` and `/work/` both return the Work page with status 200 and no redirect, and its
+   source has one `<link rel="canonical" href="https://gakinz.com/work">`; `/work/rotaflow`
+   returns the RotaFlow page; `/app` and `/login` return the shell (an empty `#root`) and, with
+   JavaScript on, the sign-in page. A 404 on `/app` means `.htaccess` points at a missing
+   `app-shell.html` and the `DOCUMENT_ROOT` check did not apply; a 301 from `/work` to
+   `/work/` means the old `.htaccess` is still live.
+11. Do **not** test a real payment or a real send. Stripe behaviour is covered by
    `npm run test:server` against a fake provider; a live check needs Stripe test-mode keys on a
    non-production copy.
 
@@ -343,6 +389,9 @@ notes, not here.
 | API returns "Database connection failed" | Wrong credentials in the server `config.php`, or the user lacks privileges |
 | API returns a 500 on a feature that works locally | A migration has not been run |
 | A feature returns 503 | Its configuration key is not set on the server |
+| Actions run fails at `prerender:` | A listed public path rendered the 404 page or lost its title or canonical, or `index.html` lost its `seo:start` and `seo:end` markers. The message names the path |
+| A public page shows old projects or copy with JavaScript off | The prerendered HTML is from the last build. Redeploy after publishing (section 2) |
+| `/app` or `/login` shows the home page for a moment | The old `.htaccess` is live and sends `index.html`; upload the new one |
 | Browser reports a CORS failure in development | The dev port drifted from 5102, or the live `ALLOWED_ORIGINS` does not list it |
 | An endpoint 404s | The PHP file was never uploaded |
 

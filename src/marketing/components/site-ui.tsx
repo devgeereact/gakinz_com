@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react"
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react"
 import { Link, NavLink } from "react-router-dom"
 import { delay, host, ToneCtx, type Tone } from "./site-helpers"
 import { kindName, onColour, type Project } from "@/marketing/data/showcase"
@@ -71,13 +71,19 @@ export function PageHead({ crumbs, title, lede, children }: { crumbs: [string | 
 const london = () =>
   new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }).format(new Date())
 
+const everyTwentySeconds = (tick: () => void) => {
+  const id = window.setInterval(tick, 20_000)
+  return () => window.clearInterval(id)
+}
+
+/**
+ * The time in London. Empty in the prerendered markup and in the first render
+ * that hydrates it, since the build ran at a different time; React swaps in the
+ * real time straight after hydration (useSyncExternalStore's server snapshot).
+ */
 export function LondonClock() {
-  const [t, setT] = useState(london)
-  useEffect(() => {
-    const id = window.setInterval(() => setT(london()), 20_000)
-    return () => window.clearInterval(id)
-  }, [])
-  return <time>{t}</time>
+  const t = useSyncExternalStore(everyTwentySeconds, london, () => "")
+  return <time className="clock">{t}</time>
 }
 
 
@@ -312,7 +318,8 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
             </div>
           </div>
           <div className="foot__base mono">
-            <span>© {new Date().getFullYear()} Gideon Akinlotan · London</span>
+            {/* The year is the build's in the prerendered markup; a rebuild in January moves it on. */}
+            <span suppressHydrationWarning>© {new Date().getFullYear()} Gideon Akinlotan · London</span>
             <span>
               London <LondonClock />
             </span>
