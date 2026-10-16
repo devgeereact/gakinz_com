@@ -427,6 +427,21 @@ Automatic scheduler import is a later decision needing a sandbox.
 Acceptance: no request is labelled confirmed too early; local time is clear; a cancellation
 is visible; the owner can record a phone booking without a public form.
 
+**As built on 2026-10-16 (not deployed):** `server/bookings.php` and the `bookings` and
+`booking_events` tables. Enquiries has a Board and Calls switch, and each enquiry drawer a
+Calls section. A call is recorded against an enquiry, a client or both, with a local time and
+IANA zone (stored as UTC; a time inside the spring-forward gap is refused), a length, a
+meeting link or place, owner-only notes and an outcome. It starts "Requested, not confirmed"
+unless the owner records it as already confirmed; requested moves to confirmed or cancelled,
+confirmed to completed or cancelled. A reschedule moves the same record and keeps the old
+time in its history. On a reschedule or cancellation the owner may switch on an email to the
+customer; its outcome is shown on the call and a failure can be retried, never sent twice.
+Times show in the agreed zone with the viewer's own time when it differs. Not built: the ICS
+file (a later item in section 7), linking to an external scheduler, and a customer's own
+request for a call (section 6.2). Tested against a local database
+(`tests/server/bookings.test.ts`) and in the browser with mocked responses only; needs SQL 9
+and 10 in `docs/DEPLOYMENT.md` section 5.2.
+
 #### Clients
 
 One record holds company or trading name, main contact, email and phone, active projects,
@@ -437,6 +452,13 @@ instead of automatic deletion of financial history.
 
 Acceptance: the owner can answer "what happened with this client?" from one timeline, and
 changing a contact updates future communications without altering issued documents.
+
+**As built on 2026-10-16 (not deployed):** the client record's timeline merges the enquiry
+the client came from, calls (including those booked on that enquiry before conversion),
+quotes, projects, invoices, messages (tickets), Comms conversations and feedback, newest
+first. A Private feedback section sits below it. Booking emails go to the client's current
+address, then the enquiry's, so a changed contact applies to the next email. Archive and
+export for data requests are not part of this change.
 
 #### Projects and tasks
 
@@ -752,6 +774,17 @@ guidance supports keeping evidence of genuine statements and permission, and a t
 does not by itself substantiate a technical or revenue claim. The privacy notice explains
 retention and customer rights.
 
+**As built on 2026-10-16 (not deployed):** `server/feedback.php` and the `client_feedback`
+table. A client sends feedback from the portal: optional project and rating, what worked,
+what could improve, whether a follow-up is welcome, and, as a separate switch that is off by
+default, permission to quote it with the name they choose. The portal shows only a thank-you;
+feedback is never returned to any client. The owner sees it in the client record, sets the
+follow-up state (new, following up, closed) and a private note, records a withdrawal of
+permission, and can record feedback received another way. Nothing becomes a testimonial
+automatically; the separate testimonial request with a proposed excerpt is not built, and the
+owner still adds a testimonial by hand. Tested with two synthetic clients
+(`tests/server/feedback.test.ts`); needs SQL 11.
+
 ### 6.4 Project brief and measurements under a client ID
 
 "Measurement" means agreed scope and delivery or quality evidence for now; a different meaning
@@ -821,7 +854,7 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 |---|---|---|---|---|---|
 | Next-action date and short note on each enquiry | Nothing goes cold unnoticed | Built 2026-10-10; needs the SQL step | 2 | S | None |
 | Simple priority set by the owner | Replaces AI scoring | Built 2026-10-10; needs the SQL step | 2 | S | None |
-| Call record: requested or confirmed time, time zone, link, outcome | Bookings tracked against the enquiry | `book.php` returns a Calendly link only | 2 | M | None |
+| Call record: requested or confirmed time, time zone, link, outcome | Bookings tracked against the enquiry | Built 2026-10-16 (`bookings.php`); needs SQL 9 and 10 | 2 | M | None |
 | Optional calendar file (ICS) for a confirmed call | Adds to any calendar without OAuth | Missing | Later | S | Call record |
 | Convert enquiry to client once, matching existing email or company | No duplicate clients | Exists, untested for duplicates | 2 | S | Synthetic tests |
 | Six service options on the enquiry form with the website's labels; budget bands that fit small IT jobs | Clean source data | Five project types that do not match service names; lowest budget band "Under £5k" (`Contact.tsx`) | 4 | S | Services and prices approved |
@@ -830,12 +863,12 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 
 | Feature | Why it helps | Today | Phase | Size | Depends on |
 |---|---|---|---|---|---|
-| One client timeline: enquiries, calls, quotes, projects, invoices, messages | Answers "what happened with this client?" | Spread across modules | 2 | M | None |
+| One client timeline: enquiries, calls, quotes, projects, invoices, messages | Answers "what happened with this client?" | Built 2026-10-16 in the client record | 2 | M | None |
 | Private owner notes kept apart from client-visible information | Nothing internal leaks | Partly | 2 | S | None |
 | Client portal: project summary, next step, invoices, shared files | Clients help themselves | Read-only portal exists | 2 | M | Isolation tests |
 | Client messages through support tickets | Two-way conversation without a new chat system | Built 2026-10-10 (K-039) | 2 | M | Client branch in `support.php` |
 | Request an update, request a call, supply assets | Fewer chasing emails | Missing | 2 | M | Client messages |
-| Private delivery feedback, with separate permission to publish | Honest feedback and lawful testimonials | Missing | 2 | S | Client messages |
+| Private delivery feedback, with separate permission to publish | Honest feedback and lawful testimonials | Built 2026-10-16 (`feedback.php`); needs SQL 11. The excerpt-approval request is not built | 2 | S | Client messages |
 | Project reference on documents; reference plus email link sign-in | Access without another password | Missing | After J03 | M | K-027 fixed and J03 passing |
 
 ### Quotes and money

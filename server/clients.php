@@ -3,6 +3,9 @@
  * Clients / CRM (GAkinzOS §6 Clients). Protected.
  *
  *   GET  /clients.php                 → list clients (newest first)
+ *   GET  /clients.php?id=N            → one client, totals and a newest-first timeline of its
+ *                                       enquiry, calls, quotes, projects, invoices, tickets,
+ *                                       conversations and feedback (staff only)
  *   POST /clients.php?action=create   {company, contact_name?, email?, phone?, tag?, notes?}
  *   POST /clients.php?action=update   {id, ...fields}
  *   POST /clients.php?action=convert  {lead_id}   → create a client from an enquiry, mark it won
@@ -85,6 +88,61 @@ if ($method === 'GET' && isset($_GET['id'])) {
     $timeline[] = ['type' => 'ticket', 'id' => (int)$r['id'], 'label' => $r['subject'], 'status' => $r['status'], 'amount' => null, 'date' => $r['created_at']];
   }
 
+  // The enquiry this client came from.
+  if ($client['source_lead_id'] !== null) {
+    $stmt = $conn->prepare('SELECT id, name, company, project_type, status, created_at FROM enquiries WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+    $stmt->bind_param('i', $client['source_lead_id']);
+    $stmt->execute();
+    if ($r = $stmt->get_result()->fetch_assoc()) {
+      $label = 'Enquiry from ' . $r['name'] . ($r['project_type'] ? ': ' . $r['project_type'] : '');
+      $timeline[] = ['type' => 'enquiry', 'id' => (int)$r['id'], 'label' => $label, 'status' => $r['status'], 'amount' => null, 'date' => $r['created_at']];
+    }
+  }
+
+  // Conversations recorded in Comms.
+  $stmt = $conn->prepare('SELECT id, subject, channel, status, created_at, last_message_at FROM comm_threads WHERE client_id = ? AND deleted_at IS NULL ORDER BY id DESC');
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  $res = $stmt->get_result();
+  while ($r = $res->fetch_assoc()) {
+    $timeline[] = ['type' => 'conversation', 'id' => (int)$r['id'], 'label' => $r['subject'], 'status' => $r['status'], 'amount' => null, 'date' => $r['last_message_at'] ?? $r['created_at']];
+  }
+
+  // Calls and feedback live in tables added on 2026-10-16. Until that SQL has
+  // run, leave them out and say so, rather than failing the whole record.
+  $unavailable = [];
+  $sourceLead = $client['source_lead_id'] ?? 0;
+  try {
+    $stmt = $conn->prepare('SELECT id, starts_at, timezone, duration_min, status FROM bookings
+      WHERE deleted_at IS NULL AND (client_id = ? OR (enquiry_id IS NOT NULL AND enquiry_id = ?)) ORDER BY starts_at DESC');
+    if ($stmt === false) throw new mysqli_sql_exception('bookings missing', $conn->errno);
+    $stmt->bind_param('ii', $id, $sourceLead);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($r = $res->fetch_assoc()) {
+      $local = (new DateTime($r['starts_at'], new DateTimeZone('UTC')))->setTimezone(new DateTimeZone($r['timezone']));
+      $label = 'Call, ' . (int)$r['duration_min'] . ' min, ' . $local->format('j M Y H:i') . ' ' . $r['timezone'];
+      $timeline[] = ['type' => 'call', 'id' => (int)$r['id'], 'label' => $label, 'status' => $r['status'], 'amount' => null, 'date' => $r['starts_at']];
+    }
+  } catch (mysqli_sql_exception $e) {
+    if ($e->getCode() !== 1146) throw $e;
+    $unavailable[] = 'calls';
+  }
+  try {
+    $stmt = $conn->prepare('SELECT id, rating, follow_up, created_at FROM client_feedback WHERE client_id = ? AND deleted_at IS NULL ORDER BY id DESC');
+    if ($stmt === false) throw new mysqli_sql_exception('client_feedback missing', $conn->errno);
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($r = $res->fetch_assoc()) {
+      $label = 'Feedback' . ($r['rating'] !== null ? ', rated ' . (int)$r['rating'] . ' of 5' : '');
+      $timeline[] = ['type' => 'feedback', 'id' => (int)$r['id'], 'label' => $label, 'status' => $r['follow_up'], 'amount' => null, 'date' => $r['created_at']];
+    }
+  } catch (mysqli_sql_exception $e) {
+    if ($e->getCode() !== 1146) throw $e;
+    $unavailable[] = 'feedback';
+  }
+
   // Newest first across all record types.
   usort($timeline, fn($a, $b) => strcmp((string)$b['date'], (string)$a['date']));
 
@@ -98,6 +156,7 @@ if ($method === 'GET' && isset($_GET['id'])) {
       'open_tickets'=> $openTickets,
     ],
     'timeline' => $timeline,
+    'unavailable' => $unavailable,
   ]);
 }
 

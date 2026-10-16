@@ -35,13 +35,18 @@ import { cn } from "@/lib/utils"
 import { gbp } from "@/lib/format"
 import { EmptyState, LoadError } from "@/app/components/EmptyState"
 import { PageHeader } from "@/app/components/page-kit"
+import { ClientFeedback } from "@/app/components/ClientFeedback"
 import { TableSkeleton } from "@/app/components/TableSkeleton"
 
 const TIMELINE_LABEL: Record<ClientDetail["timeline"][number]["type"], string> = {
+  enquiry: "Enquiry",
+  call: "Call",
   proposal: "Quote",
   project: "Project",
   invoice: "Invoice",
-  ticket: "Ticket",
+  ticket: "Message",
+  conversation: "Conversation",
+  feedback: "Feedback",
 }
 
 const TAGS: ClientTag[] = ["retainer", "one-off", "vip", "dormant"]
@@ -364,7 +369,12 @@ export default function Clients() {
                   </dd>
                 </dl>
 
-                <p className="mb-2 mt-5 font-semibold">Account history</p>
+                <p className="mb-2 mt-5 font-semibold">Timeline</p>
+                {(detail.unavailable ?? []).length > 0 && (
+                  <p className="mb-2 text-[13px] text-muted-foreground">
+                    {(detail.unavailable ?? []).map((u) => (u === "calls" ? "Calls" : "Feedback")).join(" and ")} not shown until the server database update has run.
+                  </p>
+                )}
                 {detail.timeline.length === 0 ? (
                   <p className="py-4 text-sm text-muted-foreground">No activity yet.</p>
                 ) : (
@@ -386,6 +396,11 @@ export default function Clients() {
                     ))}
                   </ul>
                 )}
+
+                <ClientFeedback
+                  clientId={detail.client.id}
+                  projects={detail.timeline.filter((t) => t.type === "project").map((t) => ({ id: t.id, name: t.label }))}
+                />
               </>
             )}
           </div>

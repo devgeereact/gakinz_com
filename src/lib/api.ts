@@ -147,7 +147,7 @@ export type ClientInput = {
 }
 // Client detail: lifetime value + a merged, newest-first history.
 export type ClientTimelineItem = {
-  type: "proposal" | "project" | "invoice" | "ticket"
+  type: "enquiry" | "call" | "proposal" | "project" | "invoice" | "ticket" | "conversation" | "feedback"
   id: number
   label: string
   status: string
@@ -158,6 +158,8 @@ export type ClientDetail = {
   client: Client
   stats: { ltv: number; outstanding: number; projects: number; proposals: number; open_tickets: number }
   timeline: ClientTimelineItem[]
+  // Record types left out because their tables are not there yet (2026-10-16 SQL).
+  unavailable?: Array<"calls" | "feedback">
 }
 export const clients = {
   list: () => api.get<Client[]>("/clients.php"),
@@ -167,6 +169,118 @@ export const clients = {
     api.post<{ ok: boolean }>("/clients.php?action=update", { id, ...payload }),
   convertLead: (leadId: number) =>
     api.post<{ id: number; existing?: boolean }>("/clients.php?action=convert", { lead_id: leadId }),
+}
+
+// Call bookings inside Enquiries (bookings.php, staff only). Recorded by hand;
+// a request is never confirmed until the owner says so. `starts_at` is UTC with
+// a trailing Z; `start_local` is the agreed wall-clock time in `timezone`.
+export type BookingStatus = "requested" | "confirmed" | "completed" | "cancelled"
+export type NotifyStatus = "sending" | "sent" | "failed"
+export type BookingEvent = {
+  id: number
+  kind: "created" | "rescheduled" | "status"
+  from_status: BookingStatus | null
+  to_status: BookingStatus | null
+  from_starts_at: string | null
+  from_timezone: string | null
+  to_starts_at: string | null
+  to_timezone: string | null
+  notify_status: NotifyStatus | null
+  notify_to: string | null
+  notify_attempts: number
+  notify_error: string | null
+  notified_at: string | null
+  by: string | null
+  created_at: string
+}
+export type Booking = {
+  id: number
+  enquiry_id: number | null
+  client_id: number | null
+  enquiry_name: string | null
+  enquiry_company: string | null
+  client_company: string | null
+  starts_at: string
+  start_local: string // YYYY-MM-DDTHH:MM in `timezone`
+  timezone: string
+  duration_min: number
+  location: string | null
+  status: BookingStatus
+  notes: string | null
+  outcome: string | null
+  created_at: string
+  updated_at: string
+  history: BookingEvent[] // newest first
+}
+export type BookingInput = {
+  enquiry_id?: number | null
+  client_id?: number | null
+  start_local: string
+  timezone: string
+  duration_min?: number
+  location?: string | null
+  status?: "requested" | "confirmed"
+  notes?: string | null
+}
+export type BookingNotice = { status: NotifyStatus; error: string | null; to: string | null }
+export type BookingChange = { booking: Booking; notice: BookingNotice | null }
+export const bookings = {
+  list: (filter?: { enquiry_id?: number; client_id?: number }) => {
+    const qs = filter?.enquiry_id ? `?enquiry_id=${filter.enquiry_id}` : filter?.client_id ? `?client_id=${filter.client_id}` : ""
+    return api.get<Booking[]>(`/bookings.php${qs}`)
+  },
+  create: (payload: BookingInput) => api.post<Booking>("/bookings.php?action=create", payload),
+  update: (id: number, payload: { location?: string | null; notes?: string | null; outcome?: string | null }) =>
+    api.post<Booking>("/bookings.php?action=update", { id, ...payload }),
+  reschedule: (id: number, payload: { start_local: string; timezone: string; duration_min?: number; notify?: boolean }) =>
+    api.post<BookingChange>("/bookings.php?action=reschedule", { id, ...payload }),
+  setStatus: (id: number, status: BookingStatus, extra: { outcome?: string | null; notify?: boolean } = {}) =>
+    api.post<BookingChange>("/bookings.php?action=status", { id, status, ...extra }),
+  retryNotice: (eventId: number) =>
+    api.post<{ notice: BookingNotice }>("/bookings.php?action=notify", { event_id: eventId }),
+}
+
+// Private delivery feedback (feedback.php). Staff read and manage it; a client
+// can only send it, and the server never returns feedback to a client.
+export type FeedbackFollowUp = "new" | "following_up" | "closed"
+export type Feedback = {
+  id: number
+  client_id: number
+  client_company: string
+  project_id: number | null
+  project_name: string | null
+  source: "portal" | "owner"
+  rating: number | null
+  went_well: string | null
+  could_improve: string | null
+  follow_up_ok: boolean
+  may_publish: boolean
+  attribution: string | null
+  follow_up: FeedbackFollowUp
+  owner_note: string | null
+  submitted_by: string | null
+  created_at: string
+  updated_at: string
+}
+export type FeedbackInput = {
+  project_id?: number | null
+  rating?: number | null
+  went_well?: string | null
+  could_improve?: string | null
+  follow_up_ok?: boolean
+  may_publish?: boolean
+  attribution?: string | null
+}
+export const FEEDBACK_TEXT_MAX = 5000
+export const feedback = {
+  list: (clientId?: number) => api.get<Feedback[]>(`/feedback.php${clientId ? `?client_id=${clientId}` : ""}`),
+  // Staff recording feedback received another way, for a named client.
+  record: (clientId: number, payload: FeedbackInput) =>
+    api.post<{ id: number; duplicate?: boolean }>("/feedback.php?action=create", { client_id: clientId, ...payload }),
+  // A client's own submission: the server takes the client from the token.
+  send: (payload: FeedbackInput) => api.post<{ ok: boolean; duplicate?: boolean }>("/feedback.php?action=create", payload),
+  update: (id: number, payload: { follow_up?: FeedbackFollowUp; owner_note?: string | null; may_publish?: boolean }) =>
+    api.post<Feedback>("/feedback.php?action=update", { id, ...payload }),
 }
 
 // Projects & Tasks (§6 Projects & Tasks).

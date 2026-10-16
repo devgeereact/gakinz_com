@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
-import { Loader2, Download, RefreshCw, Mail, UserPlus, Tag, CalendarClock, Inbox } from "lucide-react"
+import { Loader2, Download, RefreshCw, Mail, UserPlus, Tag, CalendarClock, Inbox, Phone, Plus } from "lucide-react"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -24,11 +24,13 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Sheet, SheetContent, SheetDescription, SheetFooter, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { leads, clients, type Lead, type LeadPriority, type LeadStage } from "@/lib/api"
+import { leads, clients, bookings, type Booking, type Client, type Lead, type LeadPriority, type LeadStage } from "@/lib/api"
 import { followUpState, formatYmd, localIsoDate } from "@/lib/format"
 import AiAssist from "@/app/components/AiAssist"
 import { EmptyState, LoadError } from "@/app/components/EmptyState"
 import { PageHeader, StatusBadge } from "@/app/components/page-kit"
+import { CallList, RecordCallDialog, type CallLink } from "@/app/components/CallBookings"
+import { sortCalls } from "@/app/modules/bookingModel"
 import { cn } from "@/lib/utils"
 
 type Tone = "ok" | "warn" | "bad" | "acc" | "secondary"
@@ -75,6 +77,8 @@ export default function Leads() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const dueOnly = searchParams.get("due") === "1"
+  // The Calls view: every recorded call, inside Enquiries (docs/PRODUCT-SPEC.md 5.5).
+  const callsView = searchParams.get("view") === "calls"
   const [items, setItems] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -233,6 +237,81 @@ export default function Leads() {
     fn()
   }
 
+  // Calls: the whole list for the Calls view, and the open enquiry's own calls.
+  const [calls, setCalls] = useState<Booking[] | null>(null)
+  const [callsError, setCallsError] = useState<string | null>(null)
+  const [callClients, setCallClients] = useState<Client[]>([])
+  const [recording, setRecording] = useState<"view" | "lead" | null>(null)
+  const [leadCalls, setLeadCalls] = useState<{ id: number; list: Booking[] | null; error: string | null } | null>(null)
+  const callsUnavailable = (r: { status?: number; error: string }) =>
+    r.status === 503 ? "Calls appear once the server database update has run." : r.error
+
+  const applyCalls = (res: Awaited<ReturnType<typeof bookings.list>>) => {
+    if (res.ok) {
+      setCalls(res.data)
+      setCallsError(null)
+    } else setCallsError(callsUnavailable(res))
+  }
+  const loadCalls = () => {
+    setCalls(null)
+    setCallsError(null)
+    bookings.list().then(applyCalls)
+  }
+  // State is only set when the requests answer, never synchronously in the effect.
+  const [callsAttempt, setCallsAttempt] = useState(0)
+  useEffect(() => {
+    if (!callsView) return
+    let live = true
+    bookings.list().then((res) => {
+      if (!live) return
+      if (res.ok) {
+        setCalls(res.data)
+        setCallsError(null)
+      } else setCallsError(res.status === 503 ? "Calls appear once the server database update has run." : res.error)
+    })
+    clients.list().then((r) => {
+      if (live && r.ok) setCallClients(r.data)
+    })
+    return () => {
+      live = false
+    }
+  }, [callsView, callsAttempt])
+  useEffect(() => {
+    if (openId == null) return
+    let live = true
+    bookings.list({ enquiry_id: openId }).then((r) => {
+      if (!live) return
+      const error = r.ok ? null : r.status === 503 ? "Calls appear once the server database update has run." : r.error
+      setLeadCalls({ id: openId, list: r.ok ? r.data : null, error })
+    })
+    return () => {
+      live = false
+    }
+  }, [openId])
+  // Loading until the answer for the enquiry now open has arrived.
+  const openLeadCalls = leadCalls && leadCalls.id === openId ? leadCalls : null
+  const setView = (on: boolean) =>
+    setSearchParams(
+      (p) => {
+        if (on) p.set("view", "calls")
+        else p.delete("view")
+        return p
+      },
+      { replace: true },
+    )
+  // Replace a changed call wherever it is shown, or add a new one.
+  const upsertCall = (b: Booking) => {
+    const merge = (xs: Booking[]) => (xs.some((x) => x.id === b.id) ? xs.map((x) => (x.id === b.id ? b : x)) : [b, ...xs])
+    setCalls((xs) => (xs ? merge(xs) : xs))
+    setLeadCalls((lc) => (lc && b.enquiry_id === lc.id ? { ...lc, list: merge(lc.list ?? []) } : lc))
+  }
+  const callLinks: CallLink[] = [
+    ...callClients.map((c) => ({ value: `c:${c.id}`, label: `Client: ${c.company}` })),
+    ...items
+      .filter((l) => l.status !== "lost")
+      .map((l) => ({ value: `e:${l.id}`, label: `Enquiry: ${l.company ? `${l.company} (${l.name})` : l.name}` })),
+  ]
+
   const hotCount = items.filter((l) => l.score === 3).length
   const chip = (active: boolean) =>
     cn(
@@ -247,18 +326,73 @@ export default function Leads() {
         subtitle="Every enquiry from the website, captured and chased to won or lost."
         actions={
           <>
+            {callsView && (
+              <Button onClick={() => setRecording("view")} disabled={!!callsError}>
+                <Plus /> Record a call
+              </Button>
+            )}
             <Button variant="outline" onClick={exportCsv} disabled={!items.length}>
               <Download /> CSV
             </Button>
             <Button variant="outline" onClick={exportXlsx} disabled={!items.length}>
               <Download /> XLSX
             </Button>
-            <Button variant="outline" onClick={load} disabled={loading}>
+            <Button variant="outline" onClick={() => (callsView ? loadCalls() : load())} disabled={loading}>
               <RefreshCw className={cn(loading && "animate-spin")} /> Refresh
             </Button>
           </>
         }
       />
+
+      <div className="mb-3.5 inline-flex rounded-[10px] border bg-secondary p-0.5" role="group" aria-label="Enquiries view">
+        {[
+          { on: !callsView, label: "Board", calls: false },
+          { on: callsView, label: "Calls", calls: true },
+        ].map((v) => (
+          <button
+            key={v.label}
+            type="button"
+            aria-pressed={v.on}
+            onClick={() => {
+              if (v.calls && !callsView) setCallsAttempt((n) => n + 1)
+              setView(v.calls)
+            }}
+            className={cn(
+              "min-h-[34px] whitespace-nowrap rounded-[8px] px-3.5 text-[13px] font-medium",
+              v.on ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
+
+      {callsView ? (
+        callsError ? (
+          <LoadError what="calls" detail={callsError} onRetry={loadCalls} className="mb-4" />
+        ) : calls === null ? (
+          <div className="flex items-center gap-2 py-10 text-sm text-muted-foreground">
+            <Loader2 className="size-4 animate-spin" /> Loading calls…
+          </div>
+        ) : calls.length === 0 ? (
+          <EmptyState
+            className="rounded-2xl border border-dashed border-line-strong bg-card py-14"
+            icon={Phone}
+            title="No calls recorded"
+            description="Record a call agreed by phone or email. It stays a request until you confirm it."
+            action={
+              <Button onClick={() => setRecording("view")}>
+                <Plus /> Record a call
+              </Button>
+            }
+          />
+        ) : (
+          <div className="max-w-[760px]">
+            <CallList calls={sortCalls(calls)} onChange={upsertCall} showWith empty="" />
+          </div>
+        )
+      ) : (
+      <>
 
       {error && <LoadError what="enquiries" detail={`${error}. The leads endpoint and database must be live on the server.`} onRetry={load} className="mb-4" />}
 
@@ -373,6 +507,11 @@ export default function Leads() {
         </>
       ) : null}
 
+      </>
+      )}
+
+      <RecordCallDialog open={recording === "view"} onClose={() => setRecording(null)} onDone={upsertCall} links={callLinks} />
+
       {/* Enquiry drawer */}
       <Sheet open={!!openLead} onOpenChange={(o) => !o && setOpenId(null)}>
         <SheetContent className="flex flex-col gap-0 p-0 sm:p-0">
@@ -441,6 +580,24 @@ export default function Leads() {
                 <p className="mb-1.5 mt-5 font-semibold">Their message</p>
                 <p className="whitespace-pre-wrap text-muted-foreground [overflow-wrap:anywhere]">{openLead.message}</p>
 
+                <div className="mb-2 mt-5 flex flex-wrap items-center justify-between gap-2">
+                  <p className="font-semibold">Calls</p>
+                  {openLeadCalls && !openLeadCalls.error && (
+                    <Button size="sm" variant="outline" onClick={() => setRecording("lead")}>
+                      <Phone /> Record a call
+                    </Button>
+                  )}
+                </div>
+                {!openLeadCalls ? (
+                  <p className="flex items-center gap-2 py-2 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" /> Loading calls…
+                  </p>
+                ) : openLeadCalls.error ? (
+                  <p className="py-2 text-sm text-muted-foreground">{openLeadCalls.error}</p>
+                ) : (
+                  <CallList calls={sortCalls(openLeadCalls.list ?? [])} onChange={upsertCall} empty="No calls recorded for this enquiry." />
+                )}
+
                 <div className="mt-5 grid gap-1.5">
                   <Label htmlFor="lead-stage">Stage</Label>
                   <Select
@@ -485,6 +642,16 @@ export default function Leads() {
           )}
         </SheetContent>
       </Sheet>
+
+      {openLead && (
+        <RecordCallDialog
+          open={recording === "lead"}
+          onClose={() => setRecording(null)}
+          onDone={upsertCall}
+          fixed={{ enquiry_id: openLead.id }}
+          title={`Record a call with ${openLead.name}`}
+        />
+      )}
 
       {/* Lost-reason capture */}
       <Dialog open={!!lostFor} onOpenChange={(o) => !o && setLostFor(null)}>
