@@ -926,7 +926,11 @@ the audit method in `qa/ACCESSIBILITY-AUDIT.md` and Lighthouse against a local p
 build of the redesign, then on the live site after merge.
 
 ## K-046 · Dead redesign residue: `.gk-fadein` rules, the Sofia Sans dependency, D-037 brand assets
-**Severity:** cosmetic · **Status:** open. Found 2026-10-14.
+**Severity:** cosmetic · **Status:** **fixed 2026-10-16**, not deployed. The unused public
+motion rules and the stale Sofia Sans comment were removed from `src/index.css`, the
+dependency was uninstalled, and the favicon (SVG, 32px, Apple touch icon), the share image
+`public/og.png` and `theme-color` were redrawn in the D-046 graphite and chalk. The new brand
+assets await the owner's look before merge. Found 2026-10-14.
 
 After D-046 no component uses `.gk-fadein` (a search of `src` for the class finds only its
 rules in `src/index.css`), and `@fontsource-variable/sofia-sans` is still listed in
@@ -948,7 +952,10 @@ of a shared branch, which is not allowed (`AGENTS.md`, `.agent/PROJECT.yml` excl
 Resolution: none needed; a squash merge of the branch would drop the subjects from `main`.
 
 ## K-048 · Site content tabs scroll sideways at 390px with no visible cue
-**Severity:** low · **Status:** open. Found 2026-10-14.
+**Severity:** low · **Status:** **fixed 2026-10-16**, not deployed. The shared `TabsList` now
+wraps onto a second row instead of scrolling hidden, so every tab stays visible on a phone and
+the page still never widens. Applies to every tab row (Site content, Settings, Analytics,
+Content Hub). Found 2026-10-14.
 
 Site content (`src/app/modules/Site.tsx`) has eight section tabs. At 390px they do not fit, and
 the shared `TabsList` (`src/components/ui/tabs.tsx`) scrolls inside itself with its scrollbar
