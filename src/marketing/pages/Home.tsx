@@ -157,7 +157,9 @@ function Hero({ list }: { list: Project[] }) {
         </div>
       </div>
       {n > 1 && (
-        <div className="wrap hero__bar">
+        /* On light brand colours the slide text is dark, but the bar sits on the
+           dark bottom shading, so it takes light text there (K-051, 6.73:1). */
+        <div className="wrap hero__bar" style={on === "#FFFFFF" ? undefined : { color: "#ECE9E2" }}>
           <button className="ctrl js-prev" type="button" aria-label="Previous project" onClick={() => go(i - 1)}>
             <IPrev />
           </button>

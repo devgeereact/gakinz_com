@@ -6,6 +6,11 @@
  * Generated once from the prototype, then edited by hand. Keep class names in
  * step with the components in src/marketing.
  */
+/* Metric-matched fallbacks (K-052): Arial scaled to the web fonts' width and
+   line metrics, measured in Chromium on 2026-10-16, so the font swap does not
+   move the hero. */
+@font-face{font-family:"Bricolage Fallback";src:local("Arial"),local("Liberation Sans"),local("Helvetica");size-adjust:88.3%;ascent-override:100.8%;descent-override:24.9%;line-gap-override:0%}
+@font-face{font-family:"Hanken Fallback";src:local("Arial"),local("Liberation Sans"),local("Helvetica");size-adjust:90.6%;ascent-override:98.2%;descent-override:24.3%;line-gap-override:0%}
 html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .skip{position:fixed;left:16px;top:-80px;z-index:100;padding:12px 18px;border-radius:999px;background:var(--fg);color:var(--bg);font-weight:600;text-decoration:none;transition:top .15s}
 .gk-site .skip:focus{top:calc(12px + env(safe-area-inset-top,0px))}
@@ -15,8 +20,8 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 @keyframes gk-fill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 .gk-site{--bg:#0F151D; --bg-2:#121A24; --panel:#16202B; --panel-2:#1B2733; --fg:#ECE9E2; --mute:#9AA3B0; --line:#26313E; --line-2:#334252;
   --acc:#8EC5FF; --acc-ink:#0B2340; --ok:#7FD6A5; --warn:#F2C46B;
-  --disp:"Bricolage Grotesque Variable",ui-sans-serif,system-ui,sans-serif;
-  --body:"Hanken Grotesk Variable",ui-sans-serif,system-ui,sans-serif;
+  --disp:"Bricolage Grotesque Variable","Bricolage Fallback",ui-sans-serif,system-ui,sans-serif;
+  --body:"Hanken Grotesk Variable","Hanken Fallback",ui-sans-serif,system-ui,sans-serif;
   --mono:"JetBrains Mono Variable","JetBrains Mono",ui-monospace,Menlo,monospace;
   --ease:cubic-bezier(.2,.8,.2,1);
   --measure:84rem; --gut:clamp(16px,4vw,48px);
@@ -72,7 +77,7 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .drawer{position:fixed;inset:0;z-index:75;background:var(--bg);padding:calc(84px + env(safe-area-inset-top,0px)) var(--gut) 32px;display:flex;flex-direction:column;gap:4px;opacity:0;transform:translateY(-8px);pointer-events:none;visibility:hidden;transition:opacity .22s var(--ease),transform .22s var(--ease),visibility 0s .22s}
 .gk-site .drawer.open{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition:opacity .22s var(--ease),transform .22s var(--ease)}
 .gk-site .drawer a{font-family:var(--disp);font-size:2rem;font-weight:650;text-decoration:none;padding:8px 0;border-bottom:1px solid var(--line)}
-.gk-site .hero{position:relative;min-height:100svh;display:flex;flex-direction:column;background:var(--slide-bg,#3B6FE0);color:var(--slide-on,#fff);transition:background-color 1s var(--ease),color .6s;overflow:hidden;isolation:isolate}
+.gk-site .hero{position:relative;min-height:100svh;display:flex;flex-direction:column;background:var(--slide-bg,#2C5AC4);color:var(--slide-on,#fff);transition:background-color 1s var(--ease),color .6s;overflow:hidden;isolation:isolate}
 .gk-site .hero::before{content:"";position:absolute;inset:0;z-index:-1;background:radial-gradient(120% 80% at 75% 35%,transparent 40%,rgba(0,0,0,.26) 100%);pointer-events:none}
 .gk-site .hero::after{content:"";position:absolute;left:0;right:0;bottom:0;height:18%;z-index:-1;background:linear-gradient(180deg,transparent,rgba(15,21,29,.55));pointer-events:none}
 .gk-site .hero__in{flex:1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.12fr);gap:clamp(24px,4vw,72px);align-items:center;padding-top:calc(96px + env(safe-area-inset-top,0px));padding-bottom:16px}
@@ -93,7 +98,7 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .hero__case a svg{width:16px;height:16px}
 .gk-site .hero__actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px}
 .gk-site .hero .btn{border-color:currentColor}
-.gk-site .hero .btn--main{background:var(--slide-on,#fff);color:var(--slide-bg,#3B6FE0);border-color:var(--slide-on,#fff);transition:background-color 1s var(--ease),color 1s var(--ease),transform .2s}
+.gk-site .hero .btn--main{background:var(--slide-on,#fff);color:var(--slide-bg,#2C5AC4);border-color:var(--slide-on,#fff);transition:background-color 1s var(--ease),color 1s var(--ease),transform .2s}
 .gk-site .hero .btn--main:hover{transform:translateY(-2px)}
 .gk-site .stage{position:relative;aspect-ratio:16/11;width:100%;transform:translate3d(var(--px,0),var(--py,0),0);transition:transform .6s var(--ease)}
 .gk-site .laptop{position:absolute;inset:0 9% 11% 0;border-radius:16px;overflow:hidden;background:#0B0D10;border:9px solid #0B0D10;box-shadow:0 50px 90px -40px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.06)}

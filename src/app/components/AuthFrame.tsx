@@ -4,7 +4,7 @@ import { Link } from "react-router-dom"
 import ClockPill from "@/app/components/ClockPill"
 
 // One band per project colour, as the approved sign-in screen shows (D-046).
-const STRIP = ["#3B6FE0", "#33512D", "#1B2E6B", "#FF385C", "#EBB241", "#4F2149", "#B0283F", "#25282B", "#F59E0B", "#2E3A33"]
+const STRIP = ["#2C5AC4", "#33512D", "#1B2E6B", "#FF385C", "#EBB241", "#4F2149", "#B0283F", "#25282B", "#F59E0B", "#2E3A33"]
 
 // The prototype's split sign-in screen: a graphite panel with the mark, the
 // headline, a line of copy, the colour strip and the London clock on the left,
