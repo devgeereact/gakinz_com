@@ -41,7 +41,7 @@
     --destructive-foreground: 0 0% 100%;
     --border: 217.5 16% 90.2%;         /* #E2E5EA line */
     --input: 216.9 14.9% 82.9%;        /* #CDD2DA line-2, form borders */
-    --ring: 217 67.1% 51.2%;           /* #2F6FD6 blue */
+    --ring: 217 67.1% 47.5%;           /* #2866CA blue */
     --chart-1: 217 67.1% 51.2%;
     --chart-2: 152.7 63.9% 30.4%;
     --chart-3: 38.2 100% 28%;
@@ -61,11 +61,11 @@
     --os-side-mute: 215 11.7% 59.6%;          /* #8C96A4 */
 
     /* Accent and semantic tones. */
-    --os-acc: 217 67.1% 51.2%;         /* #2F6FD6 */
+    --os-acc: 217 67.1% 47.5%;         /* #2866CA: 4.68:1 on acc-soft, 5.01:1 on the canvas (K-045 audit; was #2F6FD6 at 4.12:1) */
     --os-acc-soft: 217.1 72.4% 94.3%;  /* #E6EEFB */
     --os-on-acc: 0 0% 100%;
     --os-line-2: 216.9 14.9% 82.9%;    /* #CDD2DA */
-    --os-ok: 152.7 63.9% 30.4%;        /* #1C7F52 */
+    --os-ok: 152.7 63.9% 28.5%;        /* #1A774D: 4.82:1 on ok-soft (K-045 audit; was #1C7F52 at 4.34:1) */
     --os-ok-soft: 146.3 40% 92.2%;     /* #E3F3EA */
     --os-warn: 38.2 100% 28%;          /* #8F5B00 */
     --os-warn-soft: 40 80.5% 92%;      /* #FBF0DA */

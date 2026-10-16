@@ -612,9 +612,9 @@ tokens carry an `--os-` prefix so they never collide with the public site's hex 
 | Muted text | `#5B6472` | `#9AA3B0` | `--muted-foreground` |
 | Line | `#E2E5EA` | `#26313E` | `--border` |
 | Line 2 (form borders) | `#CDD2DA` | `#334252` | `--input`, `--os-line-2` |
-| Accent | `#2F6FD6` | `#8EC5FF` | `--ring`, `--os-acc` |
+| Accent | `#2866CA` | `#8EC5FF` | `--ring`, `--os-acc` |
 | Accent soft | `#E6EEFB` | `#1C2E44` | `--accent`, `--os-acc-soft` |
-| OK / soft | `#1C7F52` / `#E3F3EA` | `#7FD6A5` / `#173326` | `--os-ok`, `--os-ok-soft` |
+| OK / soft | `#1A774D` / `#E3F3EA` | `#7FD6A5` / `#173326` | `--os-ok`, `--os-ok-soft` |
 | Warn / soft | `#8F5B00` / `#FBF0DA` | `#F2C46B` / `#3A2F17` | `--os-warn`, `--os-warn-soft` |
 | Bad / soft | `#B8322C` / `#FBE7E5` | `#FF9C95` / `#3B1E1D` | `--os-bad`, `--os-bad-soft`, `--destructive` |
 | Sidebar | `#0F151D` | `#0B1017` | `--sidebar-background` |
