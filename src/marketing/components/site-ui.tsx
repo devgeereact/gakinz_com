@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from "react"
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react"
 import { Link, NavLink } from "react-router-dom"
 import { delay, host, ToneCtx, type Tone } from "./site-helpers"
 import { kindName, onColour, type Project } from "@/marketing/data/showcase"
@@ -110,7 +110,9 @@ export function Devices({ list, active = 0 }: { list: Project[]; active?: number
   )
 }
 
-export function ProjectCard({ p, wide }: { p: Project; wide?: boolean }) {
+/** `level` is the card title's heading level: 3 under a section h2, 2 straight under the page h1. */
+export function ProjectCard({ p, wide, level = 3 }: { p: Project; wide?: boolean; level?: 2 | 3 }) {
+  const Title = level === 2 ? "h2" : "h3"
   const style = { "--cc": p.colour, "--con": onColour(p.colour) } as CSSProperties
   return (
     <Link className={`card ${wide ? "card--wide" : ""}`} to={`/work/${p.slug}`} style={style}>
@@ -122,7 +124,7 @@ export function ProjectCard({ p, wide }: { p: Project; wide?: boolean }) {
           <span>{kindName(p.kind)}</span>
           <span>{p.sector}</span>
         </div>
-        <h3>{p.name}</h3>
+        <Title>{p.name}</Title>
         <p>{p.line}</p>
         <div className="card__foot">
           <Pill status={p.status} />
@@ -180,6 +182,7 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
   const [tone, setTone] = useState<Tone>(null)
   const [solid, setSolid] = useState(false)
   const [open, setOpen] = useState(false)
+  const toggle = useRef<HTMLButtonElement>(null)
   const copy = useSiteCopy()
 
   useEffect(() => {
@@ -191,13 +194,30 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : ""
     if (!open) return
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false)
-    window.addEventListener("keydown", esc)
-    return () => window.removeEventListener("keydown", esc)
+    // While the drawer covers the page, Escape closes it and hands focus back to the
+    // toggle, and Tab cycles between the toggle and the drawer links rather than
+    // reaching the hidden page behind it (K-045 audit, 2026-10-16).
+    const keys = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false)
+        toggle.current?.focus()
+        return
+      }
+      if (e.key !== "Tab") return
+      const stops = [toggle.current, ...Array.from(document.querySelectorAll<HTMLElement>("#site-drawer a"))].filter(Boolean) as HTMLElement[]
+      if (stops.length === 0) return
+      const at = stops.indexOf(document.activeElement as HTMLElement)
+      const next = e.shiftKey ? (at <= 0 ? stops.length - 1 : at - 1) : at === -1 || at === stops.length - 1 ? 0 : at + 1
+      e.preventDefault()
+      stops[next].focus()
+    }
+    window.addEventListener("keydown", keys)
+    return () => window.removeEventListener("keydown", keys)
   }, [open])
 
   const stable = useCallback((t: Tone) => setTone(t), [])
-  const toned = !solid && tone
+  // The open drawer sits under the bar on the page background, so the bar drops its slide tone.
+  const toned = !solid && !open && tone
   const navStyle = toned ? ({ color: tone.on, "--nav-fg": tone.on, "--nav-bg": tone.bg } as CSSProperties) : undefined
 
   return (
@@ -220,7 +240,7 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
           <Link className="btn btn--main" to="/contact">
             <span>Start a project</span>
           </Link>
-          <button className="ctrl nav__menu" type="button" aria-expanded={open} aria-controls="site-drawer" aria-label={open ? "Close menu" : "Open menu"} onClick={() => setOpen((o) => !o)}>
+          <button ref={toggle} className="ctrl nav__menu" type="button" aria-expanded={open} aria-controls="site-drawer" aria-label={open ? "Close menu" : "Open menu"} onClick={() => setOpen((o) => !o)}>
             <IMenu />
           </button>
         </div>
@@ -253,13 +273,13 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
           </div>
           <div className="foot__cols">
             <div>
-              <h4>GAkinz</h4>
+              <h2>GAkinz</h2>
               <p className="mute" style={{ maxWidth: "36ch" }}>
                 {copy.contact.footer} {copy.contact.reply}
               </p>
             </div>
             <div>
-              <h4>Work</h4>
+              <h2>Work</h2>
               <ul>
                 <li><Link to="/work">All projects</Link></li>
                 {projects.slice(0, 2).map((p) => (
@@ -268,7 +288,7 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
               </ul>
             </div>
             <div>
-              <h4>Studio</h4>
+              <h2>Studio</h2>
               <ul>
                 <li><Link to="/services">Services</Link></li>
                 <li><Link to="/pricing">Pricing</Link></li>
@@ -277,7 +297,7 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
               </ul>
             </div>
             <div>
-              <h4>Clients</h4>
+              <h2>Clients</h2>
               <ul>
                 <li><Link to="/contact">Contact</Link></li>
                 <li><Link to="/login">Client login</Link></li>

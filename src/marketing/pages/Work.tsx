@@ -47,7 +47,7 @@ export default function Work() {
         </p>
         <div className="grid-work">
           {list.map((p) => (
-            <ProjectCard key={p.slug} p={p} />
+            <ProjectCard key={p.slug} p={p} level={2} />
           ))}
         </div>
       </section>

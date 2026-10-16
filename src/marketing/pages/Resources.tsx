@@ -22,7 +22,7 @@ export default function Resources() {
             {posts.map((p) => (
               <Link key={p.slug} className="post" to={`/resources/${p.slug}`}>
                 <span className="mono mute">{readableDate(p.date)}</span>
-                <h3>{p.title}</h3>
+                <h2>{p.title}</h2>
                 <p>{p.excerpt}</p>
                 <span className="link">
                   Read <IArrow />

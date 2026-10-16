@@ -69,7 +69,7 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .nav .btn--main:hover{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
 .gk-site [tabindex="-1"]:focus{outline:none}
 .gk-site .nav__menu{display:none}
-.gk-site .drawer{position:fixed;inset:0;z-index:85;background:var(--bg);padding:calc(84px + env(safe-area-inset-top,0px)) var(--gut) 32px;display:flex;flex-direction:column;gap:4px;opacity:0;transform:translateY(-8px);pointer-events:none;visibility:hidden;transition:opacity .22s var(--ease),transform .22s var(--ease),visibility 0s .22s}
+.gk-site .drawer{position:fixed;inset:0;z-index:75;background:var(--bg);padding:calc(84px + env(safe-area-inset-top,0px)) var(--gut) 32px;display:flex;flex-direction:column;gap:4px;opacity:0;transform:translateY(-8px);pointer-events:none;visibility:hidden;transition:opacity .22s var(--ease),transform .22s var(--ease),visibility 0s .22s}
 .gk-site .drawer.open{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition:opacity .22s var(--ease),transform .22s var(--ease)}
 .gk-site .drawer a{font-family:var(--disp);font-size:2rem;font-weight:650;text-decoration:none;padding:8px 0;border-bottom:1px solid var(--line)}
 .gk-site .hero{position:relative;min-height:100svh;display:flex;flex-direction:column;background:var(--slide-bg,#3B6FE0);color:var(--slide-on,#fff);transition:background-color 1s var(--ease),color .6s;overflow:hidden;isolation:isolate}
@@ -129,7 +129,7 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .card__body{display:flex;flex-direction:column;gap:10px;padding:20px;flex:1}
 .gk-site .card__meta{display:flex;justify-content:space-between;gap:10px;color:var(--mute)}
 .gk-site .card__meta span:last-child{text-align:right}
-.gk-site .card h3{font-size:1.35rem;letter-spacing:-.02em}
+.gk-site .card h2,.gk-site .card h3{font-size:1.35rem;letter-spacing:-.02em}
 .gk-site .card p{color:var(--mute);font-size:.98rem;flex:1}
 .gk-site .card__foot{display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--line);padding-top:14px;margin-top:4px}
 .gk-site .pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;letter-spacing:.04em;padding:4px 10px;border-radius:999px;border:1px solid var(--line-2);color:var(--mute);white-space:nowrap}
@@ -164,7 +164,7 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .posts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .gk-site .post{display:flex;flex-direction:column;gap:14px;padding:24px;border-radius:20px;background:var(--panel);border:1px solid var(--line);text-decoration:none;transition:border-color .2s,transform .3s var(--ease)}
 .gk-site .post:hover{border-color:var(--line-2);transform:translateY(-3px)}
-.gk-site .post h3{font-size:1.35rem}
+.gk-site .post h2,.gk-site .post h3{font-size:1.35rem}
 .gk-site .post p{color:var(--mute);flex:1}
 .gk-site .quotes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;list-style:none;margin:0;padding:0}
 .gk-site .quote{display:flex;flex-direction:column;gap:20px;height:100%;margin:0;padding:24px;border-radius:20px;background:var(--panel);border:1px solid var(--line)}
@@ -282,7 +282,7 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .foot__mail{font-family:var(--disp);font-weight:720;font-size:clamp(2.1rem,7vw,6rem);letter-spacing:-.045em;line-height:.95;text-decoration:none;overflow-wrap:anywhere;background-image:linear-gradient(var(--acc),var(--acc));background-size:0 4px;background-repeat:no-repeat;background-position:0 100%;transition:background-size .4s var(--ease)}
 .gk-site .foot__mail:hover{background-size:100% 4px}
 .gk-site .foot__cols{display:grid;grid-template-columns:minmax(0,2fr) repeat(3,minmax(0,1fr));gap:24px;border-top:1px solid var(--line);padding-top:36px}
-.gk-site .foot__cols h4{font-family:var(--mono);font-size:11px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:0 0 14px}
+.gk-site .foot__cols h2{font-family:var(--mono);font-size:11px;font-weight:400;line-height:1.55;text-wrap:wrap;letter-spacing:.08em;text-transform:uppercase;color:var(--mute);margin:0 0 14px}
 .gk-site .foot__cols ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
 .gk-site .foot__cols a{text-decoration:none}
 .gk-site .foot__cols a:hover{color:var(--acc)}
@@ -300,6 +300,10 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 @media (max-width:860px){.gk-site .hero__in{grid-template-columns:1fr;padding-top:calc(88px + env(safe-area-inset-top,0px))}
 .gk-site .hero__case{min-height:0}
 .gk-site .segs span{display:none}
+/* The bar is a flex item of the column-flex hero with auto side margins, so it shrinks to its
+   content. With the labels hidden that collapsed every segment button to 0px wide while it
+   stayed focusable (K-045 audit, 2026-10-16). Fill the measure, as the 1fr grid intends. */
+.gk-site .hero__bar{width:100%}
 .gk-site .sec__head,.gk-site .how,.gk-site .case-hero__grid,.gk-site .case-body,.gk-site .about-hero,.gk-site .contact,.gk-site .two,.gk-site .band,.gk-site .foot__big{grid-template-columns:1fr}
 .gk-site .posts{grid-template-columns:1fr}
 .gk-site .svc-list article{grid-template-columns:1fr}
