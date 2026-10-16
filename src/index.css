@@ -438,89 +438,10 @@ h1.gk-app-grad,
   background-color: hsl(var(--muted)) !important;
 }
 
-/* ── Public motion (DESIGN-SYSTEM 10.5) ───────────────────────────────────
-   CSS and SVG only. Every rule that moves anything sits inside
-   `prefers-reduced-motion: no-preference`, so with reduced motion each
-   element simply rests in its final state. Nothing loops, nothing animates
-   layout, and no base class is ever `opacity: 0`.
-
-   .gk-fadein is visible by default. Outside a reduced-motion preference it
-   plays a single entrance on mount. FadeIn upgrades it to a viewport
-   reveal by marking an element `data-reveal="pending"` only at the moment it
-   starts observing it, and only if it is below the fold; so without
-   JavaScript, or without an observer, nothing is ever hidden. */
-@keyframes gk-fade-in {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: none; }
-}
-@keyframes gk-media-in {
-  from { opacity: 0; transform: scale(0.98); }
-  to   { opacity: 1; transform: none; }
-}
-@keyframes gk-orbit-draw {
-  from { stroke-dashoffset: 1; }
-  to   { stroke-dashoffset: 0; }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .gk-fadein:not([data-reveal]) {
-    animation: gk-fade-in 450ms var(--gk-ease-out, ease-out) both;
-    animation-delay: var(--gk-delay, 0s);
-  }
-  .gk-fadein[data-reveal="pending"] {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-  .gk-fadein[data-reveal="in"] {
-    transition: opacity 450ms var(--gk-ease-out), transform 450ms var(--gk-ease-out);
-    transition-delay: var(--gk-delay, 0s);
-  }
-
-  /* Hero copy: heading, supporting line, actions, 80ms apart. */
-  .gk-rise {
-    animation: gk-fade-in 550ms var(--gk-ease-out) both;
-    animation-delay: var(--gk-delay, 0s);
-  }
-  /* Hero media: the frame reserves its box; only scale and opacity move. */
-  .gk-media-in {
-    animation: gk-media-in 700ms var(--gk-ease-out) both;
-    animation-delay: var(--gk-delay, 120ms);
-  }
-  /* One orbit path, drawn once after the content has arrived. The path
-     carries pathLength="1" so the dash maths is size independent. */
-  .gk-orbit-path {
-    stroke-dasharray: 1;
-    animation: gk-orbit-draw 1000ms cubic-bezier(0.77, 0, 0.175, 1) both;
-    animation-delay: 650ms;
-  }
-  /* The mobile menu panel, entering only. Leaving is instant. */
-  .gk-menu-panel {
-    transition: opacity 200ms var(--gk-ease-out), transform 200ms var(--gk-ease-out);
-  }
-  @starting-style {
-    .gk-menu-panel {
-      opacity: 0;
-      transform: translateY(-8px);
-    }
-  }
-}
-
-/* Desktop hover only: a touch tap must never trigger it, and nothing moves
-   while a control is being activated. */
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  .gk-hover-zoom > * {
-    transition: transform 220ms var(--gk-ease-out);
-  }
-  .gk-hover-zoom:hover > * {
-    transform: scale(1.03);
-  }
-}
-
 /* Public wrapper typography, kept for ProposalView and the portal card. */
-/* One family, Sofia Sans. Headings at the reference's medium 500, body at
-   its half-step 450 (set on .gk-public). The -2% headline tracking lives in
-   the type scale in tailwind.config.js, so it is not repeated here. A page
-   that writes `font-normal` on a heading still gets 500: the reference has
-   no lighter display weight. */
+/* Headings at medium 500. The -2% headline tracking lives in the type scale
+   in tailwind.config.js, so it is not repeated here. The family comes from
+   the D-046 tokens (Bricolage Grotesque, Hanken Grotesk). */
 .gk-public :is(h1, h2, h3, h4, blockquote) {
   font-weight: 500;
 }
