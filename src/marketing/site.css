@@ -300,6 +300,10 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 @media (max-width:860px){.gk-site .hero__in{grid-template-columns:1fr;padding-top:calc(88px + env(safe-area-inset-top,0px))}
 .gk-site .hero__case{min-height:0}
 .gk-site .segs span{display:none}
+/* The bar is a flex item of the column-flex hero with auto side margins, so it shrinks to its
+   content. With the labels hidden that collapsed every segment button to 0px wide while it
+   stayed focusable (K-045 audit, 2026-10-16). Fill the measure, as the 1fr grid intends. */
+.gk-site .hero__bar{width:100%}
 .gk-site .sec__head,.gk-site .how,.gk-site .case-hero__grid,.gk-site .case-body,.gk-site .about-hero,.gk-site .contact,.gk-site .two,.gk-site .band,.gk-site .foot__big{grid-template-columns:1fr}
 .gk-site .posts{grid-template-columns:1fr}
 .gk-site .svc-list article{grid-template-columns:1fr}
