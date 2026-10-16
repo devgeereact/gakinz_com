@@ -174,6 +174,7 @@ Grouped by area. Actions are the `?action=` value on POST unless stated.
 |---|---|---|
 | `leads.php` | GET list, `status`, `meta` | STAFF |
 | `clients.php` | GET list, GET `?id=`, `create`, `update`, `convert` | STAFF |
+| `bookings.php` | GET list (`?enquiry_id=` or `?client_id=` to filter), `create`, `update`, `reschedule`, `status`, `notify` | STAFF (as `leads.php`); every branch, reads included |
 | `proposals.php` | GET list, GET `?id=`, `create`, `status`, `accept`, `share` | STAFF |
 | `contracts.php` | GET list, GET `?id=`, `create`, `status`, `sign`, `delete` | STAFF |
 
@@ -189,6 +190,45 @@ Grouped by area. Actions are the `?action=` value on POST unless stated.
 - Before the enquiries `ALTER` in `docs/DEPLOYMENT.md` section 5.2 runs, the list omits the
   three fields and `meta` saves tags and score and answers `followup: false`, rather than
   failing (MySQL error 1054 is caught).
+
+`clients.php?id=N` timeline (2026-10-16): newest first across the source enquiry
+(`enquiry`), calls (`call`), quotes (`proposal`), projects, invoices, tickets (`ticket`),
+Comms threads (`conversation`) and feedback (`feedback`). Each item is
+`{ type, id, label, status, amount, date }`; a feedback item names the rating only, never its
+words. `unavailable` lists `calls` and or `feedback` while their 2026-10-16 tables are
+missing, and the rest of the record still loads.
+
+`bookings.php` (2026-10-16, `docs/PRODUCT-SPEC.md` section 5.5):
+
+- A booking is `{ id, enquiry_id, client_id, enquiry_name, enquiry_company, client_company,
+  starts_at, start_local, timezone, duration_min, location, status, notes, outcome,
+  created_at, updated_at, history[] }`. `starts_at` is UTC with a trailing `Z`; `start_local`
+  is `YYYY-MM-DDTHH:MM` in `timezone`. `history` is newest first: `{ id, kind, from_status,
+  to_status, from_starts_at, from_timezone, to_starts_at, to_timezone, notify_status,
+  notify_to, notify_attempts, notify_error, notified_at, by, created_at }`.
+- `create` takes `{ enquiry_id?, client_id?, start_local, timezone, duration_min?, location?,
+  status?, notes? }`. At least one link is required and each must exist (404 otherwise).
+  `timezone` must be an IANA identifier. A local time that does not exist because the clocks
+  go forward answers 400; in the autumn overlap the first (summer-time) reading is taken.
+  `duration_min` is 5 to 480, default 30. `status` is `requested` (default) or `confirmed`.
+  Returns the booking with 201.
+- `status` takes `{ id, status, outcome?, notify? }`. Allowed: requested to confirmed or
+  cancelled; confirmed to completed or cancelled. Anything else, or a change that loses a race
+  with another, answers 409.
+- `reschedule` takes `{ id, start_local, timezone, duration_min?, notify? }` for a requested
+  or confirmed call only (409 otherwise), keeps the same record and writes the old and new
+  time to its history. The same time again answers 400.
+- `notify: true` on a reschedule or a cancellation emails the customer (the client's address,
+  else the enquiry's) through `gk_send_email`, with no notes or outcome in it. Both answer
+  `{ booking, notice }`, where `notice` is `{ status: sent | failed, error, to }` or null. A
+  failed send does not undo the change.
+- `notify` takes `{ event_id }` and retries a **failed** email only. The event is claimed
+  atomically, so a double click or a second tab gets 409 rather than a second email.
+- `update` takes `{ id, location?, notes?, outcome? }`.
+- Every mutation writes an audit row (`booking_create`, `booking_update`,
+  `booking_reschedule`, `booking_status`, `booking_notify_retry`). Without the 2026-10-16
+  tables every action answers 503.
+- Covered by `tests/server/bookings.test.ts`.
 
 `proposals.php` rules:
 
@@ -249,6 +289,7 @@ Grouped by area. Actions are the `?action=` value on POST unless stated.
 |---|---|---|
 | `portal.php` | GET | Any authenticated user. The `client` role is bound to its own `client_id`. The staff preview branch requires super_admin, admin or manager |
 | `support.php` | Staff: GET list, GET `?id=`, `create`, `status`, `priority`, `assign`, `reply`. Client: GET list, GET `?id=`, `create`, `reply` | STAFF, plus the `client` role on its own branch |
+| `feedback.php` | Staff: GET list (`?client_id=` to filter), `create`, `update`. Client: `create` only | STAFF for every read; the `client` role may only create |
 | `comms.php` | GET list, GET `?id=`, `create`, `post`, `send`, `status` | STAFF |
 | `mail.php` | GET `status`, `inbox`, `message`; POST `send`, `seen` | MAIL_ROLES |
 
@@ -268,6 +309,27 @@ Grouped by area. Actions are the `?action=` value on POST unless stated.
   facing.
 - Any other action from a client is 403. Clients cannot set status, priority or assignee.
 - Covered by `tests/server/support-client.test.ts` with two synthetic clients.
+
+`feedback.php` (2026-10-16, `docs/PRODUCT-SPEC.md` section 6.3; its client branch is
+security-critical):
+
+- `create` takes `{ project_id?, rating?, went_well?, could_improve?, follow_up_ok?,
+  may_publish?, attribution? }`, plus `client_id` from staff. From a `client` caller the
+  client id comes from the token and any `client_id` sent is ignored; a `project_id` of
+  another client answers 404 exactly as a missing one. `rating` is 1 to 5 or absent; a rating
+  or some text is required. `follow_up_ok` and `may_publish` must be booleans; `may_publish`
+  defaults to false and `attribution` is dropped without it. A client gets `{ ok: true }` with
+  201 and nothing else back. An identical submission from the same client within ten minutes
+  returns the first (`duplicate: true`, 200).
+- Every GET is staff only. A client gets 403, so feedback never reaches a client, its author
+  included. Each item is `{ id, client_id, client_company, project_id, project_name, source,
+  rating, went_well, could_improve, follow_up_ok, may_publish, attribution, follow_up,
+  owner_note, submitted_by, created_at, updated_at }`.
+- `update` (staff) takes `{ id, follow_up?, owner_note?, may_publish? }`. `follow_up` is
+  `new`, `following_up` or `closed`. Setting `may_publish` to false clears the attribution and
+  records a withdrawal in the audit detail.
+- Nothing here publishes a testimonial. Without the 2026-10-16 table every action answers 503.
+- Covered by `tests/server/feedback.test.ts` with two synthetic clients.
 
 ### Content
 

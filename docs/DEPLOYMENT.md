@@ -210,6 +210,9 @@ is UNVERIFIED, so check them before step 1.
 | 6 | `ALTER TABLE enquiries ADD COLUMN next_action_at ..., ADD COLUMN next_action_note ..., ADD COLUMN priority ...;` | 2026-10-10, enquiry follow-ups | Additive. Run once only; a second run fails on the duplicate column. Until it runs, `leads.php` lists and updates enquiries but answers `followup: false` and stores no follow-up |
 | 7 | `ALTER TABLE work ADD COLUMN hero_order ..., ADD COLUMN brand_colour ..., ADD COLUMN hero_word ..., ADD COLUMN hero_desktop_file_id ..., ADD COLUMN hero_desktop_alt ..., ADD COLUMN hero_mobile_file_id ..., ADD COLUMN hero_mobile_alt ..., ADD KEY idx_hero (hero_order);` | 2026-10-14, homepage hero | After statement 3. Additive. Run once only; a second run fails on the duplicate column. The full statement is the commented block at the foot of `server/schema.sql`. Until it runs, `work.php` serves every existing action with the hero fields as `null`, `?action=hero` returns `[]`, and `setHero` / `heroOrder` (or a create/update carrying a hero value) answer 503 |
 | 8 | `CREATE TABLE IF NOT EXISTS site_content (...)` | 2026-10-14, editable site copy | New table, safe to run twice. Until it runs, `site.php?action=get` returns `{}` (the public site keeps its built-in copy) and the CMS actions answer 503 |
+| 9 | `CREATE TABLE IF NOT EXISTS bookings (...)` | 2026-10-16, calls inside Enquiries | New table, safe to run twice. It carries foreign keys to `enquiries` and `clients`. Until it runs, `bookings.php` answers 503 and the client timeline leaves calls out |
+| 10 | `CREATE TABLE IF NOT EXISTS booking_events (...)` | 2026-10-16, booking history and customer emails | After statement 9; it carries a foreign key to `bookings`. Safe to run twice |
+| 11 | `CREATE TABLE IF NOT EXISTS client_feedback (...)` | 2026-10-16, private feedback | New table, safe to run twice. Until it runs, `feedback.php` answers 503, the portal form says feedback cannot be sent yet, and the timeline leaves feedback out |
 
 No existing data is migrated by any of these statements.
 
@@ -220,14 +223,19 @@ Upload all of them, with `.htaccess`:
 
 ```
 .htaccess
-_money.php (new)  auth.php         blog.php         clients.php
-comms.php         contact.php      content.php      contracts.php
-design.php        dev.php          files.php        knowledge.php
-leads.php         oauth.php        payments.php     projects.php
-proposals.php     resourcing.php   site.php (new)   support.php
-tasks.php         testimonials.php time.php         users.php
-work.php
+_money.php (new)  auth.php         blog.php         bookings.php (new)
+clients.php       comms.php        contact.php      content.php
+contracts.php     design.php       dev.php          feedback.php (new)
+files.php         knowledge.php    leads.php        oauth.php
+payments.php      projects.php     proposals.php    resourcing.php
+site.php (new)    support.php      tasks.php        testimonials.php
+time.php          users.php        work.php
 ```
+
+`bookings.php`, `feedback.php` and the timeline change in `clients.php` are the 2026-10-16
+batch (calls, private feedback and the client timeline). Upload them after SQL statements 9
+to 11 if you want the features at once; either order is safe, because each degrades with a
+503 or an `unavailable` note until its table exists.
 
 `.htaccess` changed again on 2026-10-16 (`perf/prerender-public`): prerendered pages are served
 from their own `index.html` with no redirect, and the fallback is `app-shell.html`, or
@@ -247,7 +255,8 @@ invoices.php    mail.php      portal.php  weather.php  work.php (new)
 ```
 
 `support.php` now serves `client`-role callers and is security-critical, like `portal.php`
-(`docs/SECURITY.md` section 3). `README.md`, `schema.sql` and `config.php.example` stay out
+(`docs/SECURITY.md` section 3). So does the client branch of `feedback.php`, which is write
+only. `README.md`, `schema.sql` and `config.php.example` stay out
 of the document root.
 
 ### 5.4 Configuration this set needs
@@ -300,6 +309,12 @@ From the branch:
   makes that file permanently public, exactly as attaching a work image does.
 - **Public-site copy can be edited in the CMS** through `site.php` (2026-10-14). Nothing
   changes on the public site until a section is published.
+- **Calls are recorded inside Enquiries** (2026-10-16) through `bookings.php`, staff only.
+  A customer is emailed about a reschedule or cancellation only when the owner switches that
+  on for the change; nothing is sent automatically.
+- **Clients can send private feedback from the portal** (2026-10-16) through `feedback.php`.
+  They cannot read it back. Permission to quote is a separate switch, off by default, and
+  nothing is published from it.
 - **Public pages arrive as HTML** (2026-10-16, with the client deploy and this `.htaccess`).
   Each prerendered page carries its own title, description and one canonical, and shows the
   built-in content until the bundle loads and the CMS answers (section 2).
@@ -331,7 +346,11 @@ From the branch:
    JavaScript on, the sign-in page. A 404 on `/app` means `.htaccess` points at a missing
    `app-shell.html` and the `DOCUMENT_ROOT` check did not apply; a 301 from `/work` to
    `/work/` means the old `.htaccess` is still live.
-11. Do **not** test a real payment or a real send. Stripe behaviour is covered by
+11. After statements 9 to 11 and the 2026-10-16 upload, open Enquiries, switch to Calls and
+   confirm it lists (empty is fine) rather than saying the database update is needed; open a
+   client and confirm the timeline has no "not shown until" note. Do not record a test call
+   or send test feedback against a real client.
+12. Do **not** test a real payment or a real send. Stripe behaviour is covered by
    `npm run test:server` against a fake provider; a live check needs Stripe test-mode keys on a
    non-production copy.
 

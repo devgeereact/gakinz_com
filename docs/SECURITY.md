@@ -94,8 +94,15 @@ any change to either needs isolation tests with at least two synthetic clients.
   always ends the request, so a client never reaches the staff branches.
   `tests/server/support-client.test.ts` covers list, detail, create and reply.
 
+- `feedback.php` (2026-10-16) accepts a create from a client, write only. It takes
+  `client_id` from the token and ignores one in the body, answers 404 for another client's
+  `project_id` exactly as for a missing one, and ignores the owner's follow-up fields. Every
+  read is staff only, so private feedback never reaches any client, its author included.
+  `tests/server/feedback.test.ts` covers this with two synthetic clients. Treat a change to
+  its client branch as security-critical.
+
 A client also reaches its own account through `auth.php` (sessions, two-factor). Every other
-resource endpoint is staff only. Reads in `clients.php`, `invoices.php`, `comms.php` and
+resource endpoint is staff only, including `bookings.php`. Reads in `clients.php`, `invoices.php`, `comms.php` and
 `leads.php` carry explicit comments saying so.
 
 `users.php` will not create a `client` account without a validated `client_id`, and its

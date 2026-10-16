@@ -50,6 +50,8 @@ section 4.
 |---|---|---|
 | `enquiries` | Public contact form, the top of the leads pipeline | `status` moves through new, contacted, proposal, won, lost. `tags`, `score`, `lost_reason` added later. Follow-ups, 2026-10-10: `next_action_at` (DATE, null), `next_action_note` (VARCHAR 300, null) and `priority` (TINYINT, 0 none to 3 high, the owner's choice and separate from `score`) |
 | `clients` | CRM record, created when a lead is won | `tag` is one of retainer, one-off, vip, dormant. `retainer_amount` drives recurring billing and care-plan revenue |
+| `bookings` | Calls recorded by hand inside Enquiries, added 2026-10-16 | Linked to an `enquiry_id`, a `client_id` or both. `starts_at` is UTC and `timezone` the IANA zone the time was agreed in; `bookings.php` converts with PHP's own zone database and refuses a local time inside the spring-forward gap. `status` is requested, confirmed, completed or cancelled; only the owner moves a request to confirmed. `notes` and `outcome` are owner only and never sent |
+| `booking_events` | History of each booking, added 2026-10-16 | One row per create, reschedule and status change, with the old and new time or status. A customer email about a reschedule or cancellation records `notify_status` (sending, sent, failed), `notify_to`, `notify_attempts` and `notify_error` on its event, so the owner sees a failure and can retry it. Cascades with its booking |
 | `proposals`, `proposal_items` | Quotes with line items | `vat_rate`. `share_token` is unique and powers the public `/p/:token` view; `views` and `last_viewed_at` track opens |
 
 ### Delivery
@@ -79,6 +81,7 @@ section 4.
 | `tickets`, `ticket_replies` | Support, and since 2026-10-10 client messages | status open, in_progress, resolved; priority urgent, high, normal, low. A client-created ticket takes `client_id` from the token and priority `normal`. `ticket_replies` has no internal-note flag, so every reply is client facing |
 | `comm_threads`, `comm_messages` | Conversation log tied to a client or project | `channel` is email, sms, whatsapp, call, meeting, client or internal. `direction` is out, in or note. Most messages are **recorded**, not sent. Email, SMS and WhatsApp can genuinely send |
 | `files` | File metadata | Binary lives on disk under `server/uploads/`, which is gitignored. Optional `share_token`, expiring when issued by `files.php?action=share` and **non-expiring** when issued by `work.php?action=addImage`. See section 7 |
+| `client_feedback` | Private delivery feedback, added 2026-10-16 | `client_id`, optional `project_id` (must belong to that client), `source` (portal or owner), optional `rating` 1 to 5, `went_well`, `could_improve`, `follow_up_ok`. `may_publish` is the client's separate permission to quote it and defaults to 0; `attribution` is kept only with it. `follow_up` (new, following_up, closed) and `owner_note` are the owner's. **Never returned to any client**, not even its author |
 | `certificates` | Publicly verifiable certificates | `public_id` is the reference used by `/verify/:id`. `revoked_at` hides a revoked one |
 
 ### Content and platform
@@ -143,6 +146,7 @@ The client isolation chain is:
 users.client_id  ->  clients.id  ->  projects.client_id
                                  ->  invoices.client_id
                                  ->  tickets.client_id
+                                 ->  client_feedback.client_id   (write only for a client)
 ```
 
 `portal.php` derives `client_id` from the authenticated token whenever the role is `client`
@@ -150,7 +154,9 @@ and ignores any `?client_id` parameter. Staff may pass the parameter to preview 
 Since 2026-10-10 the client branch of `support.php` does the same for `tickets` and
 `ticket_replies`, repeating the `client_id` condition in every query. Those two files, plus a
 client's own account actions in `auth.php`, are the only places a client-role account reaches
-data. Every other resource endpoint is staff only.
+data. Since 2026-10-16 `feedback.php` also accepts a create from a client, taking `client_id`
+from the token and checking that any `project_id` belongs to that client; it never returns
+feedback to a client. Every other resource endpoint is staff only, `bookings.php` included.
 
 ## 4. Migrations
 
@@ -179,10 +185,12 @@ Outstanding statements, grouped as they appear in the file:
 | Enquiry follow-ups, 2026-10-10 | `ALTER TABLE enquiries ADD COLUMN next_action_at`, `next_action_note`, `priority`. Run once; a second run fails on the duplicate column |
 | Homepage hero, 2026-10-14 | `ALTER TABLE work ADD COLUMN hero_order`, `brand_colour`, `hero_word`, `hero_desktop_file_id`, `hero_desktop_alt`, `hero_mobile_file_id`, `hero_mobile_alt`, plus `idx_hero`. Run once; a second run fails on the duplicate column |
 | Site content, 2026-10-14 | `CREATE TABLE IF NOT EXISTS site_content`. Safe to run twice |
+| Bookings, 2026-10-16 | `CREATE TABLE IF NOT EXISTS bookings`, then `booking_events`. Safe to run twice |
+| Private feedback, 2026-10-16 | `CREATE TABLE IF NOT EXISTS client_feedback`. Safe to run twice |
 
 Which of the older statements have already been applied to the live database is
 **UNVERIFIED**. The 2026-09-22, 2026-10-10 and 2026-10-14 groups are known **not** to have been applied by
-this work, because no database has been contacted since they were written. Their order is in
+this work, nor have the 2026-10-16 tables, because no database has been contacted since they were written. Their order is in
 `docs/DEPLOYMENT.md` section 5.2.
 
 **The unique key has a precondition.** `files.share_token` currently has no unique
@@ -234,6 +242,13 @@ update carrying a non-empty hero value answer 503 with a message naming the sche
 Without `site_content`, `site.php?action=get` returns `{}` and the staff actions answer 503.
 Both paths are tested against a real database with the column or table dropped
 (`tests/server/work-hero.test.ts`, `tests/server/site.test.ts`).
+
+**The 2026-10-16 tables degrade too.** Without `bookings` and `booking_events`, every
+`bookings.php` action answers 503 naming the schema step, and the Enquiries screen says calls
+appear once the update has run. Without `client_feedback`, `feedback.php` answers 503, the
+portal form says feedback cannot be sent yet, and the client record says so. `clients.php?id=N`
+leaves calls and feedback out of the timeline and lists them in `unavailable`. Tested with the
+tables dropped (`tests/server/feedback.test.ts`).
 
 ## 7. Files, share tokens and what stays public
 

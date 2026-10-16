@@ -49,7 +49,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-036 | Public pages bring back unpublished posts and work from the static fallback | Medium | **Fixed 2026-10-10.** Not deployed |
 | K-037 | The article renderer has no links or lists | Medium | **Fixed 2026-10-10.** Not deployed |
 | K-038 | Public fallback copy shows engineering counts and internal file paths | Medium | **Partly fixed:** engineering copy removed 2026-10-10; portrait, biography and screenshot placeholders gone in the D-046 rebuild (2026-10-14). Only the legal review date placeholder remains. Not deployed |
-| K-039 | Clients cannot message the owner from the portal | High | **Fixed 2026-10-10.** Not deployed or uploaded. Private feedback still open |
+| K-039 | Clients cannot message the owner from the portal | High | **Fixed 2026-10-10.** Not deployed or uploaded. Private feedback built 2026-10-16, not uploaded |
 | K-040 | `stored` is a MySQL 8 reserved word, so the schema failed on MySQL | High | **Fixed 2026-10-10.** Not uploaded |
 | K-041 | `npm audit` reports 15 affected packages, ten of them high | Medium | Open. Owner decision |
 | K-042 | The Google Fonts `@import` still blocks rendering on public pages that no longer use those fonts | Low | **Fixed in code 2026-10-14** (D-046), not deployed. CLS measured 2026-10-16: see K-052 |
@@ -64,6 +64,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-051 | Amber hero slide: dark bar text on the dark bottom shading | Medium | Open. Owner decision (design) |
 | K-052 | Home CLS 0.114 from the font swap moving the hero, and LCP 4.9 s simulated | Medium | CLS **fixed**, FCP 2.7 to 1.8 s with the prerender (2026-10-16), not deployed. Home LCP still 4.5 to 4.8 s: open |
 | K-053 | The LCP image on `/work` is lazy-loaded | Low | Prerendered 2026-10-16: `/work` LCP 3.4 s, Performance 90 to 91. Eager first card re-measured, still no faster; lazy kept |
+| K-055 | Calls, the client timeline and private feedback are verified only locally, with owner decisions open | Medium | Open. Built 2026-10-16, not merged or uploaded |
 
 
 ---
@@ -846,8 +847,9 @@ client only. The client id comes from the token, another client's ticket answers
 clients cannot set status, priority or assignee. The portal has a Messages area
 (`tests/server/support-client.test.ts`, 22 isolation tests with two synthetic clients, 8 of
 which failed on the old code; `cf534cf`). `support.php` is now security-critical like
-`portal.php` (`docs/SECURITY.md` section 3). Private feedback with publication consent is
-still open. The original finding follows.
+`portal.php` (`docs/SECURITY.md` section 3). Private feedback with a separate publication
+consent was built on 2026-10-16 (`feedback.php`, `tests/server/feedback.test.ts`), not
+uploaded; see K-055. The original finding follows.
 
 The portal aggregates projects, invoices and tickets, but Comms is staff-only and
 `server/support.php` requires STAFF for creating a ticket and replying, with no client branch.
@@ -1100,3 +1102,36 @@ home hero headline is 77.76px at 1440). The rule is now `#main.gk-app-main h1`, 
 on the CMS `<main>` in `src/layouts/AppLayout.tsx`. Measured after the fix: hero `h1`
 77.76px. The K-045 audit figures for the public site were taken with the bug present.
 
+## K-055 · Calls, the client timeline and private feedback are verified only locally
+**Severity:** medium · **Status:** open. Built 2026-10-16 on `feat/bookings-timeline-feedback`.
+
+`bookings.php`, `feedback.php` and the timeline in `clients.php` pass 24 integration tests on a
+local MariaDB 10.11 database, and the Enquiries, Clients and portal screens were checked in a
+browser at 1440, 1024 and 390px with every API call mocked. Nothing has run against the live
+database, a real mailbox or real data. Until SQL 9 to 11 in `docs/DEPLOYMENT.md` section 5.2
+run, the endpoints answer 503 and the screens say so.
+
+Known limits in the build:
+
+- A customer email whose send crashes PHP part way leaves its event at `sending`, which the
+  retry action does not accept. It needs a manual `UPDATE booking_events SET notify_status =
+  'failed'` for that row. Not seen in testing.
+- There is no delete for a call; a mistaken record is cancelled. There is no ICS file and no
+  customer request for a call yet.
+- In the autumn clock-change hour the earlier (summer-time) reading of an ambiguous local time
+  is taken.
+
+Owner decisions that the specification left open, each built the simplest way:
+
+1. Customer emails about a reschedule or cancellation are opt-in per change (a switch, off by
+   default), by email only. Confirmations and completions are never emailed.
+2. A client cannot read any feedback back, not even their own, after sending it.
+3. The owner can record feedback received another way, including permission to quote, and can
+   record a withdrawal. Nothing creates a testimonial automatically, and the separate
+   testimonial request with an owner-proposed excerpt (`docs/PRODUCT-SPEC.md` section 6.3) is
+   not built.
+4. Bookings and feedback follow the `leads.php` and `clients.php` staff list (super_admin,
+   admin, manager, editor). Narrow it if editors should not read private feedback.
+
+Resolution: run the SQL and upload, then exercise one call and one feedback on real data the
+owner chooses, and decide items 1 to 4.

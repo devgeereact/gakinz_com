@@ -28,20 +28,20 @@ names another date or computer. Re-measure and update this table when a count ch
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 143 tests in 10 files (2026-10-16, `perf/prerender-public`: 15 added for the prerender path list and HTML assembly) |
-| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 140 tests in 12 files. Measured 2026-10-14 on local MariaDB 10.11 on the final redesign branch; not re-run for this table, because no local test database is configured on the computer that measured the other rows |
+| Unit tests | `npm test` | **PASS.** 156 tests in 11 files (2026-10-16, `feat/bookings-timeline-feedback`: 13 added in `bookingModel.test.ts`) |
+| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 164 tests in 14 files, 2026-10-16 on local MariaDB 10.11, `feat/bookings-timeline-feedback` (24 added in `bookings.test.ts` and `feedback.test.ts`) |
 | Type check | `npx tsc -b` | **PASS** |
 | Build | `npm run build` | **PASS** |
 | Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 41 errors, 1 warning, unchanged since 2026-10-11. **`npm run lint` still fails** (K-002) |
 | Documentation | `npm run docs:check` | **PASS.** 25 documents |
-| PHP files | `ls server/*.php \| wc -l`, then `php -l server/*.php` | 47: 41 endpoints and 6 `_`-prefixed includes, all 47 passing `php -l` |
-| Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 35 (`site_content` added 2026-10-14) |
+| PHP files | `ls server/*.php \| wc -l`, then `php -l server/*.php` | 49: 43 endpoints and 6 `_`-prefixed includes, all 49 passing `php -l` (`bookings.php` and `feedback.php` added 2026-10-16) |
+| Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 38 (`bookings`, `booking_events`, `client_feedback` added 2026-10-16) |
 | Public routes | `src/routes/index.tsx`, children of `PublicLayout` | 17: the home page, 15 paths and the 404. Outside the layout: `/login`, `/set-password` and `/p/:token` |
 | CMS screens | `src/routes/index.tsx` under `/app` | 26: Today (the index), 24 module routes and My account, in seven navigation groups (Site content added 2026-10-14) |
-| Client API groups | `grep -cE "^export const [a-zA-Z]+ *= *\{" src/lib/api.ts` | 37 exported groups over one `request()` helper (`siteContent` added 2026-10-14) |
+| Client API groups | `grep -cE "^export const [a-zA-Z]+ *= *\{" src/lib/api.ts` | 39 exported groups over one `request()` helper (`bookings` and `feedback` added 2026-10-16) |
 | Server files changed since `main` | `git diff --name-only c57eb4a -- server` | 25 PHP files, `.htaccess`, `schema.sql`, `README.md` and `config.php.example`; the upload list is `docs/DEPLOYMENT.md` section 5 |
 | Server files changed by the redesign | `git diff --stat origin/feat/plan-2026-batch-1...origin/feat/redesign-2026 -- server` | `site.php` (new), `work.php`, `schema.sql`, `README.md` |
-| `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 36 of 47 files, 134 call sites |
+| `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 38 of 49 files, 143 call sites (2026-10-16) |
 
 Not measured on this run: `npm audit` (last figure in K-041) and anything on the live system.
 Accessibility and performance were re-measured on the D-046 build on 2026-10-16, locally; see
@@ -124,7 +124,7 @@ live-state discovery and owner inputs first; no launch is promised in a fixed nu
 |---|---|---|---|
 | 0. Agree scope | Design system and six services; motion contract, core workflows and navigation, positioning and feature dispositions; actual business and pricing facts | Dated decisions with clear exclusions and remaining questions | Plan approved (D-037 to D-044). Business facts outstanding (section 5) |
 | 1. Establish safety | Owner credential actions; reconcile host PHP and SQL; backup and restore; a safe local synthetic backend and mail sink; payment defects and alternative sign-in reviewed | Rotation and revocation confirmed, restoration demonstrated, release manifest and rollback recorded, no accidental production calls in tests | Local fixes built (section 4), not deployed. Owner-side actions open |
-| 2. Complete business journeys | Enquiry follow-up, simple bookings, client conversion, quote acceptance and version, projects and tasks, invoices and reconciliation, verified reference access, scoped messages, updates and feedback, client-linked brief, portal and support isolation | Synthetic end-to-end journey, failure, retry and concurrency tests, and record ownership tests pass | Started. Enquiry follow-ups and client messages built with server tests; bookings, timeline, feedback and the full journey not built |
+| 2. Complete business journeys | Enquiry follow-up, simple bookings, client conversion, quote acceptance and version, projects and tasks, invoices and reconciliation, verified reference access, scoped messages, updates and feedback, client-linked brief, portal and support isolation | Synthetic end-to-end journey, failure, retry and concurrency tests, and record ownership tests pass | Started. Enquiry follow-ups, client messages, call bookings, the client timeline and private feedback built with server tests (bookings, timeline and feedback 2026-10-16, not deployed); the full journey with these steps not yet run |
 | 3. Polish the CMS | Target design foundation, smaller navigation, My account, consistent page and form states, unavailable metrics, quiet optional modules | Owner usability task passes; keyboard, phone, zoom and theme checks on affected screens | Navigation grouped and My account built (K-032, K-023, K-024). Every CMS screen restyled to D-046 on `feat/redesign-2026`, checked against mocked API responses only. Owner usability task, keyboard and zoom checks NOT TESTED |
 | 4. Polish the public site | Hero and section design and motion, company and owner positioning, service copy, complete case studies, consent and legal content, safe publishing, metadata and sitemap | Buyer journey, publish and unpublish, share preview, responsive and accessibility evidence | Rebuilt again on D-046 (2026-10-14): brand-colour hero fed by Work, the owner's real projects with screenshots, copy editable in Site content. Publishing, article format and engineering copy fixed (K-036, K-037, K-038 in part). Six-service copy, client consent records, portrait and legal review dates wait for owner inputs. Accessibility and performance re-measured 2026-10-16 (K-045 closed); two brand-colour contrast failures and home CLS 0.114 open (K-050 to K-052) |
 | 5. Social and affiliate pilot | Owned profile set-up, approved copy and media, first resources, disclosed links | Exact profile URLs, disclosure and link checks, a repeatable small publishing routine | Not started |
@@ -166,7 +166,11 @@ reference access cannot ship until the authentication and ownership gates pass.
    quote, acceptance, the VAT-inclusive deposit through the fake Stripe provider and the client
    portal. Not run against the live server.
 8. Booking records inside Enquiries, the client timeline and private feedback
-   (`docs/PRODUCT-SPEC.md` sections 5.5 and 6).
+   (`docs/PRODUCT-SPEC.md` sections 5.5 and 6). **Built locally 2026-10-16** on
+   `feat/bookings-timeline-feedback`: `bookings.php`, `feedback.php`, the timeline in
+   `clients.php`, SQL 9 to 11, and the Enquiries, Clients and portal screens. 24 server tests
+   and 13 unit tests; browser checked with mocked responses only. Not merged, uploaded or run
+   against real data (K-055). Owner decisions are listed in K-055.
 9. The remaining token work: `localStorage` exposure, token lifetime and a CSP review (K-033);
    honest contract labelling (K-034).
 
