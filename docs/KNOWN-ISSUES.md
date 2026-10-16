@@ -1036,6 +1036,14 @@ Options for the owner: render the slide bar in light text whenever the slide tex
 ## K-052 · Home CLS 0.114 from the font swap moving the hero, and LCP 4.9 s simulated
 **Severity:** medium · **Status:** CLS fixed, first paint faster, home LCP still open. Prerender on `perf/prerender-public`, 2026-10-16, not deployed.
 
+**Hero images, 2026-10-16.** Only the active slide's screenshots are now in the first render,
+the laptop one at `fetchPriority="high"`; the other slides' images join after the `load` event
+(`Devices` in `src/marketing/components/site-ui.tsx`). This moves about 300 KB of hidden-slide
+images out of the first load. Lighthouse mobile on the local preview, 4 runs each on this
+Ubuntu machine: before Performance 88 to 91, LCP 3.4 to 3.8 s; after Performance 89 to 91,
+LCP 3.4 to 3.5 s; CLS 0 both. Earlier figures of 4.4 to 5.0 s were measured in a different
+environment, so compare runs from one machine only.
+
 **Prerender, 2026-10-16.** The public pages now arrive as HTML (`docs/ARCHITECTURE.md`
 section 2). Lighthouse 12.8.2 mobile, simulated throttling, 3 runs each, local production
 builds behind the same gzip server (before: `origin/feat/redesign-2026` at `c38d425`):
