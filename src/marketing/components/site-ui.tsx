@@ -117,7 +117,12 @@ export function ProjectCard({ p, wide, level = 3 }: { p: Project; wide?: boolean
   return (
     <Link className={`card ${wide ? "card--wide" : ""}`} to={`/work/${p.slug}`} style={style}>
       <div className="card__media">
-        {p.desktop ? <img src={p.desktop.src} alt={p.desktop.alt} loading="lazy" width={1200} height={750} /> : <div className="card__type">{p.name}</div>}
+        {p.desktop ? (
+          // Lazy on purpose: eager plus high priority measured slower (K-053).
+          <img src={p.desktop.src} alt={p.desktop.alt} loading="lazy" width={1200} height={750} />
+        ) : (
+          <div className="card__type">{p.name}</div>
+        )}
       </div>
       <div className="card__body">
         <div className="card__meta mono">
