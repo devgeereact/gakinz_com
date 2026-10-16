@@ -8,6 +8,12 @@
  *   dist/index.html            the template, read once, then overwritten by "/"
  *   dist/app-shell.html        the SPA shell: default head, empty #root
  *   dist/<path>/index.html     one page per path in prerenderPaths()
+ *   dist/sitemap.xml           every indexable page above, at its canonical URL (K-019)
+ *
+ * The build fails if any page's metadata is not its own (checkHeads: canonical,
+ * og:url, social titles and descriptions) or if two indexable pages share a
+ * title, description or canonical. The sitemap's <lastmod> is a post's own
+ * date where it has one, and otherwise the day the build ran (UTC).
  *
  * Every page, the shell included, preloads the three Latin font files the first
  * screen is set in (withFontPreloads).
@@ -51,8 +57,10 @@ const template = ssr.withFontPreloads(
 await writeFile(join(dist, "app-shell.html"), ssr.buildShell(template))
 
 const paths = ssr.prerenderPaths()
+const heads = []
 for (const path of paths) {
   const markup = ssr.render(path)
+  heads.push({ path, head: ssr.readHead(ssr.splitHead(markup).head) })
   // Every listed path is a real page. A 404 here means the list and the
   // built-in content have drifted apart.
   if (markup.includes("<title>Page not found")) throw new Error(`prerender: ${path} rendered the 404 page`)
@@ -61,5 +69,15 @@ for (const path of paths) {
   await writeFile(file, ssr.buildPage(template, { path, markup }))
 }
 
+const problems = ssr.checkHeads(heads)
+if (problems.length) throw new Error(`prerender: page metadata is wrong:\n  ${problems.join("\n  ")}`)
+
+// public/sitemap.xml no longer exists, so this is the only sitemap that ships.
+const buildDate = new Date().toISOString().slice(0, 10)
+const indexable = heads.filter(({ head }) => ssr.isIndexable(head))
+const sitemap = ssr.buildSitemap(indexable.map(({ path, head }) => ({ loc: head.canonical, lastmod: ssr.contentDate(path) ?? buildDate })))
+await writeFile(join(dist, "sitemap.xml"), sitemap)
+
 await rm(ssrDir, { recursive: true, force: true })
 console.log(`prerender: ${paths.length} public pages and app-shell.html written to dist/`)
+console.log(`prerender: sitemap.xml lists ${indexable.length} URLs`)

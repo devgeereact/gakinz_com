@@ -37,7 +37,7 @@ Every data need becomes a PHP endpoint plus a call through `src/lib/api.ts`.
 | Entry | `src/main.tsx`: hydrates a prerendered public page, renders everything else from scratch |
 | Providers shared by browser and prerender | `src/AppRoot.tsx` |
 | Routing | `src/routes/index.tsx`, `createBrowserRouter`; the public branch is `src/routes/public.tsx` |
-| Prerender | `src/entry-server.tsx`, `scripts/prerender.mjs`, `src/marketing/prerender-paths.ts`, `src/prerender/html.ts` |
+| Prerender and sitemap | `src/entry-server.tsx`, `scripts/prerender.mjs`, `src/marketing/prerender-paths.ts`, `src/prerender/html.ts`, `src/prerender/head.ts`, `src/prerender/sitemap.ts` |
 | API boundary | `src/lib/api.ts`, one exported group per resource over one `request()` helper |
 | Auth state | `src/store/auth.store.ts` |
 | Route guard | `src/app/RequireAuth.tsx` |
@@ -99,7 +99,14 @@ Measured on the local build of 2026-09-22:
    the head, in place of the defaults between `<!--seo:start-->` and `<!--seo:end-->` in
    `index.html`, so each page carries exactly one title and one canonical. JSON-LD stays where
    React rendered it, inside the page;
-5. deletes `dist-ssr/`.
+5. checks every page's head (`src/prerender/head.ts`): the canonical and `og:url` are the
+   page's own URL, the Open Graph and Twitter titles and descriptions match the page's, and no
+   two indexable pages share a title, a description or a canonical. Any problem fails the build;
+6. writes `dist/sitemap.xml` (K-019): one `<url>` per indexable page, at the canonical URL read
+   from its head, so the sitemap follows the canonicals' slash policy (none, except `/`).
+   `<lastmod>` is a post's own date, and the build date (UTC) for every other page. There is
+   no `public/sitemap.xml` any more, so nothing hand-written can drift;
+7. deletes `dist-ssr/`.
 
 The paths are `/`, `/work`, `/services`, `/pricing`, `/about`, `/resources`, `/contact`,
 `/sectors`, `/privacy`, `/terms`, `/cookies`, and a detail page for every built-in project,
@@ -128,7 +135,9 @@ JavaScript, and every visitor until the bundle has loaded and the CMS has answer
 built-in projects, services, copy and posts. A record published, edited or withdrawn in the CMS
 reaches the prerendered HTML only on the next build, and a record that exists only in the CMS
 has no prerendered page: it is served the shell and renders in the browser, as every page did
-before.
+before. Nor is it in the sitemap, which lists exactly the
+prerendered pages. A built-in record withdrawn in the CMS stays in both until it is removed from
+`src/marketing/data/`.
 
 ### Two visual surfaces, two token sets
 

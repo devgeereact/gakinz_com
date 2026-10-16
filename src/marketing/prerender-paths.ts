@@ -34,3 +34,12 @@ export function outputFile(path: string): string {
   const p = normalisePath(path)
   return p === "/" ? "index.html" : `${p.slice(1)}/index.html`
 }
+
+/**
+ * The date a page's own content carries, for the sitemap's <lastmod>: a post's
+ * date. Null for every other page, which the build dates to the day it ran.
+ */
+export function contentDate(path: string): string | null {
+  const p = normalisePath(path)
+  return insights.find((i) => `/resources/${i.slug}` === p)?.date ?? null
+}

@@ -4,8 +4,10 @@ import { createMemoryRouter, RouterProvider } from "react-router-dom"
 import AppRoot from "@/AppRoot"
 import { publicRoute } from "@/routes/public"
 
-export { prerenderPaths, outputFile, normalisePath } from "@/marketing/prerender-paths"
+export { prerenderPaths, outputFile, normalisePath, contentDate } from "@/marketing/prerender-paths"
 export { buildPage, buildShell, splitHead, withFontPreloads } from "@/prerender/html"
+export { readHead, checkHeads, isIndexable } from "@/prerender/head"
+export { buildSitemap } from "@/prerender/sitemap"
 
 /**
  * Build-time renderer for the public site (scripts/prerender.mjs).
