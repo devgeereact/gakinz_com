@@ -110,7 +110,9 @@ export function Devices({ list, active = 0 }: { list: Project[]; active?: number
   )
 }
 
-export function ProjectCard({ p, wide }: { p: Project; wide?: boolean }) {
+/** `level` is the card title's heading level: 3 under a section h2, 2 straight under the page h1. */
+export function ProjectCard({ p, wide, level = 3 }: { p: Project; wide?: boolean; level?: 2 | 3 }) {
+  const Title = level === 2 ? "h2" : "h3"
   const style = { "--cc": p.colour, "--con": onColour(p.colour) } as CSSProperties
   return (
     <Link className={`card ${wide ? "card--wide" : ""}`} to={`/work/${p.slug}`} style={style}>
@@ -122,7 +124,7 @@ export function ProjectCard({ p, wide }: { p: Project; wide?: boolean }) {
           <span>{kindName(p.kind)}</span>
           <span>{p.sector}</span>
         </div>
-        <h3>{p.name}</h3>
+        <Title>{p.name}</Title>
         <p>{p.line}</p>
         <div className="card__foot">
           <Pill status={p.status} />
@@ -271,13 +273,13 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
           </div>
           <div className="foot__cols">
             <div>
-              <h4>GAkinz</h4>
+              <h2>GAkinz</h2>
               <p className="mute" style={{ maxWidth: "36ch" }}>
                 {copy.contact.footer} {copy.contact.reply}
               </p>
             </div>
             <div>
-              <h4>Work</h4>
+              <h2>Work</h2>
               <ul>
                 <li><Link to="/work">All projects</Link></li>
                 {projects.slice(0, 2).map((p) => (
@@ -286,7 +288,7 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
               </ul>
             </div>
             <div>
-              <h4>Studio</h4>
+              <h2>Studio</h2>
               <ul>
                 <li><Link to="/services">Services</Link></li>
                 <li><Link to="/pricing">Pricing</Link></li>
@@ -295,7 +297,7 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
               </ul>
             </div>
             <div>
-              <h4>Clients</h4>
+              <h2>Clients</h2>
               <ul>
                 <li><Link to="/contact">Contact</Link></li>
                 <li><Link to="/login">Client login</Link></li>
