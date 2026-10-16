@@ -983,7 +983,7 @@ replace them with a select below 640px.
 detail carried no `images` key broke the edit view. It now falls back to an empty list.
 
 ## K-050 · RotaFlow blue `#3B6FE0` fails contrast for the reduced-opacity white text on it
-**Severity:** medium · **Status:** open, owner decision. Found 2026-10-16 (K-045 audit).
+**Severity:** medium · **Status:** **fixed 2026-10-16**, not deployed. Owner chose `#2C5AC4` (white text passes at every opacity used); applied in `showcase.ts`, the hero fallback in `site.css` and the sign-in colour strip. A CMS Work record keeps whatever colour is entered there. Found 2026-10-16 (K-045 audit).
 
 `#3B6FE0` is the RotaFlow brand colour, used for hero slide 1, the `/work/rotaflow` case hero
 and, while either is on screen, the navigation bar. It holds pure white at **4.63:1**, just over
@@ -1010,7 +1010,7 @@ Not fixed here because either remedy changes the approved look. Options for the 
    white and the base ratio is under 5:1.
 
 ## K-051 · Amber hero slide: dark bar text on the dark bottom shading
-**Severity:** medium · **Status:** open, owner decision. Found 2026-10-16 (K-045 audit).
+**Severity:** medium · **Status:** **fixed 2026-10-16**, not deployed. Owner chose light bar text: on slides whose text is dark, the hero bar (project names, counter, controls) uses `#ECE9E2` over the bottom shading (6.73:1 measured by the audit). Found 2026-10-16 (K-045 audit).
 
 On slide 5 (Herit Clothing, `#F59E0B`) `onColour()` correctly picks dark text (8.69:1 on the
 flat colour). But `.hero::after` shades the bottom 18% of the hero towards graphite, to about
@@ -1022,7 +1022,7 @@ Options for the owner: render the slide bar in light text whenever the slide tex
 (white on the shaded band measures 6.73:1), or leave the shading off dark-text slides.
 
 ## K-052 · Home CLS 0.114 from the font swap moving the hero, and LCP 4.9 s simulated
-**Severity:** medium · **Status:** open. Found 2026-10-16 (K-045 audit).
+**Severity:** medium · **Status:** **CLS fixed 2026-10-16**, not deployed; LCP open. Metric-matched Arial fallbacks ("Bricolage Fallback", "Hanken Fallback" in `site.css`, measured in Chromium) stop the font swap moving the hero. Lighthouse mobile on the local preview, 3 runs after the K-054 fix: `/` CLS 0 to 0.052 (was 0.114), LCP 4.4 to 5.0 s, Performance 75 to 80; `/work` LCP 3.5 to 3.6 s, Performance 86 to 87. LCP needs prerendering of the public pages. Found 2026-10-16 (K-045 audit).
 
 Lighthouse 12.8.2, mobile, simulated throttling, local build: `/` scores performance 73 to 74,
 **CLS 0.114** (over 0.1) and **LCP 4.9 s**. The single shift is the hero's `.laptop` device
@@ -1037,9 +1037,21 @@ rather than centre; prerendering (`qa/PERFORMANCE-AUDIT.md` section 6) addresses
 Re-measure after any of them.
 
 ## K-053 · The LCP image on `/work` is lazy-loaded
-**Severity:** low · **Status:** open. Found 2026-10-16 (K-045 audit).
+**Severity:** low · **Status:** open, measured 2026-10-16. Loading the first card eagerly with high fetch priority made `/work` slower on the local preview (LCP 3.8 s against 3.5 to 3.6 s lazy, 3 runs each), because the page is rendered by JavaScript and the request only competes with scripts and fonts. Lazy loading is kept; the fix is the same prerendering as K-052. Found 2026-10-16 (K-045 audit).
 
 On `/work` the LCP element is the first project card's screenshot, and `ProjectCard` gives every
 card image `loading="lazy"`, so Lighthouse fails `lcp-lazy-loaded` (LCP 3.5 s simulated,
 performance 87). Resolution: let `ProjectCard` take an eager flag and pass it for the first row
 on `/work` and Home, then re-measure.
+
+## K-054 · A CMS heading rule shrank every public page heading
+**Severity:** high · **Status:** **fixed 2026-10-16**, not deployed. Found 2026-10-16.
+
+The CMS restyle added `#main h1 { font-size: clamp(1.7rem, 2.6vw, 2.2rem) }` to
+`src/index.css` so module titles override their utility classes. The public layout's `<main>`
+also has `id="main"`, and the id selector outranked `.gk-site .hero h1`, so from the CMS merge
+until this fix every public page `h1` rendered at about 35px instead of its design size (the
+home hero headline is 77.76px at 1440). The rule is now `#main.gk-app-main h1`, with the class
+on the CMS `<main>` in `src/layouts/AppLayout.tsx`. Measured after the fix: hero `h1`
+77.76px. The K-045 audit figures for the public site were taken with the bug present.
+
