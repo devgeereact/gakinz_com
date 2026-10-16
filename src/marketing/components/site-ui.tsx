@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type CSSProperties, type ReactNode } from "react"
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react"
 import { Link, NavLink } from "react-router-dom"
 import { delay, host, ToneCtx, type Tone } from "./site-helpers"
 import { kindName, onColour, type Project } from "@/marketing/data/showcase"
@@ -180,6 +180,7 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
   const [tone, setTone] = useState<Tone>(null)
   const [solid, setSolid] = useState(false)
   const [open, setOpen] = useState(false)
+  const toggle = useRef<HTMLButtonElement>(null)
   const copy = useSiteCopy()
 
   useEffect(() => {
@@ -191,13 +192,30 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : ""
     if (!open) return
-    const esc = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false)
-    window.addEventListener("keydown", esc)
-    return () => window.removeEventListener("keydown", esc)
+    // While the drawer covers the page, Escape closes it and hands focus back to the
+    // toggle, and Tab cycles between the toggle and the drawer links rather than
+    // reaching the hidden page behind it (K-045 audit, 2026-10-16).
+    const keys = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setOpen(false)
+        toggle.current?.focus()
+        return
+      }
+      if (e.key !== "Tab") return
+      const stops = [toggle.current, ...Array.from(document.querySelectorAll<HTMLElement>("#site-drawer a"))].filter(Boolean) as HTMLElement[]
+      if (stops.length === 0) return
+      const at = stops.indexOf(document.activeElement as HTMLElement)
+      const next = e.shiftKey ? (at <= 0 ? stops.length - 1 : at - 1) : at === -1 || at === stops.length - 1 ? 0 : at + 1
+      e.preventDefault()
+      stops[next].focus()
+    }
+    window.addEventListener("keydown", keys)
+    return () => window.removeEventListener("keydown", keys)
   }, [open])
 
   const stable = useCallback((t: Tone) => setTone(t), [])
-  const toned = !solid && tone
+  // The open drawer sits under the bar on the page background, so the bar drops its slide tone.
+  const toned = !solid && !open && tone
   const navStyle = toned ? ({ color: tone.on, "--nav-fg": tone.on, "--nav-bg": tone.bg } as CSSProperties) : undefined
 
   return (
@@ -220,7 +238,7 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
           <Link className="btn btn--main" to="/contact">
             <span>Start a project</span>
           </Link>
-          <button className="ctrl nav__menu" type="button" aria-expanded={open} aria-controls="site-drawer" aria-label={open ? "Close menu" : "Open menu"} onClick={() => setOpen((o) => !o)}>
+          <button ref={toggle} className="ctrl nav__menu" type="button" aria-expanded={open} aria-controls="site-drawer" aria-label={open ? "Close menu" : "Open menu"} onClick={() => setOpen((o) => !o)}>
             <IMenu />
           </button>
         </div>

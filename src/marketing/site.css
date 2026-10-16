@@ -69,7 +69,7 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .nav .btn--main:hover{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
 .gk-site [tabindex="-1"]:focus{outline:none}
 .gk-site .nav__menu{display:none}
-.gk-site .drawer{position:fixed;inset:0;z-index:85;background:var(--bg);padding:calc(84px + env(safe-area-inset-top,0px)) var(--gut) 32px;display:flex;flex-direction:column;gap:4px;opacity:0;transform:translateY(-8px);pointer-events:none;visibility:hidden;transition:opacity .22s var(--ease),transform .22s var(--ease),visibility 0s .22s}
+.gk-site .drawer{position:fixed;inset:0;z-index:75;background:var(--bg);padding:calc(84px + env(safe-area-inset-top,0px)) var(--gut) 32px;display:flex;flex-direction:column;gap:4px;opacity:0;transform:translateY(-8px);pointer-events:none;visibility:hidden;transition:opacity .22s var(--ease),transform .22s var(--ease),visibility 0s .22s}
 .gk-site .drawer.open{opacity:1;transform:none;pointer-events:auto;visibility:visible;transition:opacity .22s var(--ease),transform .22s var(--ease)}
 .gk-site .drawer a{font-family:var(--disp);font-size:2rem;font-weight:650;text-decoration:none;padding:8px 0;border-bottom:1px solid var(--line)}
 .gk-site .hero{position:relative;min-height:100svh;display:flex;flex-direction:column;background:var(--slide-bg,#3B6FE0);color:var(--slide-on,#fff);transition:background-color 1s var(--ease),color .6s;overflow:hidden;isolation:isolate}
