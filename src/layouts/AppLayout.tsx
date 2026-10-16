@@ -111,7 +111,7 @@ export default function AppLayout() {
           <UserDropdown />
         </header>
 
-        <main id="main" className="w-full min-w-0 max-w-[1440px] flex-1 px-[clamp(16px,3vw,32px)] pb-[clamp(16px,3vw,32px)] pt-2">
+        <main id="main" className="gk-app-main w-full min-w-0 max-w-[1440px] flex-1 px-[clamp(16px,3vw,32px)] pb-[clamp(16px,3vw,32px)] pt-2">
           <Crumb />
           <Outlet />
         </main>
