@@ -28,10 +28,10 @@ names another date or computer. Re-measure and update this table when a count ch
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 143 tests in 10 files (2026-10-16, `perf/prerender-public`: 15 added for the prerender path list and HTML assembly) |
+| Unit tests | `npm test` | **PASS.** 158 tests in 13 files (2026-10-16, `feat/generated-sitemap`: 15 added for the page metadata checks and the generated sitemap; 143 in 10 on `perf/prerender-public`) |
 | Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 140 tests in 12 files. Measured 2026-10-14 on local MariaDB 10.11 on the final redesign branch; not re-run for this table, because no local test database is configured on the computer that measured the other rows |
 | Type check | `npx tsc -b` | **PASS** |
-| Build | `npm run build` | **PASS** |
+| Build | `npm run build` | **PASS.** 30 public pages prerendered, `sitemap.xml` with 30 URLs (2026-10-16, `feat/generated-sitemap`) |
 | Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 41 errors, 1 warning, unchanged since 2026-10-11. **`npm run lint` still fails** (K-002) |
 | Documentation | `npm run docs:check` | **PASS.** 25 documents |
 | PHP files | `ls server/*.php \| wc -l`, then `php -l server/*.php` | 47: 41 endpoints and 6 `_`-prefixed includes, all 47 passing `php -l` |
@@ -126,7 +126,7 @@ live-state discovery and owner inputs first; no launch is promised in a fixed nu
 | 1. Establish safety | Owner credential actions; reconcile host PHP and SQL; backup and restore; a safe local synthetic backend and mail sink; payment defects and alternative sign-in reviewed | Rotation and revocation confirmed, restoration demonstrated, release manifest and rollback recorded, no accidental production calls in tests | Local fixes built (section 4), not deployed. Owner-side actions open |
 | 2. Complete business journeys | Enquiry follow-up, simple bookings, client conversion, quote acceptance and version, projects and tasks, invoices and reconciliation, verified reference access, scoped messages, updates and feedback, client-linked brief, portal and support isolation | Synthetic end-to-end journey, failure, retry and concurrency tests, and record ownership tests pass | Started. Enquiry follow-ups and client messages built with server tests; bookings, timeline, feedback and the full journey not built |
 | 3. Polish the CMS | Target design foundation, smaller navigation, My account, consistent page and form states, unavailable metrics, quiet optional modules | Owner usability task passes; keyboard, phone, zoom and theme checks on affected screens | Navigation grouped and My account built (K-032, K-023, K-024). Every CMS screen restyled to D-046 on `feat/redesign-2026`, checked against mocked API responses only. Owner usability task, keyboard and zoom checks NOT TESTED |
-| 4. Polish the public site | Hero and section design and motion, company and owner positioning, service copy, complete case studies, consent and legal content, safe publishing, metadata and sitemap | Buyer journey, publish and unpublish, share preview, responsive and accessibility evidence | Rebuilt again on D-046 (2026-10-14): brand-colour hero fed by Work, the owner's real projects with screenshots, copy editable in Site content. Publishing, article format and engineering copy fixed (K-036, K-037, K-038 in part). Six-service copy, client consent records, portrait and legal review dates wait for owner inputs. Accessibility and performance re-measured 2026-10-16 (K-045 closed); two brand-colour contrast failures and home CLS 0.114 open (K-050 to K-052) |
+| 4. Polish the public site | Hero and section design and motion, company and owner positioning, service copy, complete case studies, consent and legal content, safe publishing, metadata and sitemap | Buyer journey, publish and unpublish, share preview, responsive and accessibility evidence | Rebuilt again on D-046 (2026-10-14): brand-colour hero fed by Work, the owner's real projects with screenshots, copy editable in Site content. Publishing, article format and engineering copy fixed (K-036, K-037, K-038 in part). Six-service copy, client consent records, portrait and legal review dates wait for owner inputs. Accessibility and performance re-measured 2026-10-16 (K-045 closed); the two brand-colour contrast failures fixed (K-050, K-051), home CLS fixed and LCP measured (K-052, LCP still open), `/work` LCP measured (K-053), the heading-size regression fixed (K-054), all 2026-10-16. Public pages prerendered with checked per-page metadata and a generated sitemap (K-018, K-019, K-043), not deployed |
 | 5. Social and affiliate pilot | Owned profile set-up, approved copy and media, first resources, disclosed links | Exact profile URLs, disclosure and link checks, a repeatable small publishing routine | Not started |
 | 6. AdSense pilot | Account approval and a certified consent platform, article-only slots | Consent and network proof, no scripts on private layouts, performance comparison, reversible switch | Not started |
 | 7. Consolidate and operate | Promote approved requirements to canonical documents, retire duplicates, review monthly | Valid references, one source per fact, accurate task, decision and release records | Documents consolidated 2026-10-10 (D-043, D-044); sync rule and `npm run docs:check` added (D-045) |
@@ -176,9 +176,12 @@ reference access cannot ship until the authentication and ownership gates pass.
     `feat/redesign-2026`. Still open: a check with real data, a keyboard and zoom pass, and a
     first CMS accessibility check (item 14).
 11. Six service pages, authorised case studies, owner portrait and biography, and complete
-    public copy (K-038, owner inputs in section 5); route-specific metadata and a generated
-    sitemap (K-018, K-019); the canonical conflict (K-043); the hero contrast and CLS findings
-    from the 2026-10-16 re-audit (K-050 to K-053).
+    public copy (K-038, owner inputs in section 5). The technical parts are **done locally
+    2026-10-16**, not deployed: the public pages are prerendered with their own metadata, which
+    the build now checks page by page, and `sitemap.xml` is generated by the build (K-018,
+    K-019); the canonical conflict is fixed (K-043); the hero contrast and CLS findings are
+    fixed or measured (K-050 to K-054). Still open: home LCP (K-052), and CMS-only records,
+    which are neither prerendered nor in the sitemap.
 12. After the `.htaccess` upload, confirm `/llms.txt` still serves. The deny rule exempts
     `robots.txt` and `llms.txt` by name (`server/.htaccess`); the live behaviour is UNVERIFIED.
 13. Legal pages reviewed, with genuine dates (K-021).
@@ -613,7 +616,7 @@ whether the code path exists in the repository.
 | Component tests | None |
 | End-to-end tests | None |
 | Lint | FAIL. 47 errors, 2 warnings, down from 60 and 7 |
-| Accessibility, automated | PARTIAL on the D-046 build, measured 2026-10-16: two brand-colour contrast failures open (K-050, K-051). See section 6.3 and `qa/ACCESSIBILITY-AUDIT.md` section 9 |
+| Accessibility, automated | PARTIAL on the D-046 build, measured 2026-10-16: two brand-colour contrast failures found and fixed the same day (K-050, K-051), not re-measured by this table. See section 6.3 and `qa/ACCESSIBILITY-AUDIT.md` section 9 |
 | Accessibility, assistive technology | **NOT TESTED.** No screen-reader pass has been run |
 | Accessibility, GAkinzOS at `/app/*` | PARTIAL. First automated check 2026-10-16: 8 screens in empty states, light and dark, 0 axe violations after fixes. Data-filled screens, dialogs and 390px NOT TESTED |
 | Performance, lab | Lighthouse mobile with simulated throttling on a local preview, 2026-10-16: 73 to 92. See section 6.3. With the prerender (`perf/prerender-public`): 81 to 94, CLS 0, SEO 100 on `/`, `/work`, `/contact`; home LCP still 4.5 to 4.8 s (`docs/KNOWN-ISSUES.md` K-052) |
@@ -625,7 +628,7 @@ whether the code path exists in the repository.
 | Item | Reason |
 |---|---|
 | Server-side rendering | None at request time. Since 2026-10-16 (`perf/prerender-public`, not merged or deployed) the 30 public pages are prerendered at build time from the built-in content; the CMS, `/verify/:id` and CMS-only records are still client-rendered. See `docs/ARCHITECTURE.md` section 2 |
-| Generated sitemap entries for `/work/:slug` and `/resources/:slug` | `public/sitemap.xml` is hand-maintained and lists static routes only. Database-backed URLs would need a generator or a server-rendered sitemap |
+| Sitemap entries for records that exist only in the CMS | Since 2026-10-16 (`feat/generated-sitemap`, not deployed) the build writes `sitemap.xml` from the prerendered pages, built-in projects, services and posts included. A CMS-only record would need the build to read the API, which it must not, or a server-rendered sitemap (K-019) |
 | Xero and QuickBooks accounting sync | Needs a full OAuth application and a sandbox account |
 | Google Drive, Box, Dropbox storage | Same. Local file storage exists instead |
 | Zoom and Google Meet meeting creation | Same |
