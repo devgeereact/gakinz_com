@@ -38,10 +38,14 @@ import { PageHeader } from "@/app/components/page-kit"
 import { TableSkeleton } from "@/app/components/TableSkeleton"
 
 const TIMELINE_LABEL: Record<ClientDetail["timeline"][number]["type"], string> = {
+  enquiry: "Enquiry",
+  call: "Call",
   proposal: "Quote",
   project: "Project",
   invoice: "Invoice",
-  ticket: "Ticket",
+  ticket: "Message",
+  conversation: "Conversation",
+  feedback: "Feedback",
 }
 
 const TAGS: ClientTag[] = ["retainer", "one-off", "vip", "dormant"]
