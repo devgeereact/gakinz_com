@@ -43,9 +43,9 @@ names another date or computer. Re-measure and update this table when a count ch
 | Server files changed by the redesign | `git diff --stat origin/feat/plan-2026-batch-1...origin/feat/redesign-2026 -- server` | `site.php` (new), `work.php`, `schema.sql`, `README.md` |
 | `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 36 of 47 files, 134 call sites |
 
-Not measured on this run: `npm audit` (last figure in K-041), accessibility and performance
-(last runs in `qa/`, both before the D-046 rebuild, so neither describes the current public
-site), and anything on the live system.
+Not measured on this run: `npm audit` (last figure in K-041) and anything on the live system.
+Accessibility and performance were re-measured on the D-046 build on 2026-10-16, locally; see
+section 6.3 and `qa/` section 9 of each audit.
 
 ## 1. Audit and readiness, 2026-10-10
 
@@ -126,7 +126,7 @@ live-state discovery and owner inputs first; no launch is promised in a fixed nu
 | 1. Establish safety | Owner credential actions; reconcile host PHP and SQL; backup and restore; a safe local synthetic backend and mail sink; payment defects and alternative sign-in reviewed | Rotation and revocation confirmed, restoration demonstrated, release manifest and rollback recorded, no accidental production calls in tests | Local fixes built (section 4), not deployed. Owner-side actions open |
 | 2. Complete business journeys | Enquiry follow-up, simple bookings, client conversion, quote acceptance and version, projects and tasks, invoices and reconciliation, verified reference access, scoped messages, updates and feedback, client-linked brief, portal and support isolation | Synthetic end-to-end journey, failure, retry and concurrency tests, and record ownership tests pass | Started. Enquiry follow-ups and client messages built with server tests; bookings, timeline, feedback and the full journey not built |
 | 3. Polish the CMS | Target design foundation, smaller navigation, My account, consistent page and form states, unavailable metrics, quiet optional modules | Owner usability task passes; keyboard, phone, zoom and theme checks on affected screens | Navigation grouped and My account built (K-032, K-023, K-024). Every CMS screen restyled to D-046 on `feat/redesign-2026`, checked against mocked API responses only. Owner usability task, keyboard and zoom checks NOT TESTED |
-| 4. Polish the public site | Hero and section design and motion, company and owner positioning, service copy, complete case studies, consent and legal content, safe publishing, metadata and sitemap | Buyer journey, publish and unpublish, share preview, responsive and accessibility evidence | Rebuilt again on D-046 (2026-10-14): brand-colour hero fed by Work, the owner's real projects with screenshots, copy editable in Site content. Publishing, article format and engineering copy fixed (K-036, K-037, K-038 in part). Six-service copy, client consent records, portrait and legal review dates wait for owner inputs. Accessibility and performance not re-measured since the rebuild |
+| 4. Polish the public site | Hero and section design and motion, company and owner positioning, service copy, complete case studies, consent and legal content, safe publishing, metadata and sitemap | Buyer journey, publish and unpublish, share preview, responsive and accessibility evidence | Rebuilt again on D-046 (2026-10-14): brand-colour hero fed by Work, the owner's real projects with screenshots, copy editable in Site content. Publishing, article format and engineering copy fixed (K-036, K-037, K-038 in part). Six-service copy, client consent records, portrait and legal review dates wait for owner inputs. Accessibility and performance re-measured 2026-10-16 (K-045 closed); two brand-colour contrast failures and home CLS 0.114 open (K-050 to K-052) |
 | 5. Social and affiliate pilot | Owned profile set-up, approved copy and media, first resources, disclosed links | Exact profile URLs, disclosure and link checks, a repeatable small publishing routine | Not started |
 | 6. AdSense pilot | Account approval and a certified consent platform, article-only slots | Consent and network proof, no scripts on private layouts, performance comparison, reversible switch | Not started |
 | 7. Consolidate and operate | Promote approved requirements to canonical documents, retire duplicates, review monthly | Valid references, one source per fact, accurate task, decision and release records | Documents consolidated 2026-10-10 (D-043, D-044); sync rule and `npm run docs:check` added (D-045) |
@@ -177,12 +177,13 @@ reference access cannot ship until the authentication and ownership gates pass.
     first CMS accessibility check (item 14).
 11. Six service pages, authorised case studies, owner portrait and biography, and complete
     public copy (K-038, owner inputs in section 5); route-specific metadata and a generated
-    sitemap (K-018, K-019); the canonical conflict (K-043); Lighthouse and CLS after the font
-    change (K-042, K-045).
+    sitemap (K-018, K-019); the canonical conflict (K-043); the hero contrast and CLS findings
+    from the 2026-10-16 re-audit (K-050 to K-053).
 12. After the `.htaccess` upload, confirm `/llms.txt` still serves. The deny rule exempts
     `robots.txt` and `llms.txt` by name (`server/.htaccess`); the live behaviour is UNVERIFIED.
 13. Legal pages reviewed, with genuine dates (K-021).
-14. A screen-reader pass with real assistive technology, and a first CMS accessibility check.
+14. A screen-reader pass with real assistive technology. A first automated CMS check ran on
+    2026-10-16 (8 screens, empty states, light and dark); CMS screens with data are still unchecked.
 15. Exercise `work.php` against a real database before relying on it. **Done locally 2026-10-11**:
     `tests/server/work.test.ts` covers access, client consent, validation, images and ordering
     against a local `*_test` database. The live tables still do not exist until the SQL is run.
@@ -406,6 +407,16 @@ the unknown rule name as an error. Removing the comment removes the error.
 
 ### 6.3 Measured results, public surface only
 
+**Current figures, 2026-10-16, D-046 build, local preview.** axe-core 4.13.0, WCAG A and AA:
+0 violations on 14 of 15 public routes at 1440 and 390px; `/` and `/work/rotaflow` keep 5
+`color-contrast` nodes at 1440 (K-050). Rendered-pixel contrast fails on hero slide 1 (lowest
+3.57:1, K-050) and slide 5 (lowest 1.90:1, K-051). 8 CMS screens, light and dark: 0 violations
+after the fixes. Lighthouse 12.8.2 mobile, simulated throttling: performance 73 to 74 on `/`,
+87 on `/work`, 92 on `/contact`; accessibility 100 and best practices 100 on all three; SEO 100,
+92 and 92 (K-043); home CLS 0.114 and LCP 4.9 s (K-052). Detail: section 9 of
+`qa/ACCESSIBILITY-AUDIT.md` and of `qa/PERFORMANCE-AUDIT.md`. The rest of this section is the
+2026-09-22 measurement of an earlier interface, kept as history.
+
 Everything in this section was measured on 2026-09-22 against the production build
 (`npm run build`) served locally by `npm run preview`, driven through the Chrome DevTools
 protocol. None of it was measured against the deployed site, because no server was contacted.
@@ -602,10 +613,10 @@ whether the code path exists in the repository.
 | Component tests | None |
 | End-to-end tests | None |
 | Lint | FAIL. 47 errors, 2 warnings, down from 60 and 7 |
-| Accessibility, automated | PASS on the public surface, measured 2026-09-22. See section 6.3 and `qa/ACCESSIBILITY-AUDIT.md` |
+| Accessibility, automated | PARTIAL on the D-046 build, measured 2026-10-16: two brand-colour contrast failures open (K-050, K-051). See section 6.3 and `qa/ACCESSIBILITY-AUDIT.md` section 9 |
 | Accessibility, assistive technology | **NOT TESTED.** No screen-reader pass has been run |
-| Accessibility, GAkinzOS at `/app/*` | **NOT TESTED.** Out of scope for the relaunch audit |
-| Performance, lab | Measured on a local preview with no throttling. See section 6.3 |
+| Accessibility, GAkinzOS at `/app/*` | PARTIAL. First automated check 2026-10-16: 8 screens in empty states, light and dark, 0 axe violations after fixes. Data-filled screens, dialogs and 390px NOT TESTED |
+| Performance, lab | Lighthouse mobile with simulated throttling on a local preview, 2026-10-16: 73 to 92. See section 6.3 |
 | Performance, field | **NOT TESTED.** No real-user measurement exists |
 | Security | Source inspection only, and the changes are not deployed. See `qa/SECURITY-AUDIT.md` |
 

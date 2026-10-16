@@ -52,14 +52,18 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-039 | Clients cannot message the owner from the portal | High | **Fixed 2026-10-10.** Not deployed or uploaded. Private feedback still open |
 | K-040 | `stored` is a MySQL 8 reserved word, so the schema failed on MySQL | High | **Fixed 2026-10-10.** Not uploaded |
 | K-041 | `npm audit` reports 15 affected packages, ten of them high | Medium | Open. Owner decision |
-| K-042 | The Google Fonts `@import` still blocks rendering on public pages that no longer use those fonts | Low | **Fixed in code 2026-10-14** (D-046), not deployed; CLS not re-measured (K-045) |
-| K-043 | A static canonical in `index.html` conflicts with the per-route canonical | Low | Open |
+| K-042 | The Google Fonts `@import` still blocks rendering on public pages that no longer use those fonts | Low | **Fixed in code 2026-10-14** (D-046), not deployed. CLS measured 2026-10-16: see K-052 |
+| K-043 | A static canonical in `index.html` conflicts with the per-route canonical | Low | Open. Costs SEO 92 on inner routes (Lighthouse, 2026-10-16) |
 | K-044 | The D-046 redesign is verified only against mocked API responses | Medium | Open. Owner test on real data pending |
-| K-045 | Accessibility and performance audits predate the D-046 rebuild and the font change | Medium | Open |
+| K-045 | Accessibility and performance audits predate the D-046 rebuild and the font change | Medium | **Closed 2026-10-16.** Re-measured; five fixes, open findings are K-050 to K-053 |
 | K-046 | Dead redesign residue: `.gk-fadein` rules, the Sofia Sans dependency, D-037 brand assets | Cosmetic | Open |
 | K-047 | Three commit subjects on `feat/redesign-2026` contain a literal `$'\n\n'` | Informational | Open. Cannot be fixed without a history rewrite |
 | K-048 | Site content tabs scroll sideways at 390px with no visible cue | Low | Open |
 | K-049 | Editing a Work record crashed on a detail response without images | Medium | **Fixed 2026-10-14** (`24c25ff`). Not deployed |
+| K-050 | RotaFlow blue `#3B6FE0` fails contrast for the reduced-opacity white text on it | Medium | Open. Owner decision (brand colour) |
+| K-051 | Amber hero slide: dark bar text on the dark bottom shading | Medium | Open. Owner decision (design) |
+| K-052 | Home CLS 0.114 from the font swap moving the hero, and LCP 4.9 s simulated | Medium | Open |
+| K-053 | The LCP image on `/work` is lazy-loaded | Low | Open |
 
 
 ---
@@ -915,7 +919,16 @@ section 5), the owner tests those flows and the Client Portal as a client on the
 computer, and records the result in `docs/STATUS.md`.
 
 ## K-045 · Accessibility and performance audits predate the D-046 rebuild and the font change
-**Severity:** medium · **Status:** open. Found 2026-10-14.
+**Severity:** medium · **Status:** **closed 2026-10-16.** Found 2026-10-14.
+
+**Resolution.** Re-measured on 2026-10-16 against a local production build of
+`feat/redesign-2026` (`89c7829`) on branch `qa/redesign-audits`: axe-core 4.13.0 on 15 public
+routes at 1440 and 390px and on 8 CMS screens in light and dark, contrast on rendered pixels for
+every hero slide and case hero, keyboard, reduced motion, and Lighthouse 12.8.2 mobile on three
+pages. Five defects were fixed (`0a1d62f`, `bb9ac2e`, `ceb418c`, `dae9f3e`, `ffaa083`). The open
+findings are K-050 to K-053. Results: `qa/ACCESSIBILITY-AUDIT.md` section 9 and
+`qa/PERFORMANCE-AUDIT.md` section 9. Real assistive technology, CMS screens with data, and the
+live site remain NOT TESTED. The original report follows.
 
 `qa/ACCESSIBILITY-AUDIT.md` and `qa/PERFORMANCE-AUDIT.md` measured the 2026-09-22 build, with a
 partial re-check after the D-037 rebuild on 2026-10-10. The D-046 rebuild replaced every public
@@ -968,3 +981,65 @@ replace them with a select below 640px.
 
 `Work.tsx` read `res.data.images` from the detail response without a default, so a record whose
 detail carried no `images` key broke the edit view. It now falls back to an empty list.
+
+## K-050 · RotaFlow blue `#3B6FE0` fails contrast for the reduced-opacity white text on it
+**Severity:** medium · **Status:** open, owner decision. Found 2026-10-16 (K-045 audit).
+
+`#3B6FE0` is the RotaFlow brand colour, used for hero slide 1, the `/work/rotaflow` case hero
+and, while either is on screen, the navigation bar. It holds pure white at **4.63:1**, just over
+AA, but the design sets secondary text at reduced opacity, and every such use fails 1.4.3
+(measured on rendered pixels, local build):
+
+| Text | Opacity | Ratio |
+|---|---|---|
+| Case line (`01 · Own product · Staff scheduling`) | 80% | 3.57:1 |
+| Status line and London clock; navigation links | 85% | 3.80 to 3.99:1 |
+| Hero lede | 92% | 4.18:1 |
+| Current-page link on its 12% white tint | 100% | 3.76:1 |
+| "See all the work" on its lighter fill | 100% | 3.73 to 4.07:1 |
+
+axe confirms the navigation links on `/` and `/work/rotaflow` at 1440 (5 nodes each). The other
+11 project colours pass everywhere; the lowest is `/work/harni` at 4.55:1.
+
+Not fixed here because either remedy changes the approved look. Options for the owner:
+
+1. Darken the RotaFlow colour to `#2F5FCC` (white 5.79:1; 4.67:1 at 85%, so lift the 80% text
+   to 85%) or `#2C5AC4` (4.62:1 even at 80%). One value in `src/marketing/data/showcase.ts`,
+   and the CMS Work record if it carries a colour.
+2. Keep the colour and render hero and bar text at full opacity whenever `onColour()` returns
+   white and the base ratio is under 5:1.
+
+## K-051 · Amber hero slide: dark bar text on the dark bottom shading
+**Severity:** medium · **Status:** open, owner decision. Found 2026-10-16 (K-045 audit).
+
+On slide 5 (Herit Clothing, `#F59E0B`) `onColour()` correctly picks dark text (8.69:1 on the
+flat colour). But `.hero::after` shades the bottom 18% of the hero towards graphite, to about
+`#7B5411` behind the slide bar, and the bar's text stays dark. The segment labels (65% opacity)
+measure **1.90 to 2.67:1** and the `05 / 05` counter **2.77 to 2.87:1** at 1440 and 390, against
+4.5:1 required. The other four slides use white text, which the shading only helps.
+
+Options for the owner: render the slide bar in light text whenever the slide text is dark
+(white on the shaded band measures 6.73:1), or leave the shading off dark-text slides.
+
+## K-052 · Home CLS 0.114 from the font swap moving the hero, and LCP 4.9 s simulated
+**Severity:** medium · **Status:** open. Found 2026-10-16 (K-045 audit).
+
+Lighthouse 12.8.2, mobile, simulated throttling, local build: `/` scores performance 73 to 74,
+**CLS 0.114** (over 0.1) and **LCP 4.9 s**. The single shift is the hero's `.laptop` device
+frame, attributed to "Web font loaded": the hero columns are vertically centred, so when the
+self-hosted display face replaces the fallback and the copy column changes height, the device
+stage moves. The LCP element is the first hero screenshot, with 37% load delay and 53% render
+delay, the cost of client rendering. `/work` and `/contact` have CLS 0 and 0.001.
+
+Resolution options: fallback metric overrides (`size-adjust`, `ascent-override`) for Bricolage
+Grotesque so the swap moves nothing, or preload its Latin file; align the hero grid to the top
+rather than centre; prerendering (`qa/PERFORMANCE-AUDIT.md` section 6) addresses the LCP delay.
+Re-measure after any of them.
+
+## K-053 · The LCP image on `/work` is lazy-loaded
+**Severity:** low · **Status:** open. Found 2026-10-16 (K-045 audit).
+
+On `/work` the LCP element is the first project card's screenshot, and `ProjectCard` gives every
+card image `loading="lazy"`, so Lighthouse fails `lcp-lazy-loaded` (LCP 3.5 s simulated,
+performance 87). Resolution: let `ProjectCard` take an eager flag and pass it for the first row
+on `/work` and Home, then re-measure.
