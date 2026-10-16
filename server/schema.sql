@@ -668,3 +668,93 @@ CREATE TABLE IF NOT EXISTS site_content (
   published_by  INT UNSIGNED  NULL,                   -- users.id of the last publish
   published_at  TIMESTAMP     NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-10-16 · Call bookings inside Enquiries (bookings.php).
+-- docs/PRODUCT-SPEC.md section 5.5: a booking is recorded by hand against an
+-- enquiry, a client or both. It starts as a request; only the owner confirms
+-- it. `starts_at` is UTC; `timezone` is the IANA zone the call was agreed in,
+-- so the local time is always recoverable, daylight saving included.
+-- bookings.php computes `starts_at` from the local time and zone with PHP's own
+-- time zone database. Every change of time or status adds a `booking_events`
+-- row, so a reschedule keeps its history, and a customer email about a
+-- reschedule or cancellation records its outcome there for the owner to retry.
+-- New tables only, so safe to run as-is on the live DB (CREATE TABLE IF NOT
+-- EXISTS); `bookings` before `booking_events`. Until they run, bookings.php
+-- answers 503 with a message asking for this step, the Enquiries screen hides
+-- calls, and the client timeline leaves calls out.
+CREATE TABLE IF NOT EXISTS bookings (
+  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  enquiry_id    INT NULL,                          -- enquiries.id, when the call came from an enquiry
+  client_id     INT NULL,                          -- clients.id, when the call is with a client
+  starts_at     DATETIME     NOT NULL,             -- UTC
+  timezone      VARCHAR(64)  NOT NULL,             -- IANA zone the time was agreed in, e.g. Europe/London
+  duration_min  SMALLINT UNSIGNED NOT NULL DEFAULT 30,
+  location      VARCHAR(500) NULL DEFAULT NULL,    -- meeting link, phone number or place
+  status        VARCHAR(20)  NOT NULL DEFAULT 'requested', -- requested | confirmed | completed | cancelled
+  notes         TEXT         NULL,                 -- owner only, never sent to the customer
+  outcome       VARCHAR(1000) NULL DEFAULT NULL,   -- what the call decided, owner only
+  created_by    INT NULL,
+  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at    TIMESTAMP NULL DEFAULT NULL,
+  KEY idx_booking_enquiry (enquiry_id),
+  KEY idx_booking_client (client_id),
+  KEY idx_booking_start (starts_at),
+  CONSTRAINT fk_booking_enquiry FOREIGN KEY (enquiry_id) REFERENCES enquiries(id) ON DELETE SET NULL,
+  CONSTRAINT fk_booking_client  FOREIGN KEY (client_id)  REFERENCES clients(id)   ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS booking_events (
+  id              INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  booking_id      INT UNSIGNED NOT NULL,
+  user_id         INT NULL,                        -- who made the change
+  kind            VARCHAR(20)  NOT NULL,           -- created | rescheduled | status | edited
+  from_status     VARCHAR(20)  NULL DEFAULT NULL,
+  to_status       VARCHAR(20)  NULL DEFAULT NULL,
+  from_starts_at  DATETIME     NULL DEFAULT NULL,  -- UTC, on a reschedule
+  from_timezone   VARCHAR(64)  NULL DEFAULT NULL,
+  to_starts_at    DATETIME     NULL DEFAULT NULL,  -- UTC
+  to_timezone     VARCHAR(64)  NULL DEFAULT NULL,
+  notify_status   VARCHAR(10)  NULL DEFAULT NULL,  -- NULL not asked | sending | sent | failed
+  notify_to       VARCHAR(200) NULL DEFAULT NULL,
+  notify_attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  notify_error    VARCHAR(300) NULL DEFAULT NULL,
+  notified_at     TIMESTAMP    NULL DEFAULT NULL,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  KEY idx_event_booking (booking_id),
+  CONSTRAINT fk_event_booking FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-10-16 · Private delivery feedback (feedback.php).
+-- docs/PRODUCT-SPEC.md section 6.3: a client leaves private feedback from the
+-- portal, or the owner records feedback received another way. It is never
+-- returned to any client, not even its author. `may_publish` is the client's
+-- separate, opt-in permission to quote it; it defaults to no, and it does not
+-- by itself publish anything: a testimonial is still created by hand in
+-- Testimonials. `follow_up` and `owner_note` are the owner's own.
+-- New table only, so safe to run as-is on the live DB. Until it runs,
+-- feedback.php answers 503, the portal form says feedback cannot be sent yet,
+-- and the client record shows no feedback.
+CREATE TABLE IF NOT EXISTS client_feedback (
+  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  client_id     INT NOT NULL,
+  project_id    INT NULL DEFAULT NULL,             -- must belong to client_id
+  source        VARCHAR(10)  NOT NULL,             -- portal | owner
+  rating        TINYINT UNSIGNED NULL DEFAULT NULL, -- optional, 1 to 5
+  went_well     TEXT NULL,
+  could_improve TEXT NULL,
+  follow_up_ok  TINYINT(1) NOT NULL DEFAULT 0,     -- the client welcomes a follow-up
+  may_publish   TINYINT(1) NOT NULL DEFAULT 0,     -- separate permission to quote it publicly
+  attribution   VARCHAR(200) NULL DEFAULT NULL,    -- how the client wants to be named, if quoted
+  follow_up     VARCHAR(20)  NOT NULL DEFAULT 'new', -- new | following_up | closed (owner)
+  owner_note    VARCHAR(1000) NULL DEFAULT NULL,   -- owner only
+  submitted_by  INT NULL,
+  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at    TIMESTAMP NULL DEFAULT NULL,
+  KEY idx_feedback_client (client_id),
+  CONSTRAINT fk_feedback_client  FOREIGN KEY (client_id)  REFERENCES clients(id)  ON DELETE CASCADE,
+  CONSTRAINT fk_feedback_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
