@@ -161,9 +161,9 @@ deadline: REQUIRES LEGAL REVIEW, not stated here.
 
 | Document | State | Evidence used | Missing owner information | Publication |
 |---|---|---|---|---|
-| Privacy policy (`/privacy`) | exists; **facts corrected 2026-10-17** (budget, IP address) | `contact.php`, this file | entity, bases, processors, transfers, periods, rights, ICO | live text is incomplete; draft in section 9 needs review |
+| Privacy policy (`/privacy`) | exists; **facts corrected and section 9 structure applied 2026-10-17**, owner facts as labelled placeholders | `contact.php`, this file | entity, ICO number, bases, processors, transfers, periods | not publishable until placeholders are filled and reviewed |
 | Cookie policy (`/cookies`) | exists; **rewritten to name every item, 2026-10-17**; now linked from the footer | section 4 | none for the facts; classification needs review | ready for review |
-| Terms of use (`/terms`) | exists; covers browsing only | `Legal.tsx` | governing law; the warranty sentence (K-021 item 5) | needs review |
+| Terms of use (`/terms`) | exists; covers browsing only; governing law is a placeholder | `Legal.tsx` | governing law; the warranty sentence (K-021 item 5) | needs review |
 | Client terms (projects, payment, cancellation) | **missing on the site**; project terms are said to live in each proposal | `docs/STATUS.md` section 5 | payment schedule, cancellation, revision terms | blocked on owner |
 | Review dates | shown as a labelled gap on all three pages | K-021 | a real review date | blocked on owner |
 

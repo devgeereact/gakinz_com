@@ -72,7 +72,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-060 | Proposal share links never expire and cannot be revoked | Low | Open |
 | K-061 | Smaller server findings from the 2026-10-17 audit | Low | Two fixed (PHP version, non-image Work files); the rest open |
 | K-062 | No retention, deletion or export: personal data is kept indefinitely | High | Open. Owner and legal decisions (`docs/PRIVACY-READINESS.md`) |
-| K-063 | The privacy and cookie pages did not match what the site does | High | **Partly fixed 2026-10-17:** collection and storage facts corrected, not deployed. Controller, bases, processors, retention and rights still missing (K-021) |
+| K-063 | The privacy and cookie pages did not match what the site does | High | **Partly fixed 2026-10-17:** facts corrected and the full structure in place with labelled placeholders for owner facts, not deployed. Placeholders and adviser review outstanding (K-021) |
 | K-064 | Enquiry and client text can reach an AI provider, undisclosed | Medium | Open. Owner and legal decision |
 | K-065 | Testimonials default to five stars and carry no source or consent record | Medium | Open. Owner decision |
 | K-066 | Public-site defects from the 2026-10-17 audit | Low to medium | **Fixed 2026-10-17**, not deployed. VAT wording open (owner) |
@@ -1292,6 +1292,14 @@ the cookie page. Still missing, and not an agent's to write: the controller's le
 lawful bases, the processors (hosting, mail, Stripe, PayPal, Twilio, Google, Slack, OpenRouter,
 Calendly), transfers, retention periods, the full rights list and the ICO. A labelled draft is
 in `docs/PRIVACY-READINESS.md`. K-021 still holds the review date.
+
+Update 2026-10-17, at the owner's request: the draft now runs on `/privacy`, with every owner
+fact as a bracketed placeholder that renders as the D-027 `.gap` marker (controller, ICO
+number, lawful bases, hosting, email, optional services, transfers, retention periods). The
+rights list and the ICO complaint route are in. `/terms` gained a governing-law placeholder and
+`/pricing` a VAT placeholder. Replacing the bracketed text in `Legal.tsx` or `Pricing.tsx`
+removes each marker. The pages are not ready to publish until every placeholder is filled and
+an adviser has reviewed the text.
 
 ---
 

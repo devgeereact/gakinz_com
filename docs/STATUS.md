@@ -334,6 +334,13 @@ On 2026-10-14 the owner approved the redesign that replaces D-037's visual direc
 - [ ] The operating targets in `docs/PRODUCT-SPEC.md` section 1.4, confirmed or changed.
 - [ ] Data retention periods for enquiries, client records and invoices.
 - [ ] Legal pages reviewed by the owner, and by a professional if wanted (K-021).
+- [ ] Parked by the owner on 2026-10-17, shown on the site as labelled placeholders until
+      answered (`docs/PRIVACY-READINESS.md` section 10): ICO data protection fee and
+      registration number; which integrations are live (mail provider, Stripe, Twilio, Google
+      sign-in, Slack, OpenRouter) and the host and data location; whether AI drafting keeps
+      client text (K-064); lawful bases and international transfers (with an adviser);
+      governing law for the terms. The trading identity, VAT and retention items above are
+      also placeholders on `/privacy`, `/terms` and `/pricing`.
 
 **Brand and content (phase 4)**
 
