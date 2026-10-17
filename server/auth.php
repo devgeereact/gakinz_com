@@ -54,19 +54,23 @@ function login(mysqli $conn): void {
   $pass  = (string)($in['password'] ?? '');
   if ($email === '' || $pass === '') fail('Email and password are required.');
 
-  // Brute-force throttle: block after too many recent failures for this email
-  // or IP. Reuses audit_log (failure rows store the email in `detail`). Counts
-  // failed second-factor attempts too, so TOTP guessing is throttled as well.
+  // Brute-force throttle. Reuses audit_log (failure rows store the email in
+  // `detail`) and counts failed second-factor attempts too, so TOTP guessing is
+  // throttled as well. Two limits: 10 failures for this email from this IP, and
+  // 30 from this IP for any email. The email limit is per IP on purpose: a
+  // global per-email count let anyone lock any account (the owner's included)
+  // out of password sign-in with ten requests every fifteen minutes.
   $ip = $_SERVER['REMOTE_ADDR'] ?? '';
   $stmt = $conn->prepare(
-    "SELECT COUNT(*) AS c FROM audit_log
+    "SELECT COALESCE(SUM(detail = ?), 0) AS mine, COUNT(*) AS any_email FROM audit_log
      WHERE action IN ('login_failed', 'login_2fa_failed')
        AND created_at > (NOW() - INTERVAL 15 MINUTE)
-       AND (detail = ? OR ip = ?)"
+       AND ip = ?"
   );
   $stmt->bind_param('ss', $email, $ip);
   $stmt->execute();
-  if ((int)($stmt->get_result()->fetch_assoc()['c'] ?? 0) >= 10) {
+  $tries = $stmt->get_result()->fetch_assoc();
+  if ((int)($tries['mine'] ?? 0) >= 10 || (int)($tries['any_email'] ?? 0) >= 30) {
     fail('Too many attempts. Please wait a few minutes and try again.', 429);
   }
 
@@ -79,7 +83,11 @@ function login(mysqli $conn): void {
   $stmt->execute();
   $u = $stmt->get_result()->fetch_assoc();
 
-  if (!$u || !password_verify($pass, $u['password_hash'])) {
+  // An unknown email still pays for one bcrypt check, so response time does not
+  // reveal which addresses have accounts. The hash is of a random value nobody
+  // knows; it never matches.
+  $known = $u ? password_verify($pass, $u['password_hash']) : password_verify($pass, '$2y$12$egnBXeD.0hvaByaZ8NNE5.yLCSbJSj5uCUJzDzx3bXVPjvj1/DWbS');
+  if (!$u || !$known) {
     audit($conn, $u ? (int)$u['id'] : null, 'login_failed', $email);
     fail('Email or password is incorrect.', 401);
   }
@@ -214,12 +222,15 @@ function reset_password(mysqli $conn): void {
   $uid = (int)$r['user_id'];
   $rid = (int)$r['id'];
 
+  // Claim the token first, atomically, so two requests racing on one link
+  // cannot both set a password.
+  $stmt = $conn->prepare('UPDATE password_resets SET used_at = NOW() WHERE id = ? AND used_at IS NULL');
+  $stmt->bind_param('i', $rid);
+  $stmt->execute();
+  if ($stmt->affected_rows !== 1) fail('This reset link is invalid or has expired.', 400);
+
   $stmt = $conn->prepare('UPDATE users SET password_hash = ? WHERE id = ? AND deleted_at IS NULL');
   $stmt->bind_param('si', $hash, $uid);
-  $stmt->execute();
-
-  $stmt = $conn->prepare('UPDATE password_resets SET used_at = NOW() WHERE id = ?');
-  $stmt->bind_param('i', $rid);
   $stmt->execute();
 
   // Invalidate existing sessions after a password change
@@ -320,6 +331,29 @@ function gk_totp_verify(string $secretB32, string $code): bool {
   return false;
 }
 
+/**
+ * A current-code check for a signed-in account (setup, enable, disable, new
+ * recovery codes). Without a limit, a stolen bearer token could try codes until
+ * one matched and switch two-factor off. Ten wrong codes in fifteen minutes
+ * blocks the account's code checks until the window passes.
+ */
+function gk_totp_check(mysqli $conn, int $uid, string $secret, string $code, string $message): void {
+  $stmt = $conn->prepare(
+    "SELECT COUNT(*) AS c FROM audit_log
+     WHERE action = '2fa_code_failed' AND user_id = ?
+       AND created_at > (NOW() - INTERVAL 15 MINUTE)"
+  );
+  $stmt->bind_param('i', $uid);
+  $stmt->execute();
+  if ((int)($stmt->get_result()->fetch_assoc()['c'] ?? 0) >= 10) {
+    fail('Too many attempts. Please wait a few minutes and try again.', 429);
+  }
+  if (!gk_totp_verify($secret, $code)) {
+    audit($conn, $uid, '2fa_code_failed', '');
+    fail($message);
+  }
+}
+
 function twofa_setup(mysqli $conn): void {
   $u = require_auth($conn);
   $uid = $u['id'];
@@ -333,10 +367,7 @@ function twofa_setup(mysqli $conn): void {
   $row = $stmt->get_result()->fetch_assoc();
   if ($row && !empty($row['totp_enabled'])) {
     $code = (string)(body()['code'] ?? '');
-    if (!gk_totp_verify((string)$row['totp_secret'], $code)) {
-      audit($conn, $uid, '2fa_setup_denied', '');
-      fail('Enter a current code to replace your two-factor setup.');
-    }
+    gk_totp_check($conn, $uid, (string)$row['totp_secret'], $code, 'Enter a current code to replace your two-factor setup.');
   }
 
   $secret = gk_base32_encode(random_bytes(20));
@@ -360,7 +391,7 @@ function twofa_enable(mysqli $conn): void {
   $stmt->execute();
   $secret = $stmt->get_result()->fetch_assoc()['totp_secret'] ?? '';
   if ($secret === '') fail('Start setup first.');
-  if (!gk_totp_verify($secret, $code)) fail('That code is invalid. Check your authenticator and try again.');
+  gk_totp_check($conn, $uid, (string)$secret, $code, 'That code is invalid. Check your authenticator and try again.');
   [$plain, $hashed] = gk_gen_recovery();
   $stmt = $conn->prepare('UPDATE users SET totp_enabled = 1, totp_recovery = ? WHERE id = ?');
   $stmt->bind_param('si', $hashed, $uid);
@@ -379,7 +410,7 @@ function twofa_disable(mysqli $conn): void {
   $stmt->execute();
   $row = $stmt->get_result()->fetch_assoc();
   if (!$row || empty($row['totp_enabled'])) ok(['ok' => true]); // already off / not found
-  if (!gk_totp_verify((string)$row['totp_secret'], $code)) fail('Enter a current code to turn off two-factor.');
+  gk_totp_check($conn, $uid, (string)$row['totp_secret'], $code, 'Enter a current code to turn off two-factor.');
   $stmt = $conn->prepare('UPDATE users SET totp_enabled = 0, totp_secret = NULL, totp_recovery = NULL WHERE id = ?');
   $stmt->bind_param('i', $uid);
   $stmt->execute();
@@ -397,7 +428,7 @@ function twofa_recodes(mysqli $conn): void {
   $stmt->execute();
   $row = $stmt->get_result()->fetch_assoc();
   if (!$row || empty($row['totp_enabled'])) fail('Two-factor is not enabled.');
-  if (!gk_totp_verify((string)$row['totp_secret'], $code)) fail('Enter a current code to regenerate recovery codes.');
+  gk_totp_check($conn, $uid, (string)$row['totp_secret'], $code, 'Enter a current code to regenerate recovery codes.');
   [$plain, $hashed] = gk_gen_recovery();
   $stmt = $conn->prepare('UPDATE users SET totp_recovery = ? WHERE id = ?');
   $stmt->bind_param('si', $hashed, $uid);

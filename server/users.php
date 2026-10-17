@@ -14,6 +14,20 @@ require __DIR__ . '/_bootstrap.php';
 
 const ADMINS = ['super_admin', 'admin'];
 
+/**
+ * Only a super admin may change a super admin's role or status. Without this,
+ * an admin (or a stolen admin token) could demote or suspend the owner, and a
+ * suspension also deletes every one of the owner's sessions.
+ */
+function refuse_super_admin_target(mysqli $conn, array $admin, int $id): void {
+  if ($admin['role'] === 'super_admin') return;
+  $chk = $conn->prepare('SELECT role FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+  $chk->bind_param('i', $id);
+  $chk->execute();
+  $row = $chk->get_result()->fetch_assoc();
+  if ($row && $row['role'] === 'super_admin') fail('Only a super admin can change a super admin.', 403);
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
@@ -130,6 +144,7 @@ if ($method === 'POST' && $action === 'role') {
   if (!in_array($role, VALID_ROLES, true)) fail('Invalid role.');
   if ($id === $admin['id']) fail('You cannot change your own role.', 403);
   if ($role === 'super_admin' && $admin['role'] !== 'super_admin') fail('Only a super admin can grant super admin.', 403);
+  refuse_super_admin_target($conn, $admin, $id);
   // A client binding is set at creation. You can't promote an account INTO
   // `client` here (no client_id to attach); switching a client account to a
   // staff role clears the binding so it can't keep portal access by accident.
@@ -170,6 +185,7 @@ if ($method === 'POST' && $action === 'status') {
   if ($id <= 0) fail('A user id is required.');
   if (!in_array($status, ['active', 'suspended'], true)) fail('Invalid status.');
   if ($id === $admin['id']) fail('You cannot change your own status.', 403);
+  refuse_super_admin_target($conn, $admin, $id);
 
   $stmt = $conn->prepare('UPDATE users SET status = ? WHERE id = ? AND deleted_at IS NULL');
   $stmt->bind_param('si', $status, $id);
