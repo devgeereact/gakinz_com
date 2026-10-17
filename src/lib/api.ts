@@ -10,6 +10,37 @@ export type ApiResult<T> =
   // `details` carries the full parsed error body (e.g. { two_factor_required }).
   | { ok: false; error: string; status?: number; details?: Record<string, unknown> }
 
+// Plain-language failures. The browser's own messages ("Failed to fetch",
+// "Unexpected token '<'") are shown on screen as they are, so they never reach
+// a visitor or the CMS directly.
+export const NETWORK_ERROR = "Could not reach the server. Check your connection and try again."
+export const BAD_REPLY_ERROR = "The server sent a reply this page could not read. Try again in a moment."
+
+/** Parses a JSON body; anything else (an HTML error page, a PHP notice) is undefined. */
+export function parseJsonBody(text: string): unknown {
+  if (!text) return null
+  try {
+    return JSON.parse(text)
+  } catch {
+    return undefined
+  }
+}
+
+/** The message for a failed response with no usable `error` field. */
+export function statusError(status: number, verb = "Request"): string {
+  if (status === 403) return "You do not have access to this."
+  if (status === 404) return "That could not be found. It may have been removed."
+  if (status === 429) return "Too many attempts. Wait a minute and try again."
+  if (status >= 500) return `${verb} failed on the server. Try again in a moment.`
+  return `${verb} failed (${status}).`
+}
+
+/** Error text from a parsed body, if it carries one. */
+const bodyError = (body: unknown): string | undefined =>
+  body && typeof body === "object" && typeof (body as { error?: unknown }).error === "string"
+    ? (body as { error: string }).error
+    : undefined
+
 async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
   try {
     const token = getStoredToken()
@@ -22,7 +53,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T
       ...init,
     })
     const text = await res.text()
-    const body = text ? JSON.parse(text) : null
+    const parsed = parseJsonBody(text)
+    const body = (parsed ?? null) as Record<string, unknown> | null
     if (!res.ok) {
       // Self-healing session expiry: a 401 means the token is gone/expired, so
       // purge auth — RequireAuth then redirects to /login instead of leaving the
@@ -34,11 +66,12 @@ async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T
       if (res.status === 401 && body?.two_factor_required !== true && !path.startsWith("/auth.php?action=login")) {
         useAuth.getState().clear()
       }
-      return { ok: false, error: (body && body.error) || `Request failed (${res.status})`, status: res.status, details: body || undefined }
+      return { ok: false, error: bodyError(body) || statusError(res.status), status: res.status, details: body || undefined }
     }
+    if (parsed === undefined) return { ok: false, error: BAD_REPLY_ERROR, status: res.status }
     return { ok: true, data: body as T }
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Network error" }
+  } catch {
+    return { ok: false, error: NETWORK_ERROR }
   }
 }
 
@@ -57,14 +90,16 @@ export const api = {
         body: form,
       })
       const text = await res.text()
-      const body = text ? JSON.parse(text) : null
+      const parsed = parseJsonBody(text)
+      const body = parsed ?? null
       if (!res.ok) {
         if (res.status === 401) useAuth.getState().clear()
-        return { ok: false, error: (body && body.error) || `Upload failed (${res.status})`, status: res.status }
+        return { ok: false, error: bodyError(body) || statusError(res.status, "Upload"), status: res.status }
       }
+      if (parsed === undefined) return { ok: false, error: BAD_REPLY_ERROR, status: res.status }
       return { ok: true, data: body as T }
-    } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : "Network error" }
+    } catch {
+      return { ok: false, error: NETWORK_ERROR }
     }
   },
 }
@@ -676,11 +711,11 @@ export const auth = {
         body: "{}",
       })
       const text = await res.text()
-      const body = text ? JSON.parse(text) : null
-      if (!res.ok) return { ok: false, error: (body && body.error) || `Request failed (${res.status})`, status: res.status }
+      const body = parseJsonBody(text) ?? null
+      if (!res.ok) return { ok: false, error: bodyError(body) || statusError(res.status), status: res.status }
       return { ok: true, data: body as { ok: boolean } }
-    } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : "Network error" }
+    } catch {
+      return { ok: false, error: NETWORK_ERROR }
     }
   },
   forgot: (email: string) => api.post<{ ok: boolean }>("/auth.php?action=forgot", { email }),

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { Link } from "react-router-dom"
 import { contact, booking, type EnquiryPayload } from "@/lib/api"
 import Seo from "@/marketing/components/Seo"
 import { IArrow, PageHead } from "@/marketing/components/site-ui"
@@ -61,7 +62,12 @@ export default function Contact() {
     if (res.ok) {
       setSentTo(form.name.trim().split(/\s+/)[0])
       setForm(EMPTY)
-    } else setSendError(res.error || "I could not send that just now. Email me directly and it will reach me.")
+    } else {
+      // A 4xx carries the server's own reason (a field it rejected, too many
+      // tries). A 5xx or no reply at all gets the way round: email directly.
+      const own = res.status !== undefined && res.status >= 400 && res.status < 500 ? res.error : ""
+      setSendError(own || "I could not send that just now. Email me directly and it will reach me.")
+    }
   }
 
   const copyEmail = () => {
@@ -116,8 +122,8 @@ export default function Contact() {
             ) : (
               <form className="form" onSubmit={submit} noValidate>
                 <div className="row2">
-                  {field("name", "Your name", <input id="name" ref={nameRef} autoComplete="name" required aria-invalid={errors.name || undefined} aria-describedby="e-name" value={form.name} onChange={(e) => set("name", e.target.value)} onBlur={() => blur("name")} />)}
-                  {field("email", "Email", <input id="email" ref={emailRef} type="email" autoComplete="email" required aria-invalid={errors.email || undefined} aria-describedby="e-email" value={form.email} onChange={(e) => set("email", e.target.value)} onBlur={() => blur("email")} />)}
+                  {field("name", "Your name", <input id="name" ref={nameRef} autoComplete="name" required aria-invalid={errors.name || undefined} aria-describedby={errors.name ? "e-name" : undefined} value={form.name} onChange={(e) => set("name", e.target.value)} onBlur={() => blur("name")} />)}
+                  {field("email", "Email", <input id="email" ref={emailRef} type="email" autoComplete="email" required aria-invalid={errors.email || undefined} aria-describedby={errors.email ? "e-email" : undefined} value={form.email} onChange={(e) => set("email", e.target.value)} onBlur={() => blur("email")} />)}
                 </div>
                 <div className="row2">
                   <div className="field">
@@ -138,7 +144,7 @@ export default function Contact() {
                     </select>
                   </div>
                 </div>
-                {field("message", "What does the site have to do?", <textarea id="message" ref={messageRef} required aria-invalid={errors.message || undefined} aria-describedby="e-message" value={form.message} onChange={(e) => set("message", e.target.value)} onBlur={() => blur("message")} />)}
+                {field("message", "What does the site have to do?", <textarea id="message" ref={messageRef} required maxLength={5000} aria-invalid={errors.message || undefined} aria-describedby={errors.message ? "e-message" : undefined} value={form.message} onChange={(e) => set("message", e.target.value)} onBlur={() => blur("message")} />)}
                 {sendError && (
                   <p role="alert" style={{ color: "#FFA3A3" }}>
                     {sendError}
@@ -149,6 +155,11 @@ export default function Contact() {
                     {sending ? "Sending…" : "Send enquiry"} {!sending && <IArrow />}
                   </button>
                 </div>
+                {/* Just-in-time notice at the point of collection (ICO, right to be informed). */}
+                <p className="mute" style={{ fontSize: 14, maxWidth: "60ch" }}>
+                  I use these details only to reply to you, and record the address the message came from to stop spam. More in the{" "}
+                  <Link to="/privacy">privacy policy</Link>.
+                </p>
               </form>
             )}
           </div>
