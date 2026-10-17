@@ -37,6 +37,28 @@ type Block = { h: string; p: string[] }
 
 const pad = (n: number) => String(n).padStart(2, "0")
 
+/**
+ * Owner facts not yet supplied are written in square brackets, e.g.
+ * "[legal name to supply]", and render as the site's labelled `.gap` marker
+ * (D-027), so a missing fact is visible rather than invented. Replacing the
+ * bracketed text with the real value removes the marker.
+ */
+function Para({ text }: { text: string }) {
+  return (
+    <p>
+      {text.split(/(\[[^\]]+\])/).map((part, i) =>
+        /^\[[^\]]+\]$/.test(part) ? (
+          <span key={i} className="gap">
+            {part}
+          </span>
+        ) : (
+          part
+        ),
+      )}
+    </p>
+  )
+}
+
 function LegalPage({
   title,
   intro,
@@ -61,7 +83,7 @@ function LegalPage({
                 <div>
                   <h2>{b.h}</h2>
                   {b.p.map((para, j) => (
-                    <p key={j}>{para}</p>
+                    <Para key={j} text={para} />
                   ))}
                 </div>
               </section>
@@ -115,29 +137,55 @@ export function Privacy() {
         reviewed={null}
         blocks={[
           {
+            h: "Who I am",
+            p: [
+              `gakinz.com is run by [legal name and trading form to supply], who decides how the information described here is used. Contact: ${site.contact.email}.`,
+              "[ICO registration number to supply, if registered]",
+            ],
+          },
+          {
             h: "What I collect",
             p: [
               "When you contact me I collect the details you send: your name, email, company, rough budget and the message itself. I do not collect more than I need to reply.",
               "The site also records the internet (IP) address your message came from, with the time it arrived. I use it only to stop spam and repeated automated submissions.",
+              "If you become a client, I also keep your contact details, project records, messages and feedback you send through the client area, contracts, invoices and payments. If you sign in, I keep a record of your sessions, including the device and internet address, to keep your account secure.",
             ],
           },
           {
             h: "How I use it",
             p: [
-              "I use your details to respond to your enquiry and, if we work together, to deliver the project. I do not sell your data.",
+              "I use your details to respond to your enquiry and, if we work together, to deliver the project, bill for it and keep the records the law requires. I do not sell your data and I do not use it for advertising.",
+              "The legal basis for each use: [lawful basis for enquiries, client work and tax records to supply]",
+            ],
+          },
+          {
+            h: "Who else handles it",
+            p: [
+              "A small number of services handle information for me so the site and the work can run. Cloudflare carries traffic to the site.",
+              "Hosting: [hosting provider and data location to supply]",
+              "Email: [email provider to supply]",
+              "Only where used: [payment, text message, sign-in and AI drafting services to confirm]",
+              "Outside the UK: [international transfers and safeguards to supply]",
             ],
           },
           {
             h: "How long I keep it",
             p: [
-              "I keep enquiry records for as long as needed to follow up, then remove them. Project records are kept for the life of the engagement and a reasonable period after.",
+              "Enquiries: [period to supply]",
+              "Client and project records: [period to supply]",
+              "Invoices and payment records: [period required for tax records to supply]",
             ],
           },
           {
             h: "Your rights",
             p: [
-              "You can ask me what I hold about you, ask me to correct it, or ask me to delete it. Email me and I will respond.",
+              "You can ask what I hold about you and for a copy of it, ask me to correct it or delete it, ask me to restrict or stop using it, and ask for it in a form you can take elsewhere. Email me and I will reply from that address to confirm it is you.",
+              "If you are unhappy with how I handle your information, you can complain to the Information Commissioner's Office at ico.org.uk.",
             ],
+          },
+          {
+            h: "Cookies",
+            p: ["The public pages set no cookies. The cookie policy lists what the client login stores in your browser."],
           },
         ]}
       />
@@ -173,6 +221,10 @@ export function Terms() {
           {
             h: "Intellectual property",
             p: [`The design, text and brand on this site belong to ${site.name} unless stated otherwise.`],
+          },
+          {
+            h: "Law",
+            p: ["[Governing law and courts to supply]"],
           },
         ]}
       />

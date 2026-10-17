@@ -48,6 +48,10 @@ export default function Pricing() {
             </article>
           ))}
         </div>
+        {/* VAT status is not confirmed (docs/STATUS.md section 5), so the basis is a labelled gap (D-027). */}
+        <p className="mute" style={{ marginTop: 20 }}>
+          Prices in pounds sterling. <span className="gap">[VAT basis to supply: included, excluded, or not VAT registered]</span>
+        </p>
       </section>
       <section className="sec wrap">
         <div className="two">
