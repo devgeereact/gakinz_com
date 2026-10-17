@@ -8,6 +8,7 @@ import {
   api, clearProviderRequests, createClient, createInvoice, createUser, login, one, providerRequests,
   resetDb, sql, stripeSignature,
 } from "./helpers"
+import { BASE } from "./env"
 
 function stripeEvent(id: string, invoiceId: number, amountTotal: number, currency = "gbp") {
   return JSON.stringify({
@@ -122,5 +123,19 @@ describe("Stripe webhook before the payment_events table exists", () => {
     } finally {
       sql("RENAME TABLE payment_events_hidden TO payment_events")
     }
+  })
+})
+
+describe("PayPal return while PayPal is switched off (K-061)", () => {
+  beforeEach(() => resetDb())
+
+  it("captures nothing and sends the browser back with a failure flag", async () => {
+    clearProviderRequests()
+    const id = createInvoice(createClient("Synthetic Ltd"), [[1, 1000]])
+    const res = await fetch(`${BASE}/payments.php?action=paypal_return&invoice_id=${id}&token=SYNTHETICORDER`, { redirect: "manual" })
+    expect(res.status).toBe(302)
+    expect(res.headers.get("location")).toMatch(/payfail=1/)
+    expect(providerRequests()).toEqual([])
+    expect(one(`SELECT status FROM invoices WHERE id = ${id}`)).not.toBe("paid")
   })
 })

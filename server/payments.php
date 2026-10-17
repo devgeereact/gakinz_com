@@ -266,6 +266,9 @@ if ($method === 'GET' && $action === 'paypal_return') {
   $invoiceId = (int)($_GET['invoice_id'] ?? 0);
   $orderId = preg_replace('/[^A-Za-z0-9]/', '', (string)($_GET['token'] ?? ''));
   $bounce = "$appUrl/app/invoicing";
+  // Same switch as paypal_link (K-026, K-061). While PayPal is off nothing is
+  // captured here; an approved order is never charged without this capture.
+  if (empty($GLOBALS['PAYPAL_ENABLED'])) { header("Location: $bounce?payfail=1"); exit; }
   if ($invoiceId <= 0 || $orderId === '') { header("Location: $bounce?payfail=1"); exit; }
   $token = paypal_token();
   if ($token === '') { header("Location: $bounce?payfail=1"); exit; }
