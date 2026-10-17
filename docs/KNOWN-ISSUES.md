@@ -69,8 +69,8 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-057 | Sign-in lockout by anyone, unlimited code guesses on a signed-in account, a reusable reset link, and sign-in timing | Medium | **Fixed 2026-10-17**, not uploaded |
 | K-058 | No browser security headers on pages and static files; HSTS and directory listing unknown | Medium | **Partly fixed 2026-10-17:** four headers in `.htaccess`, not uploaded. HSTS and listing need the operator |
 | K-059 | Session, reset, magic-link and share tokens are stored in plain text | Medium | Open. Needs a schema change |
-| K-060 | Proposal share links never expire and cannot be revoked | Low | Open |
-| K-061 | Smaller server findings from the 2026-10-17 audit | Low | Two fixed (PHP version, non-image Work files); the rest open |
+| K-060 | Proposal share links never expire and cannot be revoked | Low | **Fixed 2026-10-17**, not uploaded |
+| K-061 | Smaller server findings from the 2026-10-17 audit | Low | Four fixed (PHP version, non-image Work files, cron key, PayPal return), not uploaded. Certificate IDs and the seed-password log open |
 | K-062 | No retention, deletion or export: personal data is kept indefinitely | High | Open. Owner and legal decisions (`docs/PRIVACY-READINESS.md`) |
 | K-063 | The privacy and cookie pages did not match what the site does | High | **Partly fixed 2026-10-17:** facts corrected and the full structure in place with labelled placeholders for owner facts, not deployed. Placeholders and adviser review outstanding (K-021) |
 | K-064 | Enquiry and client text can reach an AI provider, undisclosed | Medium | Open. Owner and legal decision |
@@ -1236,13 +1236,18 @@ planned change for the owner, not an audit fix.
 ---
 
 ## K-060 · Proposal share links never expire and cannot be revoked
-**Severity:** low · **Status:** open.
+**Severity:** low · **Status:** fixed 2026-10-17, not uploaded.
 
 `proposals.php` serves a proposal by token with no expiry or status check and always reuses
 the same token, yet its error text says "expired". A declined or old proposal (scope, prices,
 client company) stays readable by anyone holding the link. `docs/PRODUCT-SPEC.md` asks for
-expiry and revocation. Fix: an expiry column, refusal for declined or expired proposals, and a
-revoke action.
+expiry and revocation.
+
+Fixed with no schema change: the public view answers 410 for a declined proposal, and for one
+past its existing `valid_until` date unless it was accepted (an accepted proposal stays
+readable as the record of the agreement). A new `unshare` action clears the token, so the next
+Share issues a different link, and Proposals has a Revoke button. Six tests in
+`tests/server/proposals.test.ts`; the button was checked in a browser with mocked responses.
 
 ---
 
@@ -1253,13 +1258,15 @@ revoke action.
 - **Fixed:** `work.php` `ensure_public_share()` made any file permanently public when attached
   as a Work picture, a PDF included. It now refuses anything that is not `image/*` (422), with
   a test in `tests/server/work.test.ts`. Removing a picture still leaves its link live.
-- Open: `cron.php` takes its key in the query string, so it lands in access logs. Run the job
-  as `php cron.php` from cPanel cron, or send the key in a header.
+- **Fixed:** `cron.php` took its key in the query string, so it landed in access logs. It now
+  runs from the command line with no key (`docs/OPERATIONS.md` section 2); the cPanel entry
+  must be changed by the operator. Test: `tests/server/cron-prune.test.ts`.
 - Open: certificate IDs on `/verify/:id` are short and unthrottled, and each answer names the
   recipient. Use 16+ random characters and an address throttle; confirm recipients agreed to
   public verification (`docs/PRIVACY-READINESS.md`).
-- Open: `payments.php` `paypal_return` still runs when PayPal is switched off. Low impact,
-  since the capture needs a real order.
+- **Fixed:** `payments.php` `paypal_return` ran while PayPal was switched off. It now sends the
+  browser back with `payfail=1` and captures nothing. The test passes on the old code too,
+  because no PayPal keys exist in the test configuration; it guards against regression.
 - Open: when no admin exists, `auth.php` writes the generated seed password to the PHP error
   log, while `config.php.example` says a `.txt` file. A password in a log: check the live
   `error_log` with K-015.
@@ -1276,8 +1283,9 @@ magic links and reset rows are never pruned. Nobody can export their data and th
 self-service deletion. The privacy page promises that enquiries are removed, and deletion on
 request with no mechanism behind it. The full inventory and a proposed retention schedule,
 every period marked for the owner and legal review, are in `docs/PRIVACY-READINESS.md`.
-Nothing was built: periods, the erasure procedure and what must be kept for HMRC are business
-and legal decisions.
+Periods, the erasure procedure and what must be kept for HMRC are business and legal
+decisions. The one part with no business judgement is built (2026-10-17, not uploaded): the
+`prune` cron job deletes sessions, magic links and reset links a day past expiry.
 
 ---
 
@@ -1345,7 +1353,10 @@ flow in K-055 already records permission to quote).
 - **Open, owner:** `/pricing` never says whether prices include VAT, while `site.ts` and
   `llms.txt` say they exclude it. The owner's VAT status is not confirmed
   (`docs/STATUS.md` section 5), so no wording was added.
-- **Open, low:** blog `published_at` reaches the page and JSON-LD as MySQL text, not ISO 8601;
-  `/sectors` has no inbound link; no `favicon.ico` or web manifest; the pricing buttons do not
-  carry the package to the form.
+- **Fixed later the same day:** CMS post dates are normalised to ISO (`isoDate` in
+  `src/marketing/data/blog.ts`, with tests), so the page, `<time>` and the JSON-LD get
+  `2026-05-12`, not MySQL text. The pricing buttons now pass the package to the contact form,
+  which shows it, lets the visitor remove it, and sends it in the existing `projectType` field.
+- **Open, low:** `/sectors` has no inbound link (the owner has not decided whether to keep the
+  page); no `favicon.ico` or web manifest.
 

@@ -44,8 +44,16 @@ to exercise the server is the synthetic test path in section 8.
 
 ## 2. Scheduled jobs
 
-`server/cron.php` is the runner. It is **not** user-authenticated. It is gated by a shared
-secret compared with `hash_equals`, so it can be triggered by a cPanel cron entry:
+`server/cron.php` is the runner. It is **not** user-authenticated. Run it from the cPanel
+cron entry on the command line (2026-10-17), which needs no key and keeps the key out of the
+web access logs (K-061). The path is the account's document root:
+
+```
+php /home/<account>/public_html/cron.php job=all
+```
+
+Over the web it still works, gated by a shared secret compared with `hash_equals`. Prefer the
+command line; a key in a URL ends up in Cloudflare and host logs:
 
 ```
 wget -qO- "https://gakinz.com/cron.php?key=<CRON_KEY>&job=all"
@@ -57,7 +65,8 @@ wget -qO- "https://gakinz.com/cron.php?key=<CRON_KEY>&job=all"
 | `billing` | Raises this month's invoice for each client with `retainer_amount > 0`. Idempotent per month | Column missing |
 | `uptime` | Pings every `project_dev.prod_url`, records HTTP status and TLS days remaining | No rows with a production URL |
 | `digest` | Emails a KPI digest to `$REPORT_RECIPIENTS` | No SMTP or no recipients |
-| `all` | Runs all four. This is the default | |
+| `prune` | Deletes sessions, magic links and reset links more than a day past expiry (2026-10-17, K-062). No business record is touched | Never |
+| `all` | Runs all five. This is the default | |
 
 The response is JSON: `{"ran": {...}}` with a per-job result, so the cron output is readable
 in a mail log.

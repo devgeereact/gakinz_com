@@ -223,7 +223,7 @@ No existing data is migrated by any of these statements.
 Upload all of them, with `.htaccess`:
 
 ```
-.htaccess         api.php
+.htaccess         api.php          cron.php
 _money.php (new)  auth.php         blog.php         bookings.php (new)
 clients.php       comms.php        contact.php      content.php
 contracts.php     design.php       dev.php          feedback.php (new)
@@ -251,6 +251,11 @@ before using it, and evens out sign-in timing; `users.php` stops an admin changi
 admin; `work.php` refuses a non-image file as a Work picture. After uploading `.htaccess`,
 check one page's response headers (section 5.6) and that the site still loads: if the host
 lacks `mod_headers`, the block is skipped, not fatal.
+
+Also on 2026-10-17, no SQL: `cron.php` runs from the command line and gains a `prune` job, so
+**change the cPanel cron entry** to `php /home/<account>/public_html/cron.php job=all`
+(`docs/OPERATIONS.md` section 2); `proposals.php` refuses links to declined or lapsed proposals
+with 410 and gains `unshare`; `payments.php` ignores a PayPal return while PayPal is off.
 
 `site.php` and `work.php` are the 2026-10-14 redesign batch (homepage hero and editable site
 copy). Upload them **after** SQL statements 7 and 8 if you want the new features at once;

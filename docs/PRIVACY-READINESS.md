@@ -125,7 +125,7 @@ business is a sole trader or a company, so they are left blank on purpose.
 | Enquiry that did not become a client | reply | `enquiries` | 12 to 24 months | last contact | delete row and audit copies | age out with backup rotation | OWNER DECISION, LEGAL REVIEW |
 | Client, project, contract records | delivery, claims | `clients`, `projects`, `contracts` | owner to set | end of engagement | delete or anonymise | as above | LEGAL REVIEW (limitation periods) |
 | Invoices and payments | tax | `invoices`, `payment_events` | **set by HMRC rules for the trading form** | end of the relevant tax year | delete | as above | OWNER INPUT, LEGAL REVIEW |
-| Sessions, magic links, reset tokens | access | `auth_tokens`, `magic_links`, `password_resets` | delete on expiry | expiry | delete | n/a | none; safe to implement |
+| Sessions, magic links, reset tokens | access | `auth_tokens`, `magic_links`, `password_resets` | one day after expiry | expiry | delete | n/a | **built 2026-10-17** (`cron.php` `prune`), not uploaded |
 | Audit log | security | `audit_log` | 12 months | entry date | delete, or strip email and IP | as above | OWNER DECISION |
 | Portal messages, feedback | support | `tickets`, `client_feedback` | with the client record | end of engagement | delete | as above | OWNER DECISION |
 | Comms, Mailbox | correspondence | database, mailbox | owner to set | last message | delete | mailbox provider's own | OWNER DECISION |
@@ -135,9 +135,8 @@ business is a sole trader or a company, so they are left blank on purpose.
 
 Implementation, once periods are agreed: a `cron.php` job that deletes or anonymises by these
 rules, with a dry-run mode, tests against the local `*_test` database, and an entry in
-`docs/DEPLOYMENT.md`. Expired-token pruning could ship first, since it carries no business
-judgement. It was not built in this pass because `cron.php` takes its key in the query string
-(K-061) and should move to a CLI job at the same time.
+`docs/DEPLOYMENT.md`. Expired-token pruning, which carries no business judgement, is already
+built as the `prune` job, together with running `cron.php` from the command line (K-061).
 
 ## 7. Rights and account deletion
 

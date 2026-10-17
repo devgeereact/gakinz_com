@@ -28,8 +28,8 @@ names another date or computer. Re-measure and update this table when a count ch
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 176 tests in 15 files on 2026-10-17 (`audit/readiness-2026-10-17`: 5 added in `src/lib/api-errors.test.ts`). Before that 171 in 14 files (2026-10-16, after merging `feat/generated-sitemap` and `feat/bookings-timeline-feedback`: 15 added for the page metadata checks and the sitemap, 13 in `bookingModel.test.ts`) |
-| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 171 tests in 15 files on 2026-10-17 on the Mac (7 added: `security-hardening.test.ts` and one in `work.test.ts`). Before that 164 tests in 14 files, 2026-10-16 on local MariaDB 10.11, `feat/bookings-timeline-feedback` (24 added in `bookings.test.ts` and `feedback.test.ts`) |
+| Unit tests | `npm test` | **PASS.** 179 tests in 16 files on 2026-10-17 (`audit/readiness-2026-10-17`: `api-errors.test.ts` and `blog-date.test.ts` added). Before that 171 in 14 files (2026-10-16, after merging `feat/generated-sitemap` and `feat/bookings-timeline-feedback`: 15 added for the page metadata checks and the sitemap, 13 in `bookingModel.test.ts`) |
+| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 180 tests in 16 files on 2026-10-17 on the Mac (16 added: `security-hardening.test.ts`, `cron-prune.test.ts`, and new cases in `work`, `proposals` and `payments`). Before that 164 tests in 14 files, 2026-10-16 on local MariaDB 10.11, `feat/bookings-timeline-feedback` (24 added in `bookings.test.ts` and `feedback.test.ts`) |
 | Type check | `npx tsc -b` | **PASS** |
 | Build | `npm run build` | **PASS.** 30 public pages prerendered, `sitemap.xml` with 30 URLs (2026-10-16, `feat/generated-sitemap`) |
 | Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 41 errors, 1 warning, unchanged since 2026-10-11. **`npm run lint` still fails** (K-002) |
@@ -59,8 +59,10 @@ errors, no request to another domain, no cookie or browser storage on any public
 Fixed and tested, none deployed or uploaded: K-056 (admin could lock out the owner), K-057
 (sign-in lockout, code guessing, reset race, timing), K-058 in part (security headers), two
 items of K-061, K-063 in part (privacy and cookie facts), K-066 (404 noindex, raw error text,
-contact form, footer, robots, work pages, `llms.txt`). Recorded, open: K-059 to K-062, K-064,
-K-065. Privacy inventory, proposed retention and a draft notice: `docs/PRIVACY-READINESS.md`.
+contact form, footer, robots, work pages, `llms.txt`), and later the same day K-060
+(proposal link expiry and revoke), the cron key and PayPal items of K-061, token pruning for
+K-062, ISO post dates and the pricing-to-contact package. Recorded, open: K-059, K-061 (two
+items), K-062 (retention periods), K-064, K-065. Privacy inventory, proposed retention and a draft notice: `docs/PRIVACY-READINESS.md`.
 
 Verdict: **not ready for production.** The P0 items in section 3 still stand (credential and
 session revocation, server state, backups, upload), retention and deletion do not exist
