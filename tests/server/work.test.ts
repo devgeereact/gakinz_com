@@ -167,6 +167,15 @@ describe("images", () => {
     expect(r.status).toBe(404)
   })
 
+  it("refuses a file that is not an image, and does not make it public", async () => {
+    const { json } = await create({})
+    const fileId = insertFile()
+    sql(`UPDATE files SET name = 'contract.pdf', mime = 'application/pdf' WHERE id = ${fileId}`)
+    const r = await api("work.php?action=addImage", { body: { work_id: json.id, file_id: fileId, alt: "A contract" }, token: editor })
+    expect(r.status).toBe(422)
+    expect(one(`SELECT share_token FROM files WHERE id = ${fileId}`)).toBe("NULL")
+  })
+
   it("removes a record's images with the record", async () => {
     const { json } = await create({})
     await api("work.php?action=addImage", { body: { work_id: json.id, file_id: insertFile(), alt: "One" }, token: editor })

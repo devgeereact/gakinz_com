@@ -55,6 +55,22 @@ RewriteRule ^ app-shell.html [L]
 RewriteRule ^ index.html [L]
 
 # Basic hardening
+# No `Options -Indexes` here on purpose: where the host does not allow Options
+# overrides, that one line turns every request into a 500. Ask the host to
+# switch off directory listing instead (K-058).
+
+# Browser security headers on every response: the prerendered pages, the SPA
+# shell and static files, not only the PHP JSON that _bootstrap.php covers.
+# Same values as _bootstrap.php, so a PHP response is unchanged. No CSP yet
+# (K-033) and no HSTS: transport security belongs to the TLS and Cloudflare
+# set-up, which this repository does not own (K-058).
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set X-Frame-Options "DENY"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+</IfModule>
+
 # config.php and every shared include (_bootstrap, _money, _smtp, _sms, _slack,
 # _monitor and any future _*.php). Includes are required by endpoints, never
 # requested directly (KNOWN-ISSUES K-013).

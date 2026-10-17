@@ -19,4 +19,6 @@ if ($res = $conn->query('SELECT 1 AS ping')) {
 }
 if (!$db) fail('Database connection failed.', 500);
 
-ok(['ok' => true, 'php' => PHP_VERSION, 'db' => true]);
+// No version numbers: this endpoint is public, and the PHP version only helps
+// someone matching the host against known vulnerabilities.
+ok(['ok' => true, 'db' => true]);

@@ -347,11 +347,14 @@ function unused_share_token(mysqli $conn): string {
  * Authenticated callers only. A GET must never reach this.
  */
 function ensure_public_share(mysqli $conn, int $fileId, int $uid): array {
-  $stmt = $conn->prepare('SELECT share_token, expires_at FROM files WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+  $stmt = $conn->prepare('SELECT share_token, expires_at, mime FROM files WHERE id = ? AND deleted_at IS NULL LIMIT 1');
   $stmt->bind_param('i', $fileId);
   $stmt->execute();
   $row = $stmt->get_result()->fetch_assoc();
   if (!$row) fail('File not found.', 404);
+  // Only images become public through Work. Without this, attaching a contract
+  // or an invoice PDF as a "screenshot" would publish it at a permanent link.
+  if (strpos((string)($row['mime'] ?? ''), 'image/') !== 0) fail('Only an image can be shown on a public Work page.', 422);
 
   $token = trim((string)($row['share_token'] ?? ''));
   $needClear = $row['expires_at'] !== null;
