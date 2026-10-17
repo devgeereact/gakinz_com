@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
-import { Loader2, Plus, RefreshCw, Trash2, Send, Check, X, Share2, Eye, AlertCircle, FileText } from "lucide-react"
+import { Loader2, Plus, RefreshCw, Trash2, Send, Check, X, Share2, Link2Off, Eye, AlertCircle, FileText } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -190,6 +190,17 @@ export default function Proposals() {
         toast.success(`Public link: ${url}`)
       }
     } else toast.error(res.error || "Could not create a link.")
+  }
+
+  // Revoke the public link. A later Share issues a new one; the old copy stays dead.
+  const unshare = async (p: Proposal) => {
+    setBusyId(p.id)
+    const res = await proposals.unshare(p.id)
+    setBusyId(null)
+    if (res.ok) {
+      setItems((xs) => xs.map((x) => (x.id === p.id ? { ...x, share_token: null } : x)))
+      toast.success("Public link revoked.")
+    } else toast.error(res.error || "Could not revoke the link.")
   }
 
   const accept = async (p: Proposal) => {
@@ -415,6 +426,11 @@ export default function Proposals() {
                         <Button variant="ghost" size="sm" disabled={busyId === p.id} onClick={() => share(p)} title="Copy a public read-only link">
                           <Share2 /> {p.share_token ? "Copy link" : "Share"}
                         </Button>
+                        {p.share_token && (
+                          <Button variant="ghost" size="sm" disabled={busyId === p.id} onClick={() => unshare(p)} title="Revoke the public link">
+                            <Link2Off /> Revoke
+                          </Button>
+                        )}
                         {p.status === "draft" && (
                           <Button variant="ghost" size="sm" disabled={busyId === p.id} onClick={() => send(p)}>
                             <Send /> Send

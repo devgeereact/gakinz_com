@@ -82,3 +82,43 @@ describe("quote acceptance", () => {
     expect(one(`SELECT status FROM proposals WHERE id = ${id}`)).toBe("accepted")
   })
 })
+
+describe("public proposal links (K-060)", () => {
+  async function shared(status: string, validUntil: string | null = null): Promise<{ id: number; link: string }> {
+    const id = proposal(status, validUntil)
+    const r = await api<{ token: string }>("proposals.php?action=share", { body: { id }, token })
+    return { id, link: `proposals.php?token=${r.json.token}` }
+  }
+
+  it("serves a sent proposal that is still valid", async () => {
+    const { link } = await shared("sent", "2999-01-01")
+    expect((await api(link)).status).toBe(200)
+  })
+
+  it.each([
+    ["declined", null],
+    ["sent", "2020-01-01"],
+  ])("refuses a %s proposal (valid until %s)", async (status, until) => {
+    const { link } = await shared(status, until)
+    expect((await api(link)).status).toBe(410)
+  })
+
+  it("keeps an accepted proposal readable after its date", async () => {
+    const { link } = await shared("accepted", "2020-01-01")
+    expect((await api(link)).status).toBe(200)
+  })
+
+  it("revokes a link for good, and a new share issues a different one", async () => {
+    const { id, link } = await shared("sent")
+    const revoke = await api("proposals.php?action=unshare", { body: { id }, token })
+    expect(revoke.status).toBe(200)
+    expect((await api(link)).status).toBe(404)
+    const again = await api<{ token: string }>("proposals.php?action=share", { body: { id }, token })
+    expect(`proposals.php?token=${again.json.token}`).not.toBe(link)
+  })
+
+  it("refuses a revoke without staff access", async () => {
+    const { id } = await shared("sent")
+    expect((await api("proposals.php?action=unshare", { body: { id } })).status).toBe(401)
+  })
+})

@@ -413,6 +413,7 @@ export const proposals = {
       { id },
     ),
   share: (id: number) => api.post<{ token: string }>("/proposals.php?action=share", { id }),
+  unshare: (id: number) => api.post<{ ok: boolean }>("/proposals.php?action=unshare", { id }),
   // Public, no-auth read-only fetch by share token (records a view server-side).
   publicView: (token: string) => api.get<PublicProposal>(`/proposals.php?token=${encodeURIComponent(token)}`),
 }

@@ -7,6 +7,9 @@
  *   POST /proposals.php?action=create {client_id?, title, valid_until?, notes?, items:[{description,qty,unit_price}]}
  *   POST /proposals.php?action=status {id, status}    status: sent | declined | draft
  *   POST /proposals.php?action=accept {id}            → mark accepted + create a project
+ *   POST /proposals.php?action=share {id}             → issue or reuse the public link token
+ *   POST /proposals.php?action=unshare {id}           → revoke the public link
+ *   GET  /proposals.php?token=T                       → public view; 410 once declined or expired
  *
  * Status: draft | sent | accepted | declined
  */
@@ -31,6 +34,13 @@ if ($method === 'GET' && isset($_GET['token'])) {
   $stmt->execute();
   $p = $stmt->get_result()->fetch_assoc();
   if (!$p) fail('This proposal link is invalid or has expired.', 404);
+  // A declined proposal, or one past its valid-until date that was never
+  // accepted, is no longer an offer, so its link stops working (K-060). An
+  // accepted proposal stays readable as the record of what was agreed.
+  if ($p['status'] === 'declined') fail('This proposal is no longer available.', 410);
+  if ($p['status'] !== 'accepted' && !empty($p['valid_until']) && $p['valid_until'] < date('Y-m-d')) {
+    fail('This proposal has expired. Ask for an updated one.', 410);
+  }
   $p['id'] = (int)$p['id'];
   $p['vat_rate'] = (float)$p['vat_rate'];
 
@@ -276,6 +286,25 @@ if ($method === 'POST' && $action === 'share') {
   }
   audit($conn, $user['id'], 'proposal_share', "#$id");
   ok(['token' => $token]);
+}
+
+// Revoke the public link. The next Share issues a new token, so an old copy of
+// the link never works again (K-060).
+if ($method === 'POST' && $action === 'unshare') {
+  $user = require_auth($conn, STAFF);
+  $id = (int)(body()['id'] ?? 0);
+  if ($id <= 0) fail('A proposal id is required.');
+  $stmt = $conn->prepare('UPDATE proposals SET share_token = NULL WHERE id = ? AND deleted_at IS NULL');
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  if ($stmt->affected_rows < 1) {
+    $chk = $conn->prepare('SELECT id FROM proposals WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+    $chk->bind_param('i', $id);
+    $chk->execute();
+    if (!$chk->get_result()->fetch_assoc()) fail('Proposal not found.', 404);
+  }
+  audit($conn, $user['id'], 'proposal_unshare', "#$id");
+  ok(['ok' => true]);
 }
 
 fail('Method not allowed.', 405);
