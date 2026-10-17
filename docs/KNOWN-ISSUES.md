@@ -68,7 +68,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-056 | An admin could demote or suspend a super admin, locking the owner out | High | **Fixed 2026-10-17**, not uploaded |
 | K-057 | Sign-in lockout by anyone, unlimited code guesses on a signed-in account, a reusable reset link, and sign-in timing | Medium | **Fixed 2026-10-17**, not uploaded |
 | K-058 | No browser security headers on pages and static files; HSTS and directory listing unknown | Medium | **Partly fixed 2026-10-17:** four headers in `.htaccess`, not uploaded. HSTS and listing need the operator |
-| K-059 | Session, reset, magic-link and share tokens are stored in plain text | Medium | Open. Needs a schema change |
+| K-059 | Session, reset, magic-link and share tokens are stored in plain text | Medium | **Fixed 2026-10-17** for sessions, reset and magic links, no schema change, not uploaded. Share tokens open by design |
 | K-060 | Proposal share links never expire and cannot be revoked | Low | **Fixed 2026-10-17**, not uploaded |
 | K-061 | Smaller server findings from the 2026-10-17 audit | Low | Four fixed (PHP version, non-image Work files, cron key, PayPal return), not uploaded. Certificate IDs and the seed-password log open |
 | K-062 | No retention, deletion or export: personal data is kept indefinitely | High | Open. Owner and legal decisions (`docs/PRIVACY-READINESS.md`) |
@@ -1198,7 +1198,10 @@ after it.
 2. **Code guessing on a signed-in account.** `twofa_setup`, `twofa_enable`, `twofa_disable`
    and `twofa_recodes` had no attempt limit, so a stolen token could try codes until one
    matched. `gk_totp_check()` now allows ten wrong codes in fifteen minutes per account, then
-   answers 429. Replay of one valid code inside its 90-second window is still possible: open.
+   answers 429. Replay of one valid code inside its 90-second window was blocked later the same
+   day: the accepted step is stored in `users.totp_last_step` (SQL 12) and an equal or earlier
+   step is refused, at login and in the signed-in checks. Until SQL 12 runs, codes work as
+   before.
 3. **Reset race.** The reset link was checked, then marked used, in two steps. The `used_at`
    update now runs first with `AND used_at IS NULL` and must change one row.
 4. **Timing.** An unknown email skipped `password_verify`, so it answered faster. It now checks
@@ -1224,14 +1227,21 @@ K-033. Live headers: NOT TESTED.
 ---
 
 ## K-059 · Tokens are stored in plain text
-**Severity:** medium · **Status:** open.
+**Severity:** medium · **Status:** fixed 2026-10-17 for sessions, reset links and magic links, not uploaded.
 
 `auth_tokens.token`, `password_resets.token`, `magic_links.token`, `files.share_token` and the
 proposal token are stored as issued (`_bootstrap.php`, `auth.php`, `files.php`,
 `proposals.php`). Anyone who reads the database or a backup holds working 30-day sessions for
 every user, the owner included. Fix: store `hash('sha256', $token)` and look up by the hash.
-This needs a schema change, a one-off rehash, and every session signing in again, so it is a
-planned change for the owner, not an audit fix.
+Fixed without a schema change and without signing anyone out. `token_hash()` stores the first
+62 hex characters of SHA-256, which fits `CHAR(64)` and can never be mistaken for a raw
+64-character token. Lookups match the hash, or a raw value only in a 64-character row, so
+sessions issued before the upload work until they expire and the `prune` job removes them, while
+a stolen 62-character hash presented as a token matches nothing. Tests:
+`tests/server/token-hashing.test.ts`. **Upload `_bootstrap.php` with `auth.php`, `oauth.php` and
+`users.php`** (`docs/DEPLOYMENT.md` section 5.3). File and proposal share tokens stay as issued:
+the CMS shows them back to staff to copy the link, and they are capability links by design
+(D-029); proposal links can now be revoked (K-060).
 
 ---
 

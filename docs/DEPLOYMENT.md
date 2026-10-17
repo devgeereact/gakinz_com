@@ -214,6 +214,7 @@ is UNVERIFIED, so check them before step 1.
 | 9 | `CREATE TABLE IF NOT EXISTS bookings (...)` | 2026-10-16, calls inside Enquiries | New table, safe to run twice. It carries foreign keys to `enquiries` and `clients`. Until it runs, `bookings.php` answers 503 and the client timeline leaves calls out |
 | 10 | `CREATE TABLE IF NOT EXISTS booking_events (...)` | 2026-10-16, booking history and customer emails | After statement 9; it carries a foreign key to `bookings`. Safe to run twice |
 | 11 | `CREATE TABLE IF NOT EXISTS client_feedback (...)` | 2026-10-16, private feedback | New table, safe to run twice. Until it runs, `feedback.php` answers 503, the portal form says feedback cannot be sent yet, and the timeline leaves feedback out |
+| 12 | `ALTER TABLE users ADD COLUMN totp_last_step BIGINT NULL DEFAULT NULL AFTER totp_recovery;` | 2026-10-17, two-factor replay (K-057) | Additive. Run once only. Until it runs, `auth.php` checks codes as before and does not block a reused code |
 
 No existing data is migrated by any of these statements.
 
@@ -223,7 +224,7 @@ No existing data is migrated by any of these statements.
 Upload all of them, with `.htaccess`:
 
 ```
-.htaccess         api.php          cron.php
+.htaccess         api.php          cron.php         _bootstrap.php
 _money.php (new)  auth.php         blog.php         bookings.php (new)
 clients.php       comms.php        contact.php      content.php
 contracts.php     design.php       dev.php          feedback.php (new)
@@ -251,6 +252,13 @@ before using it, and evens out sign-in timing; `users.php` stops an admin changi
 admin; `work.php` refuses a non-image file as a Work picture. After uploading `.htaccess`,
 check one page's response headers (section 5.6) and that the site still loads: if the host
 lacks `mod_headers`, the block is skipped, not fatal.
+
+**Upload `_bootstrap.php`, `auth.php`, `oauth.php` and `users.php` together, in one go**
+(2026-10-17, K-059). Sign-in, reset and magic-link tokens are now stored hashed; the new
+`auth.php`, `oauth.php` and `users.php` call `token_hash()`, which only the new `_bootstrap.php`
+defines, so any of them without it fails every sign-in with a 500. Nobody is signed out:
+sessions issued before the upload are still accepted until they expire. SQL 12 is optional and
+can run before or after.
 
 Also on 2026-10-17, no SQL: `cron.php` runs from the command line and gains a `prune` job, so
 **change the cPanel cron entry** to `php /home/<account>/public_html/cron.php job=all`

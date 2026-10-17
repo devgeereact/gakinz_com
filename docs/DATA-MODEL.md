@@ -39,7 +39,7 @@ section 4.
 | Table | Purpose | Notes |
 |---|---|---|
 | `users` | Staff and client logins | `role` is one of the seven roles. `client_id` binds a `client` login to one client. `cost_rate` feeds profitability. `totp_secret`, `totp_enabled`, `totp_recovery` carry 2FA |
-| `auth_tokens` | Opaque session tokens | 64 hex characters, sent as `Authorization: Bearer`. `user_agent`, `ip`, `last_seen_at` drive the active-sessions list |
+| `auth_tokens` | Session tokens, stored hashed | The browser holds 64 hex characters; the row holds `token_hash()` of them (62 characters) since 2026-10-17, or the raw value for an older session (K-059). `user_agent`, `ip`, `last_seen_at` drive the active-sessions list |
 | `magic_links` | Passwordless sign-in | Short lived, single use |
 | `password_resets` | Reset and invite tokens | |
 | `audit_log` | Record of sensitive actions | Also doubles as the store for the login throttle and the AI daily cap. See section 5 |

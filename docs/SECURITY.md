@@ -28,11 +28,12 @@ That is the main thing to check in review.
 | Element | Implementation |
 |---|---|
 | Password storage | `password_hash(..., PASSWORD_BCRYPT)`, verified with `password_verify` |
-| Session token | `bin2hex(random_bytes(32))`, 64 hex characters, opaque, stored in `auth_tokens` |
+| Session token | `bin2hex(random_bytes(32))`, 64 hex characters, opaque. Since 2026-10-17 only a hash is stored (`token_hash()` in `_bootstrap.php`, the first 62 hex characters of SHA-256), for sessions, reset links and magic links; rows written raw before that still match until they expire (K-059) |
 | Transport | `Authorization: Bearer`, re-exposed by `server/.htaccess` because CGI strips it |
 | Lifetime | 30 days (`TOKEN_TTL_DAYS`) |
 | Validation | Joins `auth_tokens` to `users`, requires an unexpired token, `deleted_at IS NULL` and `status = 'active'` |
 | Reset tokens | 60 minutes (`RESET_TTL_MINUTES`) |
+| Two-factor codes | One use each: the accepted 30-second step is stored in `users.totp_last_step` and an equal or earlier step is refused, once SQL 12 has run (K-057) |
 | Magic links | 15 minutes (`MAGIC_TTL_MINUTES`), single use, claimed by a guarded `UPDATE`. `client` role only (`MAGIC_ROLES`), never for an account with two-factor on (K-027) |
 
 The token lives in browser storage and is read by `getStoredToken()` in `src/lib/api.ts`.
