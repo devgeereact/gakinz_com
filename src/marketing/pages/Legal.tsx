@@ -117,7 +117,8 @@ export function Privacy() {
           {
             h: "What I collect",
             p: [
-              "When you contact me I collect the details you send: your name, email, company and the message itself. I do not collect more than I need to reply.",
+              "When you contact me I collect the details you send: your name, email, company, rough budget and the message itself. I do not collect more than I need to reply.",
+              "The site also records the internet (IP) address your message came from, with the time it arrived. I use it only to stop spam and repeated automated submissions.",
             ],
           },
           {
@@ -193,15 +194,23 @@ export function Cookies() {
         reviewed={null}
         blocks={[
           {
-            h: "What I use",
+            h: "The public site",
             p: [
-              "This site uses only the cookies needed to make it work. I do not run advertising trackers.",
+              "The public pages (everything outside the client login) set no cookies and store nothing in your browser. There is no analytics, no advertising tracker and no third-party embed.",
+            ],
+          },
+          {
+            h: "Signing in",
+            p: [
+              "If you sign in to the client area, your browser stores what the sign-in needs to work: gk-auth (local storage: your sign-in token and basic account details, kept until you sign out; the token stops working after 30 days) and gk-locked (session storage: whether the screen is locked, cleared when you close the tab).",
+              "Inside the signed-in area, three settings remember your choices: sidebar_state (a cookie that keeps the side menu open or closed, 7 days), gkos-groups (local storage: which menu groups are open) and theme (local storage: light or dark, only if you change it).",
+              "Signing in with Google sets gk_oauth_state, a cookie that lasts 10 minutes and protects the sign-in from forgery. It is deleted when the sign-in finishes.",
             ],
           },
           {
             h: "Managing cookies",
             p: [
-              "You can clear or block cookies in your browser settings at any time. The site will still work without them.",
+              "You can clear or block cookies and site storage in your browser settings at any time. The public site works without them. Signing in needs them.",
             ],
           },
         ]}
