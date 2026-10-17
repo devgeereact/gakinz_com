@@ -1,7 +1,7 @@
 import type { CSSProperties } from "react"
 import { Link, useParams } from "react-router-dom"
 import Seo from "@/marketing/components/Seo"
-import { Crumbs, Devices, IArrow, Pill } from "@/marketing/components/site-ui"
+import { Crumbs, CtaBand, Devices, IArrow, Pill } from "@/marketing/components/site-ui"
 import { delay, useNavTone } from "@/marketing/components/site-helpers"
 import { kindName, onColour, useProjects } from "@/marketing/data/showcase"
 import NotFound from "./NotFound"
@@ -71,7 +71,9 @@ export default function WorkDetail() {
             <section>
               <h2>Where it stands</h2>
               <p className="lede" style={{ maxWidth: "60ch", marginBottom: 16 }}>
-                {p.status === "Live" ? `Live${p.url ? ` at ${p.url}` : ""}.` : "Built, and in final checks before launch."}
+                {/* One honest line for every unlaunched project: "in final checks"
+                    was printed for all of them, a local app included. */}
+                {p.status === "Live" ? `Live${p.url ? ` at ${p.url}` : ""}.` : "In build, and not launched yet."}
               </p>
               {p.outcome ? (
                 <p className="lede" style={{ maxWidth: "60ch" }}>
@@ -108,7 +110,15 @@ export default function WorkDetail() {
             {p.url && (
               <div>
                 <dt>Address</dt>
-                <dd>{p.url}</dd>
+                <dd>
+                  {p.status === "Live" ? (
+                    <a href={`https://${p.url}`} target="_blank" rel="noopener noreferrer">
+                      {p.url}
+                    </a>
+                  ) : (
+                    p.url
+                  )}
+                </dd>
               </div>
             )}
           </dl>
@@ -126,6 +136,9 @@ export default function WorkDetail() {
             </span>
           </Link>
         )}
+      </section>
+      <section className="sec wrap">
+        <CtaBand projects={projects} />
       </section>
     </>
   )

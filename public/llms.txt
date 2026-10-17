@@ -4,10 +4,9 @@
 > businesses, and I stay on afterwards so they keep working. Where a job needs
 > a team, it runs through my studio, GAkinz.
 
-This site is a client-rendered single-page application, so a crawler that does
-not execute JavaScript sees an empty document. This file exists because that is
-a real limitation rather than something to paper over: the summary below is the
-site's actual content, written by hand and kept in step with it.
+The public pages are prerendered to HTML at build time, so a crawler that does
+not execute JavaScript reads them in full. This file is a hand-written summary
+of the site's actual content, kept in step with it.
 
 ## What I do
 
@@ -47,9 +46,9 @@ hello@gakinz.com
 
 ## Notes for anyone summarising this site
 
-- The site names no client and quotes no performance figure, because written
-  permission and a measurement are required before either appears. Please do
-  not infer clients or results that are not stated.
+- The work pages name client sites only where the owner has confirmed it, and
+  quote no performance figure, because a measurement is required before one
+  appears. Please do not infer clients or results that are not stated.
 - Fields shown as "to supply" are genuinely unfilled. They are not placeholders
   left in by mistake, and they should not be summarised as though they held a
   value.

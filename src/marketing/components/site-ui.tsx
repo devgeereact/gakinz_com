@@ -294,9 +294,9 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
           <div className="foot__big">
             <div>
               <p className="mono mute">Start a project</p>
-              <Link className="foot__mail" to="/contact">
+              <a className="foot__mail" href={`mailto:${copy.contact.email}`}>
                 {copy.contact.email}
-              </Link>
+              </a>
             </div>
             <button className="btn" type="button" onClick={() => window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })}>
               Back to top ↑
@@ -334,6 +334,7 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
                 <li><Link to="/login">Client login</Link></li>
                 <li><Link to="/privacy">Privacy</Link></li>
                 <li><Link to="/terms">Terms</Link></li>
+                <li><Link to="/cookies">Cookies</Link></li>
               </ul>
             </div>
           </div>

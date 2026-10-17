@@ -4,7 +4,9 @@ User-agent: *
 Allow: /
 
 # Private workspace. Client-side gated only, so it is stated here too.
-Disallow: /app
+# /app/ and /app$, not /app: a bare prefix also blocked /apple-touch-icon.png.
+Disallow: /app/
+Disallow: /app$
 Disallow: /login
 Disallow: /set-password
 
