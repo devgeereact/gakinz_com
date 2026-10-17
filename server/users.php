@@ -120,7 +120,8 @@ if ($method === 'POST' && $action === 'invite') {
   $token = bin2hex(random_bytes(32));
   $exp = (new DateTime('+7 days'))->format('Y-m-d H:i:s');
   $ins = $conn->prepare('INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)');
-  $ins->bind_param('iss', $uid, $token, $exp);
+  $stored = token_hash($token);
+  $ins->bind_param('iss', $uid, $stored, $exp);
   $ins->execute();
 
   $appUrl = rtrim($GLOBALS['APP_URL'] ?? 'https://gakinz.com', '/');

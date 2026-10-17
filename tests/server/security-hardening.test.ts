@@ -5,8 +5,9 @@
  *  - Code checks on a signed-in account stop after ten wrong codes.
  *  - A password reset link works once.
  */
+import crypto from "node:crypto"
 import { beforeEach, describe, expect, it } from "vitest"
-import { api, createUser, login, one, PASSWORD, q, resetDb, sql, totp } from "./helpers"
+import { api, createUser, login, one, PASSWORD, q, resetDb, sql, tokenHash, totp } from "./helpers"
 
 const SECRET = "JBSWY3DPEHPK3PXP" // synthetic base32 TOTP secret
 
@@ -80,15 +81,31 @@ describe("two-factor code checks on a signed-in account", () => {
   })
 })
 
+describe("two-factor code replay", () => {
+  beforeEach(() => resetDb())
+
+  it("refuses the same code a second time", async () => {
+    createUser({ email: "owner@example.test", role: "super_admin", totpSecret: SECRET })
+    const code = totp(SECRET)
+    await expect(login("owner@example.test", code)).resolves.toMatch(/\w+/)
+    const again = await api<{ error?: string }>("auth.php?action=login", {
+      body: { email: "owner@example.test", password: PASSWORD, code },
+    })
+    expect(again.status).toBe(401)
+    expect(again.json.error).toMatch(/already been used/)
+  })
+})
+
 describe("password reset link", () => {
   beforeEach(() => resetDb())
 
   it("works once", async () => {
     const id = createUser({ email: "emp@example.test", role: "employee" })
-    sql(`INSERT INTO password_resets (user_id, token, expires_at) VALUES (${id}, 'synthetic-reset-token', NOW() + INTERVAL 1 HOUR)`)
-    const first = await api("auth.php?action=reset", { body: { token: "synthetic-reset-token", password: "New-Synthetic-1" } })
+    const raw = crypto.randomBytes(32).toString("hex")
+    sql(`INSERT INTO password_resets (user_id, token, expires_at) VALUES (${id}, ${q(tokenHash(raw))}, NOW() + INTERVAL 1 HOUR)`)
+    const first = await api("auth.php?action=reset", { body: { token: raw, password: "New-Synthetic-1" } })
     expect(first.status).toBe(200)
-    const second = await api("auth.php?action=reset", { body: { token: "synthetic-reset-token", password: "New-Synthetic-2" } })
+    const second = await api("auth.php?action=reset", { body: { token: raw, password: "New-Synthetic-2" } })
     expect(second.status).toBe(400)
   })
 })

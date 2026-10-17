@@ -157,11 +157,13 @@ if ($action === 'callback') {
   $ua = mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255);
   $ip = $_SERVER['REMOTE_ADDR'] ?? '';
   if ($stmt = @$conn->prepare('INSERT INTO auth_tokens (user_id, token, user_agent, ip, last_seen_at, expires_at) VALUES (?, ?, ?, ?, NOW(), ?)')) {
-    $stmt->bind_param('issss', $uid, $token, $ua, $ip, $exp);
+    $stored = token_hash($token);
+    $stmt->bind_param('issss', $uid, $stored, $ua, $ip, $exp);
     $stmt->execute();
   } else {
     $stmt = $conn->prepare('INSERT INTO auth_tokens (user_id, token, expires_at) VALUES (?, ?, ?)');
-    $stmt->bind_param('iss', $uid, $token, $exp);
+    $stored = token_hash($token);
+    $stmt->bind_param('iss', $uid, $stored, $exp);
     $stmt->execute();
   }
   audit($conn, $uid, 'login_sso', $email);

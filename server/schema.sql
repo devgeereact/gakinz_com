@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS users (
   totp_secret   VARCHAR(64) DEFAULT NULL,                -- base32 TOTP secret (2FA)
   totp_enabled  TINYINT(1)  NOT NULL DEFAULT 0,          -- is 2FA active for this user
   totp_recovery VARCHAR(1000) DEFAULT NULL,              -- JSON array of bcrypt-hashed backup codes
+  totp_last_step BIGINT NULL DEFAULT NULL,               -- last accepted 30-second TOTP step: blocks replay (2026-10-17)
   status        VARCHAR(20)  NOT NULL DEFAULT 'active',  -- active | suspended
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -758,3 +759,12 @@ CREATE TABLE IF NOT EXISTS client_feedback (
   CONSTRAINT fk_feedback_client  FOREIGN KEY (client_id)  REFERENCES clients(id)  ON DELETE CASCADE,
   CONSTRAINT fk_feedback_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-10-17 · Two-factor code replay (auth.php, K-057).
+-- A valid code stayed usable for its whole 90-second window, so someone who saw
+-- one could use it again. auth.php now records the 30-second step of each
+-- accepted code and refuses that step or an earlier one. Additive. Run once
+-- only; a second run fails on the duplicate column. Until it runs, codes are
+-- checked exactly as before and replay is not blocked.
+--   ALTER TABLE users ADD COLUMN totp_last_step BIGINT NULL DEFAULT NULL AFTER totp_recovery;

@@ -85,10 +85,10 @@ describe("my account: cannot touch another user", () => {
   })
 
   it("revokes the caller's own other session", async () => {
-    await login("alice@example.test")
+    // The database holds only a hash of each token (K-059), so the second
+    // session's token comes from the login answer, not from the table.
+    const second = await login("alice@example.test")
     const older = Number(one(`SELECT MIN(id) FROM auth_tokens WHERE user_id = ${alice}`))
-    const newest = Number(one(`SELECT MAX(id) FROM auth_tokens WHERE user_id = ${alice}`))
-    const second = one(`SELECT token FROM auth_tokens WHERE id = ${newest}`) as string
     const r = await api("auth.php?action=revoke", { token: second, body: { id: older } })
     expect(r.status).toBe(200)
     expect((await api("auth.php?action=me", { token: aliceToken })).status).toBe(401)

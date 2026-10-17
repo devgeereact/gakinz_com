@@ -29,6 +29,11 @@ export function one(query: string): string | undefined {
   return sql(query)[0]?.[0]
 }
 
+/** The stored form of a session, reset or magic-link token: server/_bootstrap.php token_hash(). */
+export function tokenHash(token: string): string {
+  return crypto.createHash("sha256").update(token).digest("hex").slice(0, 62)
+}
+
 /** Quote a synthetic test value for SQL. Test data only, never user input. */
 export function q(v: string | number | null): string {
   if (v === null) return "NULL"
