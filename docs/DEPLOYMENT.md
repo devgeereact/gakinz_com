@@ -223,7 +223,7 @@ No existing data is migrated by any of these statements.
 Upload all of them, with `.htaccess`:
 
 ```
-.htaccess
+.htaccess         api.php
 _money.php (new)  auth.php         blog.php         bookings.php (new)
 clients.php       comms.php        contact.php      content.php
 contracts.php     design.php       dev.php          feedback.php (new)
@@ -242,6 +242,15 @@ to 11 if you want the features at once; either order is safe, because each degra
 from their own `index.html` with no redirect, and the fallback is `app-shell.html`, or
 `index.html` until a build with the shell is live. The Cloudflare origin lock, the
 `Authorization` pass-through, the PHP exemptions and both deny blocks are unchanged.
+
+`.htaccess`, `api.php`, `auth.php`, `users.php` and `work.php` changed again on 2026-10-17
+(readiness audit, K-056 to K-058). No SQL. `.htaccess` adds four browser security headers to
+every response; `api.php` no longer reports the PHP version; `auth.php` throttles failed
+sign-ins per email and address, limits code checks on a signed-in account, claims a reset link
+before using it, and evens out sign-in timing; `users.php` stops an admin changing a super
+admin; `work.php` refuses a non-image file as a Work picture. After uploading `.htaccess`,
+check one page's response headers (section 5.6) and that the site still loads: if the host
+lacks `mod_headers`, the block is skipped, not fatal.
 
 `site.php` and `work.php` are the 2026-10-14 redesign batch (homepage hero and editable site
 copy). Upload them **after** SQL statements 7 and 8 if you want the new features at once;
@@ -279,7 +288,8 @@ From the 2026-09-22 relaunch set, if it was not already live:
   own 301. Check the certificate first. Internal addresses are no longer checked at all.
 - **`employee`, `editor` and `trainer` lose the Portal screen.** The staff preview branch of
   `portal.php` is now super_admin, admin and manager, matching `invoices.php`.
-- **`api.php` is a read-only health check** returning `{"ok":true,"php":"8.x.y","db":true}`.
+- **`api.php` is a read-only health check** returning `{"ok":true,"db":true}` (the PHP
+  version was dropped on 2026-10-17).
   The unauthenticated POST is gone (K-004).
 - **Attaching an image to a work record makes that file permanently public** and clears any
   earlier share expiry. Detaching does not revoke the link; revoke it in Files.
@@ -351,7 +361,13 @@ From the branch:
    confirm it lists (empty is fine) rather than saying the database update is needed; open a
    client and confirm the timeline has no "not shown until" note. Do not record a test call
    or send test feedback against a real client.
-12. Do **not** test a real payment or a real send. Stripe behaviour is covered by
+12. Security headers (2026-10-17): `curl -sI https://gakinz.com/work` shows
+   `x-content-type-options: nosniff`, `referrer-policy: strict-origin-when-cross-origin`,
+   `x-frame-options: DENY` and a `permissions-policy` line. Missing headers mean `mod_headers`
+   is off or Cloudflare strips them; the site still works. While there, note whether
+   `strict-transport-security` is present (set by Cloudflare, if anywhere) and whether
+   `https://gakinz.com/assets/` lists files (K-058).
+13. Do **not** test a real payment or a real send. Stripe behaviour is covered by
    `npm run test:server` against a fake provider; a live check needs Stripe test-mode keys on a
    non-production copy.
 

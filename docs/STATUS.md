@@ -1,6 +1,6 @@
 # Status
 
-**As at:** 2026-10-14. `main` is `c57eb4a`. All later work sits on branches stacked into
+**As at:** 2026-10-17 (section 0.1); otherwise 2026-10-14. `main` is `c57eb4a`. All later work sits on branches stacked into
 PR #8. `feat/plan-2026-batch-1` (PR #8) holds batch 1 (the local half of delivery phase 1), the
 seven-destination navigation, My account, enquiry follow-ups, client portal messages, public
 publishing and the article format, the lock-screen token fix, the D-037 public redesign, the
@@ -28,12 +28,12 @@ names another date or computer. Re-measure and update this table when a count ch
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 171 tests in 14 files (2026-10-16, after merging `feat/generated-sitemap` and `feat/bookings-timeline-feedback`: 15 added for the page metadata checks and the sitemap, 13 in `bookingModel.test.ts`) |
-| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 164 tests in 14 files, 2026-10-16 on local MariaDB 10.11, `feat/bookings-timeline-feedback` (24 added in `bookings.test.ts` and `feedback.test.ts`) |
+| Unit tests | `npm test` | **PASS.** 176 tests in 15 files on 2026-10-17 (`audit/readiness-2026-10-17`: 5 added in `src/lib/api-errors.test.ts`). Before that 171 in 14 files (2026-10-16, after merging `feat/generated-sitemap` and `feat/bookings-timeline-feedback`: 15 added for the page metadata checks and the sitemap, 13 in `bookingModel.test.ts`) |
+| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 171 tests in 15 files on 2026-10-17 on the Mac (7 added: `security-hardening.test.ts` and one in `work.test.ts`). Before that 164 tests in 14 files, 2026-10-16 on local MariaDB 10.11, `feat/bookings-timeline-feedback` (24 added in `bookings.test.ts` and `feedback.test.ts`) |
 | Type check | `npx tsc -b` | **PASS** |
 | Build | `npm run build` | **PASS.** 30 public pages prerendered, `sitemap.xml` with 30 URLs (2026-10-16, `feat/generated-sitemap`) |
 | Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 41 errors, 1 warning, unchanged since 2026-10-11. **`npm run lint` still fails** (K-002) |
-| Documentation | `npm run docs:check` | **PASS.** 25 documents |
+| Documentation | `npm run docs:check` | **PASS.** 26 documents (2026-10-17, `docs/PRIVACY-READINESS.md` added) |
 | PHP files | `ls server/*.php \| wc -l`, then `php -l server/*.php` | 49: 43 endpoints and 6 `_`-prefixed includes, all 49 passing `php -l` (`bookings.php` and `feedback.php` added 2026-10-16) |
 | Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 38 (`bookings`, `booking_events`, `client_feedback` added 2026-10-16) |
 | Public routes | `src/routes/index.tsx`, children of `PublicLayout` | 17: the home page, 15 paths and the 404. Outside the layout: `/login`, `/set-password` and `/p/:token` |
@@ -46,6 +46,26 @@ names another date or computer. Re-measure and update this table when a count ch
 Not measured on this run: `npm audit` (last figure in K-041) and anything on the live system.
 Accessibility and performance were re-measured on the D-046 build on 2026-10-16, locally; see
 section 6.3 and `qa/` section 9 of each audit.
+
+## 0.1 Production and privacy readiness audit, 2026-10-17
+
+On `audit/readiness-2026-10-17`, from `feat/redesign-2026`. Method: three read-only source
+reviews (server security, privacy data map, public site), a browser run of the production
+build at 320, 390, 768 and 1440px over all 30 prerendered pages and the 404 with every
+non-local request blocked, mocked contact-form failures, and axe 4.13 (WCAG 2.2 AA rules) on
+seven pages at 1280 and 390px: **0 violations**. No horizontal scroll at any width, no console
+errors, no request to another domain, no cookie or browser storage on any public page.
+
+Fixed and tested, none deployed or uploaded: K-056 (admin could lock out the owner), K-057
+(sign-in lockout, code guessing, reset race, timing), K-058 in part (security headers), two
+items of K-061, K-063 in part (privacy and cookie facts), K-066 (404 noindex, raw error text,
+contact form, footer, robots, work pages, `llms.txt`). Recorded, open: K-059 to K-062, K-064,
+K-065. Privacy inventory, proposed retention and a draft notice: `docs/PRIVACY-READINESS.md`.
+
+Verdict: **not ready for production.** The P0 items in section 3 still stand (credential and
+session revocation, server state, backups, upload), retention and deletion do not exist
+(K-062), and the legal pages lack the controller's identity and the required content (K-021,
+K-063). Live headers, a real sign-in and real data: NOT TESTED.
 
 ## 1. Audit and readiness, 2026-10-10
 

@@ -108,6 +108,7 @@ once.
 | `docs/DATA-MODEL.md` | The tables, ownership, share tokens, and the migration situation |
 | `docs/API-SPEC.md` | The endpoints, their actions and their role gates |
 | `docs/SECURITY.md` | Authentication, roles, client isolation, payments, secrets, open gaps |
+| `docs/PRIVACY-READINESS.md` | Data inventory, vendors, cookies and storage, proposed retention, rights pathways and a draft privacy notice for the owner and an adviser (2026-10-17) |
 | `docs/DEPLOYMENT.md` | Both tracks, release policy, and the one list of server files and SQL not yet uploaded |
 | `docs/OPERATIONS.md` | Local development, cron jobs, monitoring, mail, test environment rules, launch gates, recovery targets |
 | `docs/DESIGN-SYSTEM.md` | The design system as implemented: the D-046 public site and GAkinzOS, with the superseded D-037 system kept as record |
