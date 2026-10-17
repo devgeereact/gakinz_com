@@ -131,6 +131,12 @@ Measured on branch `feat/redesign-2026` at `d314833` (stacked on `feat/plan-2026
   current public site; the CMS and real assistive technology have never been tested (K-045).
 - **The deployed server state is UNVERIFIED.** Which PHP files are uploaded and which
   migrations have run cannot be known from here.
+- **2026-10-17, readiness audit** on `audit/readiness-2026-10-17`, PR #20 into
+  `feat/redesign-2026`: security, privacy and public-site fixes, hashed sign-in tokens, SQL 12,
+  and labelled placeholders for owner facts on the legal and pricing pages. `npm test` 179 and
+  `npm run test:server` 184 PASS. Not merged, uploaded or deployed. **Upload `_bootstrap.php`
+  with `auth.php`, `oauth.php` and `users.php`, together.** Resume from
+  `.agent/CURRENT-TASK.md`; owner answers are parked in `docs/STATUS.md` section 5.
 - A live super-admin credential was published in an earlier revision of this file and is in
   git history. The owner reports it rotated on 2026-10-12; session revocation is unconfirmed.
   See `docs/KNOWN-ISSUES.md` K-001.
