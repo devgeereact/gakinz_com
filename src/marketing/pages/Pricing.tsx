@@ -42,7 +42,7 @@ export default function Pricing() {
                 {p.price}
               </p>
               {p.features.length > 0 ? <Ticks items={p.features} /> : <div style={{ flex: 1 }} />}
-              <Link className="btn" to="/contact">
+              <Link className="btn" to={`/contact?package=${encodeURIComponent(p.name)}`}>
                 Talk about {p.name.toLowerCase()} <IArrow />
               </Link>
             </article>

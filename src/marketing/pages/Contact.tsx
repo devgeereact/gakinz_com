@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useSearchParams } from "react-router-dom"
 import { contact, booking, type EnquiryPayload } from "@/lib/api"
 import Seo from "@/marketing/components/Seo"
 import { IArrow, PageHead } from "@/marketing/components/site-ui"
@@ -40,6 +40,18 @@ export default function Contact() {
   const emailRef = useRef<HTMLInputElement>(null)
   const messageRef = useRef<HTMLTextAreaElement>(null)
   const code = useRef<HTMLElement>(null)
+
+  // A pricing button links here with ?package=Name. Only a real package name is
+  // accepted; it fills the enquiry's existing projectType field. Set after the
+  // first render so the prerendered page and the hydrated one match.
+  const [params] = useSearchParams()
+  const pkg = params.get("package") ?? ""
+  useEffect(() => {
+    // Deliberately after mount: reading the query during render would make the
+    // prerendered HTML and the first client render differ (a hydration error).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (copy.packages.some((p) => p.name === pkg)) setForm((f) => (f.projectType ? f : { ...f, projectType: pkg }))
+  }, [pkg, copy.packages])
 
   // Discovery-call link: shown only when the server has one configured.
   useEffect(() => {
@@ -145,6 +157,14 @@ export default function Contact() {
                   </div>
                 </div>
                 {field("message", "What does the site have to do?", <textarea id="message" ref={messageRef} required maxLength={5000} aria-invalid={errors.message || undefined} aria-describedby={errors.message ? "e-message" : undefined} value={form.message} onChange={(e) => set("message", e.target.value)} onBlur={() => blur("message")} />)}
+                {form.projectType && (
+                  <p className="mute">
+                    About the {form.projectType} package.{" "}
+                    <button type="button" className="link" style={{ background: "none", border: 0, padding: 0, font: "inherit", cursor: "pointer" }} onClick={() => set("projectType", "")}>
+                      Not that one
+                    </button>
+                  </p>
+                )}
                 {sendError && (
                   <p role="alert" style={{ color: "#FFA3A3" }}>
                     {sendError}
@@ -158,7 +178,7 @@ export default function Contact() {
                 {/* Just-in-time notice at the point of collection (ICO, right to be informed). */}
                 <p className="mute" style={{ fontSize: 14, maxWidth: "60ch" }}>
                   I use these details only to reply to you, and record the address the message came from to stop spam. More in the{" "}
-                  <Link to="/privacy">privacy policy</Link>.
+                  <Link to="/privacy" style={{ textDecoration: "underline" }}>privacy policy</Link>.
                 </p>
               </form>
             )}

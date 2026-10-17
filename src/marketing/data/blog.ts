@@ -51,12 +51,23 @@ function fromStatic(p: Insight): MarketingPost {
   }
 }
 
+/**
+ * The CMS sends MySQL time ("2026-05-12 10:00:00"). The pages, the <time>
+ * element and the Article JSON-LD all expect an ISO date, which the static
+ * posts already use, and Safari will not parse the MySQL form. Anything else
+ * becomes "", which the pages treat as no date.
+ */
+export function isoDate(value: string | null | undefined): string {
+  const m = /^(\d{4}-\d{2}-\d{2})(?:[ T].*)?$/.exec((value ?? "").trim())
+  return m ? m[1] : ""
+}
+
 function fromSummary(p: BlogSummary): MarketingPost {
   return {
     slug: p.slug,
     title: p.title,
     excerpt: p.excerpt ?? "",
-    date: p.published_at ?? "",
+    date: isoDate(p.published_at),
     category: p.category,
     bodyParas: [],
   }
