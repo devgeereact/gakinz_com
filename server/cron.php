@@ -1,7 +1,12 @@
 <?php
 /**
- * Scheduled jobs runner (GAkinzOS — automation). NOT user-authenticated: it is
- * gated by a shared secret so it can be triggered by a cPanel cron entry, e.g.
+ * Scheduled jobs runner (GAkinzOS — automation). NOT user-authenticated. Run it
+ * from a cPanel cron entry on the command line, which needs no key and keeps
+ * the key out of web access logs (K-061):
+ *
+ *   php /home/ACCOUNT/public_html/cron.php job=all
+ *
+ * Over the web it is still gated by the shared secret:
  *
  *   wget -qO- "https://gakinz.com/cron.php?key=YOUR_CRON_KEY&job=all"
  *
@@ -9,6 +14,7 @@
  *   ?job=billing  raise this month's invoice for each retainer/care-plan client
  *   ?job=digest   email a KPI digest to $REPORT_RECIPIENTS
  *   ?job=uptime   ping every care-plan prod URL, record HTTP + SSL-expiry
+ *   ?job=prune    delete sessions, magic links and reset links a day past expiry
  *   ?job=all      run them all (default)
  *
  * Config (config.php): $CRON_KEY (required), $REPORT_RECIPIENTS (comma list).
@@ -16,21 +22,44 @@
  */
 require __DIR__ . '/_bootstrap.php';
 
-$key = $_GET['key'] ?? '';
-$expected = $GLOBALS['CRON_KEY'] ?? '';
-if ($expected === '' || !hash_equals((string)$expected, (string)$key)) fail('Forbidden.', 403);
-
-$job = $_GET['job'] ?? 'all';
+if (PHP_SAPI === 'cli') {
+  // `php cron.php job=prune`. Only someone with shell or cron access to the
+  // account can run PHP this way, so no key is needed.
+  parse_str(implode('&', array_slice($argv ?? [], 1)), $cli);
+  $job = (string)($cli['job'] ?? 'all');
+} else {
+  $key = $_GET['key'] ?? '';
+  $expected = $GLOBALS['CRON_KEY'] ?? '';
+  if ($expected === '' || !hash_equals((string)$expected, (string)$key)) fail('Forbidden.', 403);
+  $job = $_GET['job'] ?? 'all';
+}
 $out = [];
 
 if ($job === 'all' || $job === 'chase')   $out['chase']   = cron_chase($conn);
 if ($job === 'all' || $job === 'billing') $out['billing'] = cron_billing($conn);
 if ($job === 'all' || $job === 'uptime')  $out['uptime']  = cron_uptime($conn);
 if ($job === 'all' || $job === 'digest')  $out['digest']  = cron_digest($conn);
+if ($job === 'all' || $job === 'prune')   $out['prune']   = cron_prune($conn);
 
 ok(['ran' => $out]);
 
 // ── Jobs ─────────────────────────────────────────────────────────────────────
+/**
+ * Removes sign-in credentials that can no longer be used: sessions, magic
+ * links and reset links more than a day past their expiry. A day's grace keeps
+ * a just-expired row readable while someone investigates a sign-in problem.
+ * Nothing here is a business record (docs/PRIVACY-READINESS.md section 6).
+ */
+function cron_prune(mysqli $conn): array {
+  $out = [];
+  foreach (['auth_tokens', 'magic_links', 'password_resets'] as $table) {
+    $ok = $conn->query("DELETE FROM $table WHERE expires_at < (NOW() - INTERVAL 1 DAY)");
+    $out[$table] = $ok ? $conn->affected_rows : 'failed';
+  }
+  if (array_sum(array_filter($out, 'is_int')) > 0) audit($conn, null, 'cron_prune', json_encode($out));
+  return $out;
+}
+
 function cron_chase(mysqli $conn): array {
   if (empty($GLOBALS['SMTP_HOST'])) return ['skipped' => 'no smtp'];
   require_once __DIR__ . '/_smtp.php';
