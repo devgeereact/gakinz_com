@@ -152,6 +152,22 @@ describe("booking calendar file", () => {
       expect(prop(r.text, "SUMMARY")).toBe(`GAkinz call with ${"€".repeat(40)}`)
     })
 
+    it("escapes raw CR, LF and CRLF typed into a field, leaving no line break inside a content line", async () => {
+      const id = await record({ client_id: clientA, start_local: "2027-03-02T10:00", timezone: "Europe/London", status: "confirmed" })
+      const u = await api("bookings.php?action=update", { token: owner, body: { id, location: "Room 1\r\nFloor 2\rWing\nB" } })
+      expect(u.status).toBe(200)
+      const r = await getIcs(`bookings.php?action=ics&id=${id}`, owner)
+      expect(r.status).toBe(200)
+      expect(prop(r.text, "LOCATION")).toBe("Room 1\\nFloor 2\\nWing\\nB")
+      expect(prop(r.text, "DESCRIPTION")).toContain("Where: Room 1\\nFloor 2\\nWing\\nB\\n")
+      // Splitting on CRLF leaves no CR or LF inside any content line, and no line is empty.
+      const lines = r.text.split("\r\n").slice(0, -1)
+      for (const l of lines) {
+        expect(l).not.toMatch(/[\r\n]/)
+        expect(l).not.toBe("")
+      }
+    })
+
     it("names the place but sets no URL when the location is not a web link", async () => {
       const id = await record({ client_id: clientA, start_local: "2027-03-02T10:00", timezone: "Europe/London", status: "confirmed", location: "Phone: 01632 960000" })
       const r = await getIcs(`bookings.php?action=ics&id=${id}`, owner)
