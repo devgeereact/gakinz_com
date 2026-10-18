@@ -293,6 +293,33 @@ describe("portal requests", () => {
       expect(one(`SELECT COUNT(*) FROM bookings`)).toBe("1")
     })
 
+    it("caps a client at five open portal call requests", async () => {
+      const ask = (n: number, token = tokenA) =>
+        requestCall({ topic: `Call ${n}`, timezone: "Europe/London", slots: [{ date: day(20 + n), time: "10:00" }] }, token)
+      const ids: number[] = []
+      for (let n = 1; n <= 5; n++) {
+        const r = await ask(n)
+        expect(r.status).toBe(201)
+        ids.push(r.json.id)
+      }
+      // Owner-recorded calls for the same client do not count towards the cap.
+      const recorded = await api("bookings.php?action=create", {
+        token: tokenOwner,
+        body: { client_id: clientA, start_local: `${day(40)}T15:00`, timezone: "Europe/London" },
+      })
+      expect(recorded.status).toBe(201)
+      const sixth = await ask(6)
+      expect(sixth.status).toBe(429)
+      expect(sixth.json.error).toMatch(/5 call requests waiting/)
+      expect(one(`SELECT COUNT(*) FROM bookings WHERE client_id = ${clientA}`)).toBe("6")
+      // Another client is unaffected.
+      expect((await ask(1, tokenB)).status).toBe(201)
+      // Once the owner answers one, there is room again.
+      expect((await api("bookings.php?action=status", { token: tokenOwner, body: { id: ids[0], status: "confirmed" } })).status).toBe(200)
+      expect((await ask(7)).status).toBe(201)
+      expect((await ask(8)).status).toBe(429)
+    })
+
     it("is for clients only: staff and the signed-out get no client routes, and clients no staff ones", async () => {
       const body = { topic: "Staff try", timezone: "Europe/London", slots: [{ date: day(8), time: "10:00" }] }
       expect((await api("bookings.php?action=request", { body })).status).toBe(401)
