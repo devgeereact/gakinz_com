@@ -14,6 +14,7 @@ export type ApiResult<T> =
 // "Unexpected token '<'") are shown on screen as they are, so they never reach
 // a visitor or the CMS directly.
 export const NETWORK_ERROR = "Could not reach the server. Check your connection and try again."
+export const DOWNLOAD_NOT_READY = "The server is not ready for this download yet."
 export const BAD_REPLY_ERROR = "The server sent a reply this page could not read. Try again in a moment."
 
 /** Parses a JSON body; anything else (an HTML error page, a PHP notice) is undefined. */
@@ -104,8 +105,10 @@ export const api = {
   },
   // An authenticated file (a calendar file, for example). A plain link cannot
   // carry the bearer token, so the file is fetched here and handed back as a
-  // Blob for the page to save. Errors arrive as JSON, as everywhere else.
-  download: async (path: string): Promise<ApiResult<Blob>> => {
+  // Blob for the page to save. Errors arrive as JSON, as everywhere else. A
+  // 200 of any other type (an older server answering JSON) is refused, so it is
+  // never saved under the file's name.
+  download: async (path: string, expectedType: string): Promise<ApiResult<Blob>> => {
     try {
       const token = getStoredToken()
       const res = await fetch(`${API_BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
@@ -114,6 +117,8 @@ export const api = {
         const body = parseJsonBody(await res.text())
         return { ok: false, error: bodyError(body) || statusError(res.status, "Download"), status: res.status }
       }
+      const type = (res.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase()
+      if (type !== expectedType.toLowerCase()) return { ok: false, error: DOWNLOAD_NOT_READY, status: res.status }
       return { ok: true, data: await res.blob() }
     } catch {
       return { ok: false, error: NETWORK_ERROR }
@@ -291,7 +296,7 @@ export const bookings = {
   retryNotice: (eventId: number) =>
     api.post<{ notice: BookingNotice }>("/bookings.php?action=notify", { event_id: eventId }),
   // RFC 5545 file for a confirmed call; any other status answers 404.
-  calendarFile: (id: number) => api.download(`/bookings.php?action=ics&id=${id}`),
+  calendarFile: (id: number) => api.download(`/bookings.php?action=ics&id=${id}`, "text/calendar"),
 }
 
 // Private delivery feedback (feedback.php). Staff read and manage it; a client
@@ -656,7 +661,7 @@ export const portalRequests = {
   requestCall: (payload: CallRequestInput) => api.post<PortalCallRequest>("/bookings.php?action=request", payload),
   calls: () => api.get<PortalCallRequest[]>("/bookings.php?action=mine"),
   // The calendar file for one of the client's own confirmed calls, else 404.
-  calendarFile: (id: number) => api.download(`/bookings.php?action=mine_ics&id=${id}`),
+  calendarFile: (id: number) => api.download(`/bookings.php?action=mine_ics&id=${id}`, "text/calendar"),
 }
 
 // Project asset checklist (assets.php, SQL 15): what a client must send for a
