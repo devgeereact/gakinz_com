@@ -27,6 +27,7 @@ import {
 } from "@/lib/api"
 import { feedback as feedbackApi } from "@/lib/api"
 import { FeedbackFields } from "@/app/components/ClientFeedback"
+import { PortalRequests } from "@/app/components/PortalRequests"
 import { EMPTY_FEEDBACK, feedbackPayload, feedbackReady, type FeedbackFormState } from "@/app/modules/bookingModel"
 import { useAuth } from "@/store/auth.store"
 import { EmptyState, LoadError } from "@/app/components/EmptyState"
@@ -61,6 +62,8 @@ export default function Portal() {
   const [attempt, setAttempt] = useState(0)
   // The client's New message form, opened from the page header.
   const [composing, setComposing] = useState(false)
+  // Bumped when an update request is sent, so Messages reloads to show it.
+  const [messagesKey, setMessagesKey] = useState(0)
 
   // Open a Stripe Checkout link for an outstanding invoice (webhook settles it).
   const payNow = async (invoiceId: number) => {
@@ -292,7 +295,8 @@ export default function Portal() {
           {/* A client messages the studio here; staff previewing see the ticket list. */}
           {isClient ? (
             <>
-              <ClientMessages composing={composing} setComposing={setComposing} />
+              <PortalRequests projects={data.projects} onUpdateSent={() => setMessagesKey((n) => n + 1)} />
+              <ClientMessages key={messagesKey} composing={composing} setComposing={setComposing} />
               <PortalFeedback projects={data.projects} />
             </>
           ) : (

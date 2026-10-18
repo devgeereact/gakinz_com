@@ -611,6 +611,33 @@ export const clientMessages = {
   reply: (id: number, body: string) => api.post<{ id: number }>("/support.php?action=reply", { id, body }),
 }
 
+// Portal requests from a `client`-role user (docs/PRODUCT-SPEC.md 6.2). An
+// update request is a support ticket the server prefixes "Update request:"; a
+// call request is a requested booking the owner confirms in Enquiries, Calls.
+// Neither takes a client id: the server derives it from the token.
+export const CALL_TOPIC_MAX = 200
+export const CALL_SLOTS_MAX = 3
+export type CallSlot = { date: string; time: string } // YYYY-MM-DD and HH:MM in `timezone`
+export type CallRequestInput = { topic: string; timezone: string; slots: CallSlot[] }
+export type PortalCallRequest = {
+  id: number
+  status: BookingStatus
+  starts_at: string // UTC, trailing Z
+  start_local: string // YYYY-MM-DDTHH:MM in `timezone`
+  timezone: string
+  duration_min: number
+  created_at: string
+}
+export const portalRequests = {
+  askUpdate: (question: string, projectId: number | null) =>
+    api.post<{ id: number; subject: string }>("/support.php?action=update_request", {
+      question,
+      ...(projectId != null ? { project_id: projectId } : {}),
+    }),
+  requestCall: (payload: CallRequestInput) => api.post<PortalCallRequest>("/bookings.php?action=request", payload),
+  calls: () => api.get<PortalCallRequest[]>("/bookings.php?action=mine"),
+}
+
 // Client portal (§6 Client Portal). Aggregated client-facing view.
 export type PortalData = {
   client: { id: number; company: string; contact_name: string | null; email: string | null }
