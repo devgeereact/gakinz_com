@@ -88,7 +88,7 @@ export default function Login() {
         }
       })
     }
-  }, [navigate, setUser])
+  }, [navigate, setAuth, setUser])
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
