@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/page-kit"
+import { ProjectAssetsPanel } from "@/app/components/AssetChecklist"
 import {
   projects,
   tasks as tasksApi,
@@ -298,6 +299,7 @@ export default function Projects() {
             onStageChange={(s) => setProjectStage(selected, s)}
             onTasksChanged={loadProjects}
           />
+          <ProjectAssetsPanel key={selected.id} projectId={selected.id} projectName={selected.name} />
         </div>
       )}
     </div>

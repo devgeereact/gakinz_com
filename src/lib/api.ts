@@ -638,6 +638,40 @@ export const portalRequests = {
   calls: () => api.get<PortalCallRequest[]>("/bookings.php?action=mine"),
 }
 
+// Project asset checklist (assets.php, SQL 15): what a client must send for a
+// project. Staff manage items per project; a client lists the items on their
+// own projects and marks one supplied. The client routes take no client id:
+// the server derives it from the token. Until SQL 15 runs, every call is 503.
+export const ASSET_LABEL_MAX = 160
+export const ASSET_NOTE_MAX = 1000
+export type AssetStatus = "requested" | "supplied" | "accepted"
+type AssetCommon = {
+  id: number
+  project_id: number
+  label: string
+  note: string | null // owner guidance, shown to the client
+  status: AssetStatus
+  client_note: string | null
+  supplied_at: string | null
+  accepted_at: string | null
+  created_at: string
+  updated_at: string
+}
+export type ProjectAsset = AssetCommon & { file_id: number | null; file_name: string | null; requested_by: string | null }
+export type PortalAsset = AssetCommon & { project_name: string }
+export const projectAssets = {
+  list: (projectId: number) => api.get<ProjectAsset[]>(`/assets.php?project_id=${projectId}`),
+  create: (projectId: number, label: string, note: string | null) =>
+    api.post<ProjectAsset>("/assets.php?action=create", { project_id: projectId, label, note }),
+  update: (id: number, patch: { label?: string; note?: string | null; file_id?: number | null }) =>
+    api.post<ProjectAsset>("/assets.php?action=update", { id, ...patch }),
+  accept: (id: number) => api.post<ProjectAsset>("/assets.php?action=accept", { id }),
+  reopen: (id: number) => api.post<ProjectAsset>("/assets.php?action=reopen", { id }),
+  remove: (id: number) => api.post<{ ok: boolean }>("/assets.php?action=delete", { id }),
+  mine: () => api.get<PortalAsset[]>("/assets.php?action=mine"),
+  supply: (id: number, note: string | null) => api.post<PortalAsset>("/assets.php?action=supply", { id, note }),
+}
+
 // Client portal (§6 Client Portal). Aggregated client-facing view.
 export type PortalData = {
   client: { id: number; company: string; contact_name: string | null; email: string | null }
