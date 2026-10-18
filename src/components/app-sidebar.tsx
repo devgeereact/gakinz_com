@@ -13,8 +13,8 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
-  useSidebar,
 } from "@/components/ui/sidebar"
+import { useSidebar } from "@/components/ui/sidebar-context"
 import { auth, leads as leadsApi, support as supportApi } from "@/lib/api"
 import { canAccess } from "@/lib/access"
 import { useAuth, type Role } from "@/store/auth.store"

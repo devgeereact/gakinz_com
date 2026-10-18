@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react"
 import { Link } from "react-router-dom"
-import Seo, { personSchema, websiteSchema } from "@/marketing/components/Seo"
+import Seo from "@/marketing/components/Seo"
+import { personSchema, websiteSchema } from "@/marketing/components/seo-schema"
 import { CtaBand, Devices, IArrow, INext, IPause, IPlay, IPrev, LondonClock, ProjectCard } from "@/marketing/components/site-ui"
 import { useNavTone } from "@/marketing/components/site-helpers"
 import { kindName, onColour, useProjects, type Project } from "@/marketing/data/showcase"

@@ -1,6 +1,7 @@
 import { Fragment } from "react"
 import { Link, useParams } from "react-router-dom"
-import Seo, { SITE_URL } from "@/marketing/components/Seo"
+import Seo from "@/marketing/components/Seo"
+import { SITE_URL } from "@/marketing/components/seo-schema"
 import { Crumbs, CtaBand, IPrev } from "@/marketing/components/site-ui"
 import { delay } from "@/marketing/components/site-helpers"
 import { useMarketingPost } from "@/marketing/data/blog"
