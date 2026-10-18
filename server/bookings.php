@@ -23,6 +23,8 @@
  * with the topic and every proposed time written into the owner-only notes; the
  * owner reschedules to the chosen time and confirms it in Enquiries, Calls. The
  * client reads back only status and time, never notes, location or outcome.
+ * A client may have at most five portal requests still `requested`; the sixth
+ * answers 429.
  * "Not in the past" compares the UTC instant of each proposed time with the
  * database clock (UTC_TIMESTAMP()), the same clock the rest of the server uses.
  *
@@ -51,6 +53,7 @@ const BOOKING_NEXT = [
   'completed' => [],
   'cancelled' => [],
 ];
+const CLIENT_OPEN_CALLS_MAX = 5; // portal call requests still `requested`, per client
 const BOOKINGS_MIGRATION = 'Call bookings need the 2026-10-16 database update first (docs/DEPLOYMENT.md section 5.2).';
 const BOOKING_COLS = 'b.id, b.enquiry_id, b.client_id, b.starts_at, b.timezone, b.duration_min, b.location, b.status,
   b.notes, b.outcome, b.created_at, b.updated_at, e.name AS enquiry_name, e.company AS enquiry_company, c.company AS client_company';
@@ -380,6 +383,16 @@ try {
     $d->bind_param('iss', $clientId, $first, $notes);
     $d->execute();
     if ($d->get_result()->fetch_assoc()) fail('That call request has already been sent.', 409);
+
+    // At most CLIENT_OPEN_CALLS_MAX portal requests may wait on the owner at once.
+    $o = bk_stmt($conn, "SELECT COUNT(*) FROM bookings b
+      JOIN users u ON u.id = b.created_by AND u.role = 'client' AND u.client_id = b.client_id
+      WHERE b.client_id = ? AND b.status = 'requested' AND b.deleted_at IS NULL");
+    $o->bind_param('i', $clientId);
+    $o->execute();
+    if ((int)$o->get_result()->fetch_row()[0] >= CLIENT_OPEN_CALLS_MAX) {
+      fail('You already have ' . CLIENT_OPEN_CALLS_MAX . ' call requests waiting for the studio. Please wait for a reply before asking for another.', 429);
+    }
 
     $status = 'requested';
     $duration = 30;
