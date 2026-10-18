@@ -435,6 +435,20 @@ export type Invoice = {
   vat_amount: number
   total: number // payable, inc VAT (= subtotal when vat_rate is 0)
   overdue: boolean
+  // A payment recorded by hand (record_payment, SQL 13). All null when none is
+  // recorded, when it was paid another way, or before SQL 13 has run.
+  paid_method: PaymentMethod | null
+  paid_reference: string | null
+  paid_amount_pence: number | null
+  paid_recorded_by: number | null // users.id, staff only
+}
+export type PaymentMethod = "bank_transfer" | "cash" | "cheque" | "other"
+export type RecordPaymentInput = {
+  id: number
+  method: PaymentMethod
+  reference?: string // required for bank_transfer and cheque, at most 100 characters
+  paid_on: string // YYYY-MM-DD, not in the future and not before issued_at
+  amount: string // POUNDS as a decimal with at most two places, e.g. "119.99"; must equal `total`
 }
 export type InvoiceLine = { id: number; description: string; qty: number; unit_price: number }
 export type InvoiceDetail = Invoice & {
@@ -463,6 +477,18 @@ export const invoices = {
   // PayPal: create an order and return the approve URL (capture happens on return).
   paypalLink: (invoice_id: number) =>
     api.post<{ url: string; order_id: string }>("/payments.php?action=paypal_link", { invoice_id }),
+  // Record a bank transfer, cash or cheque payment on a sent invoice. 503 until
+  // SQL 13 has run; 409 when it is already paid or no longer sent.
+  recordPayment: (payload: RecordPaymentInput) =>
+    api.post<{
+      ok: boolean
+      id: number
+      status: "paid"
+      paid_at: string
+      paid_method: PaymentMethod
+      paid_reference: string | null
+      paid_amount_pence: number
+    }>("/invoices.php?action=record_payment", payload),
   // Email the client a payment reminder for an unpaid invoice (needs SMTP).
   chase: (id: number) => api.post<{ ok: boolean; sent_to: string }>("/invoices.php?action=chase", { id }),
 }

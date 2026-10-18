@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Loader2, Plus, RefreshCw, Trash2, Send, BadgePoundSterling, FileDown, Download, CreditCard, AlertTriangle, AlertCircle, BellRing, Receipt, Search } from "lucide-react"
+import { Loader2, Plus, RefreshCw, Trash2, Send, BadgePoundSterling, FileDown, Download, CreditCard, AlertTriangle, AlertCircle, BellRing, Receipt, Search, Landmark } from "lucide-react"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -34,6 +34,7 @@ import {
   clients as clientsApi,
   type Invoice,
   type InvoiceStatus,
+  type PaymentMethod,
   type ProposalItemInput,
   type Client,
 } from "@/lib/api"
@@ -42,6 +43,10 @@ import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/pa
 import { EmptyState } from "@/app/components/EmptyState"
 import { TableSkeleton } from "@/app/components/TableSkeleton"
 import { downloadInvoicePdf } from "./invoicePdf"
+import {
+  PAYMENT_METHODS, amountInput, canRecordPayment, needsReference, paymentProblem, recordedPaymentLine,
+  type PaymentDraft,
+} from "./paymentModel"
 
 type Filter = "all" | "sent" | "overdue" | "paid" | "draft"
 const FILTERS: { key: Filter; label: string }[] = [
@@ -190,6 +195,45 @@ export default function Invoicing() {
     }
   }
 
+  // Record a bank transfer, cash or cheque payment the owner has checked.
+  const [payFor, setPayFor] = useState<Invoice | null>(null)
+  const [payDraft, setPayDraft] = useState<PaymentDraft>({ method: "bank_transfer", reference: "", paid_on: "", amount: "" })
+  const [payError, setPayError] = useState<string | null>(null)
+  const [paySaving, setPaySaving] = useState(false)
+  const openPayment = (inv: Invoice) => {
+    setPayDraft({ method: "bank_transfer", reference: "", paid_on: localIsoDate(), amount: amountInput(inv.total) })
+    setPayError(null)
+    setPayFor(inv)
+  }
+  const payProblem = payFor ? paymentProblem(payDraft, payFor, localIsoDate()) : null
+  const recordPayment = async () => {
+    if (!payFor || payProblem) return
+    setPaySaving(true)
+    const res = await invoices.recordPayment({
+      id: payFor.id,
+      method: payDraft.method,
+      reference: payDraft.reference.trim() || undefined,
+      paid_on: payDraft.paid_on,
+      amount: payDraft.amount.trim(),
+    })
+    setPaySaving(false)
+    if (res.ok) {
+      const d = res.data
+      setItems((xs) =>
+        xs.map((x) =>
+          x.id === d.id
+            ? { ...x, status: "paid", overdue: false, paid_at: d.paid_at, paid_method: d.paid_method, paid_reference: d.paid_reference, paid_amount_pence: d.paid_amount_pence }
+            : x,
+        ),
+      )
+      toast.success(`Payment recorded on ${payFor.number || `invoice ${payFor.id}`}.`)
+      setPayFor(null)
+    } else {
+      // 503 carries the server's own message that SQL 13 has not run yet.
+      setPayError(res.error || "Could not record the payment.")
+    }
+  }
+
   const chase = async (inv: Invoice) => {
     setBusyId(inv.id)
     const res = await invoices.chase(inv.id)
@@ -298,8 +342,72 @@ export default function Invoicing() {
     </Dialog>
   )
 
+  const paymentDialog = (
+    <Dialog open={payFor !== null} onOpenChange={(o) => !o && setPayFor(null)}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Record payment{payFor ? ` on ${payFor.number || `invoice ${payFor.id}`}` : ""}</DialogTitle>
+        </DialogHeader>
+        {payFor && (
+          <div className="grid gap-[14px]">
+            <p className="text-sm text-muted-foreground">
+              Record money you have checked has arrived. The amount must be the full total of {gbp(payFor.total)}
+              {payFor.vat_rate > 0 ? " including VAT" : ""}; a part payment is a separate instalment invoice.
+            </p>
+            {payError && (
+              <div role="alert" className="flex items-start gap-3 rounded-2xl border border-bad/30 bg-bad-soft p-[14px] text-sm text-foreground">
+                <AlertCircle className="mt-0.5 size-4 shrink-0 text-bad" aria-hidden="true" />
+                <p className="min-w-0 flex-1">{payError}</p>
+              </div>
+            )}
+            <div className="grid gap-[14px] sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <Label htmlFor="pmethod">Method</Label>
+                <Select value={payDraft.method} onValueChange={(v) => setPayDraft((d) => ({ ...d, method: v as PaymentMethod }))}>
+                  <SelectTrigger id="pmethod">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_METHODS.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="pdate">Date paid</Label>
+                <Input id="pdate" type="date" min={payFor.issued_at.slice(0, 10)} max={localIsoDate()} value={payDraft.paid_on} onChange={(e) => setPayDraft((d) => ({ ...d, paid_on: e.target.value }))} />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="pref">Reference{needsReference(payDraft.method) ? "" : " (optional)"}</Label>
+                <Input id="pref" maxLength={100} value={payDraft.reference} onChange={(e) => setPayDraft((d) => ({ ...d, reference: e.target.value }))} placeholder={payDraft.method === "cheque" ? "Cheque number" : "As shown on the statement"} />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="pamount">Amount (£)</Label>
+                <Input id="pamount" inputMode="decimal" value={payDraft.amount} onChange={(e) => setPayDraft((d) => ({ ...d, amount: e.target.value }))} />
+              </div>
+            </div>
+            {payProblem && <p className="text-sm text-muted-foreground" aria-live="polite">{payProblem}</p>}
+          </div>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setPayFor(null)}>
+            Cancel
+          </Button>
+          <Button onClick={recordPayment} disabled={paySaving || payProblem !== null}>
+            {paySaving && <Loader2 className="animate-spin" />}
+            Record payment
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+
   return (
     <div>
+      {paymentDialog}
       <PageHeader
         title="Invoicing"
         subtitle="Invoices, payments and chasing, in pounds with VAT."
@@ -417,6 +525,11 @@ export default function Invoicing() {
                       <TableCell className="min-w-[10rem] max-w-[16rem] [overflow-wrap:anywhere]">{inv.client_company || <span className="text-muted-foreground">No client</span>}</TableCell>
                       <TableCell>
                         <StatusBadge status={inv.overdue && inv.status !== "paid" ? "overdue" : inv.status} />
+                        {inv.status === "paid" && recordedPaymentLine(inv) && (
+                          <p className="mt-1 max-w-[14rem] text-xs text-muted-foreground [overflow-wrap:anywhere]">
+                            {recordedPaymentLine(inv)}, {fmt(inv.paid_at)}
+                          </p>
+                        )}
                       </TableCell>
                       <TableCell className="whitespace-nowrap">
                         {inv.due_at ? fmt(inv.due_at) : <span className="text-muted-foreground">{inv.status === "draft" ? "Not sent" : "No date"}</span>}
@@ -443,6 +556,11 @@ export default function Invoicing() {
                           {inv.status !== "paid" && (
                             <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => createPayLink(inv)} title="Create a Stripe payment link">
                               <CreditCard /> Pay link
+                            </Button>
+                          )}
+                          {canRecordPayment(inv) && (
+                            <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => openPayment(inv)} title="Record a bank transfer, cash or cheque payment">
+                              <Landmark /> Record payment
                             </Button>
                           )}
                           {inv.status !== "paid" && (
