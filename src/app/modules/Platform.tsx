@@ -375,7 +375,10 @@ function TeamTab({ open, setOpen }: { open: boolean; setOpen: (open: boolean) =>
                       </Select>
                     </TableCell>
                     <TableCell className="text-right">
-                      <RateCell user={u} />
+                      <RateCell
+                        user={u}
+                        onSaved={(rate) => setItems((xs) => xs.map((x) => (x.id === u.id ? { ...x, cost_rate: rate } : x)))}
+                      />
                     </TableCell>
                     <TableCell>
                       <Badge variant={u.totp_enabled ? "ok" : "warn"}>{u.totp_enabled ? "On" : "Off"}</Badge>
@@ -400,7 +403,9 @@ function TeamTab({ open, setOpen }: { open: boolean; setOpen: (open: boolean) =>
 }
 
 // Inline editable internal cost rate (£/h) for profitability reporting.
-function RateCell({ user }: { user: ManagedUser }) {
+// The saved rate goes back to the parent list through onSaved rather than by
+// writing to the user prop.
+function RateCell({ user, onSaved }: { user: ManagedUser; onSaved: (rate: number) => void }) {
   const [value, setValue] = useState(String(user.cost_rate ?? 0))
   const [saving, setSaving] = useState(false)
   const save = async () => {
@@ -413,7 +418,7 @@ function RateCell({ user }: { user: ManagedUser }) {
       toast.error(res.error || "Could not save the rate.")
       setValue(String(user.cost_rate ?? 0))
     } else {
-      user.cost_rate = n
+      onSaved(n)
     }
   }
   return (
