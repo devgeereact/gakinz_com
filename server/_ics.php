@@ -9,8 +9,14 @@
  * call at the right moment in whatever zone its user is in.
  */
 
+/** Valid UTF-8 only: an invalid byte becomes "?", so no later step can empty the value. */
+function ics_utf8(string $v): string {
+  return mb_scrub($v, 'UTF-8');
+}
+
 /** Escape a TEXT value: backslash, semicolon, comma and line breaks. */
 function ics_text(string $v): string {
+  $v = ics_utf8($v);
   $v = str_replace(["\r\n", "\r"], "\n", $v);
   $v = (string)preg_replace('/[\x00-\x08\x0B-\x1F\x7F]/u', '', $v); // TEXT allows no other control characters
   return str_replace(['\\', ';', ',', "\n"], ['\\\\', '\\;', '\\,', '\\n'], $v);
@@ -23,7 +29,9 @@ function ics_text(string $v): string {
 function ics_fold(string $line): string {
   $out = '';
   $cur = '';
-  foreach (preg_split('//u', $line, -1, PREG_SPLIT_NO_EMPTY) ?: [] as $ch) {
+  $chars = preg_split('//u', ics_utf8($line), -1, PREG_SPLIT_NO_EMPTY);
+  if ($chars === false || $chars === []) return ''; // never a bare CRLF
+  foreach ($chars as $ch) {
     if (strlen($cur) + strlen($ch) > 75) {
       $out .= $cur . "\r\n";
       $cur = ' '; // the leading space counts towards the next line's 75
