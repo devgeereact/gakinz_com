@@ -162,6 +162,13 @@ CREATE TABLE IF NOT EXISTS proposals (
   notes       TEXT DEFAULT NULL,
   valid_until DATE NULL DEFAULT NULL,
   project_id  INT NULL,                              -- set when accepted
+  -- Acceptance evidence (SQL 14, 2026-10-18): what the client sent, recorded by staff.
+  accepted_at            DATETIME     NULL DEFAULT NULL, -- when staff recorded the acceptance
+  accepted_by            INT          NULL DEFAULT NULL, -- staff user who recorded it
+  acceptance_method      VARCHAR(20)  NULL DEFAULT NULL, -- email | letter | in_person | phone | other
+  acceptance_reference   VARCHAR(200) NULL DEFAULT NULL, -- e.g. email subject and sender; staff only
+  acceptance_received_on DATE         NULL DEFAULT NULL, -- the day the client's acceptance arrived
+  accepted_terms_sha256  CHAR(64)     NULL DEFAULT NULL, -- SHA-256 of the canonical terms JSON (proposals.php)
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted_at  TIMESTAMP NULL DEFAULT NULL,
@@ -789,3 +796,22 @@ CREATE TABLE IF NOT EXISTS client_feedback (
 --     ADD COLUMN paid_reference    VARCHAR(100) NULL DEFAULT NULL AFTER paid_method,
 --     ADD COLUMN paid_amount_pence INT          NULL DEFAULT NULL AFTER paid_reference,
 --     ADD COLUMN paid_recorded_by  INT          NULL DEFAULT NULL AFTER paid_amount_pence;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-10-18 · SQL 14 · Quote acceptance evidence (proposals.php).
+-- docs/PRODUCT-SPEC.md sections 5.5 and 7: staff clicking Accept is not proof
+-- the client agreed. Accept now records how the client's acceptance arrived
+-- (email, letter, in person, phone or other), a reference such as the email
+-- subject and sender, the day it was received, who recorded it and when, and
+-- a SHA-256 fingerprint of the exact terms accepted, all in the same atomic
+-- claim. The reference and recorder are staff only; the public link shows only
+-- the acceptance date. Additive. Run once only; a second run fails on the
+-- duplicate column. Until it runs, accept behaves exactly as before and
+-- requires no evidence, so the live journey keeps working.
+--   ALTER TABLE proposals
+--     ADD COLUMN accepted_at            DATETIME     NULL DEFAULT NULL AFTER project_id,
+--     ADD COLUMN accepted_by            INT          NULL DEFAULT NULL AFTER accepted_at,
+--     ADD COLUMN acceptance_method      VARCHAR(20)  NULL DEFAULT NULL AFTER accepted_by,
+--     ADD COLUMN acceptance_reference   VARCHAR(200) NULL DEFAULT NULL AFTER acceptance_method,
+--     ADD COLUMN acceptance_received_on DATE         NULL DEFAULT NULL AFTER acceptance_reference,
+--     ADD COLUMN accepted_terms_sha256  CHAR(64)     NULL DEFAULT NULL AFTER acceptance_received_on;
