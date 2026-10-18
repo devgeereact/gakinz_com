@@ -72,8 +72,10 @@ describe("enquiry to paid deposit", () => {
   })
 
   it("6. accepting the quote creates one project and a 40/30/30 schedule carrying the VAT", async () => {
-    const r = await api<{ project_id: number }>("proposals.php?action=accept", { body: { id: proposalId }, token: owner })
+    const evidence = { method: "email", reference: "Re: Booking site, from buyer@example.test", received_on: one("SELECT CURRENT_DATE") }
+    const r = await api<{ project_id: number }>("proposals.php?action=accept", { body: { id: proposalId, ...evidence }, token: owner })
     expect(r.status).toBe(200)
+    expect(one(`SELECT acceptance_method FROM proposals WHERE id = ${proposalId}`)).toBe("email")
     projectId = r.json.project_id
     expect(one(`SELECT client_id FROM projects WHERE id = ${projectId}`)).toBe(String(clientId))
     const subtotals = sql(

@@ -19,7 +19,10 @@ function proposal(status: string, validUntil: string | null = null, vat = 20): n
   return id
 }
 
-const accept = (id: number) => api<{ error?: string; project_id?: number; existing?: boolean }>("proposals.php?action=accept", { body: { id }, token })
+// The client's acceptance as received, required once SQL 14 has run (acceptance-evidence.test.ts).
+// The database's own date: the clock that stamps created_at and judges expiry.
+const evidence = () => ({ method: "email", reference: "Re: Synthetic website, from buyer@example.test", received_on: one("SELECT CURRENT_DATE") })
+const accept = (id: number) => api<{ error?: string; project_id?: number; existing?: boolean }>("proposals.php?action=accept", { body: { id, ...evidence() }, token })
 const projects = () => Number(one("SELECT COUNT(*) FROM projects"))
 const invoices = () => Number(one("SELECT COUNT(*) FROM invoices"))
 
