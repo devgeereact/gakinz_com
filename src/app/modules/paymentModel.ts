@@ -33,10 +33,12 @@ export function penceFromPounds(value: string): number | null {
 export type PaymentDraft = { method: PaymentMethod; reference: string; paid_on: string; amount: string }
 
 /**
- * The first problem with a draft, or null when it is ready to send. `today` is
- * the browser's local date; the server checks again against its own clock.
+ * The first blocking problem with a draft, or null when it can be sent. `today`
+ * is the browser's local date; the server checks again against its own clock.
+ * The amount is only checked for format here: whether it equals the payable
+ * total is the server's call (see amountWarning).
  */
-export function paymentProblem(d: PaymentDraft, inv: Pick<Invoice, "total" | "issued_at">, today: string): string | null {
+export function paymentProblem(d: PaymentDraft, inv: Pick<Invoice, "issued_at">, today: string): string | null {
   if (needsReference(d.method) && !d.reference.trim()) {
     return d.method === "cheque" ? "Enter the cheque number or reference." : "Enter the bank transfer reference."
   }
@@ -45,11 +47,25 @@ export function paymentProblem(d: PaymentDraft, inv: Pick<Invoice, "total" | "is
   if (d.paid_on > today) return "The payment date cannot be in the future."
   if (d.paid_on < inv.issued_at.slice(0, 10)) return "The payment date cannot be before the invoice was issued."
   const pence = penceFromPounds(d.amount)
-  if (pence === null) return "Enter the amount received in pounds, for example 120.00."
-  if (pence !== Math.round(inv.total * 100)) {
-    return `The amount must be the full invoice total of £${inv.total.toFixed(2)}. Record a part payment as a separate instalment invoice.`
-  }
+  if (pence === null || pence <= 0) return "Enter the amount received in pounds, for example 120.00."
   return null
+}
+
+/**
+ * Advice, never a block: the amount differs from the total in the invoice list.
+ * The list and server/_money.php can round VAT a penny apart, and the server
+ * holds the authoritative total, so the owner may still send it.
+ */
+export function amountWarning(amount: string, inv: Pick<Invoice, "total">): string | null {
+  const pence = penceFromPounds(amount)
+  if (pence === null || pence === Math.round(inv.total * 100)) return null
+  return `This differs from the invoice total of £${inv.total.toFixed(2)}. The server will refuse anything but the full total; record a part payment as a separate instalment invoice.`
+}
+
+/** The expected total from a refused record_payment, as an amount field value, or null if the reply has none. */
+export function expectedAmount(details: Record<string, unknown> | undefined): string | null {
+  const p = details?.expected_pence
+  return typeof p === "number" && Number.isInteger(p) && p > 0 ? (p / 100).toFixed(2) : null
 }
 
 /** One line for a paid invoice with a recorded payment, e.g. "Bank transfer, ref ABC123". Null when none was recorded. */

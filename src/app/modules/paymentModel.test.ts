@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
-  amountInput, canRecordPayment, needsReference, paymentProblem, penceFromPounds, recordedPaymentLine,
+  amountInput, amountWarning, canRecordPayment, expectedAmount, needsReference, paymentProblem, penceFromPounds,
+  recordedPaymentLine,
   type PaymentDraft,
 } from "./paymentModel"
 
@@ -36,9 +37,37 @@ describe("paymentProblem", () => {
     expect(paymentProblem({ ...ok, paid_on: "2026-01-10" }, inv, today)).toBeNull()
     expect(paymentProblem({ ...ok, paid_on: "" }, inv, today)).toMatch(/date/)
   })
-  it("refuses a part payment and names the full total", () => {
-    expect(paymentProblem({ ...ok, amount: "100.00" }, inv, today)).toContain("£119.99")
+  it("blocks only a malformed or zero amount, never a different one", () => {
+    expect(paymentProblem({ ...ok, amount: "100.00" }, inv, today)).toBeNull()
+    expect(paymentProblem({ ...ok, amount: "120.00" }, inv, today)).toBeNull()
     expect(paymentProblem({ ...ok, amount: "119.999" }, inv, today)).toMatch(/in pounds/)
+    expect(paymentProblem({ ...ok, amount: "0.00" }, inv, today)).toMatch(/in pounds/)
+    expect(paymentProblem({ ...ok, amount: "" }, inv, today)).toMatch(/in pounds/)
+  })
+})
+
+describe("amountWarning", () => {
+  it("advises when the amount differs from the listed total, naming that total", () => {
+    expect(amountWarning("100.00", inv)).toContain("£119.99")
+    // A penny out, as the list and _money.php can round VAT differently.
+    expect(amountWarning("120.00", inv)).toMatch(/differs/)
+  })
+  it("says nothing for the listed total or for a malformed amount (that is paymentProblem's job)", () => {
+    expect(amountWarning("119.99", inv)).toBeNull()
+    expect(amountWarning("119.990", inv)).toBeNull()
+  })
+})
+
+describe("expectedAmount", () => {
+  it("turns the server's expected_pence into an amount field value", () => {
+    expect(expectedAmount({ error: "x", expected_pence: 12000 })).toBe("120.00")
+    expect(expectedAmount({ expected_pence: 11999 })).toBe("119.99")
+  })
+  it("returns null when the reply carries no usable figure", () => {
+    expect(expectedAmount(undefined)).toBeNull()
+    expect(expectedAmount({ error: "SQL 13" })).toBeNull()
+    expect(expectedAmount({ expected_pence: "12000" })).toBeNull()
+    expect(expectedAmount({ expected_pence: 0 })).toBeNull()
   })
 })
 

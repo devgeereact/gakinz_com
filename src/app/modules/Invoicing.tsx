@@ -44,7 +44,7 @@ import { EmptyState } from "@/app/components/EmptyState"
 import { TableSkeleton } from "@/app/components/TableSkeleton"
 import { downloadInvoicePdf } from "./invoicePdf"
 import {
-  PAYMENT_METHODS, amountInput, canRecordPayment, needsReference, paymentProblem, recordedPaymentLine,
+  PAYMENT_METHODS, amountInput, amountWarning, canRecordPayment, expectedAmount, needsReference, paymentProblem, recordedPaymentLine,
   type PaymentDraft,
 } from "./paymentModel"
 
@@ -199,13 +199,16 @@ export default function Invoicing() {
   const [payFor, setPayFor] = useState<Invoice | null>(null)
   const [payDraft, setPayDraft] = useState<PaymentDraft>({ method: "bank_transfer", reference: "", paid_on: "", amount: "" })
   const [payError, setPayError] = useState<string | null>(null)
+  const [payExpected, setPayExpected] = useState<string | null>(null) // total the server asked for, in pounds
   const [paySaving, setPaySaving] = useState(false)
   const openPayment = (inv: Invoice) => {
     setPayDraft({ method: "bank_transfer", reference: "", paid_on: localIsoDate(), amount: amountInput(inv.total) })
     setPayError(null)
+    setPayExpected(null)
     setPayFor(inv)
   }
   const payProblem = payFor ? paymentProblem(payDraft, payFor, localIsoDate()) : null
+  const payWarning = payFor && !payProblem ? amountWarning(payDraft.amount, payFor) : null
   const recordPayment = async () => {
     if (!payFor || payProblem) return
     setPaySaving(true)
@@ -229,8 +232,10 @@ export default function Invoicing() {
       toast.success(`Payment recorded on ${payFor.number || `invoice ${payFor.id}`}.`)
       setPayFor(null)
     } else {
-      // 503 carries the server's own message that SQL 13 has not run yet.
+      // 503 carries the server's own message that SQL 13 has not run yet. A
+      // 400 on the amount carries the server's payable total in expected_pence.
       setPayError(res.error || "Could not record the payment.")
+      setPayExpected(expectedAmount(res.details))
     }
   }
 
@@ -357,7 +362,23 @@ export default function Invoicing() {
             {payError && (
               <div role="alert" className="flex items-start gap-3 rounded-2xl border border-bad/30 bg-bad-soft p-[14px] text-sm text-foreground">
                 <AlertCircle className="mt-0.5 size-4 shrink-0 text-bad" aria-hidden="true" />
-                <p className="min-w-0 flex-1">{payError}</p>
+                <div className="min-w-0 flex-1">
+                  <p>{payError}</p>
+                  {payExpected && payExpected !== payDraft.amount.trim() && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mt-2"
+                      onClick={() => {
+                        setPayDraft((d) => ({ ...d, amount: payExpected }))
+                        setPayError(null)
+                        setPayExpected(null)
+                      }}
+                    >
+                      Use £{payExpected}
+                    </Button>
+                  )}
+                </div>
               </div>
             )}
             <div className="grid gap-[14px] sm:grid-cols-2">
@@ -389,7 +410,11 @@ export default function Invoicing() {
                 <Input id="pamount" inputMode="decimal" value={payDraft.amount} onChange={(e) => setPayDraft((d) => ({ ...d, amount: e.target.value }))} />
               </div>
             </div>
-            {payProblem && <p className="text-sm text-muted-foreground" aria-live="polite">{payProblem}</p>}
+            {(payProblem || payWarning) && (
+              <p className={payProblem ? "text-sm text-muted-foreground" : "rounded-[10px] border border-warn/35 bg-warn-soft px-3 py-2 text-sm text-foreground"} aria-live="polite">
+                {payProblem || payWarning}
+              </p>
+            )}
           </div>
         )}
         <DialogFooter>
