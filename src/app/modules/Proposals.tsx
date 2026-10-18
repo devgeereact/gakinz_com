@@ -213,6 +213,8 @@ export default function Proposals() {
     setEvidence({ method: "email", reference: "", received_on: localIsoDate() })
     setConfirming(p)
   }
+  // An accept request is in flight: the dialog cannot be cancelled or closed until it answers.
+  const accepting = confirming !== null && busyId === confirming.id
   const evidenceIssue = confirming?.evidence_ready ? evidenceProblem(evidence, confirming, localIsoDate()) : null
 
   const accept = async (p: Proposal) => {
@@ -489,7 +491,7 @@ export default function Proposals() {
         )}
       </div>
 
-      <Dialog open={confirming !== null} onOpenChange={(o) => !o && setConfirming(null)}>
+      <Dialog open={confirming !== null} onOpenChange={(o) => !o && !accepting && setConfirming(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Accept “{confirming?.title}”?</DialogTitle>
@@ -571,12 +573,9 @@ export default function Proposals() {
             </div>
           )}
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setConfirming(null)}>Cancel</Button>
-            <Button
-              onClick={() => confirming && accept(confirming)}
-              disabled={confirming !== null && (busyId === confirming.id || evidenceIssue !== null)}
-            >
-              <Check /> Accept and create project
+            <Button variant="outline" onClick={() => setConfirming(null)} disabled={accepting}>Cancel</Button>
+            <Button onClick={() => confirming && accept(confirming)} disabled={accepting || evidenceIssue !== null}>
+              {accepting ? <Loader2 className="animate-spin" /> : <Check />} Accept and create project
             </Button>
           </DialogFooter>
         </DialogContent>
