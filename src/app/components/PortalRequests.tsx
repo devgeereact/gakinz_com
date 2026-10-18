@@ -25,6 +25,7 @@ import {
   emptyCallForm,
   openCallRequests,
   openUpdateRequests,
+  requestsLoadState,
   todayIn,
   type CallFormState,
 } from "@/app/modules/portalRequestsModel"
@@ -86,6 +87,7 @@ export function PortalRequests({ projects, onUpdateSent }: { projects: { id: num
   const updates = threads ? openUpdateRequests(threads) : []
   const openCalls = calls ? openCallRequests(calls) : []
   const zone = viewerZone()
+  const view = requestsLoadState(threads, calls, loadError)
 
   return (
     <Card aria-labelledby="portal-requests-heading">
@@ -131,9 +133,9 @@ export function PortalRequests({ projects, onUpdateSent }: { projects: { id: num
               </p>
             )}
             {callsOff && <p className="mb-3 text-[13px] text-muted-foreground">{CALLS_OFF}</p>}
-            {loadError && !threads ? (
-              <LoadError what="your requests" detail={loadError} onRetry={load} />
-            ) : threads === null || calls === null ? (
+            {view === "error" ? (
+              <LoadError what="your requests" detail={loadError ?? ""} onRetry={load} />
+            ) : view === "loading" ? (
               <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
                 <Loader2 className="size-4 animate-spin" /> Loading requests…
               </div>

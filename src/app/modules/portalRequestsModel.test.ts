@@ -7,6 +7,7 @@ import {
   isUpdateRequest,
   openCallRequests,
   openUpdateRequests,
+  requestsLoadState,
   todayIn,
 } from "./portalRequestsModel"
 
@@ -90,5 +91,19 @@ describe("the call request form", () => {
     expect(todayIn("Europe/London", lateLondon)).toBe("2026-10-19") // BST, UTC+1
     expect(todayIn("America/Los_Angeles", lateLondon)).toBe("2026-10-18")
     expect(todayIn("Not/AZone", lateLondon)).toBe("2026-10-18")
+  })
+})
+
+describe("the requests panel state", () => {
+  it("shows the error whenever a load failed, even when the other list arrived", () => {
+    expect(requestsLoadState([], null, "Server error")).toBe("error") // messages loaded, calls failed
+    expect(requestsLoadState(null, [], "Server error")).toBe("error")
+    expect(requestsLoadState([], [], "Server error")).toBe("error")
+  })
+
+  it("loads until both lists arrive, then is ready", () => {
+    expect(requestsLoadState(null, null, null)).toBe("loading")
+    expect(requestsLoadState([], null, null)).toBe("loading")
+    expect(requestsLoadState([], [], null)).toBe("ready")
   })
 })

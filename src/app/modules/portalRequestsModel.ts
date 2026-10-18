@@ -63,3 +63,13 @@ export function todayIn(zone: string, now = new Date()): string {
     return now.toISOString().slice(0, 10)
   }
 }
+
+/**
+ * What the Requests panel shows. Any load failure is shown with a retry, even
+ * when one of the two lists did arrive, so the panel never spins for ever.
+ */
+export function requestsLoadState(threads: unknown[] | null, calls: unknown[] | null, loadError: string | null): "error" | "loading" | "ready" {
+  if (loadError) return "error"
+  if (threads === null || calls === null) return "loading"
+  return "ready"
+}
