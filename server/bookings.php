@@ -14,10 +14,12 @@
  *   POST /bookings.php?action=reschedule     {id, start_local, timezone, duration_min?, notify?}
  *   POST /bookings.php?action=status         {id, status, outcome?, notify?}
  *   POST /bookings.php?action=notify         {event_id}  → retry a failed customer email
+ *   GET  /bookings.php?action=ics&id=N       → calendar file (text/calendar) for a confirmed call
  *
  * Client role only (docs/PRODUCT-SPEC.md section 6.2, "Request another call"):
  *   POST /bookings.php?action=request {topic, timezone, slots: [{date, time}] (1 to 3)}
  *   GET  /bookings.php?action=mine    → the client's own portal call requests
+ *   GET  /bookings.php?action=mine_ics&id=N → calendar file for one of those, once confirmed
  * The client comes from the token, never the request. A request is an ordinary
  * `requested` booking against that client, starting at the first proposed time,
  * with the topic and every proposed time written into the owner-only notes; the
@@ -37,6 +39,14 @@
  * Status: requested → confirmed | cancelled; confirmed → completed | cancelled.
  * Completed and cancelled are final. A change carries the status it expects to
  * replace, so two people acting at once cannot both win.
+ *
+ * Calendar file (docs/PRODUCT-SPEC.md section 7): an RFC 5545 file built by
+ * server/_ics.php, the one response here that is not JSON. Only a confirmed
+ * call has one; anything else answers 404. Times are UTC from the stored
+ * starts_at. SEQUENCE is the number of reschedules in booking_events, so a
+ * re-imported file replaces the old time. The text never carries notes or
+ * outcome, and the client's file carries no location either, because a client
+ * never reads the location (bk_client_shape).
  *
  * Every create, reschedule and status change writes a booking_events row, so a
  * reschedule keeps its history. With `notify: true` a reschedule or a
@@ -316,14 +326,56 @@ function bk_client_shape(array $r): array {
   ];
 }
 
+/** How many times a call has been rescheduled: the calendar file's SEQUENCE. */
+function bk_reschedules(mysqli $conn, int $id): int {
+  $s = bk_stmt($conn, "SELECT COUNT(*) FROM booking_events WHERE booking_id = ? AND kind = 'rescheduled'");
+  $s->bind_param('i', $id);
+  $s->execute();
+  return (int)$s->get_result()->fetch_row()[0];
+}
+
+/**
+ * Send the calendar file for a confirmed booking row and end the request.
+ * Staff get who the call is with and where; a client gets only what
+ * bk_client_shape already shows them. Neither gets notes or outcome.
+ */
+function bk_send_ics(mysqli $conn, array $b, bool $forClient): void {
+  require_once __DIR__ . '/_ics.php';
+  $id = (int)$b['id'];
+  $agreed = 'Agreed time: ' . bk_local($b['starts_at'], $b['timezone'], 'l j F Y, H:i') . ' (' . $b['timezone'] . ').';
+  $location = null;
+  if ($forClient) {
+    $summary = 'Call with GAkinz';
+    $lines = ['Call with GAkinz.', $agreed, 'To change the time, send the studio a message from your portal.'];
+  } else {
+    $who = trim((string)($b['client_company'] ?? '')) ?: trim((string)($b['enquiry_company'] ?? '')) ?: trim((string)($b['enquiry_name'] ?? ''));
+    $summary = 'GAkinz call' . ($who !== '' ? ' with ' . $who : '');
+    $lines = ['Call with ' . ($who !== '' ? $who : 'a customer') . '.', $agreed];
+    $location = $b['location'] !== null && trim((string)$b['location']) !== '' ? trim((string)$b['location']) : null;
+    if ($location !== null) $lines[] = 'Where: ' . $location;
+    $lines[] = "Booking #$id in GAkinzOS, Enquiries, Calls.";
+  }
+  $body = ics_event([
+    'uid'          => "booking-$id@gakinz.com",
+    'starts_at'    => $b['starts_at'],
+    'duration_min' => (int)$b['duration_min'],
+    'summary'      => $summary,
+    'description'  => implode("\n", $lines),
+    'location'     => $location,
+    'url'          => $location !== null && preg_match('#^https?://\S+$#i', $location) ? $location : null,
+    'sequence'     => bk_reschedules($conn, $id),
+  ]);
+  ics_send($body, "gakinz-call-$id.ics");
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
 try {
   // ── Client branch ───────────────────────────────────────────────────────────
-  // Only these two routes accept a client, and they accept nobody else. Both
+  // Only these three routes accept a client, and they accept nobody else. All
   // always end the request, so a client never reaches the staff code below.
-  if (($method === 'GET' && $action === 'mine') || ($method === 'POST' && $action === 'request')) {
+  if (($method === 'GET' && ($action === 'mine' || $action === 'mine_ics')) || ($method === 'POST' && $action === 'request')) {
     $user = require_auth($conn, ['client']);
     $clientId = (int)($user['client_id'] ?? 0);
     if ($clientId <= 0) fail('Your account is not linked to a client.', 403);
@@ -331,6 +383,21 @@ try {
     $c->bind_param('i', $clientId);
     $c->execute();
     if (!$c->get_result()->fetch_assoc()) fail('Client not found.', 404);
+
+    if ($action === 'mine_ics') {
+      // The same set `mine` lists (their client, raised by a user of that
+      // client), and confirmed. Anything else, including another client's
+      // call, answers the same 404.
+      $id = bk_id($_GET['id'] ?? null);
+      $s = bk_stmt($conn, "SELECT b.id, b.starts_at, b.timezone, b.duration_min FROM bookings b
+        JOIN users u ON u.id = b.created_by AND u.role = 'client' AND u.client_id = b.client_id
+        WHERE b.id = ? AND b.client_id = ? AND b.status = 'confirmed' AND b.deleted_at IS NULL LIMIT 1");
+      $s->bind_param('ii', $id, $clientId);
+      $s->execute();
+      $b = $s->get_result()->fetch_assoc();
+      if (!$b) fail('Call not found.', 404);
+      bk_send_ics($conn, $b, true);
+    }
 
     if ($method === 'GET') {
       // The client's own requests from the portal: their client, raised by a
@@ -408,6 +475,15 @@ try {
     $s->bind_param('ii', $id, $clientId);
     $s->execute();
     ok(bk_client_shape($s->get_result()->fetch_assoc()), 201);
+  }
+
+  if ($method === 'GET' && $action === 'ics') {
+    require_auth($conn, STAFF);
+    $id = bk_id($_GET['id'] ?? null);
+    if ($id <= 0) fail('A booking id is required.');
+    $b = bk_find($conn, $id);
+    if ($b['status'] !== 'confirmed') fail('Only a confirmed call has a calendar file.', 404);
+    bk_send_ics($conn, $b, false);
   }
 
   if ($method === 'GET') {
