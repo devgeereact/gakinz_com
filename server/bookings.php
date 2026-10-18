@@ -1,6 +1,7 @@
 <?php
 /**
- * Call bookings inside Enquiries (docs/PRODUCT-SPEC.md section 5.5). Staff only.
+ * Call bookings inside Enquiries (docs/PRODUCT-SPEC.md section 5.5). Staff,
+ * plus two client-only actions for the portal (below).
  * A booking is recorded by hand against an enquiry, a client or both. It starts
  * as a request and only the owner confirms it; there is no availability engine,
  * no instant booking and no payment.
@@ -13,6 +14,17 @@
  *   POST /bookings.php?action=reschedule     {id, start_local, timezone, duration_min?, notify?}
  *   POST /bookings.php?action=status         {id, status, outcome?, notify?}
  *   POST /bookings.php?action=notify         {event_id}  → retry a failed customer email
+ *
+ * Client role only (docs/PRODUCT-SPEC.md section 6.2, "Request another call"):
+ *   POST /bookings.php?action=request {topic, timezone, slots: [{date, time}] (1 to 3)}
+ *   GET  /bookings.php?action=mine    → the client's own portal call requests
+ * The client comes from the token, never the request. A request is an ordinary
+ * `requested` booking against that client, starting at the first proposed time,
+ * with the topic and every proposed time written into the owner-only notes; the
+ * owner reschedules to the chosen time and confirms it in Enquiries, Calls. The
+ * client reads back only status and time, never notes, location or outcome.
+ * "Not in the past" compares the UTC instant of each proposed time with the
+ * database clock (UTC_TIMESTAMP()), the same clock the rest of the server uses.
  *
  * Times: the request carries the agreed local time (`start_local`,
  * YYYY-MM-DDTHH:MM) and its IANA zone. The server converts with PHP's own time
@@ -288,10 +300,103 @@ function bk_text(array $in, string $key, int $max): ?string {
   return $v === '' ? null : $v;
 }
 
+/** The fields a client may read about one of their own calls. */
+function bk_client_shape(array $r): array {
+  return [
+    'id'           => (int)$r['id'],
+    'status'       => $r['status'],
+    'starts_at'    => str_replace(' ', 'T', $r['starts_at']) . 'Z',
+    'start_local'  => bk_local($r['starts_at'], $r['timezone']),
+    'timezone'     => $r['timezone'],
+    'duration_min' => (int)$r['duration_min'],
+    'created_at'   => $r['created_at'],
+  ];
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
 
 try {
+  // ── Client branch ───────────────────────────────────────────────────────────
+  // Only these two routes accept a client, and they accept nobody else. Both
+  // always end the request, so a client never reaches the staff code below.
+  if (($method === 'GET' && $action === 'mine') || ($method === 'POST' && $action === 'request')) {
+    $user = require_auth($conn, ['client']);
+    $clientId = (int)($user['client_id'] ?? 0);
+    if ($clientId <= 0) fail('Your account is not linked to a client.', 403);
+    $c = bk_stmt($conn, 'SELECT id FROM clients WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+    $c->bind_param('i', $clientId);
+    $c->execute();
+    if (!$c->get_result()->fetch_assoc()) fail('Client not found.', 404);
+
+    if ($method === 'GET') {
+      // The client's own requests from the portal: their client, raised by a
+      // user of that same client. Calls the owner recorded by hand stay internal.
+      $s = bk_stmt($conn, "SELECT b.id, b.starts_at, b.timezone, b.duration_min, b.status, b.created_at FROM bookings b
+        JOIN users u ON u.id = b.created_by AND u.role = 'client' AND u.client_id = b.client_id
+        WHERE b.client_id = ? AND b.deleted_at IS NULL ORDER BY b.id DESC LIMIT 100");
+      $s->bind_param('i', $clientId);
+      $s->execute();
+      ok(array_map('bk_client_shape', $s->get_result()->fetch_all(MYSQLI_ASSOC)));
+    }
+
+    $in = body();
+    $topic = $in['topic'] ?? '';
+    if (!is_string($topic)) fail('Write the topic as text.');
+    $topic = trim((string)preg_replace('/\s+/u', ' ', $topic)); // one line, so it cannot pose as another line of the notes
+    if ($topic === '') fail('Say briefly what the call is about.');
+    if (mb_strlen($topic) > 200) fail('Please keep the topic under 200 characters.');
+
+    $slots = $in['slots'] ?? null;
+    if (!is_array($slots) || $slots === [] || array_keys($slots) !== range(0, count($slots) - 1)) {
+      fail('Propose at least one time for the call.');
+    }
+    if (count($slots) > 3) fail('Propose up to three times.');
+    $tz = $in['timezone'] ?? null;
+    $now = (string)$conn->query('SELECT UTC_TIMESTAMP()')->fetch_row()[0];
+    $times = [];
+    foreach ($slots as $i => $slot) {
+      $n = $i + 1;
+      $date = is_array($slot) ? ($slot['date'] ?? null) : null;
+      $time = is_array($slot) ? ($slot['time'] ?? null) : null;
+      if (!is_string($date) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || !is_string($time) || !preg_match('/^\d{2}:\d{2}$/', $time)) {
+        fail("Time $n needs a date and a time.");
+      }
+      [$utc] = bk_time(['start_local' => $date . 'T' . $time, 'timezone' => $tz]);
+      if ($utc <= $now) fail("Time $n is in the past. Choose a time that is still to come.");
+      if (in_array($utc, $times, true)) fail('Each proposed time must be different.');
+      $times[] = $utc;
+    }
+
+    $lines = ["Call request from the client portal.", "Topic: $topic", "Proposed times ($tz), in order of preference:"];
+    foreach ($times as $i => $utc) $lines[] = ($i + 1) . '. ' . bk_local($utc, $tz, 'l j F Y, H:i');
+    $lines[] = 'Booked at the first choice until you reschedule it.';
+    $notes = implode("\n", $lines);
+    $first = $times[0];
+
+    // A double click or a resend answers 409, not a second request.
+    $d = bk_stmt($conn, "SELECT id FROM bookings WHERE client_id = ? AND status = 'requested' AND starts_at = ? AND notes = ?
+      AND deleted_at IS NULL AND created_at > NOW() - INTERVAL 10 MINUTE LIMIT 1");
+    $d->bind_param('iss', $clientId, $first, $notes);
+    $d->execute();
+    if ($d->get_result()->fetch_assoc()) fail('That call request has already been sent.', 409);
+
+    $status = 'requested';
+    $duration = 30;
+    $uid = (int)$user['id'];
+    $s = bk_stmt($conn, 'INSERT INTO bookings (enquiry_id, client_id, starts_at, timezone, duration_min, location, status, notes, created_by)
+      VALUES (NULL, ?, ?, ?, ?, NULL, ?, ?, ?)');
+    $s->bind_param('ississi', $clientId, $first, $tz, $duration, $status, $notes, $uid);
+    $s->execute();
+    $id = (int)$conn->insert_id; // before audit(), which inserts its own row
+    bk_event($conn, $id, $uid, 'created', ['to_status' => $status, 'to_starts_at' => $first, 'to_timezone' => $tz]);
+    audit($conn, $uid, 'booking_request', "#$id (client) " . count($times) . ' proposed');
+    $s = bk_stmt($conn, 'SELECT id, starts_at, timezone, duration_min, status, created_at FROM bookings WHERE id = ? AND client_id = ? LIMIT 1');
+    $s->bind_param('ii', $id, $clientId);
+    $s->execute();
+    ok(bk_client_shape($s->get_result()->fetch_assoc()), 201);
+  }
+
   if ($method === 'GET') {
     require_auth($conn, STAFF); // staff only; a client never reads bookings
     if (isset($_GET['enquiry_id'])) {
