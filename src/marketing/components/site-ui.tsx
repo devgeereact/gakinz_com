@@ -268,6 +268,10 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
               </li>
             ))}
           </ul>
+          {/* Quiet on purpose: a text link, so it never competes with the enquiry button. */}
+          <Link className="nav__signin" to="/login">
+            Client sign in
+          </Link>
           <Link className="btn btn--main" to="/contact">
             <span>Start a project</span>
           </Link>
@@ -282,6 +286,10 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
             {label}
           </Link>
         ))}
+        <p className="drawer__client mute">Already working with us?</p>
+        <Link to="/login" tabIndex={open ? 0 : -1} onClick={() => setOpen(false)}>
+          Client sign in
+        </Link>
       </nav>
       {children}
       <footer className="foot">
@@ -331,7 +339,8 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
               <h2>Clients</h2>
               <ul>
                 <li><Link to="/contact">Contact</Link></li>
-                <li><Link to="/login">Client login</Link></li>
+                <li className="mute">Already working with us?</li>
+                <li><Link to="/login">Client sign in</Link></li>
                 <li><Link to="/privacy">Privacy</Link></li>
                 <li><Link to="/terms">Terms</Link></li>
                 <li><Link to="/cookies">Cookies</Link></li>
