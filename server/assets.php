@@ -68,7 +68,7 @@ function as_label($v): string {
   if (!is_string($v)) fail('A label is required.');
   $v = trim(preg_replace('/[\r\n]+/', ' ', $v));
   if ($v === '') fail('A label is required.');
-  if (mb_strlen($v) > ASSET_LABEL_MAX) fail('Keep the label under ' . ASSET_LABEL_MAX . ' characters.');
+  if (mb_strlen($v) > ASSET_LABEL_MAX) fail('Keep the label to ' . ASSET_LABEL_MAX . ' characters or fewer.');
   return $v;
 }
 
@@ -78,7 +78,7 @@ function as_note(array $in, string $key): ?string {
   if (!is_string($in[$key])) fail("Invalid $key.");
   $v = trim($in[$key]);
   if ($v === '') return null;
-  if (mb_strlen($v) > ASSET_NOTE_MAX) fail('Keep the note under ' . ASSET_NOTE_MAX . ' characters.');
+  if (mb_strlen($v) > ASSET_NOTE_MAX) fail('Keep the note to ' . ASSET_NOTE_MAX . ' characters or fewer.');
   return $v;
 }
 
@@ -117,6 +117,11 @@ function as_client_shape(array $r): array {
   ];
 }
 
+/** The 409 a client gets for supplying an item that is no longer requested. */
+function as_supply_conflict(string $status): void {
+  fail($status === 'accepted' ? 'This item has already been accepted.' : 'You have already marked this item as sent.', 409);
+}
+
 /** One live item for staff, or 404. */
 function as_staff_item(mysqli $conn, int $id): array {
   $s = as_stmt($conn, 'SELECT ' . ASSET_STAFF_COLS . ASSET_STAFF_FROM . '
@@ -127,6 +132,14 @@ function as_staff_item(mysqli $conn, int $id): array {
   $r = $s->get_result()->fetch_assoc();
   if (!$r) fail('Item not found.', 404);
   return $r;
+}
+
+/**
+ * A staff accept or reopen matched no row: the item changed after it was read
+ * (as_staff_item has already answered 404 if it is gone). Say why.
+ */
+function as_staff_conflict(array $now, string $target, string $already): void {
+  fail($now['status'] === $target ? $already : 'This item changed while you were working. Reload and try again.', 409);
 }
 
 /** The id from a staff action body, or 400. */
@@ -170,9 +183,7 @@ try {
     $s->execute();
     $item = $s->get_result()->fetch_assoc();
     if (!$item) fail('Item not found.', 404); // another client's item answers as a missing one
-    if ($item['status'] !== 'requested') {
-      fail($item['status'] === 'accepted' ? 'The studio has already accepted this item.' : 'You have already marked this item as sent.', 409);
-    }
+    if ($item['status'] !== 'requested') as_supply_conflict($item['status']);
 
     // Atomic claim: only a requested item on a live project of this client moves.
     $u = as_stmt($conn, "UPDATE project_assets a JOIN projects p ON p.id = a.project_id AND p.deleted_at IS NULL AND p.client_id = ?
@@ -180,7 +191,15 @@ try {
       WHERE a.id = ? AND a.deleted_at IS NULL AND a.status = 'requested'");
     $u->bind_param('isi', $clientId, $note, $id);
     $u->execute();
-    if ($u->affected_rows < 1) fail('You have already marked this item as sent.', 409);
+    if ($u->affected_rows < 1) {
+      // It changed between the read and the write: answer from what it is now.
+      $s = as_stmt($conn, ASSET_CLIENT_SQL . ' AND a.id = ? LIMIT 1');
+      $s->bind_param('ii', $clientId, $id);
+      $s->execute();
+      $now = $s->get_result()->fetch_assoc();
+      if (!$now) fail('Item not found.', 404);
+      as_supply_conflict($now['status']);
+    }
     audit($conn, $user['id'], 'asset_supply', "#$id (client) project #" . (int)$item['project_id'] . ($note !== null ? ' with note' : ''));
 
     $s = as_stmt($conn, ASSET_CLIENT_SQL . ' AND a.id = ? LIMIT 1');
@@ -263,24 +282,27 @@ try {
 
   if ($action === 'accept') {
     if ($item['status'] === 'accepted') fail('This item is already accepted.', 409);
+    // Claim on the status just read, so the audit's "from" is known to be true.
+    $from = $item['status'];
     $s = as_stmt($conn, "UPDATE project_assets SET status = 'accepted', accepted_at = NOW()
-      WHERE id = ? AND deleted_at IS NULL AND status IN ('requested', 'supplied')");
-    $s->bind_param('i', $id);
+      WHERE id = ? AND deleted_at IS NULL AND status = ?");
+    $s->bind_param('is', $id, $from);
     $s->execute();
-    if ($s->affected_rows < 1) fail('This item is already accepted.', 409);
-    audit($conn, $user['id'], 'asset_accept', "#$id from {$item['status']}");
+    if ($s->affected_rows < 1) as_staff_conflict(as_staff_item($conn, $id), 'accepted', 'This item is already accepted.');
+    audit($conn, $user['id'], 'asset_accept', "#$id from $from");
     ok(as_staff_shape(as_staff_item($conn, $id)));
   }
 
   if ($action === 'reopen') {
     if ($item['status'] === 'requested') fail('This item is already waiting for the client.', 409);
     // client_note is kept on purpose: what the client said stays on the record.
+    $from = $item['status'];
     $s = as_stmt($conn, "UPDATE project_assets SET status = 'requested', supplied_at = NULL, accepted_at = NULL
-      WHERE id = ? AND deleted_at IS NULL AND status IN ('supplied', 'accepted')");
-    $s->bind_param('i', $id);
+      WHERE id = ? AND deleted_at IS NULL AND status = ?");
+    $s->bind_param('is', $id, $from);
     $s->execute();
-    if ($s->affected_rows < 1) fail('This item is already waiting for the client.', 409);
-    audit($conn, $user['id'], 'asset_reopen', "#$id from {$item['status']}");
+    if ($s->affected_rows < 1) as_staff_conflict(as_staff_item($conn, $id), 'requested', 'This item is already waiting for the client.');
+    audit($conn, $user['id'], 'asset_reopen', "#$id from $from");
     ok(as_staff_shape(as_staff_item($conn, $id)));
   }
 
