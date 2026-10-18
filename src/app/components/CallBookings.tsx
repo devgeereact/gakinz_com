@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { CalendarClock, Check, ExternalLink, Loader2, MapPin, Pencil, RotateCw, X } from "lucide-react"
+import { CalendarClock, Check, Download, ExternalLink, Loader2, MapPin, Pencil, RotateCw, X } from "lucide-react"
+import { saveAs } from "file-saver"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -72,6 +73,14 @@ export function CallList({ calls, onChange, showWith = false, empty }: { calls: 
     const list = await bookings.list(c.enquiry_id ? { enquiry_id: c.enquiry_id } : { client_id: c.client_id ?? 0 })
     const fresh = list.ok ? list.data.find((x) => x.id === c.id) : undefined
     if (fresh) onChange(fresh)
+  }
+
+  const calendarFile = async (c: Booking) => {
+    setBusy(c.id)
+    const res = await bookings.calendarFile(c.id)
+    setBusy(null)
+    if (res.ok) saveAs(res.data, `gakinz-call-${c.id}.ics`)
+    else toast.error(res.error || "Could not download the calendar file.")
   }
 
   if (calls.length === 0) return <p className="py-3 text-sm text-muted-foreground">{empty}</p>
@@ -147,6 +156,11 @@ export function CallList({ calls, onChange, showWith = false, empty }: { calls: 
                 {canReschedule(c.status) && (
                   <Button size="sm" variant="outline" onClick={() => setMoving(c)}>
                     <CalendarClock /> Reschedule
+                  </Button>
+                )}
+                {c.status === "confirmed" && (
+                  <Button size="sm" variant="outline" onClick={() => calendarFile(c)} disabled={busy === c.id}>
+                    <Download /> Download calendar file
                   </Button>
                 )}
                 <Button size="sm" variant="outline" onClick={() => setEditing(c)}>

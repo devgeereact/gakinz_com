@@ -102,6 +102,23 @@ export const api = {
       return { ok: false, error: NETWORK_ERROR }
     }
   },
+  // An authenticated file (a calendar file, for example). A plain link cannot
+  // carry the bearer token, so the file is fetched here and handed back as a
+  // Blob for the page to save. Errors arrive as JSON, as everywhere else.
+  download: async (path: string): Promise<ApiResult<Blob>> => {
+    try {
+      const token = getStoredToken()
+      const res = await fetch(`${API_BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      if (!res.ok) {
+        if (res.status === 401) useAuth.getState().clear()
+        const body = parseJsonBody(await res.text())
+        return { ok: false, error: bodyError(body) || statusError(res.status, "Download"), status: res.status }
+      }
+      return { ok: true, data: await res.blob() }
+    } catch {
+      return { ok: false, error: NETWORK_ERROR }
+    }
+  },
 }
 
 // Public contact enquiry (corporate site → leads pipeline).
@@ -273,6 +290,8 @@ export const bookings = {
     api.post<BookingChange>("/bookings.php?action=status", { id, status, ...extra }),
   retryNotice: (eventId: number) =>
     api.post<{ notice: BookingNotice }>("/bookings.php?action=notify", { event_id: eventId }),
+  // RFC 5545 file for a confirmed call; any other status answers 404.
+  calendarFile: (id: number) => api.download(`/bookings.php?action=ics&id=${id}`),
 }
 
 // Private delivery feedback (feedback.php). Staff read and manage it; a client
@@ -636,6 +655,8 @@ export const portalRequests = {
     }),
   requestCall: (payload: CallRequestInput) => api.post<PortalCallRequest>("/bookings.php?action=request", payload),
   calls: () => api.get<PortalCallRequest[]>("/bookings.php?action=mine"),
+  // The calendar file for one of the client's own confirmed calls, else 404.
+  calendarFile: (id: number) => api.download(`/bookings.php?action=mine_ics&id=${id}`),
 }
 
 // Project asset checklist (assets.php, SQL 15): what a client must send for a

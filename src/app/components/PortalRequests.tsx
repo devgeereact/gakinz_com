@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
-import { CalendarClock, Loader2, MessageCircleQuestion, Plus, Send, X } from "lucide-react"
+import { CalendarClock, Download, Loader2, MessageCircleQuestion, Plus, Send, X } from "lucide-react"
+import { saveAs } from "file-saver"
+import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -166,6 +168,7 @@ export function PortalRequests({ projects, onUpdateSent }: { projects: { id: num
                           {c.status === "requested" ? "Your first choice. The studio will confirm a time." : "Confirmed by the studio."}
                           {when.yours ? ` ${when.yours}.` : ""}
                         </span>
+                        {c.status === "confirmed" && <CalendarFileButton id={c.id} />}
                       </span>
                       <StatusBadge status={c.status === "requested" ? "pending" : "approved"}>
                         {c.status === "requested" ? "Awaiting confirmation" : "Confirmed"}
@@ -390,5 +393,22 @@ function CallForm({ onCancel, onSent, onUnavailable }: { onCancel: () => void; o
         </Button>
       </div>
     </form>
+  )
+}
+
+/** Saves the calendar file for one of the client's own confirmed calls. */
+function CalendarFileButton({ id }: { id: number }) {
+  const [busy, setBusy] = useState(false)
+  const download = async () => {
+    setBusy(true)
+    const res = await portalRequests.calendarFile(id)
+    setBusy(false)
+    if (res.ok) saveAs(res.data, `gakinz-call-${id}.ics`)
+    else toast.error(res.error || "Could not download the calendar file.")
+  }
+  return (
+    <Button size="sm" variant="outline" className="mt-2" onClick={download} disabled={busy}>
+      {busy ? <Loader2 className="animate-spin" /> : <Download />} Download calendar file
+    </Button>
   )
 }
