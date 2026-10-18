@@ -34,6 +34,7 @@ export function ProjectAssetsPanel({ projectId, projectName }: { projectId: numb
   const [busy, setBusy] = useState<number | null>(null)
   const [editing, setEditing] = useState<number | null>(null)
   const [removing, setRemoving] = useState<number | null>(null)
+  const [addKey, setAddKey] = useState(0) // bumped only after a successful add, to clear the form
 
   const apply = useCallback((res: Awaited<ReturnType<typeof projectAssets.list>>) => {
     if (res.ok) {
@@ -166,7 +167,7 @@ export function ProjectAssetsPanel({ projectId, projectName }: { projectId: numb
           )}
           <div className="mt-3 border-t pt-3">
             <AssetForm
-              key={items?.length ?? 0}
+              key={addKey}
               idPrefix={`asset-new-${projectId}`}
               initial={{ label: "", note: "" }}
               submitLabel="Add item"
@@ -177,6 +178,7 @@ export function ProjectAssetsPanel({ projectId, projectName }: { projectId: numb
                   return res.error || "The item was not added."
                 }
                 setItems((xs) => [...(xs ?? []), res.data])
+                setAddKey((k) => k + 1)
                 return null
               }}
             />

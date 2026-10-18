@@ -55,13 +55,13 @@ export function groupByProject(items: PortalAsset[]): { projectId: number; proje
 export const noteValue = (text: string): string | null => (text.trim() === "" ? null : text.trim())
 
 export function noteProblem(text: string): string | null {
-  return text.trim().length > ASSET_NOTE_MAX ? `Keep the note under ${ASSET_NOTE_MAX} characters.` : null
+  return text.trim().length > ASSET_NOTE_MAX ? `Keep the note to ${ASSET_NOTE_MAX} characters or fewer.` : null
 }
 
 export function labelProblem(text: string): string | null {
   const v = text.trim()
   if (v === "") return "Say what the client should send."
-  if (v.length > ASSET_LABEL_MAX) return `Keep the label under ${ASSET_LABEL_MAX} characters.`
+  if (v.length > ASSET_LABEL_MAX) return `Keep the label to ${ASSET_LABEL_MAX} characters or fewer.`
   return null
 }
 

@@ -79,13 +79,14 @@ describe("form rules", () => {
 
   it("refuses a note over the server's limit", () => {
     expect(noteProblem("a".repeat(1000))).toBeNull()
-    expect(noteProblem("a".repeat(1001))).toMatch(/1000/)
+    expect(noteProblem("a".repeat(1001))).toBe("Keep the note to 1000 characters or fewer.")
   })
 
   it("needs a label within the server's limit", () => {
     expect(labelProblem("  ")).not.toBeNull()
     expect(labelProblem("Logo")).toBeNull()
-    expect(labelProblem("a".repeat(161))).toMatch(/160/)
+    expect(labelProblem("a".repeat(160))).toBeNull()
+    expect(labelProblem("a".repeat(161))).toBe("Keep the label to 160 characters or fewer.")
   })
 })
 
