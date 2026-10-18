@@ -190,6 +190,10 @@ CREATE TABLE IF NOT EXISTS invoices (
   issued_at   DATE NOT NULL,                        -- set by PHP on create
   due_at      DATE NULL DEFAULT NULL,
   paid_at     TIMESTAMP NULL DEFAULT NULL,
+  paid_method       VARCHAR(20)  NULL DEFAULT NULL, -- bank_transfer | cash | cheque | other, from record_payment (2026-10-18)
+  paid_reference    VARCHAR(100) NULL DEFAULT NULL, -- bank or cheque reference the owner checked
+  paid_amount_pence INT          NULL DEFAULT NULL, -- amount received, equal to the payable total
+  paid_recorded_by  INT          NULL DEFAULT NULL, -- users.id who recorded it; never shown to a client
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted_at  TIMESTAMP NULL DEFAULT NULL,
@@ -768,3 +772,20 @@ CREATE TABLE IF NOT EXISTS client_feedback (
 -- only; a second run fails on the duplicate column. Until it runs, codes are
 -- checked exactly as before and replay is not blocked.
 --   ALTER TABLE users ADD COLUMN totp_last_step BIGINT NULL DEFAULT NULL AFTER totp_recovery;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-10-18 · SQL 13 · Manual payment record on invoices (invoices.php).
+-- docs/PRODUCT-SPEC.md section 5.5: the owner records a bank transfer, cash or
+-- cheque payment with its method, reference, date and amount. The amount must
+-- equal the VAT-inclusive payable total from _money.php; a part payment is a
+-- separate instalment invoice. `paid_at` holds the date the money arrived.
+-- Moving an invoice back from paid clears all four. `paid_recorded_by` is
+-- staff only and never returned by portal.php. Additive. Run once only; a
+-- second run fails on the duplicate column. Until it runs, the record_payment
+-- action answers 503 with a message asking for this step, and every existing
+-- invoice action works as before.
+--   ALTER TABLE invoices
+--     ADD COLUMN paid_method       VARCHAR(20)  NULL DEFAULT NULL AFTER paid_at,
+--     ADD COLUMN paid_reference    VARCHAR(100) NULL DEFAULT NULL AFTER paid_method,
+--     ADD COLUMN paid_amount_pence INT          NULL DEFAULT NULL AFTER paid_reference,
+--     ADD COLUMN paid_recorded_by  INT          NULL DEFAULT NULL AFTER paid_amount_pence;

@@ -6,12 +6,65 @@
  *   GET  /invoices.php?id=N          → one invoice with line items (for PDF)
  *   POST /invoices.php?action=create {client_id?, project_id?, due_at?, notes?, items:[...]}
  *   POST /invoices.php?action=status {id, status}   status: draft | sent | paid
+ *   POST /invoices.php?action=record_payment {id, method, reference?, paid_on, amount}
+ *        method: bank_transfer | cash | cheque | other. `amount` is in pounds as a
+ *        decimal ("119.99" or 119.99) and must equal the payable total. 503 until
+ *        SQL 13 (2026-10-18) has run.
  *
  * Status: draft | sent | paid. `overdue` is computed (sent + past due_at).
  */
 require __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/_money.php';
 
 const STAFF = ['super_admin', 'admin', 'manager'];
+const PAYMENT_METHODS = ['bank_transfer', 'cash', 'cheque', 'other'];
+const PAYMENT_NEEDS_REFERENCE = ['bank_transfer', 'cheque'];
+
+/**
+ * True once the SQL 13 payment columns exist on `invoices`. Until that schema
+ * step runs, every existing action works as before and record_payment answers
+ * 503. Cached for the request.
+ */
+function payment_cols_ready(mysqli $conn): bool {
+  static $ready = null;
+  if ($ready !== null) return $ready;
+  try {
+    // LIMIT 0 reads no rows; it only proves the columns are there.
+    $res = $conn->query('SELECT paid_method, paid_reference, paid_amount_pence, paid_recorded_by FROM invoices LIMIT 0');
+    $ready = $res !== false; // older mysqli reporting returns false instead of throwing
+  } catch (mysqli_sql_exception $e) {
+    if ($e->getCode() !== 1054) throw $e; // ER_BAD_FIELD_ERROR only
+    $ready = false;
+  }
+  return $ready;
+}
+
+/** The payment columns for a SELECT on alias `i`, or NULL placeholders before SQL 13. */
+function payment_cols_sql(mysqli $conn): string {
+  return payment_cols_ready($conn)
+    ? 'i.paid_method, i.paid_reference, i.paid_amount_pence, i.paid_recorded_by'
+    : 'NULL AS paid_method, NULL AS paid_reference, NULL AS paid_amount_pence, NULL AS paid_recorded_by';
+}
+
+/** Cast the payment columns of a row in place. */
+function payment_cols_cast(array &$r): void {
+  $r['paid_amount_pence'] = $r['paid_amount_pence'] !== null ? (int)$r['paid_amount_pence'] : null;
+  $r['paid_recorded_by'] = $r['paid_recorded_by'] !== null ? (int)$r['paid_recorded_by'] : null;
+}
+
+/**
+ * Pence from a pounds amount such as "119.99", 119.99 or "120". Null unless it
+ * is a plain non-negative decimal with at most two places. String maths only,
+ * so 0.1 + 0.2 style float error never reaches the comparison.
+ */
+function pence_from_pounds($value): ?int {
+  if (is_int($value) || is_float($value)) $value = (string)$value;
+  if (!is_string($value)) return null;
+  $value = trim($value);
+  if (!preg_match('/^(\d{1,7})(?:\.(\d{1,2}))?$/', $value, $m)) return null;
+  $fraction = str_pad($m[2] ?? '', 2, '0');
+  return (int)$m[1] * 100 + (int)$fraction;
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
@@ -21,6 +74,7 @@ if ($method === 'GET' && isset($_GET['id'])) {
   $id = (int)$_GET['id'];
   $stmt = $conn->prepare(
     'SELECT i.id, i.number, i.status, i.currency, i.vat_rate, i.notes, i.issued_at, i.due_at, i.paid_at,
+            ' . payment_cols_sql($conn) . ',
             i.client_id, i.project_id, c.company AS client_company, c.email AS client_email
      FROM invoices i LEFT JOIN clients c ON c.id = i.client_id
      WHERE i.id = ? AND i.deleted_at IS NULL LIMIT 1'
@@ -30,6 +84,7 @@ if ($method === 'GET' && isset($_GET['id'])) {
   $inv = $stmt->get_result()->fetch_assoc();
   if (!$inv) fail('Invoice not found.', 404);
   $inv['id'] = (int)$inv['id'];
+  payment_cols_cast($inv);
   $inv['vat_rate'] = (float)$inv['vat_rate'];
 
   $items = [];
@@ -56,6 +111,7 @@ if ($method === 'GET') {
   require_auth($conn, STAFF); // staff only — clients see invoices via portal.php (own client_id)
   $rows = [];
   $sql = 'SELECT i.id, i.number, i.status, i.currency, i.vat_rate, i.issued_at, i.due_at, i.paid_at,
+                 ' . payment_cols_sql($conn) . ',
                  i.client_id, c.company AS client_company,
                  (SELECT COALESCE(SUM(qty * unit_price), 0) FROM invoice_items it WHERE it.invoice_id = i.id) AS subtotal,
                  (i.status = "sent" AND i.due_at IS NOT NULL AND i.due_at < CURRENT_DATE) AS overdue
@@ -72,6 +128,7 @@ if ($method === 'GET') {
       // equals the subtotal, so pre-VAT invoices are unchanged.
       $r['total'] = round($r['subtotal'] + $r['vat_amount'], 2);
       $r['overdue'] = (bool)$r['overdue'];
+      payment_cols_cast($r);
       $rows[] = $r;
     }
   }
@@ -133,13 +190,96 @@ if ($method === 'POST' && $action === 'status') {
     $stmt = $conn->prepare('UPDATE invoices SET status = "paid", paid_at = NOW() WHERE id = ? AND deleted_at IS NULL');
     $stmt->bind_param('i', $id);
   } else {
-    $stmt = $conn->prepare('UPDATE invoices SET status = ?, paid_at = NULL WHERE id = ? AND deleted_at IS NULL');
+    // Moving back from paid also forgets any recorded payment (SQL 13 columns).
+    $clear = payment_cols_ready($conn)
+      ? ', paid_method = NULL, paid_reference = NULL, paid_amount_pence = NULL, paid_recorded_by = NULL'
+      : '';
+    $stmt = $conn->prepare('UPDATE invoices SET status = ?, paid_at = NULL' . $clear . ' WHERE id = ? AND deleted_at IS NULL');
     $stmt->bind_param('si', $status, $id);
   }
   $stmt->execute();
   if ($stmt->affected_rows < 1) fail('Invoice not found.', 404);
   audit($conn, $user['id'], 'invoice_status', "#$id → $status");
   ok(['ok' => true]);
+}
+
+// Record a payment received outside Stripe and PayPal: bank transfer, cash,
+// cheque or other. The owner has checked the money arrived; this records what,
+// when and how much. Only a sent invoice, only the exact payable total (a part
+// payment is a separate instalment invoice), and only once.
+if ($method === 'POST' && $action === 'record_payment') {
+  $user = require_auth($conn, STAFF);
+  if (!payment_cols_ready($conn)) {
+    fail('Recording a payment needs the 2026-10-18 database step (SQL 13) to be run on the server first.', 503);
+  }
+  $in = body();
+  $id = (int)($in['id'] ?? 0);
+  if ($id <= 0) fail('An invoice id is required.');
+
+  $payMethod = is_string($in['method'] ?? null) ? trim($in['method']) : '';
+  if (!in_array($payMethod, PAYMENT_METHODS, true)) fail('Choose how it was paid: bank transfer, cash, cheque or other.');
+
+  $reference = is_scalar($in['reference'] ?? null) ? trim((string)$in['reference']) : '';
+  if (mb_strlen($reference) > 100) fail('The reference must be 100 characters or fewer.');
+  if ($reference === '' && in_array($payMethod, PAYMENT_NEEDS_REFERENCE, true)) {
+    fail($payMethod === 'cheque' ? 'Enter the cheque number or reference.' : 'Enter the bank transfer reference.');
+  }
+
+  $paidOn = is_string($in['paid_on'] ?? null) ? trim($in['paid_on']) : '';
+  $date = preg_match('/^\d{4}-\d{2}-\d{2}$/', $paidOn) ? DateTime::createFromFormat('!Y-m-d', $paidOn) : false;
+  if (!$date || $date->format('Y-m-d') !== $paidOn) fail('Enter the date it was paid as YYYY-MM-DD.');
+  // Same clock as issued_at, which create sets from PHP's own date.
+  if ($paidOn > (new DateTime())->format('Y-m-d')) fail('The payment date cannot be in the future.');
+
+  $amountPence = pence_from_pounds($in['amount'] ?? null);
+  if ($amountPence === null) fail('Enter the amount received in pounds, for example 120.00.');
+
+  $inv = gk_invoice_payable($conn, $id);
+  if (!$inv) fail('Invoice not found.', 404);
+  if ($inv['status'] === 'paid') fail('That invoice is already paid.', 409);
+  if ($inv['status'] !== 'sent') fail('Send the invoice before recording a payment against it.', 409);
+  if ($inv['total_minor'] <= 0) fail('That invoice has nothing to pay.');
+  if ($amountPence !== $inv['total_minor']) {
+    fail('The amount must be the full invoice total of £' . number_format($inv['total_minor'] / 100, 2)
+      . '. Record a part payment as a separate instalment invoice.', 400, ['expected_pence' => $inv['total_minor']]);
+  }
+
+  $stmt = $conn->prepare('SELECT issued_at FROM invoices WHERE id = ? LIMIT 1');
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  $issued = (string)($stmt->get_result()->fetch_assoc()['issued_at'] ?? '');
+  if ($issued !== '' && $paidOn < $issued) fail('The payment date cannot be before the invoice was issued (' . $issued . ').');
+
+  $refOrNull = $reference !== '' ? $reference : null;
+  $paidAt = $paidOn . ' 00:00:00';
+  // Conditional on the status, so two parallel records cannot both succeed:
+  // `<> "paid"` is the single-use guard, and `= "sent"` also refuses an invoice
+  // moved back to draft between the checks above and this write.
+  $stmt = $conn->prepare(
+    'UPDATE invoices SET status = "paid", paid_at = ?, paid_method = ?, paid_reference = ?,
+            paid_amount_pence = ?, paid_recorded_by = ?
+     WHERE id = ? AND status <> "paid" AND status = "sent" AND deleted_at IS NULL'
+  );
+  $stmt->bind_param('sssiii', $paidAt, $payMethod, $refOrNull, $amountPence, $user['id'], $id);
+  $stmt->execute();
+  if ($stmt->affected_rows < 1) {
+    $now = gk_invoice_payable($conn, $id);
+    if ($now && $now['status'] === 'paid') fail('That invoice is already paid.', 409);
+    fail('That invoice changed while the payment was being recorded. Refresh and try again.', 409);
+  }
+
+  $num = $inv['number'] ?: ('#' . $id);
+  audit($conn, $user['id'], 'invoice_paid_manual',
+    "$num $payMethod " . ($refOrNull ?? '-') . ' £' . number_format($amountPence / 100, 2) . " on $paidOn");
+  ok([
+    'ok' => true,
+    'id' => $id,
+    'status' => 'paid',
+    'paid_at' => $paidAt,
+    'paid_method' => $payMethod,
+    'paid_reference' => $refOrNull,
+    'paid_amount_pence' => $amountPence,
+  ]);
 }
 
 // Chase an unpaid invoice: email the client a payment reminder and log it.
