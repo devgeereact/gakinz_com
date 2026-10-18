@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -10,18 +10,15 @@ import AuthFrame from "@/app/components/AuthFrame"
 // Used by the invite email + the forgot-password flow. The token rides in the
 // URL hash (#token=…) so it never hits the server logs as a query string.
 export default function SetPassword() {
-  const [token, setToken] = useState("")
+  // Read once on mount. This route is never server-rendered (only public paths
+  // are prerendered), so window is always defined here.
+  const [token] = useState(() => new URLSearchParams(window.location.hash.replace(/^#/, "")).get("token") ?? "")
   const [pw, setPw] = useState("")
   const [pw2, setPw2] = useState("")
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [done, setDone] = useState(false)
   const navigate = useNavigate()
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.hash.replace(/^#/, ""))
-    setToken(params.get("token") ?? "")
-  }, [])
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
