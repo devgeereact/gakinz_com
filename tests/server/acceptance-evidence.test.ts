@@ -138,6 +138,32 @@ describe("the terms fingerprint", () => {
     expect(created.map((x) => x[0])).toEqual(["1600.40", "1200.30", "1200.30"])
   })
 
+  it("splits and rounds in integer pence, half away from zero, with the remainder on the final part", async () => {
+    // Line 1: 1.5 x £0.33 = 49.5p exactly, rounds to 50p. Line 2: 1 x £99.55.
+    // Subtotal 10005p; VAT 17.5% = 1750.875p -> 1751p; deposit 40% = 4002p;
+    // stage 30% = 3001.5p -> 3002p; final = 10005 - 4002 - 3002 = 3001p.
+    const id = quote({ lines: [["Hosting", 1.5, 0.33], ["Support", 1, 99.55]], vat: 17.5, validUntil: null, notes: "" })
+    const r = await accept({ id, ...good })
+    expect(r.status).toBe(200)
+    const canonical = JSON.stringify({
+      v: 1, title: "Website", currency: "GBP", vat_rate: "17.50", valid_until: null,
+      items: [
+        { description: "Hosting", qty: "1.50", unit_price: "0.33", amount: "0.50" },
+        { description: "Support", qty: "1.00", unit_price: "99.55", amount: "99.55" },
+      ],
+      subtotal: "100.05", vat: "17.51", total: "117.56",
+      payment_schedule: [
+        { label: "Deposit (40%)", percent: "40", amount: "40.02", due_days_after_acceptance: "0" },
+        { label: "Stage payment (30%)", percent: "30", amount: "30.02", due_days_after_acceptance: "30" },
+        { label: "Final payment (30%)", percent: "30", amount: "30.01", due_days_after_acceptance: "60" },
+      ],
+      notes: "",
+    })
+    expect(r.json.accepted_terms_sha256).toBe(crypto.createHash("sha256").update(canonical).digest("hex"))
+    const created = sql("SELECT it.unit_price FROM invoices i JOIN invoice_items it ON it.invoice_id = i.id ORDER BY i.id")
+    expect(created.map((x) => x[0])).toEqual(["40.02", "30.02", "30.01"])
+  })
+
   it("is the same for two quotes with identical terms and changes when one line changes", async () => {
     const a = quote()
     const b = quote()
