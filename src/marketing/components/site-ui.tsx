@@ -287,7 +287,7 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
           </Link>
         ))}
         <p className="drawer__client mute">Already working with us?</p>
-        <Link to="/login" tabIndex={open ? 0 : -1} onClick={() => setOpen(false)}>
+        <Link className="drawer__signin" to="/login" tabIndex={open ? 0 : -1} onClick={() => setOpen(false)}>
           Client sign in
         </Link>
       </nav>
