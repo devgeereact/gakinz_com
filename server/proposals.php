@@ -62,31 +62,102 @@ function acceptance_cols_cast(mysqli $conn, array &$r): void {
   $r['evidence_ready'] = acceptance_cols_ready($conn);
 }
 
-/** Money as a fixed two-decimal string, so the hash never depends on float printing. */
-function terms_money(float $amount): string {
-  return sprintf('%.2f', round($amount, 2));
+/**
+ * Integer money for the terms fingerprint and the 40/30/30 split. No float
+ * touches either, so the hash and the invoice amounts are the same on every
+ * PHP version (PHP 8.4 changed round() at some edges).
+ *
+ * Every figure is an integer count of hundredths: qty and vat_rate in
+ * hundredths, money in pence. Rounding rule everywhere: half away from zero
+ * (round_half_away), done with integer division only.
+ */
+
+/** Hundredths from a DECIMAL(n,2) string such as "1250.50", "-3", "0.5". Throws on anything else. */
+function hundredths(string $decimal): int {
+  if (!preg_match('/^(-?)(\d{1,12})(?:\.(\d{1,2}))?$/', trim($decimal), $m)) {
+    throw new UnexpectedValueException('Not a two-place decimal: ' . $decimal);
+  }
+  $v = (int)$m[2] * 100 + (int)str_pad($m[3] ?? '', 2, '0');
+  return $m[1] === '-' ? -$v : $v;
+}
+
+/** $a * $b, refusing to overflow into a float. */
+function int_mul(int $a, int $b): int {
+  $r = $a * $b;
+  if (!is_int($r)) throw new OverflowException('Amount too large.');
+  return $r;
+}
+
+/** $a + $b, refusing to overflow into a float. */
+function int_add(int $a, int $b): int {
+  $r = $a + $b;
+  if (!is_int($r)) throw new OverflowException('Amount too large.');
+  return $r;
+}
+
+/** $n / $d rounded half away from zero, $d > 0. Integer arithmetic only. */
+function round_half_away(int $n, int $d): int {
+  $q = intdiv(abs($n), $d);
+  if ((abs($n) % $d) * 2 >= $d) $q++;
+  return $n < 0 ? -$q : $q;
+}
+
+/** Hundredths (pence, or qty and rates in hundredths) as a fixed two-decimal string: 160040 -> "1600.40". */
+function hundredths_str(int $v): string {
+  $abs = abs($v);
+  return ($v < 0 ? '-' : '') . intdiv($abs, 100) . '.' . str_pad((string)($abs % 100), 2, '0', STR_PAD_LEFT);
 }
 
 /**
- * The 40 / 30 / 30 schedule accept creates: deposit due on acceptance, stage
- * +30 days, final +60 days. The final part absorbs rounding so the parts sum
- * to the whole. Used both to create the invoices and in the terms hash, so the
+ * Line and quote figures in pence from the proposal_items rows (qty and
+ * unit_price as the DECIMAL(10,2) strings mysqli returns):
+ *   line amount = round_half_away(qty_hundredths * unit_pence, 100)
+ *   subtotal    = round_half_away(sum of qty_hundredths * unit_pence, 100)
+ *                 (the exact sum rounded once, as SUM(qty * unit_price) then
+ *                 round(, 2) did; it can differ by a penny from the sum of
+ *                 rounded line amounts when a quantity has a fraction)
+ *   vat         = round_half_away(subtotal * vat_rate_hundredths, 10000)
+ *   total       = subtotal + vat
+ */
+function terms_pence(array $items, string $vatRate): array {
+  $lines = [];
+  $exact = 0; // pence * 100
+  foreach ($items as $it) {
+    $q = hundredths((string)$it['qty']);
+    $u = hundredths((string)$it['unit_price']);
+    $x = int_mul($q, $u);
+    $exact = int_add($exact, $x);
+    $lines[] = ['qty' => $q, 'unit' => $u, 'amount' => round_half_away($x, 100)];
+  }
+  $subtotal = round_half_away($exact, 100);
+  $vat = round_half_away(int_mul($subtotal, hundredths($vatRate)), 10000);
+  return ['lines' => $lines, 'subtotal' => $subtotal, 'vat' => $vat, 'total' => int_add($subtotal, $vat)];
+}
+
+/**
+ * The 40 / 30 / 30 schedule accept creates, in pence: deposit due on
+ * acceptance, stage +30 days, final +60 days.
+ *   deposit = round_half_away(subtotal * 40, 100)
+ *   stage   = round_half_away(subtotal * 30, 100)
+ *   final   = subtotal - deposit - stage   (the remainder, so the parts sum to the whole)
+ * The single source for both the invoices created and the terms hash, so the
  * fingerprint covers exactly the schedule that was created.
  */
-function acceptance_plan(float $subtotal): array {
-  $deposit = round($subtotal * 0.40, 2);
-  $stage   = round($subtotal * 0.30, 2);
-  $final   = round($subtotal - $deposit - $stage, 2);
+function acceptance_plan(int $subtotalPence): array {
+  $deposit = round_half_away(int_mul($subtotalPence, 40), 100);
+  $stage   = round_half_away(int_mul($subtotalPence, 30), 100);
+  $final   = $subtotalPence - $deposit - $stage;
   return [
-    ['label' => 'Deposit (40%)',       'percent' => 40, 'amount' => $deposit, 'days' => 0],
-    ['label' => 'Stage payment (30%)', 'percent' => 30, 'amount' => $stage,   'days' => 30],
-    ['label' => 'Final payment (30%)', 'percent' => 30, 'amount' => $final,   'days' => 60],
+    ['label' => 'Deposit (40%)',       'percent' => 40, 'pence' => $deposit, 'days' => 0],
+    ['label' => 'Stage payment (30%)', 'percent' => 30, 'pence' => $stage,   'days' => 30],
+    ['label' => 'Final payment (30%)', 'percent' => 30, 'pence' => $final,   'days' => 60],
   ];
 }
 
 /**
  * The exact terms the client accepts, as canonical JSON. Version 1 shape, keys
- * always in this order, every number a fixed string:
+ * always in this order, every number a fixed string built from integers by
+ * hundredths_str() (never from a float):
  *
  *   {
  *     "v": 1,
@@ -97,8 +168,8 @@ function acceptance_plan(float $subtotal): array {
  *     "items": [                                 in line order (proposal_items.id)
  *       { "description": "Build", "qty": "1.00", "unit_price": "1000.00", "amount": "1000.00" }
  *     ],
- *     "subtotal": "1000.00",                     ex VAT, round(sum(qty * unit_price), 2)
- *     "vat": "200.00",                           round(subtotal * vat_rate / 100, 2), as _money.php
+ *     "subtotal": "1000.00",                     ex VAT, terms_pence()
+ *     "vat": "200.00",                           terms_pence()
  *     "total": "1200.00",
  *     "payment_schedule": [                      acceptance_plan(), ex VAT
  *       { "label": "Deposit (40%)", "percent": "40", "amount": "400.00", "due_days_after_acceptance": "0" },
@@ -113,27 +184,23 @@ function acceptance_plan(float $subtotal): array {
  * a line, price, VAT, currency, validity, schedule or scope changes it.
  * Changing this shape changes every future hash, so bump "v" if you do.
  */
-function proposal_terms(array $p, array $items, float $subtotal): array {
-  $vatRate = (float)$p['vat_rate'];
-  $sub = round($subtotal, 2);
-  $vat = round($sub * $vatRate / 100, 2);
+function proposal_terms(array $p, array $items): array {
+  $money = terms_pence($items, (string)$p['vat_rate']);
   $lines = [];
-  foreach ($items as $it) {
-    $qty = (float)$it['qty'];
-    $unit = (float)$it['unit_price'];
+  foreach ($items as $i => $it) {
     $lines[] = [
       'description' => (string)$it['description'],
-      'qty'         => terms_money($qty),
-      'unit_price'  => terms_money($unit),
-      'amount'      => terms_money($qty * $unit),
+      'qty'         => hundredths_str($money['lines'][$i]['qty']),
+      'unit_price'  => hundredths_str($money['lines'][$i]['unit']),
+      'amount'      => hundredths_str($money['lines'][$i]['amount']),
     ];
   }
   $schedule = [];
-  foreach (acceptance_plan($subtotal) as $part) {
+  foreach (acceptance_plan($money['subtotal']) as $part) {
     $schedule[] = [
       'label'                     => $part['label'],
       'percent'                   => (string)$part['percent'],
-      'amount'                    => terms_money($part['amount']),
+      'amount'                    => hundredths_str($part['pence']),
       'due_days_after_acceptance' => (string)$part['days'],
     ];
   }
@@ -141,19 +208,20 @@ function proposal_terms(array $p, array $items, float $subtotal): array {
     'v'                => 1,
     'title'            => (string)$p['title'],
     'currency'         => (string)($p['currency'] ?: 'GBP'),
-    'vat_rate'         => terms_money($vatRate),
+    'vat_rate'         => hundredths_str(hundredths((string)$p['vat_rate'])),
     'valid_until'      => $p['valid_until'] !== null && $p['valid_until'] !== '' ? (string)$p['valid_until'] : null,
     'items'            => $lines,
-    'subtotal'         => terms_money($sub),
-    'vat'              => terms_money($vat),
-    'total'            => terms_money($sub + $vat),
+    'subtotal'         => hundredths_str($money['subtotal']),
+    'vat'              => hundredths_str($money['vat']),
+    'total'            => hundredths_str($money['total']),
     'payment_schedule' => $schedule,
     'notes'            => (string)($p['notes'] ?? ''),
   ];
 }
 
+/** Throws JsonException (for example on invalid UTF-8) rather than hashing `false`. */
 function proposal_terms_sha256(array $terms): string {
-  return hash('sha256', json_encode($terms, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+  return hash('sha256', json_encode($terms, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -374,12 +442,18 @@ if ($method === 'POST' && $action === 'accept') {
   $stmt->execute();
   $res = $stmt->get_result();
   while ($r = $res->fetch_assoc()) $items[] = $r;
-  $stmt = $conn->prepare('SELECT COALESCE(SUM(qty * unit_price), 0) AS subtotal FROM proposal_items WHERE proposal_id = ?');
-  $stmt->bind_param('i', $id);
-  $stmt->execute();
-  $subtotal = (float)$stmt->get_result()->fetch_assoc()['subtotal'];
   $vat = (float)$p['vat_rate'];
-  $termsHash = proposal_terms_sha256(proposal_terms($p, $items, $subtotal));
+  // Figures and fingerprint are settled before the transaction opens, so a
+  // failure here (an amount too large for integer pence, text that is not
+  // valid UTF-8) writes nothing.
+  try {
+    $plan = acceptance_plan(terms_pence($items, (string)$p['vat_rate'])['subtotal']);
+    $termsHash = proposal_terms_sha256(proposal_terms($p, $items));
+  } catch (OverflowException $e) {
+    fail('The amounts on this quote are too large to accept.');
+  } catch (Throwable $e) {
+    fail('Could not read the terms of this quote.', 500);
+  }
 
   $conn->begin_transaction();
   try {
@@ -429,7 +503,7 @@ if ($method === 'POST' && $action === 'accept') {
     $insInv  = $conn->prepare('INSERT INTO invoices (client_id, project_id, vat_rate, issued_at, due_at) VALUES (?, ?, ?, ?, ?)');
     $setNum  = $conn->prepare('UPDATE invoices SET number = ? WHERE id = ?');
     $insItem = $conn->prepare('INSERT INTO invoice_items (invoice_id, description, qty, unit_price) VALUES (?, ?, 1, ?)');
-    foreach (acceptance_plan($subtotal) as $part) {
+    foreach ($plan as $part) {
       $due = (clone $today)->modify('+' . $part['days'] . ' days')->format('Y-m-d');
       $insInv->bind_param('iidss', $clientId, $projectId, $vat, $issued, $due);
       $insInv->execute();
@@ -438,10 +512,11 @@ if ($method === 'POST' && $action === 'accept') {
       $setNum->bind_param('si', $number, $iid);
       $setNum->execute();
       $desc = $part['label'] . ' — ' . $title;
-      $amt  = $part['amount'];
-      $insItem->bind_param('isd', $iid, $desc, $amt);
+      // Bound as the exact decimal string, so no float reaches the column.
+      $amtStr = hundredths_str($part['pence']);
+      $insItem->bind_param('iss', $iid, $desc, $amtStr);
       $insItem->execute();
-      $schedule[] = ['id' => $iid, 'number' => $number, 'label' => $part['label'], 'amount' => $amt, 'due_at' => $due];
+      $schedule[] = ['id' => $iid, 'number' => $number, 'label' => $part['label'], 'amount' => (float)($part['pence'] / 100), 'due_at' => $due];
     }
     $conn->commit();
   } catch (Throwable $e) {
