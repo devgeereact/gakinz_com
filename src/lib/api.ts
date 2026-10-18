@@ -380,7 +380,20 @@ export type Proposal = {
   client_company: string | null
   total: number // ex VAT (line-item sum)
   created_at: string
+  // Acceptance evidence (SQL 14). All null until a quote is accepted, and on
+  // every quote until SQL 14 has run on the server (evidence_ready false).
+  evidence_ready: boolean
+  accepted_at: string | null
+  accepted_by: number | null
+  accepted_by_name: string | null
+  acceptance_method: AcceptanceMethod | null
+  acceptance_reference: string | null
+  acceptance_received_on: string | null
+  accepted_terms_sha256: string | null
 }
+// How the client's acceptance reached us.
+export type AcceptanceMethod = "email" | "letter" | "in_person" | "phone" | "other"
+export type AcceptanceEvidence = { method: AcceptanceMethod; reference: string; received_on: string }
 // Public read-only proposal (by share token) — no auth.
 export type PublicProposal = {
   id: number
@@ -391,6 +404,7 @@ export type PublicProposal = {
   notes: string | null
   valid_until: string | null
   client_company: string | null
+  accepted_on: string | null // the day the client's acceptance was received; nothing else of the evidence
   items: { description: string; qty: number; unit_price: number }[]
 }
 // One leg of the 40/30/30 schedule auto-created when a proposal is accepted.
@@ -407,11 +421,16 @@ export const proposals = {
   }) => api.post<{ id: number }>("/proposals.php?action=create", payload),
   setStatus: (id: number, status: "draft" | "sent" | "declined") =>
     api.post<{ ok: boolean }>("/proposals.php?action=status", { id, status }),
-  accept: (id: number) =>
-    api.post<{ ok: boolean; project_id: number; existing?: boolean; invoices?: ScheduledInvoice[] }>(
-      "/proposals.php?action=accept",
-      { id },
-    ),
+  // Evidence is required once SQL 14 has run; before that the server ignores it.
+  accept: (id: number, evidence: AcceptanceEvidence) =>
+    api.post<{
+      ok: boolean
+      project_id: number
+      existing?: boolean
+      invoices?: ScheduledInvoice[]
+      evidence_recorded?: boolean
+      accepted_terms_sha256?: string | null
+    }>("/proposals.php?action=accept", { id, ...evidence }),
   share: (id: number) => api.post<{ token: string }>("/proposals.php?action=share", { id }),
   unshare: (id: number) => api.post<{ ok: boolean }>("/proposals.php?action=unshare", { id }),
   // Public, no-auth read-only fetch by share token (records a view server-side).

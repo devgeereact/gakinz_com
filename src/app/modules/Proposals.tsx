@@ -35,7 +35,11 @@ import {
   type Proposal,
   type ProposalItemInput,
   type Client,
+  type AcceptanceEvidence,
+  type AcceptanceMethod,
 } from "@/lib/api"
+import { localIsoDate } from "@/lib/format"
+import { ACCEPTANCE_METHODS, evidenceLine, evidenceProblem, referenceHint, shortFingerprint } from "./acceptanceModel"
 import AiAssist from "@/app/components/AiAssist"
 import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/page-kit"
 import { EmptyState } from "@/app/components/EmptyState"
@@ -80,6 +84,7 @@ export default function Proposals() {
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
   const [confirming, setConfirming] = useState<Proposal | null>(null)
+  const [evidence, setEvidence] = useState<AcceptanceEvidence>({ method: "email", reference: "", received_on: "" })
 
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState("")
@@ -203,14 +208,27 @@ export default function Proposals() {
     } else toast.error(res.error || "Could not revoke the link.")
   }
 
+  // Open the accept confirmation with fresh evidence: email, received today.
+  const startAccept = (p: Proposal) => {
+    setEvidence({ method: "email", reference: "", received_on: localIsoDate() })
+    setConfirming(p)
+  }
+  const evidenceIssue = confirming?.evidence_ready ? evidenceProblem(evidence, confirming, localIsoDate()) : null
+
   const accept = async (p: Proposal) => {
-    setConfirming(null)
     setBusyId(p.id)
-    const res = await proposals.accept(p.id)
+    const res = await proposals.accept(p.id, { ...evidence, reference: evidence.reference.trim() })
     setBusyId(null)
     if (res.ok) {
+      // Kept open on a refusal, so the owner can correct the evidence.
+      setConfirming(null)
       const n = res.data.invoices?.length ?? 0
-      toast.success(n > 0 ? `Accepted. Project and ${n} invoices (40/30/30) created.` : "Accepted. Project created.")
+      const made = n > 0 ? `Project and ${n} invoices (40/30/30) created.` : "Project created."
+      if (res.data.evidence_recorded === false && !res.data.existing) {
+        toast.success(`Accepted. ${made} No acceptance evidence was stored: the SQL 14 database step has not run.`)
+      } else {
+        toast.success(`Accepted. ${made}`)
+      }
       navigate("/app/projects")
     } else toast.error(res.error || "Could not accept.")
   }
@@ -409,7 +427,21 @@ export default function Proposals() {
               <TableBody>
                 {items.map((p) => (
                   <TableRow key={p.id}>
-                    <TableCell className="min-w-[12rem] font-semibold [overflow-wrap:anywhere]">{p.title}</TableCell>
+                    <TableCell className="min-w-[12rem] [overflow-wrap:anywhere]">
+                      <span className="font-semibold">{p.title}</span>
+                      {p.status === "accepted" && evidenceLine(p) && (
+                        <span className="mt-1 block text-[13px] text-muted-foreground">
+                          {evidenceLine(p)}
+                          {p.acceptance_reference && <>, ref {p.acceptance_reference}</>}
+                          {p.accepted_by_name && <>. Recorded by {p.accepted_by_name}</>}
+                          {p.accepted_terms_sha256 && (
+                            <span className="block font-mono text-xs" title={`SHA-256 of the accepted terms: ${p.accepted_terms_sha256}`}>
+                              Terms version {shortFingerprint(p.accepted_terms_sha256)}
+                            </span>
+                          )}
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell className="min-w-[9rem] [overflow-wrap:anywhere]">{p.client_company || <span className="text-muted-foreground">No client</span>}</TableCell>
                     <TableCell>
                       <StatusBadge status={p.status} />
@@ -438,7 +470,7 @@ export default function Proposals() {
                         )}
                         {p.status === "sent" && (
                           <>
-                            <Button variant="ghost" size="sm" disabled={busyId === p.id} onClick={() => setConfirming(p)}>
+                            <Button variant="ghost" size="sm" disabled={busyId === p.id} onClick={() => startAccept(p)}>
                               <Check /> Accept
                             </Button>
                             <Button variant="ghost" size="sm" disabled={busyId === p.id} onClick={() => decline(p)}>
@@ -479,11 +511,71 @@ export default function Proposals() {
                   </div>
                 ))}
               </div>
+              {confirming.evidence_ready ? (
+                <div className="grid gap-[14px] border-t pt-4">
+                  <p className="text-muted-foreground">
+                    Clicking Accept is not proof the client agreed. Record what they sent you: how it arrived, a reference you can
+                    find it by again, and the day it came in. A fingerprint of these exact terms is stored with it. The client's
+                    link shows only the date.
+                  </p>
+                  <div className="grid gap-[14px] sm:grid-cols-2">
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="amethod">How the client accepted</Label>
+                      <Select value={evidence.method} onValueChange={(v) => setEvidence((e) => ({ ...e, method: v as AcceptanceMethod }))}>
+                        <SelectTrigger id="amethod">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ACCEPTANCE_METHODS.map((m) => (
+                            <SelectItem key={m.value} value={m.value}>
+                              {m.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="grid gap-1.5">
+                      <Label htmlFor="adate">Date received</Label>
+                      <Input
+                        id="adate"
+                        type="date"
+                        min={confirming.created_at.slice(0, 10)}
+                        max={localIsoDate()}
+                        value={evidence.received_on}
+                        onChange={(e) => setEvidence((d) => ({ ...d, received_on: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="aref">Reference</Label>
+                    <Input
+                      id="aref"
+                      maxLength={200}
+                      value={evidence.reference}
+                      placeholder={referenceHint(evidence.method)}
+                      onChange={(e) => setEvidence((d) => ({ ...d, reference: e.target.value }))}
+                    />
+                  </div>
+                  {evidenceIssue && (
+                    <p className="text-sm text-muted-foreground" aria-live="polite">
+                      {evidenceIssue}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="rounded-[10px] border border-warn/35 bg-warn-soft px-3 py-2 text-foreground">
+                  Acceptance evidence cannot be stored until the 2026-10-18 database step (SQL 14) has run on the server.
+                  Accepting now records no evidence of the client's agreement.
+                </p>
+              )}
             </div>
           )}
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setConfirming(null)}>Cancel</Button>
-            <Button onClick={() => confirming && accept(confirming)} disabled={confirming !== null && busyId === confirming.id}>
+            <Button
+              onClick={() => confirming && accept(confirming)}
+              disabled={confirming !== null && (busyId === confirming.id || evidenceIssue !== null)}
+            >
               <Check /> Accept and create project
             </Button>
           </DialogFooter>
