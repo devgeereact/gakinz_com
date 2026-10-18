@@ -5,6 +5,7 @@
  *   GET  /support.php               → list tickets (with client + assignee)
  *   GET  /support.php?id=N          → ticket with its replies
  *   POST /support.php?action=create   {subject, body?, client_id?, priority?}
+ *   POST /support.php?action=update_request {question, project_id?}   (client only)
  *   POST /support.php?action=status   {id, status}
  *   POST /support.php?action=priority {id, priority}
  *   POST /support.php?action=assign   {id, assignee_id}
@@ -17,6 +18,12 @@
  * client_id in the request is ignored, a ticket of another client answers 404,
  * and they cannot set status, priority or assignee. Every reply is client
  * facing (ticket_replies has no internal-note flag).
+ *
+ * A client asks for an update with action=update_request: an ordinary ticket
+ * whose subject the server prefixes "Update request:", so the owner answers it
+ * in Support like any other. tickets has no project link, so a chosen project
+ * is named in the body, and only after it is proven to belong to the caller's
+ * client; any other project answers 404 exactly like a missing one.
  */
 require __DIR__ . '/_bootstrap.php';
 
@@ -24,6 +31,7 @@ const STAFF = ['super_admin', 'admin', 'manager', 'editor', 'employee'];
 const STAFF_OR_CLIENT = ['super_admin', 'admin', 'manager', 'editor', 'employee', 'client'];
 const STATUSES = ['open', 'in_progress', 'resolved'];
 const PRIORITIES = ['urgent', 'high', 'normal', 'low'];
+const UPDATE_PREFIX = 'Update request: ';
 
 /** The caller's own client id. A client account with no client is refused. */
 function own_client_id(array $user): int {
@@ -76,7 +84,7 @@ $action = $_GET['action'] ?? '';
 // ── Client branch ─────────────────────────────────────────────────────────────
 // Handled first and always ends the request, so no client request can reach
 // the staff branches below.
-if (in_array($method, ['GET', 'POST'], true) && ($action === '' || in_array($action, ['create', 'reply'], true))) {
+if (in_array($method, ['GET', 'POST'], true) && ($action === '' || in_array($action, ['create', 'reply', 'update_request'], true))) {
   $user = require_auth($conn, STAFF_OR_CLIENT);
 } else {
   $user = require_auth($conn, STAFF);
@@ -127,6 +135,46 @@ if ($user['role'] === 'client') {
     $newId = $conn->insert_id; // read before audit(), which inserts its own row
     audit($conn, $user['id'], 'ticket_create', "#$newId (client) $subject");
     ok(['id' => $newId], 201);
+  }
+
+  if ($method === 'POST' && $action === 'update_request') {
+    $in = body();
+    if (array_key_exists('question', $in) && !is_string($in['question'])) fail('Write your question as text.');
+    $question = client_text($in, 'question', 5000);
+    if ($question === '') fail('Write the question you would like answered.');
+
+    // Optional project, which must be one of this client's own. A project of
+    // another client, a deleted one and a malformed id all answer the same 404.
+    $project = null;
+    $rawProject = $in['project_id'] ?? null;
+    if ($rawProject !== null && $rawProject !== '') {
+      $pid = (is_int($rawProject) || (is_string($rawProject) && preg_match('/^[1-9]\d{0,9}$/', $rawProject))) ? (int)$rawProject : 0;
+      if ($pid <= 0) fail('Project not found.', 404);
+      $p = $conn->prepare('SELECT id, name FROM projects WHERE id = ? AND client_id = ? AND deleted_at IS NULL LIMIT 1');
+      $p->bind_param('ii', $pid, $clientId);
+      $p->execute();
+      $project = $p->get_result()->fetch_assoc();
+      if (!$project) fail('Project not found.', 404);
+    }
+
+    // The subject is built here, never taken from the request.
+    $about = $project ? (string)$project['name'] : preg_replace('/\s+/u', ' ', $question);
+    $subject = UPDATE_PREFIX . mb_substr($about, 0, 200 - mb_strlen(UPDATE_PREFIX));
+    $bodyText = $project ? 'Project: ' . $project['name'] . ' (#' . (int)$project['id'] . ")\n\n" . $question : $question;
+
+    // A double click or a resend of the same question answers 409, not a second ticket.
+    $dup = $conn->prepare("SELECT id FROM tickets WHERE client_id = ? AND subject = ? AND body = ? AND status = 'open'
+      AND deleted_at IS NULL AND created_at > NOW() - INTERVAL 10 MINUTE LIMIT 1");
+    $dup->bind_param('iss', $clientId, $subject, $bodyText);
+    $dup->execute();
+    if ($dup->get_result()->fetch_assoc()) fail('That request has already been sent.', 409);
+
+    $stmt = $conn->prepare("INSERT INTO tickets (client_id, subject, body, priority) VALUES (?, ?, ?, 'normal')");
+    $stmt->bind_param('iss', $clientId, $subject, $bodyText);
+    if (!$stmt->execute()) fail('Could not send your request.', 500);
+    $newId = $conn->insert_id; // read before audit(), which inserts its own row
+    audit($conn, $user['id'], 'ticket_update_request', "#$newId (client)" . ($project ? ' project #' . (int)$project['id'] : ''));
+    ok(['id' => $newId, 'subject' => $subject], 201);
   }
 
   if ($method === 'POST' && $action === 'reply') {
