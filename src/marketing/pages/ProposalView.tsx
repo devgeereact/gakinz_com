@@ -94,6 +94,20 @@ export default function ProposalView() {
                     </span>
                   </div>
 
+                  {/* The only part of the acceptance evidence a client sees: the date. */}
+                  {p.status === "accepted" && p.accepted_on && (
+                    <p className="mt-5 font-data text-label uppercase text-gk-ink-mute">
+                      Accepted on{" "}
+                      <time dateTime={p.accepted_on}>
+                        {new Date(`${p.accepted_on.slice(0, 10)}T00:00:00`).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </time>
+                    </p>
+                  )}
+
                   <table className="mt-8 w-full text-body">
                     <caption className="sr-only">Priced items in this proposal</caption>
                     <thead>
