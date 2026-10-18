@@ -815,3 +815,38 @@ CREATE TABLE IF NOT EXISTS client_feedback (
 --     ADD COLUMN acceptance_reference   VARCHAR(200) NULL DEFAULT NULL AFTER acceptance_method,
 --     ADD COLUMN acceptance_received_on DATE         NULL DEFAULT NULL AFTER acceptance_reference,
 --     ADD COLUMN accepted_terms_sha256  CHAR(64)     NULL DEFAULT NULL AFTER acceptance_received_on;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-10-18 · SQL 15 · Project asset checklist (assets.php).
+-- docs/PRODUCT-SPEC.md sections 6.2 and 7: the owner lists what a client must
+-- send for a project (logo, copy, photos, a description of a login without the
+-- password itself), the client sees the list in the portal and marks each item
+-- supplied with an optional note, and the owner accepts it or reopens it.
+-- Status: requested | supplied | accepted. A client can only move an item of
+-- their own project from requested to supplied; accept, reopen, edit and
+-- delete are staff only. Reopening returns an item to requested and clears
+-- supplied_at and accepted_at, but keeps client_note so the history of what
+-- the client said stays visible. `file_id` is set only by staff, to a file
+-- already stored against the same project in Files; clients cannot upload
+-- here. `requested_by` and `file_id` are never returned to a client.
+-- New table only, so safe to run as-is on the live DB. Until it runs,
+-- assets.php answers 503, the project board explains the step and the portal
+-- hides the checklist.
+CREATE TABLE IF NOT EXISTS project_assets (
+  id            INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  project_id    INT NOT NULL,
+  label         VARCHAR(160)  NOT NULL,             -- what to send, e.g. "Logo, as SVG or large PNG"
+  note          VARCHAR(1000) NULL DEFAULT NULL,    -- owner guidance shown to the client
+  status        VARCHAR(12)   NOT NULL DEFAULT 'requested', -- requested | supplied | accepted
+  client_note   VARCHAR(1000) NULL DEFAULT NULL,    -- the client's note when supplying; kept on reopen
+  file_id       INT NULL DEFAULT NULL,              -- files.id on the same project, staff only
+  requested_by  INT NULL DEFAULT NULL,              -- users.id, staff only
+  supplied_at   TIMESTAMP NULL DEFAULT NULL,
+  accepted_at   TIMESTAMP NULL DEFAULT NULL,
+  created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at    TIMESTAMP NULL DEFAULT NULL,
+  KEY idx_asset_project (project_id),
+  CONSTRAINT fk_asset_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  CONSTRAINT fk_asset_file    FOREIGN KEY (file_id)    REFERENCES files(id)    ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
