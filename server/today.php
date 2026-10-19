@@ -33,7 +33,10 @@
  *
  * Each item: { type, id, title, reason, at, route }. `at` is a UTC ISO time
  * ("…Z") for a moment, or a plain date ("YYYY-MM-DD") for a due date. `route`
- * is the CMS screen that holds the record.
+ * opens the record through the screen deep links in src/lib/deepLink.ts:
+ * /app/leads?enquiry=, /app/leads?due=1&enquiry=, /app/leads?view=calls&call=,
+ * /app/projects?project=&task=, /app/projects?project=&asset=,
+ * /app/invoicing?invoice=.
  *
  * Dates use the database clock throughout, as invoices.php and bookings.php
  * do: CURRENT_DATE for due dates, NOW() for the TIMESTAMP columns, and
@@ -107,7 +110,7 @@ function td_section(mysqli $conn, string $key): array {
       $where = " FROM enquiries WHERE deleted_at IS NULL AND status = 'new'";
       $rows = td_rows($conn, 'SELECT id, name, company, UNIX_TIMESTAMP(created_at) AS at_ts' . $where . ' ORDER BY created_at ASC, id ASC' . $limit);
       $items = array_map(fn($r) => td_item('enquiry', $r['id'], td_who($r['name'], $r['company']),
-        'New enquiry, not replied to yet', td_utc($r['at_ts']), '/app/leads'), $rows);
+        'New enquiry, not replied to yet', td_utc($r['at_ts']), '/app/leads?enquiry=' . (int)$r['id']), $rows);
       return ['count' => td_count($conn, $where), 'items' => $items];
     }
     case 'follow_ups_due': {
@@ -120,14 +123,16 @@ function td_section(mysqli $conn, string $key): array {
         $reason = (int)$r['late'] === 1 ? 'Follow-up overdue' : 'Follow-up due today';
         $note = trim((string)($r['next_action_note'] ?? ''));
         if ($note !== '') $reason .= ': ' . $note;
-        return td_item('enquiry', $r['id'], td_who($r['name'], $r['company']), $reason, $r['due'], '/app/leads?due=1');
+        return td_item('enquiry', $r['id'], td_who($r['name'], $r['company']), $reason, $r['due'], '/app/leads?due=1&enquiry=' . (int)$r['id']);
       }, $rows);
       return ['count' => td_count($conn, $where), 'items' => $items];
     }
     case 'calls': {
+      // The same joins as bookings.php: a call whose enquiry or client was
+      // deleted is still listed, without the deleted party's name.
       $where = " FROM bookings b
-        LEFT JOIN enquiries e ON e.id = b.enquiry_id
-        LEFT JOIN clients c ON c.id = b.client_id
+        LEFT JOIN enquiries e ON e.id = b.enquiry_id AND e.deleted_at IS NULL
+        LEFT JOIN clients c ON c.id = b.client_id AND c.deleted_at IS NULL
         WHERE b.deleted_at IS NULL AND (b.status = 'requested' OR (b.status = 'confirmed'
           AND b.starts_at >= UTC_TIMESTAMP() AND b.starts_at < UTC_TIMESTAMP() + INTERVAL " . TODAY_CALL_AHEAD_DAYS . ' DAY))';
       $rows = td_rows($conn, 'SELECT b.id, b.status, DATE_FORMAT(b.starts_at, \'%Y-%m-%dT%H:%i:%sZ\') AS starts,
@@ -137,17 +142,17 @@ function td_section(mysqli $conn, string $key): array {
           ? $r['c_company']
           : ($r['e_name'] !== null || $r['e_company'] !== null ? td_who($r['e_name'], $r['e_company']) : 'Call');
         $reason = $r['status'] === 'requested' ? 'Call requested, waiting for you to confirm' : 'Confirmed call';
-        return td_item('booking', $r['id'], $title, $reason, $r['starts'], '/app/leads?view=calls');
+        return td_item('booking', $r['id'], $title, $reason, $r['starts'], '/app/leads?view=calls&call=' . (int)$r['id']);
       }, $rows);
       return ['count' => td_count($conn, $where), 'items' => $items];
     }
     case 'overdue_tasks': {
       $where = " FROM tasks t JOIN projects p ON p.id = t.project_id AND p.deleted_at IS NULL
         WHERE t.deleted_at IS NULL AND t.status <> 'done' AND t.due_date IS NOT NULL AND t.due_date < CURRENT_DATE";
-      $rows = td_rows($conn, 'SELECT t.id, t.title, p.name AS project, DATE_FORMAT(t.due_date, \'%Y-%m-%d\') AS due'
+      $rows = td_rows($conn, 'SELECT t.id, t.project_id, t.title, p.name AS project, DATE_FORMAT(t.due_date, \'%Y-%m-%d\') AS due'
         . $where . ' ORDER BY t.due_date ASC, t.id ASC' . $limit);
       $items = array_map(fn($r) => td_item('task', $r['id'], $r['title'], 'Overdue task on ' . $r['project'],
-        $r['due'], '/app/projects'), $rows);
+        $r['due'], '/app/projects?project=' . (int)$r['project_id'] . '&task=' . (int)$r['id']), $rows);
       return ['count' => td_count($conn, $where), 'items' => $items];
     }
     case 'waiting_material': {
@@ -155,13 +160,13 @@ function td_section(mysqli $conn, string $key): array {
       $where = " FROM project_assets a JOIN projects p ON p.id = a.project_id AND p.deleted_at IS NULL
         WHERE a.deleted_at IS NULL AND ((a.status = 'requested' AND a.updated_at < NOW() - INTERVAL " . TODAY_ASSET_WAIT_DAYS . " DAY)
           OR a.status = 'supplied')";
-      $rows = td_rows($conn, "SELECT a.id, a.label, a.status, p.name AS project,
+      $rows = td_rows($conn, "SELECT a.id, a.project_id, a.label, a.status, p.name AS project,
         UNIX_TIMESTAMP(CASE WHEN a.status = 'supplied' THEN COALESCE(a.supplied_at, a.updated_at) ELSE a.updated_at END) AS at_ts"
         . $where . ' ORDER BY at_ts ASC, a.id ASC' . $limit);
       $items = array_map(fn($r) => td_item('asset', $r['id'], $r['label'],
         ($r['status'] === 'supplied' ? 'Supplied by the client, waiting for you to accept, on ' : 'Requested from the client over '
           . TODAY_ASSET_WAIT_DAYS . ' days ago, on ') . $r['project'],
-        td_utc($r['at_ts']), '/app/projects'), $rows);
+        td_utc($r['at_ts']), '/app/projects?project=' . (int)$r['project_id'] . '&asset=' . (int)$r['id']), $rows);
       return ['count' => td_count($conn, $where), 'items' => $items];
     }
     case 'unpaid_invoices': {
@@ -171,7 +176,7 @@ function td_section(mysqli $conn, string $key): array {
         . $where . ' ORDER BY i.due_at ASC, i.id ASC' . $limit);
       $items = array_map(function ($r) {
         $title = ($r['number'] ?: 'Invoice #' . $r['id']) . ($r['company'] ? ', ' . $r['company'] : '');
-        return td_item('invoice', $r['id'], $title, 'Sent and past its due date, not paid', $r['due'], '/app/invoicing');
+        return td_item('invoice', $r['id'], $title, 'Sent and past its due date, not paid', $r['due'], '/app/invoicing?invoice=' . (int)$r['id']);
       }, $rows);
       return ['count' => td_count($conn, $where), 'items' => $items];
     }

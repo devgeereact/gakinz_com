@@ -90,7 +90,7 @@ describe("today.php attention list", () => {
     const s = r.json.sections.new_enquiries
     expect(s).toMatchObject({ status: "ok", count: 2 })
     expect(ids(s)).toEqual([older, newer])
-    expect(s.items[1]).toMatchObject({ type: "enquiry", title: "Newer Person, Newer Ltd", route: "/app/leads" })
+    expect(s.items[1]).toMatchObject({ type: "enquiry", title: "Newer Person, Newer Ltd", route: `/app/leads?enquiry=${newer}` })
     expect(s.items[1].reason).toMatch(/not replied/)
     expect(s.items[1].at).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/)
   })
@@ -109,7 +109,7 @@ describe("today.php attention list", () => {
     expect(ids(s)).toEqual([lateHigh, lateLow, dueToday])
     const todayItem = s.items[2]
     expect(todayItem.reason).toBe("Follow-up due today: Send the quote")
-    expect(todayItem.route).toBe("/app/leads?due=1")
+    expect(todayItem.route).toBe(`/app/leads?due=1&enquiry=${dueToday}`)
     expect(todayItem.at).toBe(one("SELECT DATE_FORMAT(CURRENT_DATE, '%Y-%m-%d')"))
     expect(s.items[0].reason).toBe("Follow-up overdue")
   })
@@ -125,19 +125,30 @@ describe("today.php attention list", () => {
     booking("completed", "UTC_TIMESTAMP() + INTERVAL 1 DAY")
     booking("cancelled", "UTC_TIMESTAMP() + INTERVAL 1 DAY")
     booking("requested", "UTC_TIMESTAMP() + INTERVAL 1 DAY", {}, true) // deleted
+    // As bookings.php lists them: a call whose enquiry or client was deleted
+    // still shows, without the deleted party's name.
+    const goneLead = enquiry("Gone Lead", { company: q("Gone Lead Co"), deleted_at: "NOW()" })
+    const goneClient = createClient("Gone Client Ltd")
+    sql(`UPDATE clients SET deleted_at = NOW() WHERE id = ${goneClient}`)
+    const onGoneLead = booking("confirmed", "UTC_TIMESTAMP() + INTERVAL 2 DAY", { enquiryId: goneLead })
+    const onGoneClient = booking("requested", "UTC_TIMESTAMP() + INTERVAL 3 DAY", { clientId: goneClient })
 
-    const s = (await today(owner)).json.sections.calls
-    expect(s).toMatchObject({ status: "ok", count: 3 })
-    expect(ids(s)).toEqual([requestedPast, soon, edge])
-    expect(s.items[0]).toMatchObject({ type: "booking", title: "Call Client Ltd", route: "/app/leads?view=calls" })
+    const r = await today(owner)
+    const s = r.json.sections.calls
+    expect(s).toMatchObject({ status: "ok", count: 5 })
+    expect(ids(s)).toEqual([requestedPast, soon, onGoneLead, onGoneClient, edge])
+    expect(s.items[2].title).toBe("Call")
+    expect(s.items[3].title).toBe("Call")
+    expect(JSON.stringify(r.json)).not.toMatch(/Gone (Lead|Client)/)
+    expect(s.items[0]).toMatchObject({ type: "booking", title: "Call Client Ltd", route: `/app/leads?view=calls&call=${requestedPast}` })
     expect(s.items[0].reason).toMatch(/requested/)
     expect(s.items[1]).toMatchObject({ title: "Call Lead, Lead Co", reason: "Confirmed call" })
-    expect(s.items[2].title).toBe("Call")
+    expect(s.items[4].title).toBe("Call")
     // starts_at is stored in UTC; it comes back as an ISO time marked Z.
     expect(s.items[1].at).toBe(one(`SELECT DATE_FORMAT(starts_at, '%Y-%m-%dT%H:%i:%sZ') FROM bookings WHERE id = ${soon}`))
   })
 
-  it("lists tasks past due and not done, never due today, done or on a deleted project", async () => {
+  it("lists tasks past due and not done, never due today, done, deleted or on a deleted project", async () => {
     const live = project("Live build")
     const gone = project("Deleted build", null, true)
     const late = task(live, "Write the copy", "CURRENT_DATE - INTERVAL 5 DAY", "doing")
@@ -146,11 +157,13 @@ describe("today.php attention list", () => {
     task(live, "Finished late", "CURRENT_DATE - INTERVAL 2 DAY", "done")
     task(live, "No date", "NULL")
     task(gone, "Orphan", "CURRENT_DATE - INTERVAL 2 DAY")
+    const removed = task(live, "Removed task", "CURRENT_DATE - INTERVAL 3 DAY")
+    sql(`UPDATE tasks SET deleted_at = NOW() WHERE id = ${removed}`)
 
     const s = (await today(owner)).json.sections.overdue_tasks
     expect(s).toMatchObject({ status: "ok", count: 2 })
     expect(ids(s)).toEqual([late, lateReview])
-    expect(s.items[0]).toMatchObject({ type: "task", title: "Write the copy", reason: "Overdue task on Live build", route: "/app/projects" })
+    expect(s.items[0]).toMatchObject({ type: "task", title: "Write the copy", reason: "Overdue task on Live build", route: `/app/projects?project=${live}&task=${late}` })
     expect(s.items[0].at).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   })
 
@@ -162,16 +175,18 @@ describe("today.php attention list", () => {
     const supplied = asset(live, "Copy", "supplied", "NOW() - INTERVAL 1 HOUR", "NOW() - INTERVAL 1 HOUR")
     asset(live, "Brand guide", "accepted", "NOW() - INTERVAL 9 DAY")
     asset(gone, "Orphan logo", "requested", "NOW() - INTERVAL 9 DAY")
+    const removed = asset(live, "Removed logo", "requested", "NOW() - INTERVAL 9 DAY")
+    sql(`UPDATE project_assets SET deleted_at = NOW(), updated_at = updated_at WHERE id = ${removed}`)
 
     const s = (await today(owner)).json.sections.waiting_material
     expect(s).toMatchObject({ status: "ok", count: 2 })
     expect(ids(s)).toEqual([stale, supplied])
-    expect(s.items[0]).toMatchObject({ type: "asset", title: "Logo", route: "/app/projects" })
+    expect(s.items[0]).toMatchObject({ type: "asset", title: "Logo", route: `/app/projects?project=${live}&asset=${stale}` })
     expect(s.items[0].reason).toMatch(/^Requested from the client over 3 days ago, on Asset build$/)
     expect(s.items[1].reason).toMatch(/^Supplied by the client, waiting for you to accept/)
   })
 
-  it("lists sent invoices past due, never due today, paid, draft or undated", async () => {
+  it("lists sent invoices past due, never due today, paid, draft, undated or deleted", async () => {
     const client = createClient("Owes Ltd")
     const oldest = invoice(client, "sent", "CURRENT_DATE - INTERVAL 20 DAY", "GK-INV-0001")
     const recent = invoice(client, "sent", "CURRENT_DATE - INTERVAL 1 DAY", "GK-INV-0002")
@@ -179,11 +194,13 @@ describe("today.php attention list", () => {
     invoice(client, "paid", "CURRENT_DATE - INTERVAL 10 DAY", "GK-INV-0004")
     invoice(client, "draft", "CURRENT_DATE - INTERVAL 10 DAY", "GK-INV-0005")
     invoice(client, "sent", "NULL", "GK-INV-0006")
+    const removed = invoice(client, "sent", "CURRENT_DATE - INTERVAL 30 DAY", "GK-INV-0007")
+    sql(`UPDATE invoices SET deleted_at = NOW() WHERE id = ${removed}`)
 
     const s = (await today(owner)).json.sections.unpaid_invoices
     expect(s).toMatchObject({ status: "ok", count: 2 })
     expect(ids(s)).toEqual([oldest, recent])
-    expect(s.items[0]).toMatchObject({ type: "invoice", title: "GK-INV-0001, Owes Ltd", route: "/app/invoicing" })
+    expect(s.items[0]).toMatchObject({ type: "invoice", title: "GK-INV-0001, Owes Ltd", route: `/app/invoicing?invoice=${oldest}` })
   })
 
   it("caps each section at 20 items but counts them all, and stamps generated_at in UTC", async () => {
