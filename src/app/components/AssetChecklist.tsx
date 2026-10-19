@@ -35,11 +35,14 @@ export function ProjectAssetsPanel({
   projectId,
   projectName,
   linkedAsset = null,
+  linkRevision = "",
 }: {
   projectId: number
   projectName: string
   /** An item a deep link points at (src/lib/deepLink.ts): scrolled to and outlined. */
   linkedAsset?: number | null
+  /** Changes when the link is re-applied, so the item is scrolled to again. */
+  linkRevision?: string
 }) {
   const [items, setItems] = useState<ProjectAsset[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -90,7 +93,7 @@ export function ProjectAssetsPanel({
   }
 
   const view = assetsLoadState(items, loadError, unavailable)
-  useReveal(linkedAsset !== null && items?.some((x) => x.id === linkedAsset) ? recordElementId("asset", linkedAsset) : null, items !== null)
+  useReveal(linkedAsset !== null && items?.some((x) => x.id === linkedAsset) ? recordElementId("asset", linkedAsset) : null, items !== null, linkRevision)
 
   return (
     <section className="mt-4 min-w-0 rounded-2xl border bg-card p-[18px]" aria-labelledby={`assets-${projectId}-heading`}>

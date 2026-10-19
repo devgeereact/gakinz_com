@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react"
-import { leadsLink, recordElementId } from "@/lib/deepLink"
-import { useReveal } from "@/hooks/use-reveal"
-import { useNavigate, useSearchParams } from "react-router-dom"
+import { useEffect, useMemo, useState } from "react"
+import { leadsLink, linkMark, linkRevision, recordElementId } from "@/lib/deepLink"
+import { useApplyLink, useReveal } from "@/hooks/use-reveal"
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import { Loader2, Download, RefreshCw, Mail, UserPlus, Tag, CalendarClock, Inbox, Phone, Plus } from "lucide-react"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { toast } from "sonner"
@@ -100,11 +100,14 @@ export default function Leads() {
   const [editNextNote, setEditNextNote] = useState("")
   const [savingMeta, setSavingMeta] = useState(false)
 
-  // ?enquiry=<id> opens that enquiry once, after the first load; ?view=calls&call=<id>
+  // ?enquiry=<id> opens that enquiry once the list has loaded, and again whenever
+  // the link changes or the search re-sends it (useApplyLink); ?view=calls&call=<id>
   // outlines that call. An id that is not listed leaves the plain screen.
+  const location = useLocation()
   const link = leadsLink(searchParams)
-  const linkApplied = useRef(false)
-  // Declared here because load() opens a linked enquiry. The drawer reads it below.
+  // Separate marks, so moving between the board and Calls is not a new enquiry link.
+  const enquiryMark = linkMark({ enquiry: link.enquiry }, location.state)
+  const callMark = linkMark({ call: link.call }, location.state)
   const [openId, setOpenId] = useState<number | null>(null)
 
   const load = async () => {
@@ -113,10 +116,6 @@ export default function Leads() {
     if (res.ok) {
       setItems(res.data)
       setError(null)
-      if (!linkApplied.current) {
-        linkApplied.current = true
-        if (link.enquiry !== null && res.data.some((l) => l.id === link.enquiry)) setOpenId(link.enquiry)
-      }
     } else {
       setError(res.error)
     }
@@ -125,8 +124,10 @@ export default function Leads() {
 
   useEffect(() => {
     load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+  useApplyLink(enquiryMark, !loading && error === null, () => {
+    if (link.enquiry !== null && items.some((l) => l.id === link.enquiry)) setOpenId(link.enquiry)
+  })
 
   // The server omits the follow-up fields until the 2026-10-10 schema step runs.
   const followUpsReady = items.length === 0 || items.some((l) => l.priority !== undefined)
@@ -303,7 +304,7 @@ export default function Leads() {
   }, [openId])
   // Loading until the answer for the enquiry now open has arrived.
   const openLeadCalls = leadCalls && leadCalls.id === openId ? leadCalls : null
-  useReveal(link.call !== null && calls?.some((c) => c.id === link.call) ? recordElementId("call", link.call) : null, callsView && calls !== null)
+  useReveal(link.call !== null && calls?.some((c) => c.id === link.call) ? recordElementId("call", link.call) : null, callsView && calls !== null, linkRevision(callMark))
   const setView = (on: boolean) =>
     setSearchParams(
       (p) => {

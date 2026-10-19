@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
-import { useSearchParams } from "react-router-dom"
-import { LINKED_ROW, invoicingLink, recordElementId } from "@/lib/deepLink"
+import { useLocation, useSearchParams } from "react-router-dom"
+import { LINKED_ROW, invoicingLink, linkMark, linkRevision, recordElementId } from "@/lib/deepLink"
 import { useReveal } from "@/hooks/use-reveal"
 import { Loader2, Plus, RefreshCw, Trash2, Send, BadgePoundSterling, FileDown, Download, CreditCard, AlertTriangle, AlertCircle, BellRing, Receipt, Search, Landmark } from "lucide-react"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
@@ -112,9 +112,14 @@ export default function Invoicing() {
 
   const [filter, setFilter] = useState<Filter>("all")
   const [query, setQuery] = useState("")
-  // ?invoice=<id> scrolls to and outlines that invoice. An id not on the list is ignored.
+  // ?invoice=<id> scrolls to and outlines that invoice, read on every render so a
+  // new link on the open screen applies; the search's nonce scrolls to it again.
+  // An id not on the list is ignored.
   const [searchParams] = useSearchParams()
-  const linkedInvoice = invoicingLink(searchParams).invoice
+  const location = useLocation()
+  const invoiceLink = invoicingLink(searchParams)
+  const linkedInvoice = invoiceLink.invoice
+  const invoiceRevision = linkRevision(linkMark(invoiceLink, location.state))
 
   // Figures for the tiles, all from the loaded list. Outstanding is what has
   // been sent and not paid; drafts are counted on their own tile.
@@ -134,7 +139,7 @@ export default function Invoicing() {
       (filter === "all" || bucket(i) === filter) &&
       (!q || `${i.number ?? ""} ${i.client_company ?? ""}`.toLowerCase().includes(q)),
   )
-  useReveal(linkedInvoice !== null && shown.some((i) => i.id === linkedInvoice) ? recordElementId("invoice", linkedInvoice) : null, !loading)
+  useReveal(linkedInvoice !== null && shown.some((i) => i.id === linkedInvoice) ? recordElementId("invoice", linkedInvoice) : null, !loading, invoiceRevision)
   // Clients with at least one overdue invoice → studio "work-pause" flag.
   const overdueClients = Array.from(
     new Set(items.filter((i) => i.overdue && i.client_company).map((i) => i.client_company as string)),

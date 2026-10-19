@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import { useSearchParams } from "react-router-dom"
+import { useLocation, useSearchParams } from "react-router-dom"
 import { AlertCircle, FolderKanban, Loader2, Plus, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -24,8 +24,8 @@ import {
 import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/page-kit"
 import { ProjectAssetsPanel } from "@/app/components/AssetChecklist"
 import { ProjectBriefPanel } from "@/app/components/ProjectBrief"
-import { LINKED_RECORD, projectsLink, recordElementId } from "@/lib/deepLink"
-import { useReveal } from "@/hooks/use-reveal"
+import { LINKED_RECORD, linkMark, linkRevision, projectsLink, recordElementId } from "@/lib/deepLink"
+import { useApplyLink, useReveal } from "@/hooks/use-reveal"
 import {
   projects,
   tasks as tasksApi,
@@ -82,11 +82,13 @@ export default function Projects() {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ name: "", client_id: "", due_date: "" })
   const [saving, setSaving] = useState(false)
-  // ?project=<id>[&task=<id>|&asset=<id>] opens that project once, after the
-  // first load. An id that is not in the list leaves the plain screen.
+  // ?project=<id>[&task=<id>|&asset=<id>] opens that project once the list has
+  // loaded, and again whenever the link changes or the search re-sends it
+  // (useApplyLink). An id that is not in the list leaves the plain screen.
   const [searchParams] = useSearchParams()
+  const location = useLocation()
   const link = projectsLink(searchParams)
-  const linkApplied = useRef(false)
+  const mark = linkMark(link, location.state)
 
   const select = (p: Project) => {
     setSelected(p)
@@ -100,21 +102,20 @@ export default function Projects() {
     if (res.ok) {
       setList(res.data)
       setError(null)
-      if (!linkApplied.current) {
-        linkApplied.current = true
-        const linked = link.project !== null ? res.data.find((p) => p.id === link.project) : undefined
-        if (linked) select(linked)
-      }
     } else {
       setError(res.error)
     }
     setLoading(false)
   }
 
+  useApplyLink(mark, !loading && error === null, () => {
+    const linked = link.project !== null ? list.find((p) => p.id === link.project) : undefined
+    if (linked) select(linked)
+  })
+
   useEffect(() => {
     loadProjects()
     clientsApi.list().then((r) => r.ok && setClientList(r.data))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const createProject = async () => {
@@ -315,12 +316,14 @@ export default function Projects() {
             onStageChange={(s) => setProjectStage(selected, s)}
             onTasksChanged={loadProjects}
             linkedTask={link.project === selected.id ? link.task : null}
+            linkRevision={linkRevision(mark)}
           />
           <ProjectAssetsPanel
             key={selected.id}
             projectId={selected.id}
             projectName={selected.name}
             linkedAsset={link.project === selected.id ? link.asset : null}
+            linkRevision={linkRevision(mark)}
           />
           <ProjectBriefPanel key={`brief-${selected.id}`} projectId={selected.id} projectName={selected.name} />
         </div>
@@ -353,6 +356,7 @@ function ProjectBoard({
   onStageChange,
   onTasksChanged,
   linkedTask = null,
+  linkRevision = "",
 }: {
   project: Project
   statusOptions: { key: ProjectStatus; label: string }[]
@@ -361,6 +365,8 @@ function ProjectBoard({
   onStageChange: (s: ProjectStage) => void
   onTasksChanged: () => void
   linkedTask?: number | null
+  /** Changes when the link is re-applied, so the task is scrolled to again. */
+  linkRevision?: string
 }) {
   const [items, setItems] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
@@ -378,7 +384,7 @@ function ProjectBoard({
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id])
-  useReveal(linkedTask !== null && items.some((t) => t.id === linkedTask) ? recordElementId("task", linkedTask) : null, !loading)
+  useReveal(linkedTask !== null && items.some((t) => t.id === linkedTask) ? recordElementId("task", linkedTask) : null, !loading, linkRevision)
 
   const byStatus = useMemo(() => {
     const map: Record<TaskStatus, Task[]> = { todo: [], doing: [], review: [], done: [] }

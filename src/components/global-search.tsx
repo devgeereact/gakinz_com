@@ -47,6 +47,7 @@ import {
 } from "lucide-react"
 import { useAuth } from "@/store/auth.store"
 import { canAccess } from "@/lib/access"
+import { linkNavigationState } from "@/lib/deepLink"
 import { recordSearch, type RecordType } from "@/lib/api"
 import {
   canSearchRecords,
@@ -159,9 +160,11 @@ export function GlobalSearch() {
     return () => document.removeEventListener("keydown", down)
   }, [open, onOpenChange])
 
-  const go = (path: string) => {
+  // A record carries a fresh nonce in the history state, so picking the record
+  // the screen already shows (the same URL) still opens it again (src/lib/deepLink.ts).
+  const go = (path: string, record = false) => {
     onOpenChange(false)
-    navigate(path)
+    navigate(path, record ? { state: linkNavigationState() } : undefined)
   }
 
   return (
@@ -231,7 +234,7 @@ export function GlobalSearch() {
                         key={`${r.type}-${r.id}`}
                         value={recordItemValue(r)}
                         forceMount
-                        onSelect={() => go(r.route)}
+                        onSelect={() => go(r.route, true)}
                         className="group cursor-pointer"
                       >
                         <Icon className="mr-3 h-4 w-4 shrink-0 text-primary" />
