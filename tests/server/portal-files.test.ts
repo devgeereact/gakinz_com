@@ -102,6 +102,16 @@ describe("files shared to the client portal", () => {
     expect(off.json).toMatchObject({ client_visible: false, shared_at: null })
     expect(auditCount("file_client_share")).toBe(2)
     expect((await mine()).json).toEqual([])
+    // Hiding a hidden file changes nothing and is not audited again.
+    expect((await setShare(up.id, false)).json).toMatchObject({ client_visible: false, shared_at: null })
+    expect(auditCount("file_client_share")).toBe(2)
+
+    // A visible row with no shared_at (written before the column was filled)
+    // is stamped when it is shared again.
+    sql(`UPDATE files SET client_visible = 1, shared_at = NULL WHERE id = ${up.id}`)
+    const stamped = await setShare(up.id, true)
+    expect(stamped.json.shared_at).toMatch(/^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/)
+    expect(auditCount("file_client_share")).toBe(3)
   })
 
   it("refuses to share a file that resolves to no client, or to two", async () => {

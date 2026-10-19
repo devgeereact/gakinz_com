@@ -315,14 +315,17 @@ if ($method === 'POST' && $action === 'client_share') {
     }
   }
 
-  // shared_at is assigned before client_visible on purpose: MySQL applies the
-  // assignments left to right, so the CASE still reads the old visibility. A
-  // file that is already visible keeps its original shared_at.
-  $stmt = $conn->prepare('UPDATE files SET
-      shared_at = CASE WHEN ? = 1 THEN IF(client_visible = 1 AND shared_at IS NOT NULL, shared_at, NOW()) ELSE NULL END,
-      client_visible = ?
-    WHERE id = ? AND deleted_at IS NULL');
-  $stmt->bind_param('iii', $visible, $visible, $id);
+  // Neither assignment reads the other column, so the result does not hang on
+  // the order MySQL applies them in. Showing touches only a file that is not
+  // yet shown (or has no shared_at), so a file that is already visible keeps
+  // its original shared_at and changes no row. Hiding clears both.
+  if ($visible === 1) {
+    $stmt = $conn->prepare('UPDATE files SET client_visible = 1, shared_at = NOW()
+      WHERE id = ? AND deleted_at IS NULL AND (NOT (client_visible <=> 1) OR shared_at IS NULL)');
+  } else {
+    $stmt = $conn->prepare('UPDATE files SET client_visible = 0, shared_at = NULL WHERE id = ? AND deleted_at IS NULL');
+  }
+  $stmt->bind_param('i', $id);
   $stmt->execute();
   // Audit what the write actually changed: no row changes when the file was
   // already in that state (or a concurrent request got there first).
