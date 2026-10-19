@@ -51,6 +51,8 @@ import { recordSearch, type RecordType } from "@/lib/api"
 import {
   canSearchRecords,
   createRecordSearcher,
+  isSelectionKey,
+  recordItemValue,
   type RecordSearchState,
 } from "@/lib/recordSearchModel"
 
@@ -112,33 +114,44 @@ export function GlobalSearch() {
   // are still filtered by the menu itself.
   const [query, setQuery] = React.useState("")
   const [records, setRecords] = React.useState<RecordSearchState>({ status: "idle" })
+  // The menu's selected item, controlled so that arriving records can take the
+  // selection from Modules, unless the user has moved it since typing.
+  const [selected, setSelected] = React.useState("")
   const searcher = React.useMemo(
-    () => createRecordSearcher({ role, find: recordSearch.find, onState: setRecords }),
+    () => createRecordSearcher({ role, find: recordSearch.find, onState: setRecords, onSelect: setSelected }),
     [role],
   )
   React.useEffect(() => () => searcher.dispose(), [searcher])
   const showRecords = canSearchRecords(role) && records.status !== "idle" && records.status !== "hidden"
 
-  const onQuery = (value: string) => {
-    setQuery(value)
-    searcher.update(value)
-  }
-  const onOpenChange = (next: boolean) => {
-    setOpen(next)
-    if (!next) onQuery("")
-  }
+  const onQuery = React.useCallback(
+    (value: string) => {
+      setQuery(value)
+      searcher.update(value)
+    },
+    [searcher],
+  )
+  // Every open and close goes through here (button, Escape, Cmd/Ctrl+K, a
+  // selection), so closing always clears the query, the timer and the request.
+  const onOpenChange = React.useCallback(
+    (next: boolean) => {
+      setOpen(next)
+      if (!next) onQuery("")
+    },
+    [onQuery],
+  )
 
   // Keyboard shortcut (Ctrl + K / Cmd + K)
   React.useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         e.preventDefault()
-        setOpen((prev) => !prev)
+        onOpenChange(!open)
       }
     }
     document.addEventListener("keydown", down)
     return () => document.removeEventListener("keydown", down)
-  }, [])
+  }, [open, onOpenChange])
 
   const go = (path: string) => {
     onOpenChange(false)
@@ -157,7 +170,18 @@ export function GlobalSearch() {
         <Search />
       </Button>
 
-      <CommandDialog open={open} onOpenChange={onOpenChange}>
+      <CommandDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        commandProps={{
+          value: selected,
+          onValueChange: setSelected,
+          onKeyDown: (e) => {
+            if (isSelectionKey(e)) searcher.markMoved()
+          },
+          onPointerMove: () => searcher.markMoved(),
+        }}
+      >
         <div className="border-b">
           <CommandInput
             placeholder={canSearchRecords(role) ? "Jump to a module or find a record…" : "Jump to a module…"}
@@ -199,7 +223,7 @@ export function GlobalSearch() {
                     return (
                       <CommandItem
                         key={`${r.type}-${r.id}`}
-                        value={`record-${r.type}-${r.id}`}
+                        value={recordItemValue(r)}
                         forceMount
                         onSelect={() => go(r.route)}
                         className="group cursor-pointer"
