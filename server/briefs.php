@@ -46,12 +46,16 @@
  *   - this client's exact company, contact name and email, matched as whole
  *     words, ignoring case (a value under 3 characters is skipped, and "Ann"
  *     never touches "Annual"), become "[client detail removed]"
- *   - this client's phone, matched by its digits whatever the spaces,
- *     dashes, dots or brackets, with +44, 0044 and a leading 0 treated as
- *     the same, becomes "[client detail removed]"
+ *   - this client's phone, matched by its national number's digits whatever
+ *     the spaces, dashes, dots or brackets, with +44, 0044, (0) and a leading
+ *     0 treated as the same, becomes "[client detail removed]"; the space and
+ *     any bracket around it are kept
  *   - any email address becomes "[email removed]"
  *   - every link loses its query string, fragment and user:pass@ login,
  *     because the spec asks for non-sensitive evidence links
+ * Order: links, then the client's email and any email address, then the
+ * company and contact name, then the phone. Emails go before names, so a
+ * contact called "Ann" with ann@bloom.co.uk never leaves "@bloom.co.uk".
  * Other personal data typed into these fields is not detected.
  * Markdown safety: user text can never change the document's structure.
  * Control characters are removed; \ ` * _ { } [ ] < > # | ! ~ & are
@@ -253,43 +257,92 @@ function md_block(string $s): string {
 const REDACTED = '[client detail removed]';
 
 /**
- * A pattern for a phone number by its digits: any spaces, dashes, dots or
- * brackets between them, and +44, 0044, 44 or a leading 0 as one prefix.
- * Null when the number has fewer than 6 digits, which is too little to match
- * safely.
+ * The national significant number of a stored phone: digits only, without
+ * a 00, + or 44 country prefix and without one trunk 0 (so "+44 (0)7700
+ * 900123", "+447700900123" and "07700 900123" all give 7700900123). $uk says
+ * whether +44 or a trunk 0 was seen, so +44 forms are matched too.
+ */
+function md_phone_digits(string $phone, ?bool &$uk = null): string {
+  $d = preg_replace('/\D+/', '', $phone);
+  $uk = false;
+  if (str_starts_with($d, '00')) $d = substr($d, 2);
+  if (str_starts_with($d, '44')) { $d = substr($d, 2); $uk = true; }
+  if (str_starts_with($d, '0')) { $d = substr($d, 1); $uk = true; }
+  return $d;
+}
+
+/**
+ * A pattern for this phone by its digits: any spaces, dashes, dots or
+ * brackets between them, and an optional +44, 0044, 44, "(0)" or trunk 0 in
+ * front. It starts at a digit or a + and ends at a digit, so the text around
+ * it (a space, a bracket) is never taken. Null under 6 digits, too little to
+ * match safely.
  */
 function md_phone_pattern(string $phone): ?string {
-  $d = preg_replace('/\D+/', '', $phone);
-  if (str_starts_with($d, '00')) $d = substr($d, 2);
-  $uk = false;
-  if (str_starts_with($d, '44')) { $d = substr($d, 2); $uk = true; }
-  elseif (str_starts_with($d, '0')) { $d = substr($d, 1); $uk = true; }
+  $d = md_phone_digits($phone, $uk);
   if (strlen($d) < 6) return null;
   $sep = '[\s\-.()]*';
-  $prefix = $uk ? '(?:(?:\+|00)?\s*44(?:\s*\(\s*0\s*\))?|\(\s*0|0)' : '(?:\+|00)';
-  // The separator after the prefix sits inside the optional group, so a bare
-  // number never swallows the space in front of it.
+  $prefix = $uk ? '(?:(?:\+\s*|00\s*)?44(?:\s*\(\s*0\s*\))?|0)' : '(?:\+|00)';
   return '/(?<![\d+])(?:' . $prefix . $sep . ')?' . implode($sep, str_split($d)) . '(?!\d)/u';
 }
 
 /**
+ * The replacement for one phone match. Brackets are kept balanced: a match
+ * such as "07700) 900123" (from "(07700) 900123") gives the marker and ")",
+ * so the text keeps both its brackets.
+ */
+function md_phone_replace(array $m): string {
+  $open = substr_count($m[0], '(') - substr_count($m[0], ')');
+  return str_repeat('(', max(0, $open)) . REDACTED . str_repeat(')', max(0, -$open));
+}
+
+/**
+ * One link without its login, query string and fragment. A closing bracket
+ * the link does not open (as in "(see https://x.test/a)") is kept after it.
+ */
+function md_link_replace(array $m): string {
+  $url = $m[0];
+  $tail = '';
+  while (str_ends_with($url, ')') && substr_count($url, '(') < substr_count($url, ')')) {
+    $url = substr($url, 0, -1);
+    $tail = ')' . $tail;
+  }
+  // Trailing sentence punctuation is not part of the link.
+  if (preg_match('/[.,;:!]+$/', $url, $p)) {
+    $url = substr($url, 0, -strlen($p[0]));
+    $tail = $p[0] . $tail;
+  }
+  $url = preg_replace('/[?#].*$/s', '', $url);
+  [$scheme, $rest] = explode('://', $url, 2);
+  $slash = strpos($rest, '/');
+  $authority = $slash === false ? $rest : substr($rest, 0, $slash);
+  $path = $slash === false ? '' : substr($rest, $slash);
+  $at = strrpos($authority, '@');
+  if ($at !== false) $authority = substr($authority, $at + 1);
+  return $scheme . '://' . $authority . $path . $tail;
+}
+
+/**
  * Staff text with this client's details, any email address and the
- * sensitive parts of links removed (see the file header). $known: the
- * client's company, contact_name, email and phone.
+ * sensitive parts of links removed (see the file header for the order and
+ * why). $known: the client's company, contact_name, email and phone.
  */
 function md_sanitise(?string $s, array $known): ?string {
   if ($s === null || trim($s) === '') return null;
-  // Links first: drop the login, the query string and the fragment.
-  $s = preg_replace('#\b([a-z][a-z0-9+.-]*://)(?:[^\s/?\#@]*@)?([^\s?\#]*)(?:\?[^\s\#]*)?(?:\#\S*)?#iu', '$1$2', $s);
-  foreach (['company', 'contact_name', 'email'] as $key) {
+  $s = preg_replace_callback('#\b[a-z][a-z0-9+.-]*://\S+#iu', 'md_link_replace', $s);
+  $word = fn(string $k) => '/(?<![\p{L}\p{N}_])' . preg_quote($k, '/') . '(?![\p{L}\p{N}_])/iu';
+  $email = trim((string)($known['email'] ?? ''));
+  if (mb_strlen($email) >= 3) $s = preg_replace($word($email), REDACTED, $s);
+  $s = preg_replace('/[\p{L}\p{N}._%+\'-]+@[\p{L}\p{N}.-]+\.\p{L}{2,}/iu', '[email removed]', $s);
+  foreach (['company', 'contact_name'] as $key) {
     $k = trim((string)($known[$key] ?? ''));
     if (mb_strlen($k) < 3) continue;
     // Whole words only: no letter, digit or underscore either side.
-    $s = preg_replace('/(?<![\p{L}\p{N}_])' . preg_quote($k, '/') . '(?![\p{L}\p{N}_])/iu', REDACTED, $s);
+    $s = preg_replace($word($k), REDACTED, $s);
   }
   $phone = md_phone_pattern((string)($known['phone'] ?? ''));
-  if ($phone !== null) $s = preg_replace($phone, REDACTED, $s);
-  return preg_replace('/[\p{L}\p{N}._%+\'-]+@[\p{L}\p{N}.-]+\.\p{L}{2,}/iu', '[email removed]', $s);
+  if ($phone !== null) $s = preg_replace_callback($phone, 'md_phone_replace', $s);
+  return $s;
 }
 
 function md_section(string $heading, ?string $body, bool $block = true): string {
