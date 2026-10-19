@@ -359,6 +359,9 @@ describe("SQL 19 as the operator runs it", () => {
   const step1 = uncomment(part("-- Step 1", "-- Step 2"))
   const step2 = part("-- Step 2", "-- Recovery")
   const recovery = uncomment(part("-- Recovery"))
+  /** The counters table and the anchors alone, as the earlier draft opened the gate before any backfill. */
+  const DRAFT_GATE = step2.slice(step2.indexOf("CREATE TABLE IF NOT EXISTS reference_counters"), step2.indexOf("CREATE TEMPORARY TABLE"))
+    + " INSERT IGNORE INTO reference_counters (kind, ref_year, last_n) VALUES ('E', 0, 0), ('P', 0, 0);"
 
   /** The database as it is before SQL 19: no columns, no counters. */
   function unmigrate(): void {
@@ -438,18 +441,59 @@ describe("SQL 19 as the operator runs it", () => {
     expect(one(`SELECT last_n FROM reference_counters WHERE kind = 'E' AND ref_year = ${year}`)).toBe("3")
   })
 
+  it("numbers rows left unnumbered after the gate opened above the highest issued number on a repeat run", async () => {
+    unmigrate()
+    sql(`INSERT INTO enquiries (name, email, message) VALUES ('First', 'f@example.test', 'Old enquiry text')`)
+    sql(`INSERT INTO projects (name) VALUES ('First project')`)
+    sql(step1)
+    sql(step2)
+    expect(one("SELECT reference FROM enquiries WHERE name = 'First'")).toBe(ref("E", 1))
+
+    // Saved after the anchors: these take numbers from the counter.
+    expect((await enquire("Second")).json.reference).toBe(ref("E", 2))
+    expect((await enquire("Third")).json.reference).toBe(ref("E", 3))
+    expect((await createProject("Second project")).json.reference).toBe(ref("P", 2))
+    // Then rows with no reference, as a save during the run leaves them. A
+    // positional count would give the first of them E-2, which is taken.
+    sql(`INSERT INTO enquiries (name, email, message) VALUES ('Late one', 'l1@example.test', 'Late enquiry text'),
+         ('Late two', 'l2@example.test', 'Late enquiry text')`)
+    sql(`INSERT INTO projects (name) VALUES ('Late project')`)
+    // The highest issued number's record is deleted: its number is still never reused.
+    sql("DELETE FROM enquiries WHERE name = 'Third'")
+
+    sql(step2)
+    expect(sql("SELECT name, reference FROM enquiries ORDER BY id")).toEqual([
+      ["First", ref("E", 1)],
+      ["Second", ref("E", 2)],
+      ["Late one", ref("E", 4)],
+      ["Late two", ref("E", 5)],
+    ])
+    expect(one("SELECT reference FROM projects WHERE name = 'Late project'")).toBe(ref("P", 3))
+    expect(count("enquiries WHERE reference IS NULL")).toBe(0)
+    expect(count("projects WHERE reference IS NULL")).toBe(0)
+    expect(one(`SELECT last_n FROM reference_counters WHERE kind = 'E' AND ref_year = ${year}`)).toBe("5")
+    // A third run changes nothing, and the next create carries on after it.
+    sql(step2)
+    expect(one("SELECT reference FROM enquiries WHERE name = 'Late two'")).toBe(ref("E", 5))
+    expect((await enquire("Next")).json.reference).toBe(ref("E", 6))
+  })
+
   it("recovers a database where an earlier draft opened the gate before the backfill", async () => {
     unmigrate()
     sql(`INSERT INTO enquiries (name, email, message) VALUES ('Already here', 'h@example.test', 'Old enquiry text')`)
     // The earlier draft: the columns, then counters and anchors with no backfill.
     sql(step1)
-    sql(step2.slice(step2.indexOf("CREATE TABLE IF NOT EXISTS reference_counters")))
+    sql(DRAFT_GATE)
     const early = await enquire("Early Bird")
-    expect(early.json.reference).toBe(ref("E", 1)) // the number the backfill needs for the older row
-    // Its backfill now stops on the unique key and changes nothing.
-    expect(() => sql(step2)).toThrow(/Duplicate entry/)
-    expect(one(`SELECT reference FROM enquiries WHERE name = 'Already here'`)).toBe("NULL")
+    expect(early.json.reference).toBe(ref("E", 1)) // the number a positional backfill would give the older row
+    // Step 2 now numbers the leftover row above the issued number, with no clash.
+    sql(step2)
+    expect(sql("SELECT name, reference FROM enquiries ORDER BY id")).toEqual([
+      ["Already here", ref("E", 2)],
+      ["Early Bird", ref("E", 1)],
+    ])
 
+    // The recovery line still puts the rows back in id order if wanted.
     sql(recovery)
     expect((await enquire("While shut")).json.reference).toBeNull() // the gate is closed again
     sql(step2)
@@ -478,7 +522,7 @@ describe("SQL 19 as the operator runs it", () => {
       expect(p.json.reference).toBeNull()
     } finally {
       sql("DROP VIEW reference_counters")
-      sql(step2.slice(step2.indexOf("CREATE TABLE IF NOT EXISTS reference_counters")))
+      sql(DRAFT_GATE)
     }
   })
 })

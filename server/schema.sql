@@ -985,18 +985,40 @@ CREATE TABLE IF NOT EXISTS project_measurements (
 --     ADD UNIQUE KEY uq_enquiry_reference (reference);
 --   ALTER TABLE projects ADD COLUMN reference VARCHAR(20) NULL DEFAULT NULL AFTER due_date,
 --     ADD UNIQUE KEY uq_project_reference (reference);
--- Step 2, straight after step 1, in one go: the backfill, the counters, then
--- the gate. The backfill numbers every row still without a reference per
--- year in id order (no window functions, so it also runs on MySQL 5.7); the
--- seed starts each year's counter at the highest number in use; the anchors
--- go last. Safe to repeat: run it again if a record was saved while it ran.
+-- Step 2, after uploading the PHP and straight after step 1. Paste it as ONE
+-- piece into ONE SQL tab and run it together: it uses a temporary table,
+-- which lives only in the session that made it. In order: the counters table,
+-- the backfill, the counter seed, then the gate. The backfill gives each row
+-- still without a reference the next numbers after the highest already used
+-- in its type and year (the larger of the highest existing reference and that
+-- year's counter), in id order among the rows being numbered. It never counts
+-- by position, so it cannot collide with a number already issued. No window
+-- functions, so it also runs on MySQL 5.7. The seed starts each year's
+-- counter at the highest number in use; the anchors go last.
+-- Then check that both of these return 0:
+--   SELECT COUNT(*) FROM enquiries WHERE reference IS NULL;
+--   SELECT COUNT(*) FROM projects WHERE reference IS NULL;
+-- If either does not (a record was saved while it ran), run step 2 again:
+-- a repeat is safe and only numbers what is still unnumbered.
 -- MySQL 8.0.20 and later warn that VALUES() in the seed is deprecated, which
 -- is harmless.
+CREATE TABLE IF NOT EXISTS reference_counters (
+  kind     CHAR(1)  NOT NULL,           -- 'E' enquiry | 'P' project
+  ref_year SMALLINT NOT NULL,           -- the year in the reference; 0 for the type's anchor row
+  last_n   INT      NOT NULL DEFAULT 0, -- the highest number issued; never lowered
+  PRIMARY KEY (kind, ref_year)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 CREATE TEMPORARY TABLE gk_ref_fill AS
   SELECT a.id, YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP)) AS y,
-         (SELECT COUNT(*) FROM enquiries b
-           WHERE YEAR(COALESCE(b.created_at, CURRENT_TIMESTAMP)) = YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP))
-             AND b.id <= a.id) AS n
+         GREATEST(
+           COALESCE((SELECT MAX(CAST(SUBSTRING(b.reference, 11) AS UNSIGNED)) FROM enquiries b
+                      WHERE b.reference LIKE CONCAT('GK-E-', YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP)), '-%')), 0),
+           COALESCE((SELECT c.last_n FROM reference_counters c
+                      WHERE c.kind = 'E' AND c.ref_year = YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP))), 0))
+         + (SELECT COUNT(*) FROM enquiries b
+             WHERE b.reference IS NULL
+               AND YEAR(COALESCE(b.created_at, CURRENT_TIMESTAMP)) = YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP))
+               AND b.id <= a.id) AS n
   FROM enquiries a WHERE a.reference IS NULL;
 UPDATE enquiries e JOIN gk_ref_fill f ON f.id = e.id
   SET e.reference = CONCAT('GK-E-', f.y, '-', LPAD(f.n, GREATEST(4, CHAR_LENGTH(f.n)), '0'))
@@ -1004,20 +1026,20 @@ UPDATE enquiries e JOIN gk_ref_fill f ON f.id = e.id
 DROP TEMPORARY TABLE gk_ref_fill;
 CREATE TEMPORARY TABLE gk_ref_fill AS
   SELECT a.id, YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP)) AS y,
-         (SELECT COUNT(*) FROM projects b
-           WHERE YEAR(COALESCE(b.created_at, CURRENT_TIMESTAMP)) = YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP))
-             AND b.id <= a.id) AS n
+         GREATEST(
+           COALESCE((SELECT MAX(CAST(SUBSTRING(b.reference, 11) AS UNSIGNED)) FROM projects b
+                      WHERE b.reference LIKE CONCAT('GK-P-', YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP)), '-%')), 0),
+           COALESCE((SELECT c.last_n FROM reference_counters c
+                      WHERE c.kind = 'P' AND c.ref_year = YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP))), 0))
+         + (SELECT COUNT(*) FROM projects b
+             WHERE b.reference IS NULL
+               AND YEAR(COALESCE(b.created_at, CURRENT_TIMESTAMP)) = YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP))
+               AND b.id <= a.id) AS n
   FROM projects a WHERE a.reference IS NULL;
 UPDATE projects p JOIN gk_ref_fill f ON f.id = p.id
   SET p.reference = CONCAT('GK-P-', f.y, '-', LPAD(f.n, GREATEST(4, CHAR_LENGTH(f.n)), '0'))
   WHERE p.reference IS NULL;
 DROP TEMPORARY TABLE gk_ref_fill;
-CREATE TABLE IF NOT EXISTS reference_counters (
-  kind     CHAR(1)  NOT NULL,           -- 'E' enquiry | 'P' project
-  ref_year SMALLINT NOT NULL,           -- the year in the reference; 0 for the type's anchor row
-  last_n   INT      NOT NULL DEFAULT 0, -- the highest number issued; never lowered
-  PRIMARY KEY (kind, ref_year)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 INSERT INTO reference_counters (kind, ref_year, last_n)
   SELECT 'E', r.y, MAX(r.n) FROM (
     SELECT CAST(SUBSTRING(reference, 6, 4) AS UNSIGNED) AS y, CAST(SUBSTRING(reference, 11) AS UNSIGNED) AS n
@@ -1032,8 +1054,9 @@ INSERT INTO reference_counters (kind, ref_year, last_n)
   ON DUPLICATE KEY UPDATE last_n = GREATEST(last_n, VALUES(last_n));
 -- The anchors open the gate, so they go last.
 INSERT IGNORE INTO reference_counters (kind, ref_year, last_n) VALUES ('E', 0, 0), ('P', 0, 0);
--- Recovery, only if an earlier draft of this block was run (table and anchors
--- first) and the step 2 UPDATE stopped on the unique key: close the gate and
--- clear the references issued meanwhile, then run step 2 again. A reference
--- shown in that short window may change.
+-- Recovery, only for the older draft order of this block (table and anchors
+-- first, then the backfill), and only if you want the rows numbered in id
+-- order again: close the gate and clear every reference, then run step 2
+-- again. A reference shown since the draft ran may change. Step 2 as it is
+-- written now never needs this.
 --   DELETE FROM reference_counters; UPDATE enquiries SET reference = NULL; UPDATE projects SET reference = NULL;
