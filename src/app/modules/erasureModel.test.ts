@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { BAD_REPLY_ERROR, NETWORK_ERROR, type EnquiryErasure } from "@/lib/api"
-import { confirmMatches, deletionRequestOutcome, erasureOutcome } from "./erasureModel"
+import { confirmMatches, deletionRequestOutcome, erasePreviewState, erasureOutcome, otherEnquiriesNote } from "./erasureModel"
 
 describe("confirmMatches", () => {
   it("accepts the address with different case and outer spaces", () => {
@@ -42,6 +42,21 @@ describe("erasureOutcome", () => {
       error: "Could not erase the enquiry. Nothing was changed.",
     })
     expect(erasureOutcome({ ok: false, error: NETWORK_ERROR })).toEqual({ kind: "error", error: NETWORK_ERROR })
+  })
+})
+
+describe("erase preview", () => {
+  it("keeps a preview, and falls back to unknown on any failure so the dialog still works", () => {
+    const preview = { id: 3, other_enquiries: 2, blocked: null, message: null }
+    expect(erasePreviewState({ ok: true, data: preview })).toEqual({ kind: "ready", preview })
+    expect(erasePreviewState({ ok: false, error: "Not available on this server yet.", status: 503, details: {} })).toEqual({ kind: "unknown" })
+    expect(erasePreviewState({ ok: false, error: NETWORK_ERROR })).toEqual({ kind: "unknown" })
+  })
+
+  it("says nothing with no other enquiries, and counts them otherwise", () => {
+    expect(otherEnquiriesNote(0)).toBeNull()
+    expect(otherEnquiriesNote(1)).toMatch(/^1 other enquiry uses this address\. It is not erased, but .*IP addresses included, are cleared too\.$/)
+    expect(otherEnquiriesNote(3)).toMatch(/^3 other enquiries use this address\. They are not erased/)
   })
 })
 

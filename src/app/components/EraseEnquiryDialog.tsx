@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { privacy, type Lead } from "@/lib/api"
-import { ERASE_NOT_AVAILABLE, confirmMatches, erasureOutcome } from "@/app/modules/erasureModel"
+import { ERASE_NOT_AVAILABLE, NOT_ERASED, confirmMatches, erasePreviewState, erasureOutcome, otherEnquiriesNote, type ErasePreviewState } from "@/app/modules/erasureModel"
 
 /**
  * Erase one prospect's enquiry (privacy.php?action=erase_enquiry, super admin
@@ -19,7 +19,19 @@ export function EraseEnquiryDialog({ lead, onClose, onErased }: { lead: Lead; on
   const [typed, setTyped] = useState("")
   const [busy, setBusy] = useState(false)
   const [refusal, setRefusal] = useState<string | null>(null)
+  const [preview, setPreview] = useState<ErasePreviewState | null>(null)
+  useEffect(() => {
+    let live = true
+    privacy.erasePreview(lead.id).then((res) => {
+      if (live) setPreview(erasePreviewState(res))
+    })
+    return () => {
+      live = false
+    }
+  }, [lead.id])
   const ready = confirmMatches(typed, lead.email)
+  const others = preview?.kind === "ready" ? otherEnquiriesNote(preview.preview.other_enquiries) : null
+  const blocked = preview?.kind === "ready" ? preview.preview.message : null
 
   const erase = async () => {
     if (!ready) return
@@ -51,6 +63,20 @@ export function EraseEnquiryDialog({ lead, onClose, onErased }: { lead: Lead; on
             email address and name with “[erased]” in the activity log. It cannot be undone. An enquiry linked to a client is refused.
           </DialogDescription>
         </DialogHeader>
+        <div className="space-y-2 text-[13px] text-muted-foreground">
+          {blocked && (
+            <p role="alert" className="text-destructive">
+              {blocked}
+            </p>
+          )}
+          {others && <p>{others}</p>}
+          <p className="mb-1 font-medium text-foreground">Not erased</p>
+          <ul className="list-disc space-y-0.5 pl-5">
+            {NOT_ERASED.map((x) => (
+              <li key={x}>{x}</li>
+            ))}
+          </ul>
+        </div>
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -82,7 +108,7 @@ export function EraseEnquiryDialog({ lead, onClose, onErased }: { lead: Lead; on
             <Button type="button" variant="outline" onClick={onClose} disabled={busy}>
               Cancel
             </Button>
-            <Button type="submit" variant="destructive" disabled={!ready || busy}>
+            <Button type="submit" variant="destructive" disabled={!ready || busy || !!blocked}>
               {busy && <Loader2 className="animate-spin" />}
               Erase enquiry
             </Button>

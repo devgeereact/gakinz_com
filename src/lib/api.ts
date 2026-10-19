@@ -1077,12 +1077,16 @@ export const privacy = {
   // calls and their history, and scrubs its email and name from the audit
   // text. `confirm` must be the enquiry's email address. The server answers
   // 409, changing nothing, for anything linked to a client. New route.
+  // What the erase dialog shows first: other enquiries on the same address and
+  // whether the erasure would be refused. Read only. New route.
+  erasePreview: (id: number) => api.get<EnquiryErasePreview>(`/privacy.php?action=erase_preview&id=${id}`),
   eraseEnquiry: (id: number, confirm: string) =>
     api.post<EnquiryErasure>("/privacy.php?action=erase_enquiry", { id, confirm }),
   // A `client`-role user asks for their data to be deleted: one support ticket
   // with fixed text, at most one open per client. Nothing is deleted. New route.
   requestDeletion: () => api.post<{ id: number; subject: string }>("/support.php?action=deletion_request", {}),
 }
+export type EnquiryErasePreview = { id: number; other_enquiries: number; blocked: string | null; message: string | null }
 export type EnquiryErasure = { erased: true; id: number; bookings: number; booking_events: number; audit_scrubbed: number }
 
 // Auth (§6.1). Token + user persisted in the auth store; api attaches the bearer.

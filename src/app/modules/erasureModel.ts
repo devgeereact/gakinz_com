@@ -7,7 +7,7 @@
  * or say "not available yet" quietly, by the shared rule in
  * src/lib/notAvailable.ts.
  */
-import type { ApiResult, EnquiryErasure } from "@/lib/api"
+import type { ApiResult, EnquiryErasePreview, EnquiryErasure } from "@/lib/api"
 import { notAvailableYet } from "@/lib/notAvailable"
 
 export const ERASE_NOT_AVAILABLE = "Erasing an enquiry is not available on the server yet."
@@ -35,6 +35,31 @@ export function erasureOutcome(res: ApiResult<EnquiryErasure>): ErasureOutcome {
   if (notAvailableYet(res)) return { kind: "not_on_server" }
   if (res.status === 400 || res.status === 404 || res.status === 409) return { kind: "refused", error: res.error }
   return { kind: "error", error: res.error }
+}
+
+/** What an erasure leaves in place, shown in the dialog (PRIVACY-READINESS section 7). */
+export const NOT_ERASED = [
+  "Comms conversations and their messages",
+  "Emails in the Mailbox",
+  "Other enquiries from the same address",
+  "Backups, until they age out",
+  "Activity log entries that name the person without their email address, by first name only for example",
+]
+
+export type ErasePreviewState =
+  | { kind: "ready"; preview: EnquiryErasePreview }
+  | { kind: "unknown" }
+
+/** The preview is extra information: if it fails or is not on the server, the dialog still works without it. */
+export function erasePreviewState(res: ApiResult<EnquiryErasePreview>): ErasePreviewState {
+  return res.ok ? { kind: "ready", preview: res.data } : { kind: "unknown" }
+}
+
+/** The line about other enquiries using the same address, or null when there are none. */
+export function otherEnquiriesNote(n: number): string | null {
+  if (n <= 0) return null
+  const which = n === 1 ? "1 other enquiry uses" : `${n} other enquiries use`
+  return `${which} this address. ${n === 1 ? "It is" : "They are"} not erased, but the activity log entries naming the address, ${n === 1 ? "its" : "their"} submission records and IP addresses included, are cleared too.`
 }
 
 export type DeletionRequestOutcome =
