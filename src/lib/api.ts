@@ -382,10 +382,31 @@ export type Project = {
   done_count: number
   created_at: string
 }
+// Project templates (server/_templates.php): code, not a table, one per work
+// type in docs/PRODUCT-SPEC.md 6.4. Read with projects.templates(); an older
+// projects.php answers that route with the project list instead, which
+// parseTemplates() in projectTemplateModel.ts rejects.
+export type ProjectTemplateKey = "business_website" | "ecommerce" | "website_care" | "it_support" | "it_consultancy"
+export type ProjectTemplate = {
+  key: ProjectTemplateKey
+  name: string
+  summary: string
+  tasks: { title: string; offset_days: number }[]
+  assets: { label: string; note: string }[]
+  brief: { deliverables: string; exclusions: string; measurements: { label: string; target: string; method: string }[] }
+}
+/** projects.php?action=create. `created` and `skipped` come back only when a template was applied. */
+export type ProjectCreated = {
+  id: number
+  template?: ProjectTemplateKey
+  created?: { tasks: number; assets: number; measurements: number }
+  skipped?: { table: string; note: string }[]
+}
 export const projects = {
   list: () => api.get<Project[]>("/projects.php"),
-  create: (payload: { name: string; client_id?: number | null; due_date?: string }) =>
-    api.post<{ id: number }>("/projects.php?action=create", payload),
+  templates: () => api.get<unknown>("/projects.php?action=templates"),
+  create: (payload: { name: string; client_id?: number | null; due_date?: string; template?: ProjectTemplateKey }) =>
+    api.post<ProjectCreated>("/projects.php?action=create", payload),
   setStatus: (id: number, status: ProjectStatus) =>
     api.post<{ ok: boolean }>("/projects.php?action=status", { id, status }),
   setStage: (id: number, stage: ProjectStage) =>
