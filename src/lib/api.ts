@@ -726,6 +726,25 @@ export const today = {
   get: () => api.get<TodayData>("/today.php"),
 }
 
+// Record search (server/search.php). Staff only. Each type mirrors the role
+// constant of the endpoint that owns it; a type the caller cannot read is
+// absent from `types`. A result carries no note, message or amount.
+export const RECORD_TYPES = ["client", "project", "enquiry", "invoice", "quote"] as const
+export type RecordType = (typeof RECORD_TYPES)[number]
+export const RECORD_QUERY_MIN = 2
+export const RECORD_QUERY_MAX = 80
+export const RECORD_RESULTS_PER_TYPE = 8
+export type RecordResult = { type: RecordType; id: number; title: string; secondary: string; route: string }
+export type RecordSearchData = {
+  query: string
+  types: Partial<Record<RecordType, "ok" | "unavailable">>
+  results: RecordResult[]
+}
+export const recordSearch = {
+  find: (query: string, signal?: AbortSignal) =>
+    request<RecordSearchData>(`/search.php?q=${encodeURIComponent(query)}`, { signal }),
+}
+
 // Client portal (§6 Client Portal). Aggregated client-facing view.
 export type PortalData = {
   client: { id: number; company: string; contact_name: string | null; email: string | null }
