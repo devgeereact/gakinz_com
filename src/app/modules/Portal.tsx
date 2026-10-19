@@ -29,6 +29,7 @@ import { feedback as feedbackApi } from "@/lib/api"
 import { FeedbackFields } from "@/app/components/ClientFeedback"
 import { PortalRequests } from "@/app/components/PortalRequests"
 import { PortalAssets } from "@/app/components/AssetChecklist"
+import { PortalFiles } from "@/app/components/PortalFiles"
 import { EMPTY_FEEDBACK, feedbackPayload, feedbackReady, type FeedbackFormState } from "@/app/modules/bookingModel"
 import { useAuth } from "@/store/auth.store"
 import { EmptyState, LoadError } from "@/app/components/EmptyState"
@@ -333,6 +334,7 @@ export default function Portal() {
           {isClient ? (
             <>
               <PortalAssets />
+              <PortalFiles />
               <PortalRequests projects={data.projects} threads={threads} threadsError={threadsError} reloadThreads={loadThreads} />
               <ClientMessages
                 threads={threads}
