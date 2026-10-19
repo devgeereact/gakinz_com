@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
-import type { Measurement, ProjectBrief } from "@/lib/api"
+import { BAD_REPLY_ERROR, NETWORK_ERROR, type Measurement, type ProjectBrief } from "@/lib/api"
 import {
+  briefFailure,
   BRIEF_FIELD_KEYS,
   briefPatch,
   briefProblem,
@@ -163,4 +164,21 @@ it("keeps the panel hint word for word with the note briefs.php prints in the ex
   expect(HANDOFF_NOTE).toBe(
     "Staff-written fields are exported as typed, after removing this client's exact company, contact name, email and phone, and any email address; links lose their query string, fragment and login. Do not type personal data or secrets into the brief.",
   )
+})
+
+describe("briefFailure", () => {
+  it("names SQL 16 for a 503 from an uploaded briefs.php", () => {
+    expect(briefFailure({ ok: false, error: "Not set up.", status: 503, details: { error: "Not set up." } })).toBe("sql")
+  })
+
+  it("is quietly not on the server for the SPA shell's HTML 200 and the host's bare 404", () => {
+    expect(briefFailure({ ok: false, error: BAD_REPLY_ERROR, status: 200 })).toBe("not_on_server")
+    expect(briefFailure({ ok: false, error: "Request failed (404).", status: 404 })).toBe("not_on_server")
+  })
+
+  it("keeps a JSON 404 about the project, a server error and a network failure as errors", () => {
+    expect(briefFailure({ ok: false, error: "Project not found.", status: 404, details: { error: "Project not found." } })).toBe("error")
+    expect(briefFailure({ ok: false, error: "Server error.", status: 500, details: { error: "Server error." } })).toBe("error")
+    expect(briefFailure({ ok: false, error: NETWORK_ERROR })).toBe("error")
+  })
 })

@@ -24,6 +24,7 @@ import { LoadError } from "@/app/components/EmptyState"
 import { assetsLoadState } from "@/app/modules/assetChecklistModel"
 import {
   BRIEF_SECTIONS,
+  briefFailure,
   briefPatch,
   briefProblem,
   briefProgress,
@@ -36,6 +37,7 @@ import {
   measurementSummary,
   RESULT_BADGE,
   type BriefDraft,
+  type BriefFailure,
   type MeasureDraft,
 } from "@/app/modules/projectBriefModel"
 
@@ -48,18 +50,19 @@ import {
 export function ProjectBriefPanel({ projectId, projectName }: { projectId: number; projectName: string }) {
   const [data, setData] = useState<BriefView | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
-  const [unavailable, setUnavailable] = useState(false)
+  // Why the panel cannot be used yet, or null: SQL 16 not run, or briefs.php not uploaded.
+  const [unavailable, setUnavailable] = useState<Exclude<BriefFailure, "error"> | null>(null)
   const [downloading, setDownloading] = useState(false)
 
   const apply = useCallback((res: Awaited<ReturnType<typeof projectBriefs.get>>) => {
     if (res.ok) {
       setData(res.data)
       setLoadError(null)
-      setUnavailable(false)
-    } else if (res.status === 503) {
-      setUnavailable(true)
+      setUnavailable(null)
     } else {
-      setLoadError(res.error)
+      const why = briefFailure(res)
+      if (why === "error") setLoadError(res.error)
+      else setUnavailable(why)
     }
   }, [])
   const load = useCallback(() => projectBriefs.get(projectId).then(apply), [projectId, apply])
@@ -88,7 +91,7 @@ export function ProjectBriefPanel({ projectId, projectName }: { projectId: numbe
     else toast.error(res.error || "Could not download the handoff.")
   }
 
-  const view = assetsLoadState(data ? [data] : null, loadError, unavailable)
+  const view = assetsLoadState(data ? [data] : null, loadError, unavailable !== null)
   const brief = data?.brief ?? null
   const setBrief = (b: ProjectBrief) => setData((d) => (d ? { ...d, brief: b } : d))
   const setMeasurements = (fn: (xs: Measurement[]) => Measurement[]) => setData((d) => (d ? { ...d, measurements: fn(d.measurements) } : d))
@@ -108,7 +111,11 @@ export function ProjectBriefPanel({ projectId, projectName }: { projectId: numbe
       </div>
 
       {view === "unavailable" ? (
-        <p className="text-sm text-muted-foreground">The project brief needs a database update first (SQL 16 in docs/DEPLOYMENT.md).</p>
+        <p className="text-sm text-muted-foreground">
+          {unavailable === "not_on_server"
+            ? "The project brief is not available yet."
+            : "The project brief needs a database update first (SQL 16 in docs/DEPLOYMENT.md)."}
+        </p>
       ) : view === "error" ? (
         <LoadError what="the brief" detail={loadError ?? ""} onRetry={retry} />
       ) : view === "loading" || !data ? (
@@ -122,7 +129,7 @@ export function ProjectBriefPanel({ projectId, projectName }: { projectId: numbe
           </p>
           <div className="grid gap-3 lg:grid-cols-2">
             {BRIEF_SECTIONS.map((section) => (
-              <BriefSection key={section.title} projectId={projectId} section={section} brief={brief} onSaved={setBrief} onUnavailable={() => setUnavailable(true)} />
+              <BriefSection key={section.title} projectId={projectId} section={section} brief={brief} onSaved={setBrief} onUnavailable={() => setUnavailable("sql")} />
             ))}
           </div>
           <Measurements

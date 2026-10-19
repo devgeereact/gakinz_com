@@ -18,6 +18,7 @@ import {
   type MeasureTextField,
   type ProjectBrief,
 } from "@/lib/api"
+import { notAvailableYet, type ApiFailure } from "@/lib/notAvailable"
 
 /**
  * What the handoff does with staff text, word for word as HANDOFF_NOTE in
@@ -187,3 +188,17 @@ export function measureProblem(d: MeasureDraft): string | null {
 
 /** The saved file's name, matching the server's Content-Disposition. */
 export const handoffFileName = (projectId: number) => `gakinz-handoff-project-${projectId}.md`
+
+/**
+ * Why loading the brief failed: "sql" when briefs.php is uploaded but SQL 16
+ * has not run (503), "not_on_server" when briefs.php itself is not on the
+ * server yet (the shared rule in src/lib/notAvailable.ts: a bare 404, the SPA
+ * shell's HTML 200, an older role gate), and "error" for a real failure,
+ * which the panel shows with Retry. The first two are quiet lines.
+ */
+export type BriefFailure = "sql" | "not_on_server" | "error"
+
+export function briefFailure(res: ApiFailure): BriefFailure {
+  if (res.status === 503) return "sql"
+  return notAvailableYet(res) ? "not_on_server" : "error"
+}
