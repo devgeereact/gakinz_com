@@ -3,13 +3,18 @@ import { Link, useSearchParams } from "react-router-dom"
 import { contact, booking, type EnquiryPayload } from "@/lib/api"
 import Seo from "@/marketing/components/Seo"
 import { IArrow, PageHead } from "@/marketing/components/site-ui"
-import { useSiteCopy } from "@/marketing/data/content"
+import { enquiryServiceOptions, useSiteCopy } from "@/marketing/data/content"
 import { whatHappensNext } from "@/marketing/data/site"
 
 /**
  * Contact (D-046). The request shape sent to contact.send() is unchanged; the
  * enquiry lands in the CMS Enquiries board as before. Errors show under each
  * field and focus moves to the first one (WCAG 3.3.1, 2.4.3).
+ *
+ * The optional service choice offers the website's own service names plus
+ * "Something else" (spec 7), and fills the enquiry's existing projectType
+ * field, as a package carried from Pricing does. The budget bands are the
+ * owner's to change and are left as they are.
  */
 
 const BUDGETS = ["Under £1,500", "£1,500 to £3,500", "£3,500 to £6,000", "Over £6,000"]
@@ -44,14 +49,21 @@ export default function Contact() {
   // A pricing button links here with ?package=Name. Only a real package name is
   // accepted; it fills the enquiry's existing projectType field. Set after the
   // first render so the prerendered page and the hydrated one match.
+  // A service page links here with ?service=slug the same way, and the choice
+  // becomes that service's name.
   const [params] = useSearchParams()
   const pkg = params.get("package") ?? ""
+  const svc = params.get("service") ?? ""
   useEffect(() => {
     // Deliberately after mount: reading the query during render would make the
     // prerendered HTML and the first client render differ (a hydration error).
+    const chosen = copy.services.find((s) => s.slug === svc)?.title ?? (copy.packages.some((p) => p.name === pkg) ? pkg : "")
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (copy.packages.some((p) => p.name === pkg)) setForm((f) => (f.projectType ? f : { ...f, projectType: pkg }))
-  }, [pkg, copy.packages])
+    if (chosen) setForm((f) => (f.projectType ? f : { ...f, projectType: chosen }))
+  }, [pkg, svc, copy.packages, copy.services])
+  const serviceOptions = enquiryServiceOptions(copy.services)
+  const chosenType = form.projectType ?? ""
+  const isPackage = chosenType !== "" && !serviceOptions.includes(chosenType)
 
   // Discovery-call link: shown only when the server has one configured.
   useEffect(() => {
@@ -156,8 +168,19 @@ export default function Contact() {
                     </select>
                   </div>
                 </div>
+                <div className="field">
+                  <label htmlFor="service">
+                    Service <span>(optional)</span>
+                  </label>
+                  <select id="service" value={isPackage ? "" : chosenType} onChange={(e) => set("projectType", e.target.value)}>
+                    <option value="">{isPackage ? "As the package below" : "Not sure yet"}</option>
+                    {serviceOptions.map((o) => (
+                      <option key={o}>{o}</option>
+                    ))}
+                  </select>
+                </div>
                 {field("message", "What does the site have to do?", <textarea id="message" ref={messageRef} required maxLength={5000} aria-invalid={errors.message || undefined} aria-describedby={errors.message ? "e-message" : undefined} value={form.message} onChange={(e) => set("message", e.target.value)} onBlur={() => blur("message")} />)}
-                {form.projectType && (
+                {isPackage && (
                   <p className="mute">
                     About the {form.projectType} package.{" "}
                     <button type="button" className="link" style={{ background: "none", border: 0, padding: 0, font: "inherit", cursor: "pointer" }} onClick={() => set("projectType", "")}>
