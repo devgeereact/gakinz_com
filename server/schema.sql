@@ -851,6 +851,7 @@ CREATE TABLE IF NOT EXISTS project_assets (
   CONSTRAINT fk_asset_file    FOREIGN KEY (file_id)    REFERENCES files(id)    ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ─────────────────────────────────────────────────────────────────────────────
 -- 2026-10-19 · SQL 16 · Project brief and measurements (briefs.php).
 -- docs/PRODUCT-SPEC.md sections 6.4 and 6.5: a small brief inside an existing
 -- project (problem, users, agreed outcome, scope, milestones, decisions,
