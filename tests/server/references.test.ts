@@ -129,7 +129,7 @@ describe("under concurrency", () => {
     const replies = await Promise.all(
       Array.from({ length: 12 }, (_, i) => createProject(`Parallel ${i}`, i % 2 ? { template: "it_consultancy" } : {})),
     )
-    expect(replies.every((r) => r.status === 201)).toBe(true)
+    expect(replies.map((r) => [r.status, r.json.error])).toEqual(replies.map(() => [201, undefined]))
     const refs = replies.map((r) => r.json.reference as string)
     expect(new Set(refs).size).toBe(12)
     expect([...refs].sort()).toEqual(Array.from({ length: 12 }, (_, i) => ref("P", i + 1)))
@@ -204,6 +204,60 @@ describe("where a reference is shown", () => {
   })
 })
 
+describe("agreed documents", () => {
+  it("names the project on a contract, in the list and the single contract", async () => {
+    const clientId = createClient("Engines Ltd")
+    const p = await createProject("Engines website", { client_id: clientId })
+    sql(`INSERT INTO contracts (client_id, project_id, title, body) VALUES (${clientId}, ${p.json.id}, 'Service agreement', 'Terms')`)
+    const withProject = Number(one("SELECT MAX(id) FROM contracts"))
+    sql(`INSERT INTO contracts (client_id, title, body) VALUES (${clientId}, 'Mutual NDA', 'Terms')`)
+    const without = Number(one("SELECT MAX(id) FROM contracts"))
+
+    const one1 = await api<Row>(`contracts.php?id=${withProject}`, { token: owner })
+    expect(one1.status).toBe(200)
+    expect(one1.json).toMatchObject({ project_id: p.json.id, project_name: "Engines website", project_reference: p.json.reference })
+    expect((await api<Row>(`contracts.php?id=${without}`, { token: owner })).json.project_reference).toBeNull()
+    const list = await api<Row[]>("contracts.php", { token: owner })
+    expect(list.json.find((c) => c.id === withProject)?.project_reference).toBe(p.json.reference)
+    expect(list.json.find((c) => c.id === without)?.project_reference).toBeNull()
+
+    // Staff only, as before: a client gets nothing from contracts.php.
+    createUser({ email: "client@example.test", role: "client", clientId })
+    const client = await login("client@example.test")
+    expect((await api(`contracts.php?id=${withProject}`, { token: client })).status).toBe(403)
+  })
+
+  it("answers the project reference on a repeated or concurrent accept too", async () => {
+    const clientId = createClient("Engines Ltd")
+    const quote = sentQuote(clientId, "Shop build")
+    const [a, b] = await Promise.all([accept(quote), accept(quote)])
+    expect([a.status, b.status]).toEqual([200, 200])
+    expect(a.json.project_id).toBe(b.json.project_id)
+    expect(a.json.project_reference).toBe(ref("P", 1))
+    expect(b.json.project_reference).toBe(ref("P", 1))
+    const again = await accept(quote)
+    expect(again.json).toMatchObject({ existing: true, project_id: a.json.project_id, project_reference: ref("P", 1) })
+    expect(count("projects")).toBe(1)
+  })
+
+  it("drops the reference from a quote once its project belongs to another client", async () => {
+    const mine = createClient("Mine Ltd")
+    const theirs = createClient("Theirs Ltd")
+    const quote = sentQuote(mine, "Shop build")
+    sql(`UPDATE proposals SET share_token = ${q("b".repeat(40))} WHERE id = ${quote}`)
+    const accepted = await accept(quote)
+    expect((await api<Row>(`proposals.php?token=${"b".repeat(40)}`)).json.project_reference).toBe(accepted.json.project_reference)
+
+    sql(`UPDATE projects SET client_id = ${theirs} WHERE id = ${accepted.json.project_id}`)
+    const shared = await api<Row>(`proposals.php?token=${"b".repeat(40)}`)
+    expect(shared.status).toBe(200)
+    expect(shared.json.project_reference).toBeNull()
+    expect(JSON.stringify(shared.json)).not.toContain(accepted.json.project_reference as string)
+    expect((await api<Row>(`proposals.php?id=${quote}`, { token: owner })).json.project_reference).toBeNull()
+    expect((await accept(quote)).json.project_reference).toBeNull()
+  })
+})
+
 describe("staff search by reference", () => {
   it("finds a project or enquiry by its reference, within each role's types", async () => {
     const e = await enquire("Ada Lovelace", "Engines Ltd")
@@ -266,71 +320,99 @@ describe("a reference is never a key", () => {
     }
   })
 
-  it("is read from no request parameter by any endpoint", () => {
+  it("is read from no request parameter or body field by any endpoint", () => {
+    // The only `reference` body fields are a payment's bank reference
+    // (invoices.php record_payment) and the acceptance evidence (proposals.php
+    // accept). Both are stored as text and never used to find a record.
+    const allowed: Record<string, string> = { "invoices.php": "record_payment", "proposals.php": "accept" }
+    const query = /\$_(GET|POST|REQUEST|COOKIE)\[\s*['"](reference|ref|project_reference)['"]/
+    const fromBody = /(\$(in|body|input|data|payload|req|request)|body\(\))\[\s*['"](reference|ref|project_reference)['"]/g
     const files = fs.readdirSync(SERVER).filter((f) => f.endsWith(".php"))
     expect(files.length).toBeGreaterThan(40)
     for (const f of files) {
       const src = fs.readFileSync(path.join(SERVER, f), "utf8")
-      expect(src, f).not.toMatch(/\$_(GET|POST|REQUEST|COOKIE)\[\s*['"](reference|ref|project_reference)['"]/)
+      expect(src, f).not.toMatch(query)
+      const hits = [...src.matchAll(fromBody)]
+      if (!allowed[f]) {
+        expect(hits.map((h) => h[0]), f).toEqual([])
+        continue
+      }
+      // Each hit sits inside the allowed action's branch: after its `$action === '...'`
+      // test and before the next action branch begins.
+      const start = src.indexOf(`$action === '${allowed[f]}'`)
+      expect(start, f).toBeGreaterThan(-1)
+      const end = src.indexOf("$action === '", start + 1)
+      expect(hits.length, f).toBeGreaterThan(0)
+      for (const h of hits) {
+        expect(h.index!, `${f}: ${h[0]}`).toBeGreaterThan(start)
+        if (end > -1) expect(h.index!, `${f}: ${h[0]}`).toBeLessThan(end)
+      }
     }
   })
 })
 
-describe("before SQL 19 has run", () => {
-  // The SQL 19 block at the foot of server/schema.sql, its commented ALTERs and
-  // backfill uncommented, run as the operator would.
-  const block = fs.readFileSync(path.join(SERVER, "schema.sql"), "utf8")
-    .match(/-- 2026-10-19 · SQL 19 ·[\s\S]*$/)![0]
-    .replace(/^-- {3}/gm, "")
+describe("SQL 19 as the operator runs it", () => {
+  // The SQL 19 block at the foot of server/schema.sql, split into its steps.
+  const block = fs.readFileSync(path.join(SERVER, "schema.sql"), "utf8").match(/-- 2026-10-19 · SQL 19 ·[\s\S]*$/)![0]
+  const part = (from: string, to?: string) => block.slice(block.indexOf(from), to ? block.indexOf(to) : undefined)
+  const uncomment = (text: string) => text.replace(/^-- {3}/gm, "")
+  const step1 = uncomment(part("-- Step 1", "-- Step 2"))
+  const step2 = part("-- Step 2", "-- Recovery")
+  const recovery = uncomment(part("-- Recovery"))
 
-  it("creates enquiries and projects without one, then the backfill numbers every row per year", async () => {
+  /** The database as it is before SQL 19: no columns, no counters. */
+  function unmigrate(): void {
     sql("ALTER TABLE enquiries DROP COLUMN reference")
     sql("ALTER TABLE projects DROP COLUMN reference")
     sql("DROP TABLE reference_counters")
-    try {
-      // Older rows: two enquiries and a project from last year.
-      sql(`INSERT INTO enquiries (name, email, message, created_at) VALUES
-           ('Old one', 'o1@example.test', 'Old enquiry text', '${year - 1}-03-01 10:00:00'),
-           ('Old two', 'o2@example.test', 'Old enquiry text', '${year - 1}-11-30 10:00:00')`)
-      sql(`INSERT INTO projects (name, created_at) VALUES ('Old project', '${year - 1}-06-01 10:00:00')`)
+  }
 
-      const e = await enquire("Ada Lovelace", "Engines Ltd")
-      expect(e.status).toBe(201)
-      expect(e.json.reference).toBeNull()
-      const p = await createProject("Engines website")
-      expect(p.status).toBe(201)
-      expect(p.json.reference).toBeNull()
-      const t = await createProject("Templated", { template: "business_website" })
-      expect(t.status).toBe(201)
-      expect(t.json.reference).toBeNull()
+  it("creates without a reference until the gate opens, and the backfill numbers every row per year", async () => {
+    unmigrate()
+    // Older rows: two enquiries and a project from last year.
+    sql(`INSERT INTO enquiries (name, email, message, created_at) VALUES
+         ('Old one', 'o1@example.test', 'Old enquiry text', '${year - 1}-03-01 10:00:00'),
+         ('Old two', 'o2@example.test', 'Old enquiry text', '${year - 1}-11-30 10:00:00')`)
+    sql(`INSERT INTO projects (name, created_at) VALUES ('Old project', '${year - 1}-06-01 10:00:00')`)
 
-      const leads = await api<Row[]>("leads.php", { token: owner })
-      expect(leads.status).toBe(200)
-      expect(leads.json.find((l) => l.id === e.json.id)).toMatchObject({ name: "Ada Lovelace", reference: null })
-      const projects = await api<Row[]>("projects.php", { token: owner })
-      expect(projects.status).toBe(200)
-      expect(projects.json.every((r) => r.reference === null)).toBe(true)
+    const e = await enquire("Ada Lovelace", "Engines Ltd")
+    expect(e.status).toBe(201)
+    expect(e.json.reference).toBeNull()
+    const p = await createProject("Engines website")
+    expect(p.status).toBe(201)
+    expect(p.json.reference).toBeNull()
 
-      const search = await api<{ types: Row; results: Row[] }>("search.php?q=Engines", { token: owner })
-      expect(search.json.types).toMatchObject({ project: "ok", enquiry: "ok" })
-      expect(search.json.results.map((r) => r.type).sort()).toEqual(["enquiry", "project"])
+    const leads = await api<Row[]>("leads.php", { token: owner })
+    expect(leads.status).toBe(200)
+    expect(leads.json.find((l) => l.id === e.json.id)).toMatchObject({ name: "Ada Lovelace", reference: null })
+    const search = await api<{ types: Row; results: Row[] }>("search.php?q=Engines", { token: owner })
+    expect(search.json.types).toMatchObject({ project: "ok", enquiry: "ok" })
+    expect(search.json.results.map((r) => r.type).sort()).toEqual(["enquiry", "project"])
 
-      const clientId = createClient("Engines Ltd")
-      const accepted = await accept(sentQuote(clientId, "Shop build"))
-      expect(accepted.status).toBe(200)
-      expect(accepted.json.project_reference).toBeNull()
-      const portal = await api<{ projects: Row[] }>(`portal.php?client_id=${clientId}`, { token: owner })
-      expect(portal.status).toBe(200)
-      expect(portal.json.projects[0]).toMatchObject({ name: "Shop build", reference: null })
-    } finally {
-      sql(block)
-    }
+    sql(step1)
+    // Between the steps the columns exist but the gate is shut: a live record
+    // saved now must not take a number the backfill is about to use.
+    const t = await createProject("Templated", { template: "business_website" })
+    expect(t.status).toBe(201)
+    expect(t.json.reference).toBeNull()
+    const clientId = createClient("Engines Ltd")
+    const accepted = await accept(sentQuote(clientId, "Shop build"))
+    expect(accepted.status).toBe(200)
+    expect(accepted.json.project_reference).toBeNull()
+    const between = await enquire("Grace Hopper")
+    expect(between.status).toBe(201)
+    expect(between.json.reference).toBeNull()
+    const portal = await api<{ projects: Row[] }>(`portal.php?client_id=${clientId}`, { token: owner })
+    expect(portal.status).toBe(200)
+    expect(portal.json.projects[0]).toMatchObject({ name: "Shop build", reference: null })
 
-    // Backfill: per year, in id order.
+    sql(step2)
+
     expect(sql("SELECT name, reference FROM enquiries ORDER BY id")).toEqual([
       ["Old one", ref("E", 1, year - 1)],
       ["Old two", ref("E", 2, year - 1)],
       ["Ada Lovelace", ref("E", 1)],
+      ["Grace Hopper", ref("E", 2)],
     ])
     expect(sql("SELECT name, reference FROM projects ORDER BY id")).toEqual([
       ["Old project", ref("P", 1, year - 1)],
@@ -338,14 +420,65 @@ describe("before SQL 19 has run", () => {
       ["Templated", ref("P", 2)],
       ["Shop build", ref("P", 3)],
     ])
-    expect(sql("SELECT kind, ref_year, last_n FROM reference_counters WHERE ref_year > 0 ORDER BY kind, ref_year")).toEqual([
+    expect(sql("SELECT kind, ref_year, last_n FROM reference_counters ORDER BY kind, ref_year")).toEqual([
+      ["E", "0", "0"],
       ["E", String(year - 1), "2"],
-      ["E", String(year), "1"],
+      ["E", String(year), "2"],
+      ["P", "0", "0"],
       ["P", String(year - 1), "1"],
       ["P", String(year), "3"],
     ])
-    // New records carry on after the backfilled numbers.
-    expect((await enquire("Grace Hopper")).json.reference).toBe(ref("E", 2))
+    // The gate is open: new records carry on after the backfilled numbers.
+    expect((await enquire("Katherine Johnson")).json.reference).toBe(ref("E", 3))
     expect((await createProject("After the update")).json.reference).toBe(ref("P", 4))
+
+    // Step 2 again changes nothing that is already numbered.
+    sql(step2)
+    expect(count("enquiries WHERE reference IS NULL")).toBe(0)
+    expect(one(`SELECT last_n FROM reference_counters WHERE kind = 'E' AND ref_year = ${year}`)).toBe("3")
+  })
+
+  it("recovers a database where an earlier draft opened the gate before the backfill", async () => {
+    unmigrate()
+    sql(`INSERT INTO enquiries (name, email, message) VALUES ('Already here', 'h@example.test', 'Old enquiry text')`)
+    // The earlier draft: the columns, then counters and anchors with no backfill.
+    sql(step1)
+    sql(step2.slice(step2.indexOf("CREATE TABLE IF NOT EXISTS reference_counters")))
+    const early = await enquire("Early Bird")
+    expect(early.json.reference).toBe(ref("E", 1)) // the number the backfill needs for the older row
+    // Its backfill now stops on the unique key and changes nothing.
+    expect(() => sql(step2)).toThrow(/Duplicate entry/)
+    expect(one(`SELECT reference FROM enquiries WHERE name = 'Already here'`)).toBe("NULL")
+
+    sql(recovery)
+    expect((await enquire("While shut")).json.reference).toBeNull() // the gate is closed again
+    sql(step2)
+    expect(sql("SELECT name, reference FROM enquiries ORDER BY id")).toEqual([
+      ["Already here", ref("E", 1)],
+      ["Early Bird", ref("E", 2)],
+      ["While shut", ref("E", 3)],
+    ])
+    expect((await enquire("Afterwards")).json.reference).toBe(ref("E", 4))
+  })
+
+  it("saves an enquiry with no reference, never an error, when the readiness probe itself fails", async () => {
+    // reference_counters as a view over a table that is gone: reading it fails
+    // with an error that is neither a missing column nor a missing table.
+    sql("DROP TABLE reference_counters")
+    sql("CREATE TABLE gk_rc_gone (kind CHAR(1), ref_year SMALLINT, last_n INT)")
+    sql("CREATE VIEW reference_counters AS SELECT * FROM gk_rc_gone")
+    sql("DROP TABLE gk_rc_gone")
+    try {
+      const r = await enquire("Probe Failure")
+      expect(r.status).toBe(201)
+      expect(r.json.reference).toBeNull()
+      expect(count("enquiries WHERE name = 'Probe Failure'")).toBe(1)
+      const p = await createProject("Probe project")
+      expect(p.status).toBe(201)
+      expect(p.json.reference).toBeNull()
+    } finally {
+      sql("DROP VIEW reference_counters")
+      sql(step2.slice(step2.indexOf("CREATE TABLE IF NOT EXISTS reference_counters")))
+    }
   })
 })
