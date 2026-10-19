@@ -227,6 +227,46 @@ describe("agreed documents", () => {
     expect((await api(`contracts.php?id=${withProject}`, { token: client })).status).toBe(403)
   })
 
+  it("names no project reference on an invoice or contract linked to another client's or a deleted project", async () => {
+    const mine = createClient("Mine Ltd")
+    const theirs = createClient("Theirs Ltd")
+    const own = await createProject("Our shop", { client_id: mine })
+    const other = await createProject("Secret rebuild", { client_id: theirs })
+    const gone = await createProject("Dropped work", { client_id: mine })
+    sql(`UPDATE projects SET deleted_at = CURRENT_TIMESTAMP WHERE id = ${gone.json.id}`)
+
+    const invoiceOn = (projectId: unknown) => {
+      const id = createInvoice(mine, [[1, 10]])
+      sql(`UPDATE invoices SET project_id = ${Number(projectId)} WHERE id = ${id}`)
+      return id
+    }
+    const invOwn = invoiceOn(own.json.id)
+    const invOther = invoiceOn(other.json.id)
+    const invGone = invoiceOn(gone.json.id)
+    expect((await api<Row>(`invoices.php?id=${invOwn}`, { token: owner })).json.project_reference).toBe(own.json.reference)
+    for (const id of [invOther, invGone]) {
+      const r = await api<Row>(`invoices.php?id=${id}`, { token: owner })
+      expect(r.status).toBe(200)
+      expect(r.json.project_reference).toBeNull()
+    }
+
+    const contractOn = (projectId: unknown, title: string) => {
+      sql(`INSERT INTO contracts (client_id, project_id, title, body) VALUES (${mine}, ${Number(projectId)}, ${q(title)}, 'Terms')`)
+      return Number(one("SELECT MAX(id) FROM contracts"))
+    }
+    const kOwn = contractOn(own.json.id, "Own work")
+    const kOther = contractOn(other.json.id, "Wrong client")
+    const kGone = contractOn(gone.json.id, "Deleted work")
+    expect((await api<Row>(`contracts.php?id=${kOwn}`, { token: owner })).json.project_reference).toBe(own.json.reference)
+    const list = await api<Row[]>("contracts.php", { token: owner })
+    expect(list.json.find((c) => c.id === kOwn)?.project_reference).toBe(own.json.reference)
+    for (const id of [kOther, kGone]) {
+      expect((await api<Row>(`contracts.php?id=${id}`, { token: owner })).json.project_reference).toBeNull()
+      expect(list.json.find((c) => c.id === id)?.project_reference).toBeNull()
+    }
+    expect(JSON.stringify(list.json)).not.toContain(other.json.reference as string)
+  })
+
   it("answers the project reference on a repeated or concurrent accept too", async () => {
     const clientId = createClient("Engines Ltd")
     const quote = sentQuote(clientId, "Shop build")

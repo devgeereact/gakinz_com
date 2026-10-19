@@ -83,7 +83,7 @@ if ($method === 'GET' && isset($_GET['id'])) {
             i.client_id, i.project_id, c.company AS client_company, c.email AS client_email,
             ' . (function_exists('gk_ref_col') ? gk_ref_col($conn, 'pj', 'project_reference') : 'NULL AS project_reference') . '
      FROM invoices i LEFT JOIN clients c ON c.id = i.client_id
-     LEFT JOIN projects pj ON pj.id = i.project_id AND pj.deleted_at IS NULL
+     LEFT JOIN projects pj ON pj.id = i.project_id AND pj.client_id <=> i.client_id AND pj.deleted_at IS NULL
      WHERE i.id = ? AND i.deleted_at IS NULL LIMIT 1'
   );
   $stmt->bind_param('i', $id);

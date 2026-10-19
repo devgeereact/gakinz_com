@@ -19,9 +19,9 @@
 require __DIR__ . '/_bootstrap.php';
 if (is_file(__DIR__ . '/_reference.php')) require_once __DIR__ . '/_reference.php';
 
-/** The project reference column for a SELECT joining projects as `p`. */
+/** The project reference column for a SELECT joining projects as `pr`: the contract's own client's live project only. */
 function ct_ref_col(mysqli $conn): string {
-  return function_exists('gk_ref_col') ? gk_ref_col($conn, 'p', 'project_reference') : 'NULL AS project_reference';
+  return function_exists('gk_ref_col') ? gk_ref_col($conn, 'pr', 'project_reference') : 'NULL AS project_reference';
 }
 
 const STAFF = ['super_admin', 'admin', 'manager'];
@@ -39,6 +39,7 @@ if ($method === 'GET' && isset($_GET['id'])) {
      FROM contracts k
      LEFT JOIN clients c ON c.id = k.client_id
      LEFT JOIN projects p ON p.id = k.project_id
+     LEFT JOIN projects pr ON pr.id = k.project_id AND pr.client_id <=> k.client_id AND pr.deleted_at IS NULL
      WHERE k.id = ? AND k.deleted_at IS NULL LIMIT 1'
   );
   $stmt->bind_param('i', $id);
@@ -60,6 +61,7 @@ if ($method === 'GET') {
           FROM contracts k
           LEFT JOIN clients c ON c.id = k.client_id
           LEFT JOIN projects p ON p.id = k.project_id
+          LEFT JOIN projects pr ON pr.id = k.project_id AND pr.client_id <=> k.client_id AND pr.deleted_at IS NULL
           WHERE k.deleted_at IS NULL ORDER BY k.id DESC LIMIT 500';
   if ($res = $conn->query($sql)) {
     while ($r = $res->fetch_assoc()) {
