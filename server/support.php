@@ -480,6 +480,12 @@ if ($method === 'POST' && $action === 'log_time') {
       $run($ins);
       $projectId = (int)$conn->insert_id;
       $created = true;
+      // Its work reference (SQL 19), like any other new project. Loaded here
+      // only, so the client branch still depends on nothing but _bootstrap.php.
+      if (is_file(__DIR__ . '/_reference.php')) {
+        require_once __DIR__ . '/_reference.php';
+        gk_ref_assign($conn, 'projects', $projectId, true);
+      }
     }
     // New entries start as 'draft', pending timesheet approval, as in time.php.
     $te = $conn->prepare("INSERT INTO time_entries (project_id, ticket_id, user_id, description, minutes, billable, status, entry_date) VALUES (?, ?, ?, ?, ?, ?, 'draft', ?)");

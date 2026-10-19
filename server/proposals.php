@@ -14,8 +14,26 @@
  *   GET  /proposals.php?token=T                       → public view; 410 once declined or expired
  *
  * Status: draft | sent | accepted | declined
+ *
+ * Work references (SQL 19, _reference.php): accept gives the new project its
+ * GK-P-YYYY-NNNN. The list, the detail and the public view carry it as
+ * `project_reference` once the quote has a project, so the agreed quote names
+ * the work it became; null before that, before SQL 19, or while
+ * _reference.php is not on the server. The public view is found by its share
+ * token only, never by a reference.
  */
 require __DIR__ . '/_bootstrap.php';
+if (is_file(__DIR__ . '/_reference.php')) require_once __DIR__ . '/_reference.php';
+
+/** The accepted project's reference for a SELECT on proposals `p`; needs pr_ref_join_sql(). */
+function pr_ref_col_sql(mysqli $conn): string {
+  return function_exists('gk_ref_col') ? gk_ref_col($conn, 'pj', 'project_reference') : 'NULL AS project_reference';
+}
+
+/** The join for pr_ref_col_sql(): the quote's own, live project only. */
+function pr_ref_join_sql(): string {
+  return ' LEFT JOIN projects pj ON pj.id = p.project_id AND pj.deleted_at IS NULL';
+}
 
 const STAFF = ['super_admin', 'admin', 'manager', 'editor'];
 
@@ -236,8 +254,8 @@ if ($method === 'GET' && isset($_GET['token'])) {
   $acceptedOn = acceptance_cols_ready($conn) ? 'p.acceptance_received_on' : 'NULL';
   $stmt = $conn->prepare(
     'SELECT p.id, p.title, p.status, p.currency, p.vat_rate, p.notes, p.valid_until,
-            c.company AS client_company, ' . $acceptedOn . ' AS accepted_on
-     FROM proposals p LEFT JOIN clients c ON c.id = p.client_id
+            c.company AS client_company, ' . $acceptedOn . ' AS accepted_on, ' . pr_ref_col_sql($conn) . '
+     FROM proposals p LEFT JOIN clients c ON c.id = p.client_id' . pr_ref_join_sql() . '
      WHERE p.share_token = ? AND p.deleted_at IS NULL LIMIT 1'
   );
   $stmt->bind_param('s', $token);
@@ -253,7 +271,10 @@ if ($method === 'GET' && isset($_GET['token'])) {
   }
   $p['id'] = (int)$p['id'];
   $p['vat_rate'] = (float)$p['vat_rate'];
-  if ($p['status'] !== 'accepted') $p['accepted_on'] = null;
+  if ($p['status'] !== 'accepted') {
+    $p['accepted_on'] = null;
+    $p['project_reference'] = null; // only an agreed quote names its project
+  }
 
   $items = [];
   $stmt = $conn->prepare('SELECT description, qty, unit_price FROM proposal_items WHERE proposal_id = ? ORDER BY id ASC');
@@ -280,8 +301,8 @@ if ($method === 'GET' && isset($_GET['id'])) {
   $id = (int)$_GET['id'];
   $stmt = $conn->prepare(
     'SELECT p.id, p.title, p.status, p.currency, p.vat_rate, p.notes, p.valid_until, p.client_id, p.project_id,
-            c.company AS client_company, p.created_at, ' . acceptance_cols_sql($conn) . '
-     FROM proposals p LEFT JOIN clients c ON c.id = p.client_id' . acceptance_join_sql($conn) . '
+            c.company AS client_company, p.created_at, ' . acceptance_cols_sql($conn) . ', ' . pr_ref_col_sql($conn) . '
+     FROM proposals p LEFT JOIN clients c ON c.id = p.client_id' . acceptance_join_sql($conn) . pr_ref_join_sql() . '
      WHERE p.id = ? AND p.deleted_at IS NULL LIMIT 1'
   );
   $stmt->bind_param('i', $id);
@@ -312,9 +333,9 @@ if ($method === 'GET') {
   $rows = [];
   $sql = 'SELECT p.id, p.title, p.status, p.currency, p.vat_rate, p.share_token, p.views, p.last_viewed_at,
                  p.valid_until, p.client_id, p.project_id,
-                 c.company AS client_company, p.created_at, ' . acceptance_cols_sql($conn) . ',
+                 c.company AS client_company, p.created_at, ' . acceptance_cols_sql($conn) . ', ' . pr_ref_col_sql($conn) . ',
                  (SELECT COALESCE(SUM(qty * unit_price), 0) FROM proposal_items i WHERE i.proposal_id = p.id) AS total
-          FROM proposals p LEFT JOIN clients c ON c.id = p.client_id' . acceptance_join_sql($conn) . '
+          FROM proposals p LEFT JOIN clients c ON c.id = p.client_id' . acceptance_join_sql($conn) . pr_ref_join_sql() . '
           WHERE p.deleted_at IS NULL ORDER BY p.id DESC LIMIT 500';
   if ($res = $conn->query($sql)) {
     while ($r = $res->fetch_assoc()) {
@@ -489,6 +510,7 @@ if ($method === 'POST' && $action === 'accept') {
     $stmt->bind_param('si', $title, $clientId);
     $stmt->execute();
     $projectId = $conn->insert_id;
+    $projectRef = function_exists('gk_ref_assign') ? gk_ref_assign($conn, 'projects', (int)$projectId, true) : null;
 
     $stmt = $conn->prepare('UPDATE proposals SET project_id = ? WHERE id = ?');
     $stmt->bind_param('ii', $projectId, $id);
@@ -530,6 +552,7 @@ if ($method === 'POST' && $action === 'accept') {
   ok([
     'ok' => true,
     'project_id' => $projectId,
+    'project_reference' => $projectRef,
     'invoices' => $schedule,
     'evidence_recorded' => $evidence,
     'accepted_terms_sha256' => $evidence ? $termsHash : null,

@@ -28,9 +28,11 @@ CREATE TABLE IF NOT EXISTS enquiries (
   next_action_note VARCHAR(300) NULL DEFAULT NULL, -- what that follow-up is
   priority     TINYINT NOT NULL DEFAULT 0,   -- owner's choice: 0 none | 1 low | 2 normal | 3 high (separate from score)
   ip           VARCHAR(45)  DEFAULT NULL,
+  reference    VARCHAR(20)  NULL DEFAULT NULL, -- GK-E-YYYY-NNNN, set by the server at creation (SQL 19); never a password
   created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  deleted_at   TIMESTAMP NULL DEFAULT NULL
+  deleted_at   TIMESTAMP NULL DEFAULT NULL,
+  UNIQUE KEY uq_enquiry_reference (reference)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Users / auth (§6.1). Roles enforced server-side; never trusted from client.
@@ -129,9 +131,11 @@ CREATE TABLE IF NOT EXISTS projects (
   stage      VARCHAR(20) NOT NULL DEFAULT 'discover', -- discover | design | build | launch | support (5-stage delivery)
   kind       VARCHAR(20) NULL DEFAULT NULL,           -- NULL, or 'it_support' for the client's standing IT support project (SQL 17)
   due_date   DATE NULL DEFAULT NULL,
+  reference  VARCHAR(20) NULL DEFAULT NULL,           -- GK-P-YYYY-NNNN, set by the server at creation (SQL 19); never a password
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   deleted_at TIMESTAMP NULL DEFAULT NULL,
+  UNIQUE KEY uq_project_reference (reference),
   CONSTRAINT fk_project_client FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -952,3 +956,69 @@ CREATE TABLE IF NOT EXISTS project_measurements (
 --   ALTER TABLE files
 --     ADD COLUMN client_visible TINYINT(1) NOT NULL DEFAULT 0 AFTER expires_at,
 --     ADD COLUMN shared_at TIMESTAMP NULL DEFAULT NULL AFTER client_visible;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-10-19 · SQL 19 · Work references (_reference.php).
+-- docs/PRODUCT-SPEC.md 6.1: every new enquiry gets GK-E-YYYY-NNNN and every
+-- new project GK-P-YYYY-NNNN, NNNN counting from 0001 per type and per year
+-- (the year the row was created, by the database clock). The visitor sees
+-- their enquiry reference on the contact form's thank-you; staff see both in
+-- Enquiries, Projects and search; the client sees their own project
+-- references in the portal, on the shared quote and on invoice PDFs. A
+-- reference identifies work. It is never a password: no endpoint looks a
+-- record up by it without staff sign-in, and nothing signs anyone in with it.
+-- Numbers come from reference_counters, one row per type and year, raised by
+-- one atomic statement. Each assignment first locks its type's anchor row
+-- (ref_year 0), so assignments take turns: two parallel creates never get
+-- the same number or deadlock, and a number is never issued twice, even
+-- after its record is deleted. The unique keys are the backstop: a clash
+-- takes the next number. Fresh installs get the columns from the CREATE
+-- TABLEs above and the table and anchors below. Run in this order, once, in
+-- one sitting: the CREATE TABLE and the anchor INSERT (both safe to repeat),
+-- the two ALTERs (a second run fails on the duplicate column), then the
+-- backfill, which numbers existing rows per year in id order and seeds the
+-- counters (run it straight after the ALTERs, before any new enquiry or
+-- project is saved; if a row was saved in between, the UPDATE stops on the
+-- unique key and changes nothing). Until the ALTERs run, enquiries and
+-- projects are created exactly as before with no reference, every list
+-- answers reference null, the screens show none and search ignores it.
+CREATE TABLE IF NOT EXISTS reference_counters (
+  kind     CHAR(1)  NOT NULL,           -- 'E' enquiry | 'P' project
+  ref_year SMALLINT NOT NULL,           -- the year in the reference; 0 for the type's anchor row
+  last_n   INT      NOT NULL DEFAULT 0, -- the highest number issued; never lowered
+  PRIMARY KEY (kind, ref_year)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+-- One anchor row per type (ref_year 0): each assignment locks it first, so
+-- assignments take turns and cannot deadlock creating a new year's row.
+INSERT IGNORE INTO reference_counters (kind, ref_year, last_n) VALUES ('E', 0, 0), ('P', 0, 0);
+--   ALTER TABLE enquiries ADD COLUMN reference VARCHAR(20) NULL DEFAULT NULL AFTER ip,
+--     ADD UNIQUE KEY uq_enquiry_reference (reference);
+--   ALTER TABLE projects ADD COLUMN reference VARCHAR(20) NULL DEFAULT NULL AFTER due_date,
+--     ADD UNIQUE KEY uq_project_reference (reference);
+-- Backfill (no window functions, so it also runs on MySQL 5.7):
+--   CREATE TEMPORARY TABLE gk_ref_fill AS
+--     SELECT a.id, YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP)) AS y,
+--            (SELECT COUNT(*) FROM enquiries b
+--              WHERE YEAR(COALESCE(b.created_at, CURRENT_TIMESTAMP)) = YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP))
+--                AND b.id <= a.id) AS n
+--     FROM enquiries a;
+--   UPDATE enquiries e JOIN gk_ref_fill f ON f.id = e.id
+--     SET e.reference = CONCAT('GK-E-', f.y, '-', LPAD(f.n, GREATEST(4, CHAR_LENGTH(f.n)), '0'))
+--     WHERE e.reference IS NULL;
+--   INSERT INTO reference_counters (kind, ref_year, last_n)
+--     SELECT 'E', y, MAX(n) FROM gk_ref_fill GROUP BY y
+--     ON DUPLICATE KEY UPDATE last_n = GREATEST(last_n, VALUES(last_n));
+--   DROP TEMPORARY TABLE gk_ref_fill;
+--   CREATE TEMPORARY TABLE gk_ref_fill AS
+--     SELECT a.id, YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP)) AS y,
+--            (SELECT COUNT(*) FROM projects b
+--              WHERE YEAR(COALESCE(b.created_at, CURRENT_TIMESTAMP)) = YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP))
+--                AND b.id <= a.id) AS n
+--     FROM projects a;
+--   UPDATE projects p JOIN gk_ref_fill f ON f.id = p.id
+--     SET p.reference = CONCAT('GK-P-', f.y, '-', LPAD(f.n, GREATEST(4, CHAR_LENGTH(f.n)), '0'))
+--     WHERE p.reference IS NULL;
+--   INSERT INTO reference_counters (kind, ref_year, last_n)
+--     SELECT 'P', y, MAX(n) FROM gk_ref_fill GROUP BY y
+--     ON DUPLICATE KEY UPDATE last_n = GREATEST(last_n, VALUES(last_n));
+--   DROP TEMPORARY TABLE gk_ref_fill;

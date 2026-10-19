@@ -3,8 +3,16 @@
  * Public enquiry endpoint. The corporate contact form posts here; each enquiry
  * lands in the `enquiries` table, which feeds the GAkinzOS leads pipeline (§6).
  *   POST /contact.php {name, email, company?, budget?, projectType?, message}
+ *     → 201 {id, reference}
+ *
+ * `reference` is the enquiry's GK-E-YYYY-NNNN (SQL 19, _reference.php), shown
+ * once on the thank-you so the visitor can quote it. It is null until SQL 19
+ * has run or while _reference.php is not on the server. Nothing anywhere
+ * looks an enquiry up by it for a visitor.
  */
 require __DIR__ . '/_bootstrap.php';
+// Optional: without it the enquiry is saved exactly as before, with no reference.
+if (is_file(__DIR__ . '/_reference.php')) require_once __DIR__ . '/_reference.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') fail('Method not allowed.', 405);
 
@@ -51,6 +59,7 @@ if (!$stmt->execute()) fail('Could not save your enquiry.', 500);
 // No user id: the caller is anonymous. The row is what the throttle above
 // counts, so it has to be written on every accepted submission.
 $newId = $conn->insert_id; // read before audit(), which inserts its own row
+$reference = function_exists('gk_ref_assign') ? gk_ref_assign($conn, 'enquiries', (int)$newId) : null;
 audit($conn, null, 'enquiry_submit', $email);
 
-ok(['id' => $newId], 201);
+ok(['id' => $newId, 'reference' => $reference], 201);

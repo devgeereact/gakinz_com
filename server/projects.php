@@ -24,8 +24,19 @@
  *
  * _templates.php is loaded only by the two template routes, so a projects.php
  * uploaded without it keeps every other route working; those two answer 503.
+ *
+ * Work references (SQL 19, _reference.php): create gives the new project its
+ * GK-P-YYYY-NNNN and answers it as `reference`; the list carries it. Both are
+ * null before SQL 19 or while _reference.php is not on the server, and the
+ * project is created all the same. No route here accepts a reference as input.
  */
 require __DIR__ . '/_bootstrap.php';
+if (is_file(__DIR__ . '/_reference.php')) require_once __DIR__ . '/_reference.php';
+
+/** The new project's reference, or null (see _reference.php). */
+function pj_reference(mysqli $conn, int $id, bool $inTransaction = false): ?string {
+  return function_exists('gk_ref_assign') ? gk_ref_assign($conn, 'projects', $id, $inTransaction) : null;
+}
 
 const STATUSES = ['planning', 'in_progress', 'on_hold', 'launched'];
 const STAGES = ['discover', 'design', 'build', 'launch', 'support']; // 5-stage delivery
@@ -74,7 +85,8 @@ if ($method === 'GET' && $action === 'templates') {
 if ($method === 'GET') {
   require_auth($conn, STAFF); // staff only
   $rows = [];
-  $sql = 'SELECT p.id, p.name, p.status, p.stage, p.due_date, p.client_id, c.company AS client_company,
+  $ref = function_exists('gk_ref_col') ? gk_ref_col($conn, 'p') : 'NULL AS reference';
+  $sql = 'SELECT p.id, p.name, p.status, p.stage, p.due_date, p.client_id, c.company AS client_company, ' . $ref . ',
                  (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL) AS task_count,
                  (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL AND t.status = "done") AS done_count,
                  p.created_at
@@ -109,8 +121,9 @@ if ($method === 'POST' && $action === 'create') {
     $stmt->bind_param('sis', $name, $clientId, $due);
     if (!$stmt->execute()) fail('Could not create the project.', 500);
     $newId = $conn->insert_id; // read before audit(), which inserts its own row
+    $reference = pj_reference($conn, (int)$newId);
     audit($conn, $user['id'], 'project_create', $name);
-    ok(['id' => $newId], 201);
+    ok(['id' => $newId, 'reference' => $reference], 201);
   }
 
   pj_load_templates();
@@ -147,6 +160,7 @@ if ($method === 'POST' && $action === 'create') {
     $p->bind_param('sis', $name, $clientId, $due);
     $p->execute();
     $newId = $conn->insert_id;
+    $reference = pj_reference($conn, (int)$newId, true); // in the transaction: rolls back with the project
 
     foreach ($template['tasks'] as $task) {
       $title = $task['title'];
@@ -186,6 +200,7 @@ if ($method === 'POST' && $action === 'create') {
   }
   ok([
     'id' => $newId,
+    'reference' => $reference,
     'template' => $templateKey,
     'include_client_checklist' => $withChecklist,
     'created' => $created,

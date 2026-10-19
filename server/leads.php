@@ -14,9 +14,14 @@
  * that ALTER runs on the live DB, the list omits them and `meta` answers
  * `followup: false` instead of failing.
  *
+ * Each listed lead carries `reference`, its GK-E-YYYY-NNNN (SQL 19), or null
+ * before SQL 19 or while _reference.php is not on the server. No route here
+ * accepts a reference as input.
+ *
  * Stages: new | contacted | proposal | won | lost
  */
 require __DIR__ . '/_bootstrap.php';
+if (is_file(__DIR__ . '/_reference.php')) require_once __DIR__ . '/_reference.php';
 
 const STAGES = ['new', 'contacted', 'proposal', 'won', 'lost'];
 const STAFF = ['super_admin', 'admin', 'manager', 'editor'];
@@ -34,15 +39,16 @@ $action = $_GET['action'] ?? '';
 if ($method === 'GET') {
   require_auth($conn, STAFF); // staff only — a client must never read all leads
   $rows = [];
+  $cols = LEAD_COLS . ', ' . (function_exists('gk_ref_col') ? gk_ref_col($conn, 'enquiries') : 'NULL AS reference');
   $tail = ' FROM enquiries WHERE deleted_at IS NULL ORDER BY id DESC LIMIT 500';
   try {
-    $res = $conn->query('SELECT ' . LEAD_COLS . ', ' . FOLLOWUP_COLS . $tail);
+    $res = $conn->query('SELECT ' . $cols . ', ' . FOLLOWUP_COLS . $tail);
     // With mysqli reporting off (older PHP) a missing column returns false
     // instead of throwing; never let that read as "no enquiries".
-    if ($res === false && $conn->errno === 1054) $res = $conn->query('SELECT ' . LEAD_COLS . $tail);
+    if ($res === false && $conn->errno === 1054) $res = $conn->query('SELECT ' . $cols . $tail);
   } catch (mysqli_sql_exception $e) {
     if (!gk_followup_missing($e)) throw $e;
-    $res = $conn->query('SELECT ' . LEAD_COLS . $tail); // un-migrated DB: list without follow-ups
+    $res = $conn->query('SELECT ' . $cols . $tail); // un-migrated DB: list without follow-ups
   }
   if ($res) {
     while ($r = $res->fetch_assoc()) {

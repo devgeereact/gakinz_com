@@ -12,9 +12,14 @@
  *        SQL 13 (2026-10-18) has run.
  *
  * Status: draft | sent | paid. `overdue` is computed (sent + past due_at).
+ *
+ * The single invoice carries `project_reference`, the GK-P-YYYY-NNNN of its
+ * project (SQL 19), for the PDF; null with no project, before SQL 19, or
+ * while _reference.php is not on the server.
  */
 require __DIR__ . '/_bootstrap.php';
 require_once __DIR__ . '/_money.php';
+if (is_file(__DIR__ . '/_reference.php')) require_once __DIR__ . '/_reference.php';
 
 const STAFF = ['super_admin', 'admin', 'manager'];
 const PAYMENT_METHODS = ['bank_transfer', 'cash', 'cheque', 'other'];
@@ -75,8 +80,10 @@ if ($method === 'GET' && isset($_GET['id'])) {
   $stmt = $conn->prepare(
     'SELECT i.id, i.number, i.status, i.currency, i.vat_rate, i.notes, i.issued_at, i.due_at, i.paid_at,
             ' . payment_cols_sql($conn) . ',
-            i.client_id, i.project_id, c.company AS client_company, c.email AS client_email
+            i.client_id, i.project_id, c.company AS client_company, c.email AS client_email,
+            ' . (function_exists('gk_ref_col') ? gk_ref_col($conn, 'pj', 'project_reference') : 'NULL AS project_reference') . '
      FROM invoices i LEFT JOIN clients c ON c.id = i.client_id
+     LEFT JOIN projects pj ON pj.id = i.project_id AND pj.deleted_at IS NULL
      WHERE i.id = ? AND i.deleted_at IS NULL LIMIT 1'
   );
   $stmt->bind_param('i', $id);

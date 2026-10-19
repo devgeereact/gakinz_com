@@ -21,8 +21,8 @@
  * Fields searched, at most SEARCH_PER_TYPE results per type, newest first:
  *
  *   client   company, contact name, email        → /app/clients?client=<id>
- *   project  name                                 → /app/projects?project=<id>
- *   enquiry  name, company, email                 → /app/leads?enquiry=<id>
+ *   project  name, reference (SQL 19)             → /app/projects?project=<id>
+ *   enquiry  name, company, email, reference      → /app/leads?enquiry=<id>
  *   invoice  number                               → /app/invoicing?invoice=<id>
  *   quote    title (proposals have no number)     → /app/proposals
  *
@@ -42,11 +42,19 @@
  *   invoice  invoices.php  STAFF  super_admin, admin, manager
  *   quote    proposals.php STAFF  super_admin, admin, manager, editor
  *
+ * Work references (SQL 19, docs/PRODUCT-SPEC.md 6.1): a project or enquiry is
+ * also found by its GK-P- or GK-E- reference, which leads its secondary line.
+ * This is the only place a reference is matched, and only for the staff roles
+ * above: a reference is never a key for a visitor or a client. Before SQL 19,
+ * or while _reference.php is not on the server, the reference is not
+ * searched and both types work as before.
+ *
  * Failure: each type runs on its own. A failed query marks only that type
  * `unavailable` and adds no results for it.
  */
 require __DIR__ . '/_bootstrap.php';
 require __DIR__ . '/_like.php';
+if (is_file(__DIR__ . '/_reference.php')) require_once __DIR__ . '/_reference.php';
 
 const SEARCH_MIN = 2;
 const SEARCH_MAX = 80;
@@ -91,10 +99,16 @@ function sr_result(string $type, $id, string $title, string $secondary, string $
   return ['type' => $type, 'id' => (int)$id, 'title' => $title, 'secondary' => $secondary, 'route' => $route];
 }
 
+/** True when the reference columns can be searched (SQL 19 run, _reference.php present). */
+function sr_refs(mysqli $conn): bool {
+  return function_exists('gk_ref_ready') && gk_ref_ready($conn);
+}
+
 /** One type's results. Each may throw. */
 function sr_type(mysqli $conn, string $type, string $p): array {
   $like = LIKE_CONTAINS_SQL;
   $limit = ' LIMIT ' . SEARCH_PER_TYPE;
+  $refs = sr_refs($conn);
   switch ($type) {
     case 'client': {
       $rows = sr_rows($conn, 'SELECT id, company, contact_name, email FROM clients
@@ -104,19 +118,28 @@ function sr_type(mysqli $conn, string $type, string $p): array {
         sr_join([$r['contact_name'], $r['email']]), '/app/clients?client=' . (int)$r['id']), $rows);
     }
     case 'project': {
-      $rows = sr_rows($conn, 'SELECT p.id, p.name, p.status, c.company FROM projects p
-        LEFT JOIN clients c ON c.id = p.client_id AND c.deleted_at IS NULL
-        WHERE p.deleted_at IS NULL AND p.name' . $like . '
-        ORDER BY p.id DESC' . $limit, $p, 1);
+      $rows = $refs
+        ? sr_rows($conn, 'SELECT p.id, p.name, p.status, p.reference, c.company FROM projects p
+            LEFT JOIN clients c ON c.id = p.client_id AND c.deleted_at IS NULL
+            WHERE p.deleted_at IS NULL AND (p.name' . $like . ' OR p.reference' . $like . ')
+            ORDER BY p.id DESC' . $limit, $p, 2)
+        : sr_rows($conn, 'SELECT p.id, p.name, p.status, NULL AS reference, c.company FROM projects p
+            LEFT JOIN clients c ON c.id = p.client_id AND c.deleted_at IS NULL
+            WHERE p.deleted_at IS NULL AND p.name' . $like . '
+            ORDER BY p.id DESC' . $limit, $p, 1);
       return array_map(fn($r) => sr_result('project', $r['id'], (string)$r['name'],
-        sr_join([$r['company'], sr_status($r['status'])]), '/app/projects?project=' . (int)$r['id']), $rows);
+        sr_join([$r['reference'], $r['company'], sr_status($r['status'])]), '/app/projects?project=' . (int)$r['id']), $rows);
     }
     case 'enquiry': {
-      $rows = sr_rows($conn, 'SELECT id, name, company, email, status FROM enquiries
-        WHERE deleted_at IS NULL AND (name' . $like . ' OR company' . $like . ' OR email' . $like . ')
-        ORDER BY id DESC' . $limit, $p, 3);
+      $rows = $refs
+        ? sr_rows($conn, 'SELECT id, name, company, email, status, reference FROM enquiries
+            WHERE deleted_at IS NULL AND (name' . $like . ' OR company' . $like . ' OR email' . $like . ' OR reference' . $like . ')
+            ORDER BY id DESC' . $limit, $p, 4)
+        : sr_rows($conn, 'SELECT id, name, company, email, status, NULL AS reference FROM enquiries
+            WHERE deleted_at IS NULL AND (name' . $like . ' OR company' . $like . ' OR email' . $like . ')
+            ORDER BY id DESC' . $limit, $p, 3);
       return array_map(fn($r) => sr_result('enquiry', $r['id'], sr_join([$r['name'], $r['company']]) ?: 'Unnamed',
-        sr_join([$r['email'], sr_status($r['status'])]), '/app/leads?enquiry=' . (int)$r['id']), $rows);
+        sr_join([$r['reference'], $r['email'], sr_status($r['status'])]), '/app/leads?enquiry=' . (int)$r['id']), $rows);
     }
     case 'invoice': {
       $rows = sr_rows($conn, 'SELECT i.id, i.number, i.status, c.company FROM invoices i
