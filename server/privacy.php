@@ -409,6 +409,7 @@ if ($method === 'GET' && $action === 'export') {
 
 if ($method === 'GET' && $action === 'retention_report') {
   require_auth($conn, RETENTION_ROLES);
+  if (!is_file(__DIR__ . '/_retention.php')) fail('Not available on this server yet.', 503);
   require_once __DIR__ . '/_retention.php';
   try {
     $report = retention_report($conn);

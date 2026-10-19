@@ -48,6 +48,10 @@ if (PHP_SAPI === 'cli') {
 // is refused even with the key, so the report never lands in an access log.
 if ($job === 'retention_report') {
   if (PHP_SAPI !== 'cli') fail('retention_report runs from the command line only.', 400);
+  if (!is_file(__DIR__ . '/_retention.php')) {
+    fwrite(STDERR, "retention_report is not available on this server yet: _retention.php is missing.\n");
+    exit(1);
+  }
   require_once __DIR__ . '/_retention.php';
   header_remove('Content-Type');
   try {

@@ -402,6 +402,24 @@ describe("retention dry run", () => {
     expect(snapshot()).toBe(before)
   })
 
+  it("answers 503, and the command line exits 1, while _retention.php is not on the server", async () => {
+    const lib = path.join(WORK_DIR, "_retention.php")
+    const aside = path.join(WORK_DIR, "_retention.php.parked")
+    fs.renameSync(lib, aside)
+    try {
+      expect((await api("privacy.php?action=retention_report")).status).toBe(401) // still signed-in only
+      const r = await api<{ error?: string }>("privacy.php?action=retention_report", { token: owner })
+      expect(r.status).toBe(503)
+      expect(r.json.error).toBe("Not available on this server yet.")
+      const cli = spawnSync("php", [path.join(WORK_DIR, "cron.php"), "job=retention_report"], { encoding: "utf8" })
+      expect(cli.status).toBe(1)
+      expect(cli.stderr).toContain("retention_report is not available on this server yet: _retention.php is missing.")
+      expect(cli.stdout).toBe("")
+    } finally {
+      fs.renameSync(aside, lib)
+    }
+  })
+
   it("is super_admin only", async () => {
     createUser({ email: "admin@example.test", role: "admin" })
     createUser({ email: "manager@example.test", role: "manager" })
