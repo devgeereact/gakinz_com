@@ -191,4 +191,64 @@ describe("retention_apply", () => {
     expect(fs.lstatSync(path.join(UPLOADS, "ff66.pdf")).isSymbolicLink()).toBe(true)
     fs.rmSync(outside, { force: true })
   })
+
+  it("keeps a row whose name is a symlink to another file inside uploads/, and never removes that other file", () => {
+    setOverrides({ RETENTION_APPLY: true })
+    // A live row's real file, and an old deleted row whose name links to it.
+    const live = file("zz99.pdf", null)
+    fs.symlinkSync(path.join(UPLOADS, "zz99.pdf"), path.join(UPLOADS, "hh88.pdf"))
+    const linked = file("hh88.pdf", 90, false)
+    const r = cron("--apply")
+    expect(r.status).toBe(0)
+    expect(one(`SELECT COUNT(*) FROM files WHERE id IN (${live}, ${linked})`)).toBe("2")
+    expect(fs.readFileSync(path.join(UPLOADS, "zz99.pdf"), "utf8")).toBe("synthetic")
+    expect(fs.lstatSync(path.join(UPLOADS, "hh88.pdf")).isSymbolicLink()).toBe(true)
+    expect(r.out).toMatch(/kept 3 \([^)]*1 unsafe_path/)
+  })
+
+  it("keeps files used by Work covers, hero images and gallery images", () => {
+    setOverrides({ RETENTION_APPLY: true })
+    const cover = file("ww01.pdf", 90)
+    const hero = file("ww02.pdf", 90)
+    const mobile = file("ww03.pdf", 90)
+    const gallery = file("ww04.pdf", 90)
+    sql(`INSERT INTO work (slug, title, cover_file_id, hero_desktop_file_id, hero_mobile_file_id) VALUES ('w', 'W', ${cover}, ${hero}, ${mobile})`)
+    sql(`INSERT INTO work_images (work_id, file_id) VALUES ((SELECT id FROM work WHERE slug = 'w'), ${gallery})`)
+    const r = cron("--apply")
+    expect(r.out).toContain("4 linked_work")
+    expect(one(`SELECT COUNT(*) FROM files WHERE id IN (${cover}, ${hero}, ${mobile}, ${gallery})`)).toBe("4")
+    for (const n of ["ww01.pdf", "ww02.pdf", "ww03.pdf", "ww04.pdf"]) expect(fs.existsSync(path.join(UPLOADS, n))).toBe(true)
+  })
+
+  it("does nothing to files, and never treats rows as missing, when the uploads folder is not there", () => {
+    setOverrides({ RETENTION_APPLY: true })
+    fs.rmSync(UPLOADS, { recursive: true, force: true })
+    const filesBefore = one("SELECT COUNT(*) FROM files")
+    const r = cron("--apply")
+    expect(r.status).toBe(0)
+    expect(r.out).toContain("Soft-deleted files: the uploads folder is missing or cannot be read and written. Nothing happens.")
+    expect(one("SELECT COUNT(*) FROM files")).toBe(filesBefore)
+    expect(JSON.parse(one("SELECT detail FROM audit_log WHERE action = 'retention_apply'")!).deleted_files).toBe("uploads_unavailable")
+  })
+
+  it("still writes the counts row, marked stopped, when a run fails part way after deleting", () => {
+    setOverrides({ RETENTION_APPLY: true })
+    // Forced failure: deleting the first old file row raises an error, after both enquiries have gone.
+    sql(`DELIMITER //
+CREATE TRIGGER t22_fail BEFORE DELETE ON files FOR EACH ROW BEGIN
+  IF OLD.id = ${ids.oldFile} THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'forced'; END IF; END//
+DELIMITER ;`)
+    try {
+      const r = cron("--apply")
+      expect(r.status).toBe(1)
+      expect(r.err).toContain("Retention apply stopped")
+    } finally {
+      sql("DROP TRIGGER IF EXISTS t22_fail")
+    }
+    expect(one(`SELECT COUNT(*) FROM enquiries WHERE id IN (${ids.oldProspect}, ${ids.oldWithCall})`)).toBe("0")
+    expect(one(`SELECT COUNT(*) FROM files WHERE id = ${ids.oldFile}`)).toBe("1")
+    const audit = sql("SELECT detail FROM audit_log WHERE action = 'retention_apply'")
+    expect(audit).toHaveLength(1)
+    expect(JSON.parse(audit[0][0])).toEqual({ enquiries: { deleted: 2, kept: 2 }, deleted_files: { deleted: 0, kept: 0 }, stopped: true })
+  })
 })

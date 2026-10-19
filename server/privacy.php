@@ -5,6 +5,7 @@
  *   GET /privacy.php?action=export&client_id=N          super_admin, admin
  *   GET /privacy.php?action=export&enquiry_email=a@b.c  super_admin, admin
  *   GET /privacy.php?action=retention_report            super_admin
+ *   GET /privacy.php?action=erase_preview&id=N          super_admin
  *   POST /privacy.php?action=erase_enquiry {id, confirm}  super_admin
  *
  * ── Subject access export ──────────────────────────────────────────────────
@@ -418,6 +419,34 @@ if ($method === 'GET' && $action === 'retention_report') {
   ok($report);
 }
 
+/**
+ * Loads _erasure.php and the shared files it needs, or answers 503 when any
+ * of them is not on the server yet, so this file never fails as a whole.
+ */
+function pv_erasure_lib(): void {
+  foreach (['_erasure.php', '_retention.php', '_uploads.php', '_like.php'] as $f) {
+    if (!is_file(__DIR__ . '/' . $f)) fail('Not available on this server yet.', 503);
+  }
+  require_once __DIR__ . '/_erasure.php';
+}
+
+// What the erase dialog shows first: other enquiries using the same address,
+// and whether an erasure would be refused. Read only, super admin only.
+if ($method === 'GET' && $action === 'erase_preview') {
+  require_auth($conn, ERASE_ROLES);
+  $id = pv_id($_GET['id'] ?? '');
+  if ($id <= 0) fail('Invalid enquiry id.');
+  pv_erasure_lib();
+  try {
+    $p = er_enquiry_preview($conn, $id);
+  } catch (mysqli_sql_exception $e) {
+    error_log('privacy.php erase_preview: SQL error ' . $e->getCode() . ': ' . $e->getMessage());
+    fail('Could not check the enquiry.', 500);
+  }
+  if ($p === null) fail('Enquiry not found.', 404);
+  ok($p);
+}
+
 if ($method === 'POST' && $action === 'erase_enquiry') {
   $me = require_auth($conn, ERASE_ROLES);
   $in = body();
@@ -428,12 +457,12 @@ if ($method === 'POST' && $action === 'erase_enquiry') {
   if (!is_string($confirm) || trim($confirm) === '' || strlen($confirm) > 300) {
     fail('Type the enquiry\'s email address to confirm.');
   }
-  require_once __DIR__ . '/_erasure.php';
+  pv_erasure_lib();
   try {
     // The audit row is written inside the same transaction, by record id only.
     $r = er_erase_enquiry($conn, $id, $confirm, null, [(int)$me['id'], 'enquiry_erase', "#$id"]);
-  } catch (mysqli_sql_exception $e) {
-    error_log('privacy.php erase_enquiry: SQL error ' . $e->getCode() . ': ' . $e->getMessage());
+  } catch (mysqli_sql_exception | RuntimeException $e) {
+    error_log('privacy.php erase_enquiry: ' . get_class($e) . ' ' . $e->getCode() . ': ' . $e->getMessage());
     fail('Could not erase the enquiry. Nothing was changed.', 500);
   }
   if ($r['status'] === 'not_found') fail('Enquiry not found.', 404);

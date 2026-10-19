@@ -167,6 +167,45 @@ describe("erase_enquiry", () => {
     ])
   })
 
+  it("treats `_` and `%` in an address literally when finding audit rows", async () => {
+    const u = seedProspect("Under Score", "jane_doe@example.test")
+    sql(`INSERT INTO audit_log (action, detail) VALUES ('login_failed', 'janeXdoe@example.test'), ('login_failed', 'jane_doe@example.test')`)
+    const r = await erase(owner, { id: u.id, confirm: "jane_doe@example.test" })
+    expect(r.status).toBe(200)
+    expect(sql("SELECT detail FROM audit_log WHERE action = 'login_failed' ORDER BY id").map((x) => x[0])).toEqual(["janeXdoe@example.test", "[erased]"])
+    expect(one("SELECT COUNT(*) FROM audit_log WHERE detail LIKE '%jane!_doe%' ESCAPE '!'")).toBe("0")
+  })
+
+  it("leaves other enquiries from the same address, but scrubs their submit audit copies and IPs too", async () => {
+    const second = seedProspect("Jane Prospect", "jane@example.test")
+    const r = await erase(owner, { id: p.id, confirm: "jane@example.test" })
+    expect(r.status).toBe(200)
+    expect(sql(`SELECT name, email FROM enquiries WHERE id = ${second.id}`)).toEqual([["Jane Prospect", "jane@example.test"]])
+    expect(one(`SELECT COUNT(*) FROM bookings WHERE enquiry_id = ${second.id}`)).toBe("1")
+    expect(sql("SELECT detail, IFNULL(ip, 'NULL') FROM audit_log WHERE action = 'enquiry_submit' AND detail <> 'sam@example.test'")).toEqual([
+      ["[erased]", "NULL"], ["[erased]", "NULL"],
+    ])
+  })
+
+  it("previews the erase for a super admin: other enquiries on the address and any refusal, changing nothing", async () => {
+    seedProspect("Jane Again", "JANE@example.test")
+    const records = () => ["enquiries", "bookings", "booking_events"].map((t) => sql(`CHECKSUM TABLE ${t}`)[0][1]).join(" ")
+    const before = records()
+    const ok = await api<{ id: number; other_enquiries: number; blocked: string | null; message: string | null }>(
+      `privacy.php?action=erase_preview&id=${p.id}`, { token: owner })
+    expect(ok.status).toBe(200)
+    expect(ok.json).toEqual({ id: p.id, other_enquiries: 1, blocked: null, message: null })
+    sql(`INSERT INTO clients (company, source_lead_id) VALUES ('From Sam', ${other.id})`)
+    const blocked = await api<{ blocked: string; message: string }>(`privacy.php?action=erase_preview&id=${other.id}`, { token: owner })
+    expect(blocked.json.blocked).toBe("converted")
+    expect(blocked.json.message).toMatch(/^A client was created from this enquiry/)
+    expect((await api(`privacy.php?action=erase_preview&id=999999`, { token: owner })).status).toBe(404)
+    expect((await api(`privacy.php?action=erase_preview&id=abc`, { token: owner })).status).toBe(400)
+    createUser({ email: "admin@example.test", role: "admin" })
+    expect((await api(`privacy.php?action=erase_preview&id=${p.id}`, { token: await login("admin@example.test") })).status).toBe(403)
+    expect(records()).toBe(before)
+  })
+
   it("erases an enquiry with no calls, and one already soft-deleted", async () => {
     sql(`INSERT INTO enquiries (name, email, message, deleted_at) VALUES ('Gone Person', 'gone@example.test', 'm', NOW())`)
     const id = Number(one("SELECT MAX(id) FROM enquiries"))

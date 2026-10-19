@@ -71,11 +71,18 @@ if ($job === 'retention_apply') {
     fwrite(STDERR, "Usage: php cron.php job=retention_apply [--dry-run | --apply]. Nothing was deleted.\n");
     exit(2);
   }
+  foreach (['_erasure.php', '_retention.php', '_uploads.php', '_like.php'] as $f) {
+    if (!is_file(__DIR__ . '/' . $f)) {
+      fwrite(STDERR, "retention_apply is not available on this server yet: $f is missing. Nothing was deleted.\n");
+      exit(1);
+    }
+  }
   require_once __DIR__ . '/_erasure.php';
   try {
     echo retention_apply_text(retention_apply_run($conn, in_array('--apply', $flags, true)));
-  } catch (mysqli_sql_exception $e) {
-    fwrite(STDERR, 'Retention apply stopped: SQL error ' . $e->getCode() . ". The current item was rolled back.\n");
+  } catch (Throwable $e) {
+    $what = $e instanceof mysqli_sql_exception ? 'SQL error ' . $e->getCode() : get_class($e);
+    fwrite(STDERR, "Retention apply stopped: $what. The current item was rolled back; anything deleted before it is counted in the retention_apply audit row.\n");
     exit(1);
   }
   exit(0);

@@ -1,5 +1,8 @@
 <?php
 /**
+ * Upload _uploads.php before this file. This file requires it on every route,
+ * the public Work image share links included.
+ *
  * Files & Documents (GAkinzOS — Files). Protected.
  * Per-project / per-client file storage. Binary lives on disk under uploads/;
  * the DB row is metadata + an optional expiring public share token.

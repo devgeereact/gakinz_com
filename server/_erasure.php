@@ -17,8 +17,19 @@
  * and priority are columns on that row), the calls (bookings) recorded on it
  * and their history (booking_events). In audit_log, on the rows whose text
  * names the enquirer's email address, it replaces that address and the
- * enquirer's name with "[erased]", and clears the IP on the enquirer's own
- * enquiry_submit row. Nothing else is changed.
+ * enquirer's name with "[erased]", and clears the IP on every enquiry_submit
+ * row naming that address. Nothing else is changed.
+ *
+ * Not erased, by design (the dialog and PRIVACY-READINESS section 7 say so):
+ * Comms threads and messages, the Mailbox, other enquiries from the same
+ * address (only their audit copies are scrubbed), backups, and audit rows that
+ * name the person without their email address (by first name only, say).
+ *
+ * Soft-deleted files are removed only as plain files sitting directly in
+ * uploads/ under their exact stored name: a symlink (even to another file in
+ * uploads/), a directory or anything else at that name is left alone, and
+ * without a usable uploads/ folder the files rule does nothing. A file still
+ * used by a project asset checklist or by Work is kept.
  *
  * What it never touches, and refuses (409) rather than risk: an enquiry that
  * was won; one a client was converted from (clients.source_lead_id); one with
@@ -33,6 +44,7 @@
  */
 require_once __DIR__ . '/_retention.php';
 require_once __DIR__ . '/_uploads.php';
+require_once __DIR__ . '/_like.php';
 
 const ERASED = '[erased]';
 
@@ -114,25 +126,28 @@ function er_enquiry_problem(mysqli $conn, array $e, ?int $months = null): ?strin
 /**
  * Replaces the enquirer's email address and name with "[erased]" on the audit
  * rows whose text names that address, as a whole address (a@x.test never
- * matches ba@x.test or a@x.test.uk), and clears the IP of their own
- * enquiry_submit row. Returns how many rows changed. Rows that do not name the
- * address are left alone, so a common name elsewhere in the log is never hit.
+ * matches ba@x.test or a@x.test.uk), and clears the IP of every enquiry_submit
+ * row naming it (the enquirer's own submissions, from any of their enquiries).
+ * Returns how many rows changed. Rows that do not name the address are left
+ * alone, so a common name elsewhere in the log is never hit.
  */
 function er_scrub_audit(mysqli $conn, string $email, string $name): int {
   $email = trim($email);
   if ($email === '') return 0;
   $emailRe = '/(?<![A-Za-z0-9._%+\-])' . preg_quote($email, '/') . '(?![A-Za-z0-9_\-]|\.[A-Za-z0-9])/i';
-  $name = trim((string)preg_replace('/\s+/u', ' ', $name));
+  $name = trim(er_replace('/\s+/u', ' ', $name));
   $nameRe = mb_strlen($name) >= 2 ? '/(?<![\p{L}\p{N}])' . preg_quote($name, '/') . '(?![\p{L}\p{N}])/iu' : null;
 
-  $rows = er_rows($conn, 'SELECT id, user_id, action, detail FROM audit_log WHERE detail LIKE ? FOR UPDATE', 's',
-    ['%' . addcslashes($email, '%_\\') . '%']);
+  // LIKE finds candidates (with _like.php's '!' escape, so `_` and `%` in an
+  // address are literal); the regex then keeps only whole matches.
+  $rows = er_rows($conn, 'SELECT id, user_id, action, detail FROM audit_log WHERE detail' . LIKE_CONTAINS_SQL . ' FOR UPDATE', 's',
+    [like_contains($email)]);
   $changed = 0;
   foreach ($rows as $r) {
     $detail = (string)$r['detail'];
     if (!preg_match($emailRe, $detail)) continue;
-    $new = (string)preg_replace($emailRe, ERASED, $detail);
-    if ($nameRe !== null) $new = (string)preg_replace($nameRe, ERASED, $new);
+    $new = er_replace($emailRe, ERASED, $detail);
+    if ($nameRe !== null) $new = er_replace($nameRe, ERASED, $new);
     if ($r['action'] === 'enquiry_submit' && $r['user_id'] === null) {
       er_exec($conn, 'UPDATE audit_log SET detail = ?, ip = NULL WHERE id = ?', 'si', [$new, (int)$r['id']]);
     } else {
@@ -141,6 +156,34 @@ function er_scrub_audit(mysqli $conn, string $email, string $name): int {
     $changed++;
   }
   return $changed;
+}
+
+/** preg_replace that throws instead of returning null, so text is never silently emptied. */
+function er_replace(string $re, string $with, string $subject): string {
+  $out = preg_replace($re, $with, $subject);
+  if ($out === null) throw new RuntimeException('Erasure text replacement failed: ' . preg_last_error_msg());
+  return $out;
+}
+
+/**
+ * What the erase dialog shows before anything is done: how many OTHER
+ * enquiries use the same address (they are not erased, but the audit rows
+ * naming the address, their enquiry_submit rows included, lose the address
+ * and IP too), and whether the erasure would be refused and why. Read only.
+ */
+function er_enquiry_preview(mysqli $conn, int $id): ?array {
+  $e = er_rows($conn, 'SELECT id, email, status FROM enquiries WHERE id = ?', 'i', [$id])[0] ?? null;
+  if (!$e) return null;
+  $email = strtolower(trim((string)$e['email']));
+  $others = $email === '' ? 0 : (int)(er_rows($conn, 'SELECT COUNT(*) AS n FROM enquiries WHERE id <> ? AND LOWER(TRIM(email)) = ?',
+    'is', [$id, $email])[0]['n'] ?? 0);
+  $problem = er_enquiry_problem($conn, $e);
+  return [
+    'id' => $id,
+    'other_enquiries' => $others,
+    'blocked' => $problem,
+    'message' => $problem !== null ? ER_PROBLEMS[$problem] : null,
+  ];
 }
 
 /**
@@ -196,35 +239,68 @@ function retention_apply_enabled(): bool {
   return ($GLOBALS['RETENTION_APPLY'] ?? false) === true;
 }
 
+/** True when a column exists, for columns added by a later SQL step. */
+function er_column_exists(mysqli $conn, string $table, string $column): bool {
+  static $known = [];
+  $k = "$table.$column";
+  if (!isset($known[$k])) {
+    $known[$k] = (bool)er_rows($conn, 'SELECT 1 FROM information_schema.columns
+      WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? LIMIT 1', 'ss', [$table, $column]);
+  }
+  return $known[$k];
+}
+
 /** Why a soft-deleted file row may not be removed, or null when it may. Read only. */
 function er_file_problem(mysqli $conn, array $f): ?string {
+  $id = (int)$f['id'];
   $stored = (string)$f['stored'];
   if (!stored_name_ok($stored)) return 'unsafe_name';
   // A project's asset checklist still points at it: deleting the row would
   // change that project record, so the file stays.
-  if (er_table_exists($conn, 'project_assets') && er_rows($conn, 'SELECT 1 FROM project_assets WHERE file_id = ? LIMIT 1', 'i', [(int)$f['id']])) {
+  if (er_table_exists($conn, 'project_assets') && er_rows($conn, 'SELECT 1 FROM project_assets WHERE file_id = ? LIMIT 1', 'i', [$id])) {
     return 'linked_asset';
   }
+  // A Work record (cover, hero images) or a Work gallery image uses it: the
+  // public site serves it, so it stays whatever its deleted_at says.
+  if (er_table_exists($conn, 'work')) {
+    foreach (['cover_file_id', 'hero_desktop_file_id', 'hero_mobile_file_id'] as $col) {
+      if (er_column_exists($conn, 'work', $col) && er_rows($conn, "SELECT 1 FROM work WHERE `$col` = ? LIMIT 1", 'i', [$id])) return 'linked_work';
+    }
+  }
+  if (er_table_exists($conn, 'work_images') && er_rows($conn, 'SELECT 1 FROM work_images WHERE file_id = ? LIMIT 1', 'i', [$id])) {
+    return 'linked_work';
+  }
   // Another row uses the same file on disk.
-  if (er_rows($conn, 'SELECT 1 FROM files WHERE `stored` = ? AND id <> ? LIMIT 1', 'si', [$stored, (int)$f['id']])) return 'shared_file';
+  if (er_rows($conn, 'SELECT 1 FROM files WHERE `stored` = ? AND id <> ? LIMIT 1', 'si', [$stored, $id])) return 'shared_file';
   return null;
 }
 
 const ER_FILE_PROBLEMS = [
   'unsafe_name' => 'stored name fails the upload path rule',
   'linked_asset' => 'still linked from a project asset checklist',
+  'linked_work' => 'still used by a Work record or Work image',
   'shared_file' => 'another file row uses the same file on disk',
-  'unsafe_path' => 'something other than a plain file is at that path',
+  'unsafe_path' => 'a symlink, a directory or anything other than that plain file is at that name',
   'unlink_failed' => 'the file could not be removed from disk',
 ];
 
+/** The upload directory's real path when it exists and can be read and written, else null. */
+function er_upload_dir(): ?string {
+  $dir = realpath(UPLOAD_DIR);
+  if ($dir === false || !is_dir($dir) || !is_readable($dir) || !is_writable($dir)) return null;
+  return $dir;
+}
+
 /**
- * Removes one soft-deleted file: the file in uploads/ first, through
- * stored_path(), then its row, under a row lock that checks the age again.
- * Returns removed | missing (row removed, nothing was on disk) | gone (the row
- * no longer qualifies) | a key of ER_FILE_PROBLEMS.
+ * Removes one soft-deleted file: the file in uploads/ first, then its row,
+ * under a row lock that checks the age again. Only the exact name is ever
+ * unlinked, and only when it is a plain file (never a symlink, so a link to
+ * another row's file never removes that file) sitting directly in the upload
+ * directory, under stored_path()'s rule as well. Returns removed | missing
+ * (row removed, nothing at all was at that name) | gone (the row no longer
+ * qualifies) | a key of ER_FILE_PROBLEMS.
  */
-function er_remove_deleted_file(mysqli $conn, int $id, int $days): string {
+function er_remove_deleted_file(mysqli $conn, int $id, int $days, string $dir): string {
   $conn->begin_transaction();
   try {
     $f = er_rows($conn, 'SELECT id, `stored` FROM files WHERE id = ? AND deleted_at IS NOT NULL
@@ -233,16 +309,20 @@ function er_remove_deleted_file(mysqli $conn, int $id, int $days): string {
     $problem = er_file_problem($conn, $f);
     if ($problem !== null) { $conn->rollback(); return $problem; }
     $stored = (string)$f['stored'];
-    $path = stored_path($stored);
+    $raw = $dir . '/' . $stored;
     $outcome = 'removed';
-    if ($path !== null) {
-      if (!@unlink($path)) { $conn->rollback(); return 'unlink_failed'; }
-    } else {
-      // Nothing usable at that name. Only a name with nothing at all behind
-      // it counts as missing; a directory or a symlink is left alone.
-      $raw = UPLOAD_DIR . '/' . $stored;
-      if (file_exists($raw) || is_link($raw)) { $conn->rollback(); return 'unsafe_path'; }
+    clearstatcache(true, $raw);
+    if (is_link($raw)) { $conn->rollback(); return 'unsafe_path'; }
+    if (!file_exists($raw)) {
       $outcome = 'missing';
+    } else {
+      $real = realpath($raw);
+      if (!is_file($raw) || $real === false || dirname($real) !== $dir || basename($real) !== $stored
+          || stored_path($stored) !== $real) {
+        $conn->rollback();
+        return 'unsafe_path';
+      }
+      if (!@unlink($raw)) { $conn->rollback(); return 'unlink_failed'; }
     }
     er_exec($conn, 'DELETE FROM files WHERE id = ? AND deleted_at IS NOT NULL', 'i', [$id]);
     $conn->commit();
@@ -257,7 +337,9 @@ function er_remove_deleted_file(mysqli $conn, int $id, int $days): string {
  * The executor. Lists, for the two rules it may act on, what is eligible and
  * what is kept and why. Deletes only when `$wantApply` (the --apply flag) and
  * retention_apply_enabled() are both true, and then only for a rule whose
- * period is set. An applying run writes one audit row with counts only.
+ * period is set. An applying run writes one audit row with counts only, also
+ * when it stops part way on an error (then with "stopped": true), so whatever
+ * was already deleted is always on record; the error is then rethrown.
  */
 function retention_apply_run(mysqli $conn, bool $wantApply): array {
   $enabled = retention_apply_enabled();
@@ -269,77 +351,86 @@ function retention_apply_run(mysqli $conn, bool $wantApply): array {
     'generated_at' => gmdate('Y-m-d\TH:i:s\Z'),
     'rules' => [],
   ];
-
-  // (a) Enquiries that never became a client.
   $months = retention_period('RETENTION_ENQUIRY_MONTHS');
-  $rule = ['key' => 'enquiries', 'label' => 'Enquiries that did not become a client', 'config_key' => '$RETENTION_ENQUIRY_MONTHS',
-    'unit' => 'month', 'period' => is_int($months) ? $months : null];
-  if (!is_int($months)) {
-    $rule['status'] = $months === null ? 'period_not_set' : 'invalid_period';
-  } else {
-    $rule['status'] = 'checked';
-    $rule += ['eligible' => [], 'kept' => [], 'deleted' => [], 'bookings' => 0, 'booking_events' => 0, 'audit_scrubbed' => 0];
-    $candidates = er_rows($conn, "SELECT e.id, e.email, e.status FROM enquiries e
-      WHERE COALESCE(e.status, '') <> 'won'
-        AND NOT EXISTS (SELECT 1 FROM clients c WHERE c.source_lead_id = e.id)
-        AND e.updated_at < (NOW() - INTERVAL ? MONTH)
-      ORDER BY e.id", 'i', [$months]);
-    foreach ($candidates as $e) {
-      $id = (int)$e['id'];
-      $problem = trim((string)$e['email']) === '' ? 'no_email' : er_enquiry_problem($conn, $e, $months);
-      if ($problem !== null) { $rule['kept'][$problem] = ($rule['kept'][$problem] ?? 0) + 1; continue; }
-      $rule['eligible'][] = $id;
-      if (!$apply) continue;
-      $r = er_erase_enquiry($conn, $id, (string)$e['email'], $months);
-      if ($r['status'] === 'erased') {
-        $rule['deleted'][] = $id;
-        $rule['bookings'] += $r['bookings'];
-        $rule['booking_events'] += $r['booking_events'];
-        $rule['audit_scrubbed'] += $r['audit_scrubbed'];
-      } else {
-        $key = $r['problem'] ?? $r['status'];
-        $rule['kept'][$key] = ($rule['kept'][$key] ?? 0) + 1;
-      }
-    }
-  }
-  $out['rules'][] = $rule;
-
-  // (b) Soft-deleted files.
   $days = retention_period('RETENTION_DELETED_FILE_DAYS');
-  $rule = ['key' => 'deleted_files', 'label' => 'Soft-deleted files', 'config_key' => '$RETENTION_DELETED_FILE_DAYS',
-    'unit' => 'day', 'period' => is_int($days) ? $days : null];
-  if (!is_int($days)) {
-    $rule['status'] = $days === null ? 'period_not_set' : 'invalid_period';
-  } else {
-    $rule['status'] = 'checked';
-    $rule += ['eligible' => [], 'kept' => [], 'deleted' => [], 'missing_on_disk' => 0];
-    $candidates = er_rows($conn, 'SELECT id, `stored` FROM files
-      WHERE deleted_at IS NOT NULL AND deleted_at < (NOW() - INTERVAL ? DAY) ORDER BY id', 'i', [$days]);
-    foreach ($candidates as $f) {
-      $id = (int)$f['id'];
-      $problem = er_file_problem($conn, $f);
-      if ($problem !== null) { $rule['kept'][$problem] = ($rule['kept'][$problem] ?? 0) + 1; continue; }
-      $rule['eligible'][] = $id;
-      if (!$apply) continue;
-      $r = er_remove_deleted_file($conn, $id, $days);
-      if ($r === 'removed' || $r === 'missing') {
-        $rule['deleted'][] = $id;
-        if ($r === 'missing') $rule['missing_on_disk']++;
-      } else {
-        $rule['kept'][$r] = ($rule['kept'][$r] ?? 0) + 1;
+  $out['rules'][0] = ['key' => 'enquiries', 'label' => 'Enquiries that did not become a client', 'config_key' => '$RETENTION_ENQUIRY_MONTHS',
+    'unit' => 'month', 'period' => is_int($months) ? $months : null,
+    'status' => is_int($months) ? 'checked' : ($months === null ? 'period_not_set' : 'invalid_period')];
+  $out['rules'][1] = ['key' => 'deleted_files', 'label' => 'Soft-deleted files', 'config_key' => '$RETENTION_DELETED_FILE_DAYS',
+    'unit' => 'day', 'period' => is_int($days) ? $days : null,
+    'status' => is_int($days) ? 'checked' : ($days === null ? 'period_not_set' : 'invalid_period')];
+
+  $stopped = false;
+  try {
+    // (a) Enquiries that never became a client.
+    $rule = &$out['rules'][0];
+    if ($rule['status'] === 'checked') {
+      $rule += ['eligible' => [], 'kept' => [], 'deleted' => [], 'bookings' => 0, 'booking_events' => 0, 'audit_scrubbed' => 0];
+      $candidates = er_rows($conn, "SELECT e.id, e.email, e.status FROM enquiries e
+        WHERE COALESCE(e.status, '') <> 'won'
+          AND NOT EXISTS (SELECT 1 FROM clients c WHERE c.source_lead_id = e.id)
+          AND e.updated_at < (NOW() - INTERVAL ? MONTH)
+        ORDER BY e.id", 'i', [$months]);
+      foreach ($candidates as $e) {
+        $id = (int)$e['id'];
+        $problem = trim((string)$e['email']) === '' ? 'no_email' : er_enquiry_problem($conn, $e, $months);
+        if ($problem !== null) { $rule['kept'][$problem] = ($rule['kept'][$problem] ?? 0) + 1; continue; }
+        $rule['eligible'][] = $id;
+        if (!$apply) continue;
+        $r = er_erase_enquiry($conn, $id, (string)$e['email'], $months);
+        if ($r['status'] === 'erased') {
+          $rule['deleted'][] = $id;
+          $rule['bookings'] += $r['bookings'];
+          $rule['booking_events'] += $r['booking_events'];
+          $rule['audit_scrubbed'] += $r['audit_scrubbed'];
+        } else {
+          $key = $r['problem'] ?? $r['status'];
+          $rule['kept'][$key] = ($rule['kept'][$key] ?? 0) + 1;
+        }
       }
     }
-  }
-  $out['rules'][] = $rule;
+    unset($rule);
 
-  if ($apply) {
-    $counts = [];
-    foreach ($out['rules'] as $r) {
-      $counts[$r['key']] = $r['status'] === 'checked'
-        ? ['deleted' => count($r['deleted']), 'kept' => array_sum($r['kept'])]
-        : $r['status'];
+    // (b) Soft-deleted files. Without a usable upload directory nothing is
+    // done at all: a missing folder must never make every row look "missing".
+    $rule = &$out['rules'][1];
+    $dir = er_upload_dir();
+    if ($rule['status'] === 'checked' && $dir === null) $rule['status'] = 'uploads_unavailable';
+    if ($rule['status'] === 'checked') {
+      $rule += ['eligible' => [], 'kept' => [], 'deleted' => [], 'missing_on_disk' => 0];
+      $candidates = er_rows($conn, 'SELECT id, `stored` FROM files
+        WHERE deleted_at IS NOT NULL AND deleted_at < (NOW() - INTERVAL ? DAY) ORDER BY id', 'i', [$days]);
+      foreach ($candidates as $f) {
+        $id = (int)$f['id'];
+        $problem = er_file_problem($conn, $f);
+        if ($problem !== null) { $rule['kept'][$problem] = ($rule['kept'][$problem] ?? 0) + 1; continue; }
+        $rule['eligible'][] = $id;
+        if (!$apply) continue;
+        $r = er_remove_deleted_file($conn, $id, $days, $dir);
+        if ($r === 'removed' || $r === 'missing') {
+          $rule['deleted'][] = $id;
+          if ($r === 'missing') $rule['missing_on_disk']++;
+        } else {
+          $rule['kept'][$r] = ($rule['kept'][$r] ?? 0) + 1;
+        }
+      }
     }
-    audit($conn, null, 'retention_apply', (string)json_encode($counts));
+    unset($rule);
+  } catch (Throwable $t) {
+    $stopped = true;
+    throw $t;
+  } finally {
+    unset($rule);
+    if ($apply) {
+      $counts = [];
+      foreach ($out['rules'] as $r) {
+        $counts[$r['key']] = isset($r['deleted'])
+          ? ['deleted' => count($r['deleted']), 'kept' => array_sum($r['kept'])]
+          : $r['status'];
+      }
+      if ($stopped) $counts['stopped'] = true;
+      audit($conn, null, 'retention_apply', (string)json_encode($counts));
+    }
   }
   return $out;
 }
@@ -359,6 +450,7 @@ function retention_apply_text(array $run): string {
   foreach ($run['rules'] as $r) {
     if ($r['status'] === 'period_not_set') { $lines[] = "{$r['label']}: period not set ({$r['config_key']}). Nothing happens."; continue; }
     if ($r['status'] === 'invalid_period') { $lines[] = "{$r['label']}: invalid period in {$r['config_key']}. Nothing happens."; continue; }
+    if ($r['status'] === 'uploads_unavailable') { $lines[] = "{$r['label']}: the uploads folder is missing or cannot be read and written. Nothing happens."; continue; }
     $unit = $r['unit'] . ($r['period'] === 1 ? '' : 's');
     $line = "{$r['label']}, older than {$r['period']} $unit: ";
     $line .= $run['mode'] === 'apply'
