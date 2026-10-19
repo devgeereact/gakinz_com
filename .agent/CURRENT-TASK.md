@@ -44,7 +44,7 @@ K-046, K-048, K-054 row, K-055, K-066, new K-067 to K-073), `docs/DEPLOYMENT.md`
 ### Verification status, 2026-10-19 (Mac)
 
 - `npx tsc -b`, `npm run build` (30 pages prerendered): PASS.
-- `npm test`: PASS, 223. `GK_TEST_PHP_PORT=5291 GK_TEST_PROVIDER_PORT=5292 npm run test:server`
+- `npm test`: PASS, 239 (223 before the final-review fixes added 16 in `portalRequestsModel` and `assetChecklistModel`). `GK_TEST_PHP_PORT=5291 GK_TEST_PROVIDER_PORT=5292 npm run test:server`
   (local MariaDB `*_test`; port 5192 is held by another project on the Mac): PASS, 275.
 - `npm run lint:ratchet`: PASS at 33 errors, 0 warnings. `npm run lint`: FAIL (K-002).
 - `php -l` over 51 server files: PASS. `npm run docs:check -- --base audit/readiness-2026-10-17`:
