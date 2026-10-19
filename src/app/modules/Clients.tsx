@@ -31,7 +31,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { clients, privacy, type Client, type ClientInput, type ClientTag, type ClientDetail } from "@/lib/api"
+import { clients, privacy, downloadName, type Client, type ClientInput, type ClientTag, type ClientDetail } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { gbp } from "@/lib/format"
 import { EmptyState, LoadError } from "@/app/components/EmptyState"
@@ -91,7 +91,7 @@ export default function Clients() {
     const res = await privacy.exportClient(id)
     setExporting(false)
     if (res.ok) {
-      saveAs(res.data, `gakinz-data-export-client-${id}.json`)
+      saveAs(res.data, downloadName(res.data, `gakinz-data-export-client-${id}-${new Date().toISOString().slice(0, 10)}.json`))
       toast.success("Export downloaded. It holds personal data: store it safely and delete it once sent.")
     } else toast.error(res.error || "Could not export the client's data.")
   }

@@ -36,6 +36,23 @@ export function statusError(status: number, verb = "Request"): string {
   return `${verb} failed (${status}).`
 }
 
+/**
+ * The file name from a Content-Disposition header, or null. Only a plain
+ * `filename="..."` or `filename=...` is read, and any path is stripped, so a
+ * reply can never steer where the browser saves the file.
+ */
+export function filenameFromDisposition(header: string | null): string | null {
+  const m = header?.match(/filename\s*=\s*(?:"([^"]*)"|([^;\s]+))/i)
+  const raw = (m?.[1] ?? m?.[2] ?? "").trim()
+  const base = raw.split(/[\\/]/).pop() ?? ""
+  return /^[\w.-]{1,200}$/.test(base) && !/^\.+$/.test(base) ? base : null
+}
+
+/** The name the server gave a download, or `fallback`. */
+export function downloadName(blob: Blob, fallback: string): string {
+  return typeof File !== "undefined" && blob instanceof File && blob.name ? blob.name : fallback
+}
+
 /** Error text from a parsed body, if it carries one. */
 const bodyError = (body: unknown): string | undefined =>
   body && typeof body === "object" && typeof (body as { error?: unknown }).error === "string"
@@ -119,7 +136,11 @@ export const api = {
       }
       const type = (res.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase()
       if (type !== expectedType.toLowerCase()) return { ok: false, error: DOWNLOAD_NOT_READY, status: res.status }
-      return { ok: true, data: await res.blob() }
+      const blob = await res.blob()
+      // When the server names the file, hand back a File (still a Blob) so the
+      // page can save it under that name; see downloadName().
+      const name = filenameFromDisposition(res.headers.get("Content-Disposition"))
+      return { ok: true, data: name ? new File([blob], name, { type: blob.type }) : blob }
     } catch {
       return { ok: false, error: NETWORK_ERROR }
     }

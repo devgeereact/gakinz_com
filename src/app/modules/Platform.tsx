@@ -32,7 +32,7 @@ import {
 } from "@/components/ui/table"
 import { PageHeader, StatusBadge } from "@/app/components/page-kit"
 import { TableSkeleton } from "@/app/components/TableSkeleton"
-import { users, audit, announcements, integrations, privacy, clients as clientsApi, type RetentionReport, type ManagedUser, type AuditEntry, type Client, type Announcement, type IntegrationStatus } from "@/lib/api"
+import { users, audit, announcements, integrations, privacy, downloadName, clients as clientsApi, type RetentionReport, type ManagedUser, type AuditEntry, type Client, type Announcement, type IntegrationStatus } from "@/lib/api"
 import { useAuth, type Role } from "@/store/auth.store"
 import { TwoFactorPanel, SessionsPanel } from "@/app/components/AccountSecurity"
 
@@ -715,7 +715,7 @@ function PrivacyTab() {
     const res = await privacy.exportEnquiryEmail(e)
     setExporting(false)
     if (res.ok) {
-      saveAs(res.data, "gakinz-data-export-enquiry.json")
+      saveAs(res.data, downloadName(res.data, `gakinz-data-export-enquiry-${new Date().toISOString().slice(0, 10)}.json`))
       toast.success("Export downloaded. It holds personal data: store it safely and delete it once sent.")
     } else toast.error(res.error || "Could not export that enquirer's data.")
   }
