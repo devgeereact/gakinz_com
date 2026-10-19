@@ -22,7 +22,7 @@ describe("ArticleBody: recommendation cards", () => {
     expect(out).not.toContain("sponsored")
     expect(out).not.toContain("nofollow")
     expect(out).not.toContain("Affiliate link")
-    expect(out).not.toContain("gap")
+    expect(out).not.toContain('class="gap"')
   })
 
   it("shows the disclosure marker once per post, above the first block, even with several affiliate items", () => {
@@ -30,6 +30,13 @@ describe("ArticleBody: recommendation cards", () => {
     expect(out.split(AFFILIATE_DISCLOSURE_GAP).length - 1).toBe(1)
     expect(out.indexOf(AFFILIATE_DISCLOSURE_GAP)).toBeLessThan(out.indexOf("one.example"))
     expect((out.match(/Affiliate link/g) ?? []).length).toBe(2)
+  })
+
+  it("opens an own-site recommendation in the same tab, without the new-tab text", () => {
+    const out = html(":::recommend\ntitle: Home\nurl: https://gakinz.com/work\n:::")
+    expect(out).toContain('href="https://gakinz.com/work"')
+    expect(out).not.toContain("_blank")
+    expect(out).not.toContain("new tab")
   })
 
   it("never emits an author-supplied javascript: address or raw markup", () => {

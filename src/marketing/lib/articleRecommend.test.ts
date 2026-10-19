@@ -17,6 +17,7 @@ describe("parseArticle: recommendation blocks", () => {
         { type: "bold", children: [{ type: "text", text: "privacy-first" }] },
         { type: "text", text: " stats." },
       ],
+      external: true,
       affiliate: true,
     })
   })
@@ -29,7 +30,17 @@ describe("parseArticle: recommendation blocks", () => {
   })
 
   it("refuses a javascript:, data:, mailto: or relative address and prints plain paragraphs", () => {
-    for (const url of ["javascript:alert(1)", "data:text/html,x", "mailto:a@b.co", "/relative"]) {
+    for (const url of [
+      "javascript:alert(1)",
+      "JaVaScRiPt:alert(1)",
+      "  javascript:alert(1)",
+      "java\tscript:alert(1)",
+      "&#106;avascript:alert(1)",
+      "//evil.example",
+      "/relative",
+      "data:text/html,x",
+      "mailto:a@b.c",
+    ]) {
       const out = parseArticle(wrap(`title: Bad\nurl: ${url}`))
       expect(out).toEqual([
         { type: "paragraph", children: [{ type: "text", text: "title: Bad" }] },
@@ -46,6 +57,19 @@ describe("parseArticle: recommendation blocks", () => {
   it("leaves an unclosed opening fence as ordinary text and keeps later blocks intact", () => {
     const out = parseArticle(":::recommend\ntitle: X\n\n## After")
     expect(out.map((b) => b.type)).toEqual(["paragraph", "heading"])
+  })
+
+  it("does not let an unclosed block borrow the closing line of a later block", () => {
+    const out = parseArticle(":::recommend\ntitle: Lost\n\n" + wrap("title: Kept\nurl: https://k.example/"))
+    const recs = out.filter((b) => b.type === "recommend")
+    expect(recs).toHaveLength(1)
+    expect(recs[0]).toMatchObject({ title: "Kept" })
+    expect(out[0]).toEqual({ type: "paragraph", children: [{ type: "text", text: ":::recommend title: Lost" }] })
+  })
+
+  it("marks own-site addresses as not external", () => {
+    const [b] = parseArticle(wrap("title: Home\nurl: https://www.gakinz.com/work"))
+    expect(b).toMatchObject({ external: false })
   })
 
   it("closes the paragraph and list before it, and text after still parses", () => {

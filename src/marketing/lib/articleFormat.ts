@@ -36,7 +36,7 @@ export type Block =
   | { type: "heading"; level: 2 | 3; children: Inline[] }
   | { type: "paragraph"; children: Inline[] }
   | { type: "list"; ordered: boolean; start: number; items: Inline[][] }
-  | { type: "recommend"; title: string; href: string; note: Inline[]; affiliate: boolean }
+  | { type: "recommend"; title: string; href: string; external: boolean; note: Inline[]; affiliate: boolean }
 
 const ALLOWED_SCHEMES = new Set(["https:", "http:", "mailto:"])
 // A link to this site stays in the same tab.
@@ -139,6 +139,7 @@ function parseRecommend(lines: string[]): Extract<Block, { type: "recommend" }> 
     type: "recommend",
     title,
     href,
+    external: !OWN_HOSTS.has(new URL(href).hostname),
     note: parseInline(fields.get("note") ?? ""),
     affiliate: /^(yes|true)$/i.test(fields.get("affiliate") ?? ""),
   }
@@ -164,8 +165,11 @@ export function parseArticle(body: string): Block[] {
     const line = lines[idx].trim()
 
     if (/^:::recommend$/i.test(line)) {
-      const close = lines.findIndex((l, k) => k > idx && l.trim() === ":::")
-      if (close !== -1) {
+      // The block ends at the next ::: line. Another opening fence first means
+      // this one is unclosed, so it stays plain text and cannot borrow the
+      // later block's closing line.
+      const close = lines.findIndex((l, k) => k > idx && /^:::(recommend)?$/i.test(l.trim()))
+      if (close !== -1 && lines[close].trim() === ":::") {
         const inner = lines.slice(idx + 1, close)
         const rec = parseRecommend(inner)
         flushPara()

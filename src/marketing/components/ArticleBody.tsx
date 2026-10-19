@@ -31,16 +31,20 @@ export function InlineNodes({ nodes }: { nodes: Inline[] }) {
  * link so a screen reader announces it once.
  */
 function Recommendation({ block }: { block: Extract<Block, { type: "recommend" }> }) {
-  const rel = block.affiliate ? "sponsored nofollow noopener noreferrer" : "noopener noreferrer"
+  const rel = block.affiliate
+    ? "sponsored nofollow noopener noreferrer"
+    : block.external
+      ? "noopener noreferrer"
+      : undefined
   return (
     <aside className="rec" aria-label={`Recommendation: ${block.title}`}>
       <p className="rec__label mono">
         Recommended{block.affiliate && <span className="rec__aff"> · Affiliate link</span>}
       </p>
       <h3 className="rec__title">
-        <a href={block.href} rel={rel} target="_blank">
+        <a href={block.href} rel={rel} target={block.external ? "_blank" : undefined}>
           {block.title}
-          <span className="sr"> (opens in a new tab)</span>
+          {block.external && <span className="sr"> (opens in a new tab)</span>}
         </a>
       </h3>
       {block.note.length > 0 && (
