@@ -696,6 +696,8 @@ export default function Leads() {
           onErased={(id) => {
             setEraseFor(null)
             setItems((xs) => xs.filter((l) => l.id !== id))
+            // Its calls went with it on the server, so drop them from the board too.
+            setCalls((cs) => (cs ? cs.filter((c) => c.enquiry_id !== id) : cs))
           }}
         />
       )}
