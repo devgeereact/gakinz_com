@@ -34,9 +34,13 @@
  * client is refused, because the time would have no client to bill. The staff
  * ticket detail returns the logged time; a client never sees it. Until SQL 17
  * runs, log_time answers 503 and the detail returns `time: null`.
+ *
+ * _time.php is loaded only on the paths that log or show time (sp_time_lib),
+ * so this file still serves every other route, the client portal's included,
+ * if it is uploaded without _time.php. Then log_time answers 503 and the
+ * detail returns `time: null`, as before SQL 17.
  */
 require __DIR__ . '/_bootstrap.php';
-require __DIR__ . '/_time.php';
 
 const STAFF = ['super_admin', 'admin', 'manager', 'editor', 'employee'];
 const STAFF_OR_CLIENT = ['super_admin', 'admin', 'manager', 'editor', 'employee', 'client'];
@@ -45,6 +49,38 @@ const PRIORITIES = ['urgent', 'high', 'normal', 'low'];
 const UPDATE_PREFIX = 'Update request: ';
 const IT_SUPPORT_KIND = 'it_support';
 const IT_SUPPORT_NAME = 'IT support';
+
+/**
+ * Load _time.php on first use. False when it is not on the server, so the
+ * caller can answer for its own feature instead of the whole file failing.
+ */
+function sp_time_lib(): bool {
+  static $loaded = null;
+  if ($loaded === null) {
+    $loaded = is_file(__DIR__ . '/_time.php');
+    if ($loaded) require_once __DIR__ . '/_time.php';
+  }
+  return $loaded;
+}
+
+/** True when ticket time can be logged and shown: _time.php is here and SQL 17 has run. */
+function sp_ticket_time_ready(mysqli $conn): bool {
+  return sp_time_lib() && gk_ticket_time_ready($conn);
+}
+
+/**
+ * True once SQL 17 has added projects.kind. Probed here rather than through
+ * _time.php, so the client branch depends on nothing but _bootstrap.php.
+ */
+function sp_kind_ready(mysqli $conn): bool {
+  try {
+    // LIMIT 0 reads no rows; it only proves the column is there.
+    return $conn->query('SELECT kind FROM projects LIMIT 0') !== false;
+  } catch (mysqli_sql_exception $e) {
+    if ($e->getCode() !== 1054) throw $e; // ER_BAD_FIELD_ERROR only
+    return false;
+  }
+}
 
 /** The caller's own client id. A client account with no client is refused. */
 function own_client_id(array $user): int {
@@ -163,7 +199,7 @@ if ($user['role'] === 'client') {
     if ($rawProject !== null && $rawProject !== '') {
       $pid = (is_int($rawProject) || (is_string($rawProject) && preg_match('/^[1-9]\d{0,9}$/', $rawProject))) ? (int)$rawProject : 0;
       if ($pid <= 0) fail('Project not found.', 404);
-      $kindCol = gk_ticket_time_ready($conn) ? 'kind' : 'NULL AS kind';
+      $kindCol = sp_kind_ready($conn) ? 'kind' : 'NULL AS kind';
       $p = $conn->prepare("SELECT id, name, $kindCol FROM projects WHERE id = ? AND client_id = ? AND deleted_at IS NULL LIMIT 1");
       $p->bind_param('ii', $pid, $clientId);
       $p->execute();
@@ -252,10 +288,10 @@ if ($method === 'GET' && isset($_GET['id'])) {
   }
   $t['replies'] = $replies;
 
-  // Logged IT support time, staff only. NULL before SQL 17, so the screen
-  // knows to hide "Log time".
+  // Logged IT support time, staff only. NULL before SQL 17 (or without
+  // _time.php), so the screen knows to hide "Log time".
   $t['time'] = null;
-  if (gk_ticket_time_ready($conn)) {
+  if (sp_ticket_time_ready($conn)) {
     $entries = [];
     $total = 0;
     $stmt = $conn->prepare(
@@ -387,6 +423,9 @@ if ($method === 'POST' && $action === 'log_time') {
   // In this mode prepare() throws rather than returning false, so no
   // bind_param() below can be reached with a failed statement.
   mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+  if (!sp_time_lib()) {
+    fail('Logging time on a ticket is not available yet. Upload server/_time.php first.', 503);
+  }
   if (!gk_ticket_time_ready($conn)) {
     fail('Logging time on a ticket is not available yet. Run SQL 17 on the database first.', 503);
   }

@@ -10,6 +10,7 @@ import { spawnSync } from "node:child_process"
 import fs from "node:fs"
 import path from "node:path"
 import { beforeEach, describe, expect, it } from "vitest"
+import { WORK_DIR } from "./env"
 import { api, createClient, createUser, login, one, q, resetDb, sql } from "./helpers"
 
 type Row = Record<string, unknown>
@@ -323,5 +324,64 @@ describe("before SQL 17 has run", () => {
     } finally {
       sql(migrate)
     }
+  })
+})
+
+describe("when support.php or time.php is uploaded without _time.php", () => {
+  const lib = path.join(WORK_DIR, "_time.php")
+  const aside = path.join(WORK_DIR, "_time.php.aside")
+
+  it("keeps every ticket route and the time list working, and answers 503 only where time is logged", async () => {
+    // Time logged while the file is there, to prove the list still reads it.
+    const logged = await logTime({ id: ticketId, minutes: 30 })
+    expect(logged.status).toBe(201)
+    createUser({ email: "client@example.test", role: "client", clientId })
+    const client = await login("client@example.test")
+
+    fs.renameSync(lib, aside)
+    try {
+      // The client side of Support, which the portal serves.
+      const created = await api<{ id: number }>("support.php?action=create", { body: { subject: "Laptop slow" }, token: client })
+      expect(created.status).toBe(201)
+      const reply = await api("support.php?action=reply", { body: { id: created.json.id, body: "Still slow today" }, token: client })
+      expect(reply.status).toBe(201)
+      const mine = await api<Row[]>("support.php", { token: client })
+      expect(mine.status).toBe(200)
+      expect(mine.json.map((t) => t.subject)).toEqual(expect.arrayContaining(["Laptop slow", "Printer offline"]))
+      // update_request still names the standing project as a client sees it.
+      const ask = await api<{ subject: string }>("support.php?action=update_request", {
+        body: { question: "Any news?", project_id: logged.json.project_id },
+        token: client,
+      })
+      expect(ask.status).toBe(201)
+      expect(ask.json.subject).toBe("Update request: IT support")
+
+      // Staff: the list and the detail work; the detail hides time.
+      const list = await api<Row[]>("support.php", { token: owner })
+      expect(list.status).toBe(200)
+      expect(list.json.length).toBe(3)
+      const detail = await api<Row>(`support.php?id=${ticketId}`, { token: owner })
+      expect(detail.status).toBe(200)
+      expect(detail.json.time).toBeNull()
+
+      // Logging time is the one feature that needs the file.
+      const r = await logTime({ id: ticketId, minutes: 15 })
+      expect(r.status).toBe(503)
+      expect(r.json.error).toMatch(/_time\.php/)
+      expect(count("time_entries")).toBe(1)
+
+      // time.php: the list still answers (ticket_id unknown), create answers 503.
+      const times = await api<Row[]>("time.php", { token: owner })
+      expect(times.status).toBe(200)
+      expect(times.json).toHaveLength(1)
+      expect(times.json[0]).toMatchObject({ id: logged.json.id, minutes: 30, ticket_id: null })
+      const create = await api("time.php?action=create", { body: { project_id: logged.json.project_id, minutes: 5 }, token: owner })
+      expect(create.status).toBe(503)
+      expect(count("time_entries")).toBe(1)
+    } finally {
+      fs.renameSync(aside, lib)
+    }
+    // With the file back, logging works again.
+    expect((await logTime({ id: ticketId, minutes: 15 })).status).toBe(201)
   })
 })

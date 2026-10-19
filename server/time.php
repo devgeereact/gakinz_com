@@ -10,11 +10,24 @@
  * IT support time is logged from a ticket (support.php?action=log_time) onto
  * the client's standing "IT support" project, with the same rules
  * (_time.php). Those entries carry ticket_id; every other entry has NULL.
+ *
+ * _time.php is loaded only where it is needed (tm_time_lib), so the list,
+ * delete and approval routes keep working if this file is uploaded without
+ * it: the list then reports ticket_id as null and create answers 503.
  */
 require __DIR__ . '/_bootstrap.php';
-require __DIR__ . '/_time.php';
 
 const STAFF = ['super_admin', 'admin', 'manager', 'editor', 'employee', 'trainer'];
+
+/** Load _time.php on first use. False when it is not on the server. */
+function tm_time_lib(): bool {
+  static $loaded = null;
+  if ($loaded === null) {
+    $loaded = is_file(__DIR__ . '/_time.php');
+    if ($loaded) require_once __DIR__ . '/_time.php';
+  }
+  return $loaded;
+}
 
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
@@ -22,8 +35,9 @@ $action = $_GET['action'] ?? '';
 if ($method === 'GET') {
   require_auth($conn, STAFF); // staff only
   $rows = [];
-  // ticket_id links IT support time to its ticket (SQL 17); NULL before it runs.
-  $ticketCol = gk_ticket_time_ready($conn) ? 't.ticket_id' : 'NULL AS ticket_id';
+  // ticket_id links IT support time to its ticket (SQL 17); NULL before it
+  // runs, or while _time.php is missing.
+  $ticketCol = tm_time_lib() && gk_ticket_time_ready($conn) ? 't.ticket_id' : 'NULL AS ticket_id';
   $sql = "SELECT t.id, t.project_id, t.description, t.minutes, t.billable, t.status, t.entry_date,
                  p.name AS project_name, u.name AS user_name, t.user_id, $ticketCol
           FROM time_entries t
@@ -50,6 +64,7 @@ if ($method === 'POST' && $action === 'create') {
   $in = body();
   $projectId = (int)($in['project_id'] ?? 0);
   if ($projectId <= 0) fail('A project is required.');
+  if (!tm_time_lib()) fail('Logging time is not available yet. Upload server/_time.php first.', 503);
   $e = gk_time_entry_input($in); // the same rules as support.php log_time
   $minutes = $e['minutes'];
   $desc = $e['description'];
