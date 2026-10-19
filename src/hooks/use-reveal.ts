@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react"
+import { useEffect, useEffectEvent, useRef } from "react"
 import { isNewLink, type LinkMark } from "@/lib/deepLink"
 
 /**
@@ -30,11 +30,15 @@ export function useReveal(elementId: string | null, ready: boolean, revision = "
  */
 export function useApplyLink(mark: LinkMark, ready: boolean, apply: () => void) {
   const last = useRef<LinkMark | null>(null)
+  // `apply` is a fresh closure each render. As an effect event it always sees
+  // the latest render's values without being a dependency, so the effect runs
+  // only when the link, its nonce or readiness changes.
+  const onLink = useEffectEvent(apply)
+  const { value, nonce } = mark
   useEffect(() => {
-    if (!ready || !isNewLink(last.current, mark)) return
-    last.current = mark
-    apply()
-    // `apply` is a fresh closure each render; this effect runs only when the link, its nonce or readiness changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, mark.value, mark.nonce])
+    const next: LinkMark = { value, nonce }
+    if (!ready || !isNewLink(last.current, next)) return
+    last.current = next
+    onLink()
+  }, [ready, value, nonce])
 }

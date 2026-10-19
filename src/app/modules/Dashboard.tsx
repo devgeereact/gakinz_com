@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useEffectEvent, useMemo, useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import {
   Area,
@@ -188,10 +188,13 @@ export default function Dashboard() {
     announcementsApi.list().then((r) => r.ok && setAnns(r.data.slice(0, 3)))
   }
 
-  useEffect(() => {
+  // Load once on open; Refresh and Retry call load and loadToday again. As an
+  // effect event, the first load is not a dependency, so it never re-runs.
+  const loadOnOpen = useEffectEvent(() => {
     load()
-    // Load once on open; Refresh and Retry call load and loadToday again.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  })
+  useEffect(() => {
+    loadOnOpen()
   }, [])
 
   const stats = useMemo(() => {
