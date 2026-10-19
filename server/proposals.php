@@ -30,9 +30,23 @@ function pr_ref_col_sql(mysqli $conn): string {
   return function_exists('gk_ref_col') ? gk_ref_col($conn, 'pj', 'project_reference') : 'NULL AS project_reference';
 }
 
-/** The join for pr_ref_col_sql(): the quote's own, live project only. */
+/**
+ * The join for pr_ref_col_sql(): the quote's own, live project, and only while
+ * it still belongs to the quote's client, so a project moved to another client
+ * never shows its reference on this quote or its share link.
+ */
 function pr_ref_join_sql(): string {
-  return ' LEFT JOIN projects pj ON pj.id = p.project_id AND pj.deleted_at IS NULL';
+  return ' LEFT JOIN projects pj ON pj.id = p.project_id AND pj.client_id <=> p.client_id AND pj.deleted_at IS NULL';
+}
+
+/** The reference of the project a quote became, for the accept replies; null as pr_ref_join_sql() would give. */
+function pr_project_ref(mysqli $conn, int $proposalId): ?string {
+  if (!function_exists('gk_ref_col')) return null;
+  $s = $conn->prepare('SELECT ' . pr_ref_col_sql($conn) . ' FROM proposals p' . pr_ref_join_sql() . ' WHERE p.id = ? LIMIT 1');
+  $s->bind_param('i', $proposalId);
+  $s->execute();
+  $r = $s->get_result()->fetch_assoc();
+  return $r['project_reference'] ?? null;
 }
 
 const STAFF = ['super_admin', 'admin', 'manager', 'editor'];
@@ -424,7 +438,9 @@ if ($method === 'POST' && $action === 'accept') {
   $stmt->execute();
   $p = $stmt->get_result()->fetch_assoc();
   if (!$p) fail('Proposal not found.', 404);
-  if ($p['project_id']) ok(['ok' => true, 'project_id' => (int)$p['project_id'], 'existing' => true]);
+  if ($p['project_id']) {
+    ok(['ok' => true, 'project_id' => (int)$p['project_id'], 'project_reference' => pr_project_ref($conn, $id), 'existing' => true]);
+  }
   // Only a quote the client has actually been sent can be accepted (K-028).
   if ($p['status'] !== 'sent') fail('Only a sent quote can be accepted. Mark it as sent first.', 409);
   if (!empty($p['expired'])) fail('This quote expired on ' . $p['valid_until'] . '. Extend its validity before accepting.', 409);
@@ -500,7 +516,9 @@ if ($method === 'POST' && $action === 'accept') {
       $stmt->bind_param('i', $id);
       $stmt->execute();
       $existing = (int)($stmt->get_result()->fetch_assoc()['project_id'] ?? 0);
-      if ($existing > 0) ok(['ok' => true, 'project_id' => $existing, 'existing' => true]);
+      if ($existing > 0) {
+        ok(['ok' => true, 'project_id' => $existing, 'project_reference' => pr_project_ref($conn, $id), 'existing' => true]);
+      }
       fail('This quote is no longer open for acceptance.', 409);
     }
 
