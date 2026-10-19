@@ -1,4 +1,4 @@
-import type { SiteContent, SiteDrafts, SiteSection, WorkAdminRow, WorkInput } from "@/lib/api"
+import type { SiteContent, SiteDrafts, SiteSection, SiteService, WorkAdminRow, WorkInput } from "@/lib/api"
 import { SITE_SECTIONS } from "@/lib/api"
 import { DEFAULT_COPY } from "@/marketing/data/content"
 
@@ -24,7 +24,18 @@ export function defaultSiteContent(): SiteContent {
   const d = DEFAULT_COPY
   return {
     hero: { status: d.hero.status, lead: d.hero.lead, cta1: d.hero.cta1, cta2: d.hero.cta2, secs: normaliseSecs(d.hero.secs) },
-    services: d.services.map((s) => ({ title: s.title, summary: s.summary })),
+    services: d.services.map((s) => ({
+      title: s.title,
+      summary: s.summary,
+      slug: s.slug,
+      group: s.group,
+      hook: s.hook,
+      detail: s.detail,
+      needs: [...s.needs],
+      deliverables: [...s.deliverables],
+      exclusions: [...s.exclusions],
+      price_basis: s.price_basis,
+    })),
     process: d.process.map((s) => ({ title: s.title, detail: s.detail })),
     packages: d.packages.map((p) => ({ name: p.name, price: p.price, best: p.best, featured: p.featured })),
     addons: d.addons.map((a) => ({ name: a.name, price: a.price })),
@@ -167,6 +178,87 @@ function checkRecord(rec: Record<string, unknown>, rules: FieldRule[], where: st
   return null
 }
 
+// ── Services: whole pages or edits of a built-in one ────────────────────────
+
+/** Lines per list on a service page, mirrored from server/site.php SERVICE_LIST_MAX. */
+export const SERVICE_LIST_MAX = 10
+const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+const SERVICE_LISTS = ["needs", "deliverables", "exclusions"] as const
+/** The fields a service page needs, in the order the editor shows them. */
+const SERVICE_PAGE_FIELDS: { key: keyof SiteService; label: string }[] = [
+  { key: "slug", label: "Web address" },
+  { key: "group", label: "Group" },
+  { key: "hook", label: "Buyer hook" },
+  { key: "needs", label: "Typical needs" },
+  { key: "deliverables", label: "What you get" },
+  { key: "exclusions", label: "Not included" },
+  { key: "price_basis", label: "Price basis" },
+]
+
+/**
+ * A service row as it should be saved: text trimmed, blank list lines dropped,
+ * and empty optional fields left out, so an older title-and-summary row stays
+ * that shape.
+ */
+export function tidyService(row: SiteService): SiteService {
+  const out: SiteService = { title: (row.title ?? "").trim(), summary: (row.summary ?? "").trim() }
+  for (const k of ["slug", "hook", "detail", "price_basis"] as const) {
+    const v = typeof row[k] === "string" ? (row[k] as string).trim() : ""
+    if (v) out[k] = v
+  }
+  if (row.group) out.group = row.group
+  for (const k of SERVICE_LISTS) {
+    const v = Array.isArray(row[k]) ? (row[k] as string[]).map((x) => String(x).trim()).filter(Boolean) : []
+    if (v.length) out[k] = v
+  }
+  return out
+}
+
+/** True when a row names one of the website's built-in services, by web address or name. */
+export function isBuiltInService(row: Pick<SiteService, "title" | "slug">): boolean {
+  const title = (row.title ?? "").trim().toLowerCase()
+  const slug = (row.slug ?? "").trim()
+  return DEFAULT_COPY.services.some((s) => (slug && s.slug === slug) || s.title.toLowerCase() === title)
+}
+
+/** Each row's own problem, or null. Run on tidied rows. */
+function checkServices(rows: SiteService[]): string | null {
+  const seen = new Set<string>()
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i]
+    const where = `Row ${i + 1}: `
+    if (r.slug && !SLUG.test(r.slug)) return `${where}Web address can use lower-case letters, numbers and single hyphens only.`
+    if (r.slug && seen.has(r.slug)) return `${where}Another service already uses the web address ${r.slug}.`
+    if (r.slug) seen.add(r.slug)
+    for (const k of ["hook", "price_basis"] as const) {
+      if ((r[k] ?? "").length > SHORT) return `${where}${SERVICE_PAGE_FIELDS.find((f) => f.key === k)!.label} must be ${SHORT} characters or fewer.`
+    }
+    if ((r.detail ?? "").length > LONG) return `${where}Longer description must be ${LONG} characters or fewer.`
+    for (const k of SERVICE_LISTS) {
+      const v = r[k] ?? []
+      const label = SERVICE_PAGE_FIELDS.find((f) => f.key === k)!.label
+      if (v.length > SERVICE_LIST_MAX) return `${where}${label} can have up to ${SERVICE_LIST_MAX} lines.`
+      if (v.some((x) => x.length > SHORT)) return `${where}Each line of ${label} must be ${SHORT} characters or fewer.`
+    }
+    // A row with any page field must have them all; a row that is not a
+    // built-in service must have them all, or its page would be half empty.
+    const hasPageField = SERVICE_PAGE_FIELDS.some((f) => r[f.key] !== undefined)
+    if (hasPageField || !isBuiltInService(r)) {
+      const missing = SERVICE_PAGE_FIELDS.find((f) => r[f.key] === undefined)
+      if (missing) {
+        return `${where}${missing.label} cannot be empty. A service page is published only when it has every field, so no half page appears.`
+      }
+    }
+  }
+  return null
+}
+
+/** Ready-to-save data for a section: service rows tidied, everything else as edited. */
+export function prepareSection<S extends SiteSection>(section: S, data: SiteContent[S]): SiteContent[S] {
+  if (section !== "services") return data
+  return (data as SiteService[]).map(tidyService) as SiteContent[S]
+}
+
 /** The first problem in a section, worded for the editor, or null when it looks valid. */
 export function validateSection<S extends SiteSection>(section: S, data: SiteContent[S]): string | null {
   if (section === "hero") {
@@ -185,6 +277,7 @@ export function validateSection<S extends SiteSection>(section: S, data: SiteCon
     const bad = checkRecord(rows[i], rules, `Row ${i + 1}: `)
     if (bad) return bad
   }
+  if (section === "services") return checkServices((data as SiteService[]).map(tidyService))
   return null
 }
 

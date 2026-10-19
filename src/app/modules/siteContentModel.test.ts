@@ -16,10 +16,12 @@ import {
   lastPublished,
   moveRow,
   normaliseSecs,
+  prepareSection,
   removeRow,
   SECTION_TAB,
   SITE_MAX_ROWS,
   textOn,
+  tidyService,
   unpublishedSections,
   validateHero,
   validateSection,
@@ -44,7 +46,7 @@ function draftsWith(over: Partial<Record<SiteSection, Partial<SiteDrafts[SiteSec
 describe("defaultSiteContent", () => {
   it("maps the built-in copy onto the API shapes, with no extra keys", () => {
     const d = defaultSiteContent()
-    expect(Object.keys(d.services[0]).sort()).toEqual(["summary", "title"])
+    expect(Object.keys(d.services[0]).sort()).toEqual(["deliverables", "detail", "exclusions", "group", "hook", "needs", "price_basis", "slug", "summary", "title"])
     expect(Object.keys(d.process[0]).sort()).toEqual(["detail", "title"])
     expect(Object.keys(d.packages[0]).sort()).toEqual(["best", "featured", "name", "price"])
     expect(Object.keys(d.addons[0]).sort()).toEqual(["name", "price"])
@@ -190,5 +192,44 @@ describe("Work hero helpers", () => {
     expect(validateHero(blankHero)).toEqual({})
     const e = validateHero({ ...blankHero, brand_colour: "blue", hero_word: "far too many words", mobile_file_id: 3 })
     expect(Object.keys(e).sort()).toEqual(["brand_colour", "hero_word", "mobile_alt"])
+  })
+})
+
+describe("service rows", () => {
+  const whole = () => defaultSiteContent().services[4]
+
+  it("accepts the built-in six as they stand", () => {
+    expect(validateSection("services", defaultSiteContent().services)).toBeNull()
+  })
+
+  it("accepts an older title-and-summary row for a built-in service, and keeps it that shape when saved", () => {
+    const rows = [{ title: "Web design", summary: " Edited. " }, { title: "Website care", summary: "Care.", needs: ["", " "] }]
+    expect(validateSection("services", rows)).toBeNull()
+    expect(prepareSection("services", rows)).toEqual([{ title: "Web design", summary: "Edited." }, { title: "Website care", summary: "Care." }])
+  })
+
+  it("refuses a new service without every page field, naming the first one missing", () => {
+    expect(validateSection("services", [{ title: "Printers", summary: "Printer help." }])).toMatch(/^Row 1: Web address cannot be empty\. .*no half page/)
+    const bad = { ...whole(), slug: "printers", title: "Printers", hook: " " }
+    expect(validateSection("services", [bad])).toMatch(/^Row 1: Buyer hook cannot be empty/)
+    expect(validateSection("services", [{ ...whole(), exclusions: ["", ""] }])).toMatch(/Not included cannot be empty/)
+  })
+
+  it("refuses a page field on a built-in row unless all of them come with it", () => {
+    expect(validateSection("services", [{ title: "Web design", summary: "x", hook: "A hook only." }])).toMatch(/Web address cannot be empty/)
+    expect(validateSection("services", [{ title: "Web design", summary: "x", slug: "web-design", hook: "A hook only." }])).toMatch(/Group cannot be empty/)
+  })
+
+  it("checks web addresses, repeats and list lengths", () => {
+    expect(validateSection("services", [{ ...whole(), slug: "IT Support" }])).toMatch(/lower-case letters/)
+    expect(validateSection("services", [whole(), whole()])).toMatch(/^Row 2: Another service already uses the web address it-support/)
+    expect(validateSection("services", [{ ...whole(), needs: Array.from({ length: 11 }, (_, i) => `Need ${i}`) }])).toMatch(/up to 10 lines/)
+    expect(validateSection("services", [{ ...whole(), price_basis: "x".repeat(301) }])).toMatch(/Price basis must be 300/)
+  })
+
+  it("tidies lines typed in the editor before they are saved", () => {
+    const t = tidyService({ ...whole(), needs: ["  One ", "", "Two"], detail: "  " })
+    expect(t.needs).toEqual(["One", "Two"])
+    expect("detail" in t).toBe(false)
   })
 })

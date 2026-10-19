@@ -25,10 +25,12 @@ import {
   lastPublished,
   moveRow,
   normaliseSecs,
+  prepareSection,
   removeRow,
   textOn,
   unpublishedSections,
   validateSection,
+  SERVICE_LIST_MAX,
   type SiteTab,
 } from "./siteContentModel"
 
@@ -68,7 +70,12 @@ function Help({ id, children }: { id?: string; children: React.ReactNode }) {
 }
 
 // ── List editor ─────────────────────────────────────────────────────────────
-type FieldDef = { key: string; label: string; long?: boolean }
+// `lines`: a list edited one item per line. `options`: a fixed choice.
+type FieldDef = { key: string; label: string; long?: boolean; lines?: boolean; options?: [string, string][]; hint?: string }
+
+// Native, not the Radix trigger, so the visible <label htmlFor> names a real control (as in Work).
+const selectClass =
+  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 type Row = Record<string, unknown>
 
 function ListEditor<T extends Row>({
@@ -78,6 +85,7 @@ function ListEditor<T extends Row>({
   blank,
   addLabel,
   two,
+  labelled,
   flag,
   onChange,
 }: {
@@ -87,6 +95,8 @@ function ListEditor<T extends Row>({
   blank: T
   addLabel: string
   two?: boolean
+  /** Show each field's label above it, for rows with more fields than a placeholder can carry. */
+  labelled?: boolean
   flag?: { key: string; label: string }
   onChange: (rows: T[]) => void
 }) {
@@ -161,24 +171,47 @@ function ListEditor<T extends Row>({
           <div className={cn("grid min-w-0 gap-2", two && "md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]")}>
             {fields.map((f, j) => {
               const fid = `${id}-${i}-${j}`
-              const v = typeof r[f.key] === "string" ? (r[f.key] as string) : ""
+              const raw = r[f.key]
+              const v = f.lines ? (Array.isArray(raw) ? raw.join("\n") : "") : typeof raw === "string" ? raw : ""
+              const hid = f.hint ? `${fid}-hint` : undefined
               return (
                 <div key={f.key} className="min-w-0">
-                  <label htmlFor={fid} className="sr-only">
-                    {f.label} {i + 1}
+                  <label htmlFor={fid} className={labelled ? "mb-1 block text-xs font-medium" : "sr-only"}>
+                    {f.label}
+                    <span className="sr-only"> {i + 1}</span>
                   </label>
-                  {f.long ? (
+                  {f.options ? (
+                    <select id={fid} className={selectClass} value={v} onChange={(e) => setField(i, f.key, e.target.value || undefined)}>
+                      <option value="">Choose…</option>
+                      {f.options.map(([value, text]) => (
+                        <option key={value} value={value}>
+                          {text}
+                        </option>
+                      ))}
+                    </select>
+                  ) : f.lines ? (
+                    <Textarea
+                      id={fid}
+                      rows={3}
+                      value={v}
+                      aria-describedby={hid}
+                      onChange={(e) => setField(i, f.key, e.target.value.split("\n"))}
+                      className="min-h-20 resize-y"
+                    />
+                  ) : f.long ? (
                     <Textarea
                       id={fid}
                       rows={2}
                       value={v}
-                      placeholder={f.label}
+                      placeholder={labelled ? undefined : f.label}
+                      aria-describedby={hid}
                       onChange={(e) => setField(i, f.key, e.target.value)}
                       className="min-h-16 resize-y"
                     />
                   ) : (
-                    <Input id={fid} value={v} placeholder={f.label} onChange={(e) => setField(i, f.key, e.target.value)} />
+                    <Input id={fid} value={v} placeholder={labelled ? undefined : f.label} aria-describedby={hid} onChange={(e) => setField(i, f.key, e.target.value)} />
                   )}
+                  {f.hint && <Help id={hid}>{f.hint}</Help>}
                 </div>
               )
             })}
@@ -351,7 +384,7 @@ export default function Site() {
     let d = drafts
     const saved: Partial<SiteContent> = {}
     for (const s of dirty) {
-      const res = await siteContent.save(s, values[s])
+      const res = await siteContent.save(s, prepareSection(s, values[s]))
       if (res.ok) {
         d = { ...d, [s]: { ...d[s], draft: res.data.draft } }
         ;(saved as Record<string, unknown>)[s] = values[s]
@@ -615,16 +648,28 @@ export default function Site() {
 
             {/* ── Services ────────────────────────────────────────────── */}
             <TabsContent value="services" className="mt-4">
-              <p className="mb-3 text-sm text-muted-foreground">Shown in this order on the home page and the Services page.</p>
+              <p className="mb-3 text-sm text-muted-foreground">
+                Shown in this order on the home page and the Services page, under Websites or IT support. Each service has its own page,
+                so a service is published only when every field below is filled in.
+              </p>
               <SectionError message={errors.services} />
               <ListEditor
                 id="services"
                 rows={values.services}
+                labelled
                 fields={[
                   { key: "title", label: "Service name" },
-                  { key: "summary", label: "One-line summary" },
+                  { key: "slug", label: "Web address", hint: "The end of the page address, such as web-design. Changing it moves the page." },
+                  { key: "group", label: "Group", options: [["websites", "Websites"], ["it", "IT support"]] },
+                  { key: "summary", label: "One-line summary", long: true },
+                  { key: "hook", label: "Buyer hook", hint: "The first line on the service page." },
+                  { key: "detail", label: "Longer description", long: true, hint: "Optional. The summary is used when this is empty." },
+                  { key: "needs", label: "Typical needs", lines: true, hint: `One per line, up to ${SERVICE_LIST_MAX}.` },
+                  { key: "deliverables", label: "What you get", lines: true, hint: `One per line, up to ${SERVICE_LIST_MAX}.` },
+                  { key: "exclusions", label: "Not included", lines: true, hint: `One per line, up to ${SERVICE_LIST_MAX}.` },
+                  { key: "price_basis", label: "Price basis", hint: "Say \"Priced per job, ask for a quote.\" until a price is approved." },
                 ]}
-                blank={{ title: "", summary: "" }}
+                blank={{ title: "", summary: "", slug: "", hook: "", detail: "", needs: [], deliverables: [], exclusions: [], price_basis: "" }}
                 two
                 addLabel="Add a service"
                 onChange={(r) => setSection("services", r)}
