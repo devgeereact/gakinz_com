@@ -1,5 +1,6 @@
-import { Fragment } from "react"
+import { Fragment, type ReactNode } from "react"
 import type { Block, Inline } from "@/marketing/lib/articleFormat"
+import { slotPositions } from "@/marketing/lib/adSlots"
 
 /** The text shown for a missing affiliate disclosure (D-027 gap marker). */
 export const AFFILIATE_DISCLOSURE_GAP = "[Affiliate disclosure: owner to supply]"
@@ -61,10 +62,24 @@ function Recommendation({ block }: { block: Extract<Block, { type: "recommend" }
  * affiliate link, the disclosure gap marker is shown once, above the first
  * recommendation. No disclosure wording is invented.
  */
-export function ArticleBody({ blocks }: { blocks: Block[] }) {
+export function ArticleBody({ blocks, slot }: { blocks: Block[]; slot?: (n: number) => ReactNode }) {
   const firstRec = blocks.findIndex((b) => b.type === "recommend")
   const needsDisclosure = blocks.some((b) => b.type === "recommend" && b.affiliate)
-  return blocks.map((block, i) => {
+  const at = slot ? slotPositions(blocks) : []
+  const out = blocks.map((block, i) => {
+    const el = renderBlock(block, i)
+    const n = at.indexOf(i)
+    if (n < 0) return el
+    return (
+      <Fragment key={i}>
+        {el}
+        {slot?.(n)}
+      </Fragment>
+    )
+  })
+  return out
+
+  function renderBlock(block: Block, i: number) {
     if (block.type === "recommend") {
       return (
         <Fragment key={i}>
@@ -102,5 +117,6 @@ export function ArticleBody({ blocks }: { blocks: Block[] }) {
         <InlineNodes nodes={block.children} />
       </p>
     )
-  })
+  }
 }
+

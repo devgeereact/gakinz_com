@@ -7,6 +7,8 @@ import { useMarketingPost } from "@/marketing/data/blog"
 import { useProjects } from "@/marketing/data/showcase"
 import { ArticleBody } from "@/marketing/components/ArticleBody"
 import { parseArticle } from "@/marketing/lib/articleFormat"
+import AdSlot from "@/marketing/components/AdSlot"
+import { adsConfigured } from "@/marketing/lib/monetisation"
 import NotFound from "./NotFound"
 
 /**
@@ -42,6 +44,11 @@ import NotFound from "./NotFound"
  *
  * The generated SVG wireframe that stood in for a cover image is gone with
  * SiteMockup. An article does not need a picture of a pretend website.
+ *
+ * Ad slots (Task 25): only when src/marketing/lib/monetisation.ts configures
+ * AdSense and a CMP is the slot passed at all, after the third and eighth
+ * paragraphs (ArticleBody slotPositions). Each renders nothing until the
+ * visitor consents. With the shipped settings the page is unchanged.
  */
 
 function formatDate(iso: string) {
@@ -116,7 +123,7 @@ export default function ResourceDetail() {
 
         <section className="sec wrap" style={{ paddingTop: 56 }}>
           <div className="article">
-            <ArticleBody blocks={parseArticle(post.bodyParas.join("\n\n"))} />
+            <ArticleBody blocks={parseArticle(post.bodyParas.join("\n\n"))} slot={adsConfigured() ? () => <AdSlot /> : undefined} />
             <p style={{ marginTop: 40 }}>
               <Link className="link" to="/resources">
                 <IPrev /> All writing

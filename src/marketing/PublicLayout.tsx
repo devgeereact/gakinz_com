@@ -2,6 +2,8 @@ import { useEffect, useRef } from "react"
 import { Outlet, useLocation } from "react-router-dom"
 import { SiteChrome } from "./components/site-ui"
 import { useProjects } from "./data/showcase"
+import ConsentLoader from "./components/ConsentLoader"
+import { monetisation } from "./lib/monetisation"
 import "./site.css"
 
 /**
@@ -41,6 +43,8 @@ export default function PublicLayout() {
       <a className="skip" href="#main">
         Skip to content
       </a>
+      {/* Task 25: absent unless a CMP is configured; renders nothing either way. */}
+      {monetisation().consent && <ConsentLoader />}
       <SiteChrome projects={projects}>
         <main id="main" tabIndex={-1}>
           <Outlet />
