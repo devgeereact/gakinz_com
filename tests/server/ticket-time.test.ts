@@ -6,6 +6,7 @@
  * The ticket detail shows the logged time to staff; a client never sees time,
  * and the portal lists the standing project as "IT support" with no tasks.
  */
+import { spawnSync } from "node:child_process"
 import fs from "node:fs"
 import path from "node:path"
 import { beforeEach, describe, expect, it } from "vitest"
@@ -27,6 +28,13 @@ function createTicket(client: number | null, subject = "Printer offline"): numbe
 
 function logTime(body: Row, token = owner) {
   return api<LogReply>("support.php?action=log_time", { body, token })
+}
+
+/** Today in PHP's own time zone, as the server's default entry_date uses. */
+function phpToday(): string {
+  const r = spawnSync("php", ["-r", "echo (new DateTime())->format('Y-m-d');"], { encoding: "utf8" })
+  if (r.status !== 0) throw new Error(r.stderr)
+  return r.stdout
 }
 
 const count = (from: string) => Number(one(`SELECT COUNT(*) FROM ${from}`))
@@ -112,10 +120,15 @@ describe("log_time", () => {
     expect(count("time_entries")).toBe(0)
     expect(count("projects")).toBe(0) // a refused log creates no project either
 
+    // "Today" is PHP's date, not the database's (their zones can differ), read
+    // either side of the request so a run across midnight still passes.
+    const before = phpToday()
     const r = await logTime({ id: ticketId, minutes: "25", description: "x".repeat(400) })
+    const after = phpToday()
     expect(r.status).toBe(201)
-    const [row] = sql(`SELECT minutes, CHAR_LENGTH(description), billable, entry_date = CURRENT_DATE FROM time_entries WHERE id = ${r.json.id}`)
-    expect(row).toEqual(["25", "300", "0", "1"])
+    const [row] = sql(`SELECT minutes, CHAR_LENGTH(description), billable, entry_date FROM time_entries WHERE id = ${r.json.id}`)
+    expect(row.slice(0, 3)).toEqual(["25", "300", "0"])
+    expect([before, after]).toContain(row[3])
 
     const empty = await logTime({ id: ticketId, minutes: 5, description: "   " })
     expect(one(`SELECT IFNULL(description, 'NULL') FROM time_entries WHERE id = ${empty.json.id}`)).toBe("NULL")
@@ -126,6 +139,15 @@ describe("log_time", () => {
     expect((await logTime({ id: 999999, minutes: 10 })).status).toBe(404)
     sql(`UPDATE tickets SET deleted_at = NOW() WHERE id = ${ticketId}`)
     expect((await logTime({ id: ticketId, minutes: 10 })).status).toBe(404)
+    expect(count("time_entries")).toBe(0)
+  })
+
+  it("refuses a ticket whose client has been removed, like a missing ticket", async () => {
+    sql(`UPDATE clients SET deleted_at = NOW() WHERE id = ${clientId}`)
+    const r = await logTime({ id: ticketId, minutes: 30 })
+    expect(r.status).toBe(404)
+    expect(r.json.error).toBe("Ticket not found.")
+    expect(count("projects")).toBe(0)
     expect(count("time_entries")).toBe(0)
   })
 
@@ -227,13 +249,25 @@ describe("reading ticket time", () => {
       id: pid, name: "IT support", status: "in_progress", due_date: null, kind: "it_support", task_count: 0, done_count: 0,
     })
     expect(portal.json.projects.find((p) => p.id === site)).toMatchObject({ name: "Website rebuild", kind: null, task_count: 2, done_count: 1 })
+
+    // An update request about the standing project names it "IT support" too.
+    const req = await api<{ id: number; subject: string }>("support.php?action=update_request", {
+      body: { question: "Is the printer fixed?", project_id: pid },
+      token: client,
+    })
+    expect(req.status).toBe(201)
+    expect(req.json.subject).toBe("Update request: IT support")
+    const [[subject, body]] = sql(`SELECT subject, body FROM tickets WHERE id = ${req.json.id}`)
+    expect(subject).toBe("Update request: IT support")
+    expect(body).toContain(`Project: IT support (#${pid})`)
+    expect(body).not.toContain("Helpdesk internal bucket")
   })
 })
 
 describe("before SQL 17 has run", () => {
   // The ALTERs recorded at the foot of server/schema.sql, uncommented.
   const migrate = fs.readFileSync(path.resolve(__dirname, "../../server/schema.sql"), "utf8")
-    .match(/-- {3}ALTER TABLE time_entries\n[\s\S]*?ADD COLUMN kind[^;]*;/)![0]
+    .match(/-- 2026-10-19 · SQL 17 ·[\s\S]*?(-- {3}ALTER TABLE time_entries\n[\s\S]*?ADD COLUMN kind[^;]*;)/)![1]
     .replace(/^-- {3}/gm, "")
 
   it("answers 503 for log_time and keeps tickets, time and the portal working", async () => {
