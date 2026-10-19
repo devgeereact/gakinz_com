@@ -855,7 +855,7 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 | Next-action date and short note on each enquiry | Nothing goes cold unnoticed | Built 2026-10-10; needs the SQL step | 2 | S | None |
 | Simple priority set by the owner | Replaces AI scoring | Built 2026-10-10; needs the SQL step | 2 | S | None |
 | Call record: requested or confirmed time, time zone, link, outcome | Bookings tracked against the enquiry | Built 2026-10-16 (`bookings.php`); needs SQL 9 and 10 | 2 | M | None |
-| Optional calendar file (ICS) for a confirmed call | Adds to any calendar without OAuth | Missing | Later | S | Call record |
+| Optional calendar file (ICS) for a confirmed call | Adds to any calendar without OAuth | Built 2026-10-18 (`bookings.php`, `_ics.php`), for staff and for the client's own call; needs SQL 9 and 10. The client's file has no meeting link (K-070) | Later | S | Call record |
 | Convert enquiry to client once, matching existing email or company | No duplicate clients | Exists, untested for duplicates | 2 | S | Synthetic tests |
 | Six service options on the enquiry form with the website's labels; budget bands that fit small IT jobs | Clean source data | Five project types that do not match service names; lowest budget band "Under £5k" (`Contact.tsx`) | 4 | S | Services and prices approved |
 
@@ -867,7 +867,7 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 | Private owner notes kept apart from client-visible information | Nothing internal leaks | Partly | 2 | S | None |
 | Client portal: project summary, next step, invoices, shared files | Clients help themselves | Read-only portal exists | 2 | M | Isolation tests |
 | Client messages through support tickets | Two-way conversation without a new chat system | Built 2026-10-10 (K-039) | 2 | M | Client branch in `support.php` |
-| Request an update, request a call, supply assets | Fewer chasing emails | Missing | 2 | M | Client messages |
+| Request an update, request a call, supply assets | Fewer chasing emails | Built 2026-10-18 (`support.php`, `bookings.php`, `assets.php`); calls need SQL 9 and 10, assets need SQL 15. Supply is a note, not an upload (K-072) | 2 | M | Client messages |
 | Private delivery feedback, with separate permission to publish | Honest feedback and lawful testimonials | Built 2026-10-16 (`feedback.php`); needs SQL 11. The excerpt-approval request is not built | 2 | S | Client messages |
 | Project reference on documents; reference plus email link sign-in | Access without another password | Missing | After J03 | M | K-027 fixed and J03 passing |
 
@@ -877,10 +877,10 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 |---|---|---|---|---|---|
 | Accept only from sent; convert exactly once | Prevents wrong or duplicate projects and invoices | Fixed in source 2026-10-10 (K-028) | 1 | S | None |
 | Schedule preview with VAT before acceptance | No surprise invoices | Built 2026-10-10 (D-035) | 2 | S | None |
-| Acceptance evidence: who, when, which version | Proof of the agreed scope | Staff click only | 2 | S | None |
+| Acceptance evidence: who, when, which version | Proof of the agreed scope | Built 2026-10-18 (`proposals.php`): method, reference, date received, recorder and a terms fingerprint; needs SQL 14 | 2 | S | None |
 | Stripe charges the VAT-inclusive total; webhook checks amount and currency | Stops silent VAT loss | Fixed in source 2026-10-10 (K-025) | 1 | M | Sandbox fixtures |
 | PayPal hidden until it has a webhook | Avoids unrecorded payments | Switched off 2026-10-10 (K-026) | 1 | S | None |
-| Manual payment record: reference, date, amount | Bank transfers reconciled simply | Missing | 2 | S | None |
+| Manual payment record: reference, date, amount | Bank transfers reconciled simply | Built 2026-10-18 (`invoices.php`); needs SQL 13 | 2 | S | None |
 | Owner-triggered payment reminder | Chase money without automation | Partly | 2 | S | Mail sink for tests |
 | Safe CSV export with formula prefixes neutralised | Spreadsheet safety | Fixed 2026-10-10 (K-030) | 2 | S | None |
 
@@ -889,7 +889,7 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 | Feature | Why it helps | Today | Phase | Size | Depends on |
 |---|---|---|---|---|---|
 | Task list with due dates, one next milestone, one client-visible progress note | Clear delivery without a project suite | Tasks exist | 2 | S | None |
-| Asset request checklist | Clients know what to send | Missing | 2 | S | Portal |
+| Asset request checklist | Clients know what to send | Built 2026-10-18 (`assets.php`); needs SQL 15 | 2 | S | Portal |
 | Project brief and agreed measurements under the client ID | Scope and evidence in one place (section 6.4) | Missing | 2 | M | None |
 | Standing "IT support" project per support client; tickets plus billable time | Bill IT support without a new module | Time requires a project | 2 | S | None |
 | Consultancy project closes with a shared recommendation file | A clear consultancy deliverable | Files exist | 2 | S | Portal files |
@@ -909,7 +909,7 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 | Route-specific metadata and a sitemap from published records | Search and share previews | Static (K-018, K-019) | 4 | M | Rendering choice |
 | Replace "to supply" gaps and engineering counts with real content | A professional public site | Engineering counts removed 2026-10-10; "to supply" gaps remain (K-038) | 4 | M | Owner content |
 | Business and social links held in one settings record | Header, footer and structured data stay consistent | Hard-coded in `site.ts` | 4 | S | Profiles created |
-| "Already working with us?" link in header and footer | Client access without competing with the enquiry | Missing | 4 | S | Portal |
+| "Already working with us?" link in header and footer | Client access without competing with the enquiry | Built 2026-10-18 in the header, drawer and footer, to `/login`; not deployed | 4 | S | Portal |
 
 ### Monetisation and social
 

@@ -12,7 +12,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | ID | Issue | Severity | Status |
 |---|---|---|---|
 | K-001 | A live super-admin credential is in git history | Critical | **Password rotated 2026-10-12 (owner-reported).** Session revocation and K-015 file check unconfirmed |
-| K-002 | Lint fails | Medium | Open. 41 errors, 1 warning on 2026-10-11, down from 60 and 7; ratchet in CI |
+| K-002 | Lint fails | Medium | Open. 33 errors, 0 warnings on 2026-10-19, all `set-state-in-effect`, down from 41 and 1 (2026-10-11) and 60 and 7; ratchet in CI. Not merged |
 | K-003 | `config.php.example` named a retired mail host | Medium | Fixed in the template. Server value UNVERIFIED |
 | K-004 | `api.php` accepts an unauthenticated POST | Medium | **Fixed 2026-09-22.** Not uploaded |
 | K-005 | `contact.php` has no spam protection | Medium | **Fixed 2026-09-22.** Not uploaded |
@@ -56,14 +56,15 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-043 | A static canonical in `index.html` conflicts with the per-route canonical | Low | **Fixed 2026-10-16** (prerender), not deployed. SEO 100 on `/`, `/work`, `/contact` |
 | K-044 | The D-046 redesign is verified only against mocked API responses | Medium | Open. Owner test on real data pending |
 | K-045 | Accessibility and performance audits predate the D-046 rebuild and the font change | Medium | **Closed 2026-10-16.** Re-measured; five fixes, open findings are K-050 to K-053 |
-| K-046 | Dead redesign residue: `.gk-fadein` rules, the Sofia Sans dependency, D-037 brand assets | Cosmetic | Open |
+| K-046 | Dead redesign residue: `.gk-fadein` rules, the Sofia Sans dependency, D-037 brand assets | Cosmetic | **Fixed 2026-10-16**, not deployed. Re-checked 2026-10-18: no residue left |
 | K-047 | Three commit subjects on `feat/redesign-2026` contain a literal `$'\n\n'` | Informational | Open. Cannot be fixed without a history rewrite |
-| K-048 | Site content tabs scroll sideways at 390px with no visible cue | Low | Open |
+| K-048 | Site content tabs scroll sideways at 390px with no visible cue | Low | **Fixed 2026-10-16** (tabs wrap), not deployed. Re-checked in source 2026-10-18 |
 | K-049 | Editing a Work record crashed on a detail response without images | Medium | **Fixed 2026-10-14** (`24c25ff`). Not deployed |
 | K-050 | RotaFlow blue `#3B6FE0` fails contrast for the reduced-opacity white text on it | Medium | **Fixed 2026-10-16** (`#2C5AC4`), not deployed |
 | K-051 | Amber hero slide: dark bar text on the dark bottom shading | Medium | **Fixed 2026-10-16** (light bar text), not deployed |
 | K-052 | Home CLS 0.114 from the font swap moving the hero, and LCP 4.9 s simulated | Medium | CLS **fixed**, FCP 2.7 to 1.8 s with the prerender (2026-10-16), not deployed. Home LCP still 4.5 to 4.8 s: open |
 | K-053 | The LCP image on `/work` is lazy-loaded | Low | Prerendered 2026-10-16: `/work` LCP 3.4 s, Performance 90 to 91. Eager first card re-measured, still no faster; lazy kept |
+| K-054 | A CMS heading rule shrank every public page heading | High | **Fixed 2026-10-16**, not deployed |
 | K-055 | Calls, the client timeline and private feedback are verified only locally, with owner decisions open | Medium | Open. Built 2026-10-16, not merged or uploaded |
 | K-056 | An admin could demote or suspend a super admin, locking the owner out | High | **Fixed 2026-10-17**, not uploaded |
 | K-057 | Sign-in lockout by anyone, unlimited code guesses on a signed-in account, a reusable reset link, and sign-in timing | Medium | **Fixed 2026-10-17**, not uploaded |
@@ -75,7 +76,14 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-063 | The privacy and cookie pages did not match what the site does | High | **Partly fixed 2026-10-17:** facts corrected and the full structure in place with labelled placeholders for owner facts, not deployed. Placeholders and adviser review outstanding (K-021) |
 | K-064 | Enquiry and client text can reach an AI provider, undisclosed | Medium | Open. Owner and legal decision |
 | K-065 | Testimonials default to five stars and carry no source or consent record | Medium | Open. Owner decision |
-| K-066 | Public-site defects from the 2026-10-17 audit | Low to medium | **Fixed 2026-10-17**, not deployed. VAT wording open (owner) |
+| K-066 | Public-site defects from the 2026-10-17 audit | Low to medium | **Fixed 2026-10-17**, not deployed; `favicon.ico` and web manifest added 2026-10-18, not deployed. VAT wording and `/sectors` open (owner) |
+| K-067 | "Not in the future" date checks use a server clock whose time zone is not set | Low | Open. Live PHP and database time zones UNVERIFIED |
+| K-068 | The 40/30/30 split moved to integer pence: on PHP 8.4 or later about 2.5% of subtotals move 1p between invoices | Low | Accepted 2026-10-18, not uploaded. Live PHP version UNVERIFIED |
+| K-069 | Header links at 0.85 opacity can fall below AA on a mid-tone owner hero colour | Low | Open. Passes on every current slide; design decision |
+| K-070 | The client calendar file has no meeting link, and a cancelled call has no cancellation file | Low | Open. Owner decision |
+| K-071 | Portal call requests, update requests and supplied assets notify nobody | Low | Open. Owner decision |
+| K-072 | Asset supply is a note only: a client cannot upload a file | Low | Open. Needs a client upload path in `files.php` |
+| K-073 | Toasts failed AA contrast and ignored dark mode; the Projects board scroll region was not focusable; a refused acceptance showed only in a toast | Medium | **Fixed 2026-10-19**, not deployed |
 
 
 ---
@@ -107,9 +115,20 @@ needs rewriting, which is a force push and was explicitly excluded from this mig
 **Severity:** medium · **Status:** open, recorded not fixed
 
 `npm run lint` on 2026-09-04 reported **60 errors and 7 warnings across 42 files**. The
-current figure is in `docs/STATUS.md` section 0 (41 errors and 1 warning on 2026-10-11), and
-`npm run lint:ratchet` enforces the ceiling in `scripts/lint-ratchet.mjs` in CI. The table
-below is the 2026-09-04 breakdown, kept for history.
+current figure is in `docs/STATUS.md` section 0, and `npm run lint:ratchet` enforces the
+ceiling in `scripts/lint-ratchet.mjs` in CI. The table below is the 2026-09-04 breakdown, kept
+for history.
+
+**2026-10-19, on `feat/journeys-2026-10-18` (not merged):** 41 errors and 1 warning down to
+**33 errors and 0 warnings**, and the ceiling lowered to match. The five
+`only-export-components` errors went by moving non-component exports into their own modules
+(`badge-variants.ts`, `button-variants.ts`, `sidebar-context.ts`, `seo-schema.ts`); the
+`purity`, `immutability` and `exhaustive-deps` findings and one `set-state-in-effect` were
+fixed in place. Every remaining finding is `react-hooks/set-state-in-effect`: 30 effects that
+fetch data, plus three not provably equivalent if rewritten by reading alone (the
+`Contracts.tsx` template reset, the `Portal.tsx` client-id effect and the `theme-toggle.tsx`
+mount guard). No `eslint-disable` was added. The changed screens were checked by reading and
+build only, not in a browser.
 
 | Count | Severity | Rule |
 |---|---|---|
@@ -1155,8 +1174,9 @@ Known limits in the build:
 - A customer email whose send crashes PHP part way leaves its event at `sending`, which the
   retry action does not accept. It needs a manual `UPDATE booking_events SET notify_status =
   'failed'` for that row. Not seen in testing.
-- There is no delete for a call; a mistaken record is cancelled. There is no ICS file and no
-  customer request for a call yet.
+- There is no delete for a call; a mistaken record is cancelled. A calendar file and a
+  client's own call request were added on 2026-10-18 (`feat/journeys-2026-10-18`, not
+  uploaded); their limits are K-070 and K-071.
 - In the autumn clock-change hour the earlier (summer-time) reading of an ambiguous local time
   is taken.
 
@@ -1368,5 +1388,119 @@ flow in K-055 already records permission to quote).
   `2026-05-12`, not MySQL text. The pricing buttons now pass the package to the contact form,
   which shows it, lets the visitor remove it, and sends it in the existing `projectType` field.
 - **Open, low:** `/sectors` has no inbound link (the owner has not decided whether to keep the
-  page); no `favicon.ico` or web manifest.
+  page).
+- **Fixed 2026-10-18** on `feat/journeys-2026-10-18`, not deployed: `public/favicon.ico` (the
+  32px PNG wrapped by `scripts/make-favicon-ico.mjs`) and `public/site.webmanifest` (display
+  `browser`, graphite colours, three icons), linked from `index.html` outside the SEO markers
+  so every prerendered page and `app-shell.html` carry them (`scripts/head-assets.test.mjs`).
+  Served correctly by `vite preview`; the live host's content types are UNVERIFIED.
+
+---
+
+## K-067 · "Not in the future" date checks use a server clock whose time zone is not set
+**Severity:** low · **Status:** open. Found 2026-10-18 in review of the manual payment record.
+
+`invoices.php?action=record_payment` refuses a `paid_on` later than `(new DateTime())`, which
+is PHP's default time zone; nothing in `server/` calls `date_default_timezone_set()`. Quote
+acceptance compares `received_on` with the database's `CURRENT_DATE`, whose zone is not set
+either. If the host runs on UTC, then during British Summer Time, between 00:00 and 01:00 UK
+time, today's UK date is still "tomorrow" to the server, so a payment or an acceptance dated
+today is refused as in the future. The owner can enter it an hour later or use yesterday's
+date. Call requests are not affected: they compare UTC instants (`UTC_TIMESTAMP()`). The
+live PHP and database time zones are UNVERIFIED. Resolution: set one zone for the business
+(Europe/London) in `_bootstrap.php` and compare dates in it, with a test at 00:30 BST.
+
+---
+
+## K-068 · The 40/30/30 split now uses integer pence; on PHP 8.4 or later some instalments move by 1p
+**Severity:** low · **Status:** accepted 2026-10-18 on `feat/journeys-2026-10-18`, not uploaded.
+
+Accepting a quote creates three invoices on a 40/30/30 split of the ex-VAT subtotal. The
+accepted-terms fingerprint (SQL 14) must be stable, so `proposals.php` now works in integer
+pence only: deposit is 40% rounded half away from zero, stage is 30% rounded the same way, and
+the final invoice takes the remainder. The quote total never changes. This matches what the
+old float code gave on PHP before 8.4. On PHP 8.4 or later, where `round()` changed, the old
+code gave a different answer for about 2.5% of subtotals (those where 30% lands on an exact
+half penny), so against that code the new one moves 1p from the final invoice to the stage
+invoice. The live PHP version is UNVERIFIED. Tested in `tests/server/acceptance-evidence.test.ts`
+(stage 3001.5p rounds to 3002p, final 3001p). Resolution: none needed unless the owner wants
+a different rounding rule; record it if the live PHP version is checked.
+
+---
+
+## K-069 · Header links at 0.85 opacity can fall below AA on a mid-tone owner hero colour
+**Severity:** low · **Status:** open, a design decision. Found 2026-10-19 in the browser check.
+
+Over the home hero the header links, the new "Client sign in" link (`.nav__signin`,
+`src/marketing/site.css`) included, are drawn at 0.85 opacity in the colour `onColour`
+(`src/marketing/data/showcase.ts`) picks for the slide, which assumes full opacity. Every
+current slide passes AA for 14px text (lowest RotaFlow, 4.99:1; on `/about` 11.08:1). But the
+hero colour is the owner's choice in Work, and computed figures for mid-tone colours fail:
+`#E0457B` 4.05:1, `#D9534F` 4.02:1, `#7A7A7A` 3.70:1, and 33 of 256 pure greys. Those figures
+were computed, not rendered. Resolution: draw the header links at full opacity over the hero,
+or have `onColour` allow for the opacity, or check contrast when the owner saves a colour.
+
+---
+
+## K-070 · The client calendar file has no meeting link, and a cancelled call has no cancellation file
+**Severity:** low · **Status:** open. Owner decision. Built 2026-10-18, not uploaded.
+
+`bookings.php?action=mine_ics` gives a client a calendar file for their own confirmed call,
+but with no `LOCATION` or `URL`, because a client never reads a booking's location
+(`bk_client_shape`); the staff file carries both. A client who needs the meeting link must ask
+for it. There is also no cancellation file: after a call is cancelled or rescheduled the event
+already imported stays in the calendar. A rescheduled call's new file carries a higher
+`SEQUENCE` and the same `UID`, so apps that honour it replace the old time; which apps do is
+NOT TESTED. Resolution: the owner decides whether clients see the meeting link (then change
+`bk_client_shape` and the client file together), and whether a cancellation file
+(`METHOD:CANCEL`) is worth sending.
+
+---
+
+## K-071 · Portal call requests, update requests and supplied assets notify nobody
+**Severity:** low · **Status:** open. Owner decision. Built 2026-10-18, not uploaded.
+
+When a client asks for an update, proposes times for a call or marks an asset as supplied, no
+email, SMS or Slack message goes to the owner. The owner sees them only by opening the CMS:
+update requests in Support (subject "Update request: ..."), call requests in Enquiries, Calls
+as "Requested, not confirmed", and supplied assets on the project's checklist. Related limits
+recorded in review: every user of the same client sees that client's call requests (as with
+tickets), and the five-request cap is not atomic, so parallel requests can overshoot it by a
+few. Resolution: the owner decides whether and how to be told, then a notice through the
+existing mail or Slack helpers.
+
+---
+
+## K-072 · Asset supply is a note only: a client cannot upload a file
+**Severity:** low · **Status:** open. Built 2026-10-18, not uploaded.
+
+The asset checklist (`server/assets.php`, SQL 15) lets a client mark an item supplied with an
+optional note, for example "sent by email". It cannot carry a file, because `files.php`
+accepts uploads from staff only and has no client branch. Staff can link an item to a file
+already stored on the same project through the API (`update` with `file_id`), but the panel
+has no file picker yet; it only shows a linked file's name. Reopening an item keeps the
+client's last note and the linked file. Resolution: a client upload path with the same
+isolation rules as the other client branches, when the owner wants it
+(`docs/PRODUCT-SPEC.md` section 6.2).
+
+---
+
+## K-073 · Toast contrast, the Projects board scroll region and a refused acceptance shown only in a toast
+**Severity:** medium · **Status:** **fixed 2026-10-19** on `feat/journeys-2026-10-18`, not
+deployed. Found 2026-10-19 in the browser check; all three predate this branch.
+
+1. `<Toaster richColors>` in `src/AppRoot.tsx` sat outside the theme provider and had no
+   `theme`, so rich-colour toasts stayed light in dark mode and failed AA at 13px: success
+   4.25:1, error 4.34:1. The toaster now follows the CMS theme and takes its colours from CMS
+   tokens in `src/index.css`. Measured after: light 5.22 to 5.99:1, dark 7.22 to 8.79:1
+   (warning and info on synthetic elements only).
+2. The Projects task board (`overflow-x-auto`) had nothing focusable when a project had no
+   tasks, so axe reported `scrollable-region-focusable` at 390px. It is now a labelled,
+   focusable region.
+3. A refused quote acceptance appeared only in a toast. The message now shows inside the
+   accept dialog, which stays open with the typed reference kept.
+
+Evidence: axe 0 violations on the rerun at 1440 and 390px, light and dark, against a mocked
+API. Screen-reader announcement of the new alert and the focus ring in a screenshot: NOT
+TESTED.
 
