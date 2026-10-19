@@ -2,7 +2,7 @@
 
 **As at:** 2026-10-19 (sections 0 and 0.2); 2026-10-17 (section 0.1); otherwise 2026-10-14. `main` is `c57eb4a`. All later work sits on branches stacked into
 PR #8. The newest is `feat/journeys-2026-10-18` (section 0.2), stacked on
-`audit/readiness-2026-10-17` (PR #20), not pushed. `feat/plan-2026-batch-1` (PR #8) holds batch 1 (the local half of delivery phase 1), the
+`audit/readiness-2026-10-17` (PR #20), pushed to origin, not merged, deployed or uploaded. `feat/plan-2026-batch-1` (PR #8) holds batch 1 (the local half of delivery phase 1), the
 seven-destination navigation, My account, enquiry follow-ups, client portal messages, public
 publishing and the article format, the lock-screen token fix, the D-037 public redesign, the
 favicon and share image, and dead-code removal. `feat/redesign-2026` (`d314833`), stacked on
@@ -75,7 +75,7 @@ K-063). Live headers, a real sign-in and real data: NOT TESTED.
 ## 0.2 Client journeys batch, 2026-10-18 to 2026-10-19
 
 On `feat/journeys-2026-10-18`, 43 commits on `audit/readiness-2026-10-17` at `8499761`
-(PR #20), on the Mac. Not pushed, merged, deployed or uploaded, and SQL 13 to 15 have run
+(PR #20), on the Mac. Pushed to origin, not merged, deployed or uploaded, and SQL 13 to 15 have run
 only on the throwaway test database. Method: each task was built test first and reviewed
 before the next began; server behaviour runs over HTTP against a local MariaDB `*_test`
 database; the new screens were then driven in a production build with Playwright at 1440
@@ -280,7 +280,7 @@ manual upload in `docs/DEPLOYMENT.md` section 5.
 ### Client journeys, 2026-10-18 to 2026-10-19
 
 On `feat/journeys-2026-10-18`, stacked on `audit/readiness-2026-10-17` (PR #20) at `8499761`.
-Not pushed, merged, deployed or uploaded. Summary and method in section 0.2.
+Pushed to origin, not merged, deployed or uploaded. Summary and method in section 0.2.
 
 | Area | Change | Evidence |
 |---|---|---|

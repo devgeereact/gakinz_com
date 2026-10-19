@@ -4,7 +4,7 @@
 
 The client journeys batch of 2026-10-18 to 2026-10-19 is built, tested locally and documented
 on `feat/journeys-2026-10-18`: 43 commits on `audit/readiness-2026-10-17` at `8499761`
-(PR #20), plus the documentation commits. **Not pushed, merged, deployed or uploaded.** SQL 13
+(PR #20), plus the documentation commits. **Pushed to origin, not merged, deployed or uploaded.** SQL 13
 to 15 have run only on the throwaway test database. The owner reviews it at 06:00 on
 2026-10-19.
 
@@ -89,7 +89,7 @@ K-046, K-048, K-054 row, K-055, K-066, new K-067 to K-073), `docs/DEPLOYMENT.md`
 ## Resume on another computer
 
 1. `git fetch origin`, then `git switch feat/journeys-2026-10-18` and `git pull --ff-only`
-   (once it is pushed). This branch holds everything in `audit/readiness-2026-10-17` plus the
+   (the branch is pushed to origin). This branch holds everything in `audit/readiness-2026-10-17` plus the
    journeys batch.
 2. `npm ci` (Node 22 or newer).
 3. Read `docs/STATUS.md` (sections 0.1, 0.2, 3 and 5) and `docs/KNOWN-ISSUES.md` K-056 to K-073,

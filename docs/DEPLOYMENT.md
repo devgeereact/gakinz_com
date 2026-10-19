@@ -150,7 +150,7 @@ during the demo-surface cleanup, so step 5 of the old instructions could not pas
 This is the one list of server work that is committed and not known to be live. It covers
 every server change since `c57eb4a` (`main`, 2026-10-10) on the stacked branches in PR #8,
 including `audit/readiness-2026-10-17` (PR #20) and `feat/journeys-2026-10-18` (2026-10-18,
-stacked on PR #20, not pushed), and, conditionally, the 2026-09-22 relaunch set already on `main`. Keep it current: a change under
+stacked on PR #20, pushed to origin, not merged, deployed or uploaded), and, conditionally, the 2026-09-22 relaunch set already on `main`. Keep it current: a change under
 `server/` updates this section in the same pull request (`AGENTS.md`, "Keeping documents
 current"), and `npm run docs:check` enforces that in CI.
 

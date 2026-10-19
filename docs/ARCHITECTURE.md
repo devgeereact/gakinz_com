@@ -280,7 +280,7 @@ need SQL 7 and 8 and the upload in `docs/DEPLOYMENT.md` section 5.
 
 ### Client journeys, 2026-10-18
 
-On `feat/journeys-2026-10-18`, stacked on PR #20; not pushed, merged or deployed. The server
+On `feat/journeys-2026-10-18`, stacked on PR #20; pushed to origin, not merged, deployed or uploaded. The server
 files need SQL 13 to 15 and the upload in `docs/DEPLOYMENT.md` section 5.
 
 | Area | Shape | Where |
