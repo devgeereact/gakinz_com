@@ -1,4 +1,3 @@
-import { Fragment } from "react"
 import { Link, useParams } from "react-router-dom"
 import Seo from "@/marketing/components/Seo"
 import { SITE_URL } from "@/marketing/components/seo-schema"
@@ -6,7 +5,8 @@ import { Crumbs, CtaBand, IPrev } from "@/marketing/components/site-ui"
 import { delay } from "@/marketing/components/site-helpers"
 import { useMarketingPost } from "@/marketing/data/blog"
 import { useProjects } from "@/marketing/data/showcase"
-import { parseArticle, type Inline } from "@/marketing/lib/articleFormat"
+import { ArticleBody } from "@/marketing/components/ArticleBody"
+import { parseArticle } from "@/marketing/lib/articleFormat"
 import NotFound from "./NotFound"
 
 /**
@@ -27,7 +27,9 @@ import NotFound from "./NotFound"
  * links restricted to https, http and mailto. It is rendered here as React
  * elements, never as HTML. A link off the site opens in a new tab, says so
  * to a screen reader, and carries rel="noopener noreferrer"; one written with
- * {sponsored} also carries rel="sponsored". The three static fallback pieces
+ * {sponsored} also carries rel="sponsored". A :::recommend block renders as a
+ * labelled card (ArticleBody.tsx), with a visible Affiliate link label and
+ * rel="sponsored nofollow" when marked affiliate. The three static fallback pieces
  * contain no such markers, so they render exactly as before.
  *
  * Structured data: an Article, carrying only fields that are true of the post.
@@ -47,32 +49,6 @@ function formatDate(iso: string) {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ""
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
-}
-
-/** Inline text, bold and links from the article format, as React elements. */
-function InlineNodes({ nodes }: { nodes: Inline[] }) {
-  return nodes.map((n, i) => {
-    if (n.type === "text") return <Fragment key={i}>{n.text}</Fragment>
-    if (n.type === "bold") {
-      return (
-        <strong key={i}>
-          <InlineNodes nodes={n.children} />
-        </strong>
-      )
-    }
-    const rel = n.sponsored ? "sponsored noopener noreferrer" : n.external ? "noopener noreferrer" : undefined
-    return (
-      <a
-        key={i}
-        href={n.href}
-        rel={rel}
-        target={n.external ? "_blank" : undefined}
-      >
-        <InlineNodes nodes={n.children} />
-        {n.external && <span className="sr"> (opens in a new tab)</span>}
-      </a>
-    )
-  })
 }
 
 export default function ResourceDetail() {
@@ -140,39 +116,7 @@ export default function ResourceDetail() {
 
         <section className="sec wrap" style={{ paddingTop: 56 }}>
           <div className="article">
-            {parseArticle(post.bodyParas.join("\n\n")).map((block, i) => {
-              if (block.type === "heading" && block.level === 2) {
-                return (
-                  <h2 key={i}>
-                    <InlineNodes nodes={block.children} />
-                  </h2>
-                )
-              }
-              if (block.type === "heading") {
-                return (
-                  <h3 key={i}>
-                    <InlineNodes nodes={block.children} />
-                  </h3>
-                )
-              }
-              if (block.type === "list") {
-                const List = block.ordered ? "ol" : "ul"
-                return (
-                  <List key={i} start={block.ordered && block.start !== 1 ? block.start : undefined}>
-                    {block.items.map((item, j) => (
-                      <li key={j}>
-                        <InlineNodes nodes={item} />
-                      </li>
-                    ))}
-                  </List>
-                )
-              }
-              return (
-                <p key={i}>
-                  <InlineNodes nodes={block.children} />
-                </p>
-              )
-            })}
+            <ArticleBody blocks={parseArticle(post.bodyParas.join("\n\n"))} />
             <p style={{ marginTop: 40 }}>
               <Link className="link" to="/resources">
                 <IPrev /> All writing

@@ -273,6 +273,13 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .article ol{list-style:decimal}
 .gk-site .article li::marker{color:var(--acc)}
 .gk-site .article p a,.gk-site .article li a,.gk-site .article h2 a,.gk-site .article h3 a{color:var(--acc);text-underline-offset:4px;overflow-wrap:anywhere}
+.gk-site .article .rec{border:1px solid var(--line);border-radius:20px;background:var(--panel);padding:20px 24px;margin:0 0 1.6em}
+.gk-site .article .rec__label{font-size:12px;color:var(--mute);margin:0 0 8px}
+.gk-site .article .rec__aff{color:var(--warn)}
+.gk-site .article .rec__title{font-size:1.3rem;margin:0 0 .4em}
+.gk-site .article .rec__title a{color:var(--acc);text-underline-offset:4px;overflow-wrap:anywhere}
+.gk-site .article p.rec__note{font-size:1rem;margin:0}
+.gk-site .article p.rec__gap{margin-bottom:.8em}
 .gk-site .article strong{color:var(--fg);font-weight:650}
 .gk-site .clauses{border-top:1px solid var(--line)}
 .gk-site .clauses section{display:grid;grid-template-columns:3rem minmax(0,1fr);gap:8px 16px;padding:28px 0;border-bottom:1px solid var(--line)}

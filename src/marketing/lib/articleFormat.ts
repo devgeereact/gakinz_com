@@ -16,6 +16,14 @@
  *   [text](url){sponsored}
  *                        a paid or affiliate link, given rel="sponsored"
  *
+ *   :::recommend         a recommendation card. Lines between the opening
+ *   title: Name          :::recommend and a closing ::: hold key: value
+ *   url: https://...     pairs. title and an http(s) url are required;
+ *   note: Why it helps   note may hold **bold** and links; affiliate: yes
+ *   affiliate: yes       marks a paid link. Unknown keys are ignored. A block
+ *   :::                  with no closing ::: line, no title, or no http(s)
+ *                        url is printed as plain paragraphs instead.
+ *
  * Anything else is printed as the author typed it.
  */
 
@@ -28,6 +36,7 @@ export type Block =
   | { type: "heading"; level: 2 | 3; children: Inline[] }
   | { type: "paragraph"; children: Inline[] }
   | { type: "list"; ordered: boolean; start: number; items: Inline[][] }
+  | { type: "recommend"; title: string; href: string; note: Inline[]; affiliate: boolean }
 
 const ALLOWED_SCHEMES = new Set(["https:", "http:", "mailto:"])
 // A link to this site stays in the same tab.
@@ -111,6 +120,30 @@ const HEADING = /^(#{2,3})\s+(.+)$/
 const BULLET = /^-\s+(.+)$/
 const NUMBERED = /^(\d{1,9})\.\s+(.+)$/
 
+/**
+ * The recommendation block for the lines between the fences, or null when it
+ * is malformed (no title, or no http(s) address).
+ */
+function parseRecommend(lines: string[]): Extract<Block, { type: "recommend" }> | null {
+  const fields = new Map<string, string>()
+  for (const raw of lines) {
+    const m = /^([a-z]+)\s*:\s*(.*)$/i.exec(raw.trim())
+    if (!m) continue
+    const key = m[1].toLowerCase()
+    if (!fields.has(key)) fields.set(key, m[2].trim())
+  }
+  const title = fields.get("title") ?? ""
+  const href = safeHref(fields.get("url") ?? "")
+  if (!title || !href || !/^https?:$/.test(new URL(href).protocol)) return null
+  return {
+    type: "recommend",
+    title,
+    href,
+    note: parseInline(fields.get("note") ?? ""),
+    affiliate: /^(yes|true)$/i.test(fields.get("affiliate") ?? ""),
+  }
+}
+
 /** A whole post body, as the blocks the article page renders. */
 export function parseArticle(body: string): Block[] {
   const blocks: Block[] = []
@@ -126,8 +159,27 @@ export function parseArticle(body: string): Block[] {
     list = null
   }
 
-  for (const rawLine of body.replace(/\r\n?/g, "\n").split("\n")) {
-    const line = rawLine.trim()
+  const lines = body.replace(/\r\n?/g, "\n").split("\n")
+  for (let idx = 0; idx < lines.length; idx++) {
+    const line = lines[idx].trim()
+
+    if (/^:::recommend$/i.test(line)) {
+      const close = lines.findIndex((l, k) => k > idx && l.trim() === ":::")
+      if (close !== -1) {
+        const inner = lines.slice(idx + 1, close)
+        const rec = parseRecommend(inner)
+        flushPara()
+        flushList()
+        if (rec) blocks.push(rec)
+        else {
+          // Malformed: show what was typed, one plain paragraph per line.
+          for (const l of inner) if (l.trim()) blocks.push({ type: "paragraph", children: [{ type: "text", text: l.trim() }] })
+        }
+        idx = close
+        continue
+      }
+    }
+
     if (!line) {
       flushPara()
       flushList()
