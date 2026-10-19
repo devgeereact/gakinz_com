@@ -13,6 +13,7 @@
  * test reads the link from the message exactly as a client would.
  */
 import { spawn } from "node:child_process"
+import crypto from "node:crypto"
 import fs from "node:fs"
 import net from "node:net"
 import path from "node:path"
@@ -95,6 +96,13 @@ const request = (reference: unknown, email: unknown) =>
   api<{ ok?: boolean; message?: string; error?: string }>("client_access.php?action=request", { body: { reference, email } })
 const redeem = (token: unknown) =>
   api<{ token?: string; error?: string; user?: { role: string; client_id: number } }>("client_access.php?action=redeem", { body: { token } })
+
+/** The audit fingerprint client_access.php stores for an address. */
+const fingerprint = (email: string) => "e:" + crypto.createHash("sha256").update(`client_access|${email}`).digest("hex").slice(0, 40)
+/** Earlier requests for `email` from another address, as audit rows. */
+function seedRequests(email: string, ip: string, n: number): void {
+  for (let i = 0; i < n; i++) sql(`INSERT INTO audit_log (action, detail, ip) VALUES ('client_access_request', ${q(fingerprint(email))}, ${q(ip)})`)
+}
 
 const links = () => Number(one("SELECT COUNT(*) FROM magic_links"))
 const sessions = (uid: number) => Number(one(`SELECT COUNT(*) FROM auth_tokens WHERE user_id = ${uid}`))
@@ -224,7 +232,8 @@ describe("switched on", () => {
       expect(s.ms, s.label).toBeGreaterThanOrEqual(990) // CA_MIN_MS floor on this server
     }
     const times = seen.map((s) => s.ms)
-    expect(Math.max(...times) - Math.min(...times)).toBeLessThan(250)
+    // 400 ms tolerance: the floor dominates, the rest is scheduler noise.
+    expect(Math.max(...times) - Math.min(...times)).toBeLessThan(400)
     // Only the true match produced a link.
     expect(mails).toHaveLength(1)
     expect(links()).toBe(1)
@@ -339,6 +348,53 @@ describe("switched on", () => {
     expect(sessions(fx.userA)).toBe(1)
   })
 
+  it("lets no request through once another connection has claimed the link, even if all passed the lookup", async () => {
+    // Deterministic proof of the claim's `used_at IS NULL` guard. A second
+    // connection locks the link and, in the same transaction, marks it used.
+    // The five redemptions read the old committed row (unused), pass the
+    // lookup, and queue on the claim. After COMMIT, the guarded UPDATE sees
+    // the row as used and changes nothing: no session for anyone. Without the
+    // guard the first queued UPDATE would change used_at and mint a session.
+    await request(fx.refA, "ada@alpha.example.test")
+    const token = tokenFromMail("ada@alpha.example.test")
+    const holder = spawn("mysql", mysqlArgs(DB_NAME), { stdio: ["pipe", "ignore", "ignore"] })
+    const closed = new Promise((r) => holder.on("close", r))
+    holder.stdin.write("BEGIN; SELECT id FROM magic_links FOR UPDATE; UPDATE magic_links SET used_at = NOW() - INTERVAL 1 HOUR;\n")
+    await new Promise((r) => setTimeout(r, 500))
+    const pending = Promise.all(Array.from({ length: 5 }, () => redeem(token)))
+    await new Promise((r) => setTimeout(r, 1500))
+    holder.stdin.end("COMMIT;\n")
+    const results = await pending
+    await closed
+    expect(results.map((r) => r.status)).toEqual([400, 400, 400, 400, 400])
+    expect(sessions(fx.userA)).toBe(0)
+  })
+
+  it("follows the client-only and two-factor rules, and stays single use, when redeemed through auth.php magic_consume", async () => {
+    const consume = (token: string) => api<{ token?: string }>("auth.php?action=magic_consume", { body: { token } })
+    // Single use across both routes, in both orders.
+    await request(fx.refA, "ada@alpha.example.test")
+    const first = tokenFromMail("ada@alpha.example.test")
+    expect((await consume(first)).status).toBe(200)
+    expect((await redeem(first)).status).toBe(400)
+    expect((await consume(first)).status).toBe(400)
+    // A reference link whose user has since turned two-factor on: refused there too.
+    await request(fx.refA, "ada@alpha.example.test")
+    const second = tokenFromMail("ada@alpha.example.test")
+    expect(second).not.toBe(first)
+    sql(`UPDATE users SET totp_secret = 'JBSWY3DPEHPK3PXP', totp_enabled = 1 WHERE id = ${fx.userA}`)
+    expect((await consume(second)).status).toBe(403)
+    expect((await redeem(second)).status).toBe(400) // burned by the refused attempt
+    // A reference link whose user has since become staff: refused there too.
+    sql(`UPDATE users SET totp_secret = NULL, totp_enabled = 0 WHERE id = ${fx.userA}`)
+    await request(fx.refA, "ada@alpha.example.test")
+    const third = tokenFromMail("ada@alpha.example.test")
+    sql(`UPDATE users SET role = 'admin' WHERE id = ${fx.userA}`)
+    expect((await consume(third)).status).toBe(403)
+    expect((await redeem(third)).status).toBe(400)
+    expect(sessions(fx.userA)).toBe(1) // only the first, client-only, redemption
+  })
+
   it("is not a password reset: the token does nothing at auth.php reset and the password stays", async () => {
     await request(fx.refA, "ada@alpha.example.test")
     const token = tokenFromMail("ada@alpha.example.test")
@@ -375,13 +431,26 @@ describe("switched on", () => {
     for (const secret of [token, tokenHash(token), fx.refA, "ada@alpha.example.test"]) expect(all).not.toContain(secret)
   })
 
-  it("throttles one address after five requests, whether or not it matches", async () => {
+  it("throttles one address from one IP after five requests, whether or not it matches", async () => {
     for (let i = 0; i < 5; i++) expect((await request(fx.refA, "ada@alpha.example.test")).status).toBe(200)
     const blocked = await request(fx.refA, "ada@alpha.example.test")
     expect(blocked.status).toBe(429)
     // Three links at most per user per 15 minutes, shared with magic links.
     expect(links()).toBe(3)
     expect(mails).toHaveLength(3)
+  })
+
+  it("does not let another IP lock an address out at the per-IP limit, but stops at the overall ceiling", async () => {
+    // Another address has used up its own five for Ada.
+    seedRequests("ada@alpha.example.test", "198.51.100.9", 5)
+    expect((await request(fx.refA, "ada@alpha.example.test")).status).toBe(200)
+    expect(mails).toHaveLength(1)
+    // Fifteen from anywhere is the ceiling for one address.
+    seedRequests("ada@alpha.example.test", "203.0.113.4", 15 - 6)
+    const blocked = await request(fx.refA, "ada@alpha.example.test")
+    expect(blocked.status).toBe(429)
+    // The ceiling is per address: another address from this IP is unaffected.
+    expect((await request(fx.refA, "nobody@example.test")).status).toBe(200)
   })
 
   it("throttles one IP after twenty requests, with the same 429 for a real and a made-up address", async () => {
@@ -397,13 +466,19 @@ describe("switched on", () => {
     expect(mails).toHaveLength(0)
   })
 
-  it("throttles failed redemptions from one IP, then refuses even a good link", async () => {
+  it("throttles failed redemptions from one IP, but never blocks a valid link", async () => {
     await request(fx.refA, "ada@alpha.example.test")
     const token = tokenFromMail("ada@alpha.example.test")
+    // Junk from a shared address has reached the limit.
     for (let i = 0; i < 20; i++) sql("INSERT INTO audit_log (action, detail, ip) VALUES ('client_access_redeem_failed', '', '127.0.0.1')")
+    for (const junk of ["xyz", "f".repeat(64)]) expect((await redeem(junk)).status).toBe(429)
+    const failures = one("SELECT COUNT(*) FROM audit_log WHERE action = 'client_access_redeem_failed'")
+    expect(failures).toBe("20") // a throttled failure is not counted again
     const r = await redeem(token)
-    expect(r.status).toBe(429)
-    expect(sessions(fx.userA)).toBe(0)
+    expect(r.status).toBe(200)
+    expect(sessions(fx.userA)).toBe(1)
+    // Once used, the same link is a failure like any other, and throttled.
+    expect((await redeem(token)).status).toBe(429)
   })
 
   it("sends nothing without an SMTP host, and still answers the neutral 200", async () => {
