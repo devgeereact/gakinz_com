@@ -193,9 +193,24 @@ statements are already live; only someone with server access can (section 5.6).
    drag and drop between stages, and the Client Portal signed in as a client. Development
    calls the live API, so each of these is a real write (`docs/KNOWN-ISSUES.md` K-044).
 9. **For `feat/journeys-2026-10-18`**, run SQL 13 to 15 and upload its six files (section
-   5.3) before the merge that deploys its screens. Each feature degrades until its SQL runs,
-   but the calendar download buttons need the new `bookings.php` and `_ics.php` on the server
-   first, or they report that the server is not ready.
+   5.3) before the merge that deploys its screens. **Do not merge before `support.php`,
+   `bookings.php` (with `_ics.php`) and `assets.php` are uploaded.** The portal hides a
+   request whose route is missing (a 403 "Not allowed." from an older staff-only file, a
+   405, a bare 404, a 503, or the `app-shell.html` page a never-uploaded file is rewritten
+   to) and says quietly that it opens after a server update, so clients would see no "Request
+   a call" button, an "Ask for an update" that turns into that note once they send, and no
+   "What we need from you" card, until the files arrive. Every other failure still shows as
+   an error. The calendar download buttons need the new `bookings.php` and `_ics.php` first.
+   Mind the order between the two sides:
+   - **SQL 14 and the new `proposals.php` before the merge**: the old screens send no
+     acceptance evidence, so Accept on a quote fails with 400 "Say how the client accepted:
+     email, letter, in person, phone or other." until the merge. Run SQL 14 and upload
+     `proposals.php` just before merging, or accept no quotes in between.
+   - **The merge before the new `invoices.php`**: Record payment fails with 405 "Method not
+     allowed."
+   - **The merge before the new `proposals.php`**: the Accept dialog and its toast say that
+     SQL 14 has not run, even when it has, because the old file never reports that the
+     evidence columns are ready. Nothing is stored as evidence until the file is uploaded.
 10. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
    deploys the client that expects these server changes.
 11. **Walk the post-upload checks** in section 5.6.
@@ -441,7 +456,10 @@ From `feat/journeys-2026-10-18` (2026-10-18), once its files and SQL are up:
    - Projects: select a project and confirm "What the client sends" lists (empty is fine)
      rather than naming SQL 15.
    - Enquiries, Calls: on an existing **confirmed** call, Download calendar file saves a
-     `.ics` file. A "not ready" error means `bookings.php` or `_ics.php` is missing.
+     `.ics` file. "The server is not ready for this download yet." means the old
+     `bookings.php` is still there. "Download failed on the server." means the new
+     `bookings.php` is there without `_ics.php`, whose `require_once` in `bk_send_ics()` is
+     then fatal.
    - `https://gakinz.com/_ics.php` returns 403, like the other includes.
    - `https://gakinz.com/favicon.ico` and `/site.webmanifest` return 200 after the merge.
    - The client side (update request, call request, asset supply, the client's calendar file)
