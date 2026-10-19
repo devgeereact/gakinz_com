@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import {
   Area,
   AreaChart,
@@ -18,7 +18,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/page-kit"
 import { cn } from "@/lib/utils"
-import { followUpState, formatYmd, localIsoDate, money } from "@/lib/format"
+import { money } from "@/lib/format"
+import { useAuth } from "@/store/auth.store"
 import {
   leads as leadsApi,
   clients as clientsApi,
@@ -27,6 +28,7 @@ import {
   support as supportApi,
   time as timeApi,
   announcements as announcementsApi,
+  today as todayApi,
   ai,
   type Lead,
   type Project,
@@ -35,11 +37,22 @@ import {
   type TimeEntry,
   type Announcement,
 } from "@/lib/api"
+import {
+  applyTodayResult,
+  initialTodayView,
+  itemRoute,
+  itemWhen,
+  todayRows,
+  updatedLabel,
+  type TodayRow,
+  type TodayView,
+} from "./todayModel"
 
-// The GAkinzOS home. Aggregates the live API into a single operational
-// overview (pipeline, delivery, cash, support, utilisation) so staff land on
-// real numbers, not demo content. Every section degrades on its own: a failed
-// endpoint shows a quiet note in its card and the rest of the page still works.
+// The GAkinzOS home, "Today". First the attention list from server/today.php:
+// what needs the owner next, each item linking to the screen that holds it.
+// Below it the totals (pipeline, delivery, cash, support, utilisation). Every
+// part degrades on its own: a failed source shows as unavailable, never zero,
+// and the rest of the page still works. The AI brief is optional.
 
 function monthKey(iso: string) {
   // "2026-06-01 ..." to "2026-06"
@@ -126,7 +139,9 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState(true)
   const [errors, setErrors] = useState<string[]>([])
-  const [loadedAt, setLoadedAt] = useState<Date | null>(null)
+  const role = useAuth((s) => s.user?.role)
+  const [todayView, setTodayView] = useState<TodayView>(initialTodayView)
+  const [todayLoading, setTodayLoading] = useState(false)
 
   const [leads, setLeads] = useState<Lead[]>([])
   const [clientCount, setClientCount] = useState(0)
@@ -139,16 +154,19 @@ export default function Dashboard() {
   const [brief, setBrief] = useState<string | null>(null)
   const [briefing, setBriefing] = useState(false)
 
+  const loadToday = async () => {
+    setTodayLoading(true)
+    const res = await todayApi.get()
+    setTodayView((prev) => applyTodayResult(prev, res))
+    setTodayLoading(false)
+  }
+
   const load = async () => {
     setLoading(true)
     const errs: string[] = []
-    const [l, c, p, inv, t, tm] = await Promise.all([
-      leadsApi.list(),
-      clientsApi.list(),
-      projectsApi.list(),
-      invoicesApi.list(),
-      supportApi.list(),
-      timeApi.list(),
+    const [[l, c, p, inv, t, tm]] = await Promise.all([
+      Promise.all([leadsApi.list(), clientsApi.list(), projectsApi.list(), invoicesApi.list(), supportApi.list(), timeApi.list()]),
+      loadToday(),
     ])
     if (l.ok) setLeads(l.data)
     else errs.push("leads")
@@ -163,13 +181,14 @@ export default function Dashboard() {
     if (tm.ok) setEntries(tm.data)
     else errs.push("time")
     setErrors(errs)
-    setLoadedAt(new Date())
     setLoading(false)
     announcementsApi.list().then((r) => r.ok && setAnns(r.data.slice(0, 3)))
   }
 
   useEffect(() => {
     load()
+    // Load once on open; Refresh and Retry call load and loadToday again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const stats = useMemo(() => {
@@ -231,28 +250,6 @@ export default function Dashboard() {
     [leads],
   )
 
-  // Open enquiries whose next action is today or earlier: oldest first, then
-  // the owner's priority. `ready` is false until the server has the follow-up
-  // columns (it omits them before the 2026-10-10 schema step runs).
-  const followUps = useMemo(() => {
-    const today = localIsoDate()
-    const due = leads
-      .filter((l) => {
-        const st = followUpState(l, today)
-        return st === "overdue" || st === "today"
-      })
-      .sort(
-        (a, b) =>
-          (a.next_action_at ?? "").localeCompare(b.next_action_at ?? "") || (b.priority ?? 0) - (a.priority ?? 0),
-      )
-    return {
-      ready: leads.length === 0 || leads.some((l) => l.priority !== undefined),
-      count: due.length,
-      top: due.slice(0, 5),
-      today,
-    }
-  }, [leads])
-
   // Per-KPI trend series for the card sparklines.
   const spark = useMemo(() => {
     const months = lastNMonths(6)
@@ -308,12 +305,14 @@ export default function Dashboard() {
     else setBrief(`Couldn't generate a brief (${res.error}).`)
   }
 
-  const updated = loadedAt ? loadedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : null
+  // The last successful refresh of the attention list, on the server's clock.
+  const updated = updatedLabel(todayView)
+  const attention = todayRows(todayView, role)
 
   const header = (
     <PageHeader
       title="Today"
-      subtitle={<>The whole studio at a glance.{updated && <> Updated {updated}.</>}</>}
+      subtitle={<>What needs you next, then the studio totals.{updated && <> Updated {updated}.</>}</>}
       actions={
         <>
           <Button
@@ -324,8 +323,8 @@ export default function Dashboard() {
             {briefing ? <Loader2 className="animate-spin" /> : <Sparkles />}
             AI brief
           </Button>
-          <Button variant="outline" onClick={load} disabled={loading}>
-            <RefreshCw className={cn(loading && "animate-spin")} /> Refresh
+          <Button variant="outline" onClick={load} disabled={loading || todayLoading}>
+            <RefreshCw className={cn((loading || todayLoading) && "animate-spin")} /> Refresh
           </Button>
         </>
       }
@@ -373,16 +372,16 @@ export default function Dashboard() {
       series: down("projects") ? undefined : spark.projects,
     },
     {
-      label: "Revenue paid",
+      label: "Cash received",
       value: down("invoices") ? NA : money(stats.paid),
-      hint: down("invoices") ? NA_HINT : "All settled invoices",
+      hint: down("invoices") ? NA_HINT : "Paid invoices, all time",
       to: "/app/invoicing",
       series: down("invoices") ? undefined : spark.paid,
     },
     {
-      label: "Outstanding",
+      label: "Invoiced, unpaid",
       value: down("invoices") ? NA : money(stats.outstanding),
-      hint: down("invoices") ? NA_HINT : stats.overdue ? `${stats.overdue} overdue` : "None overdue",
+      hint: down("invoices") ? NA_HINT : stats.overdue ? `Sent, not paid. ${stats.overdue} overdue` : "Sent, not paid. None overdue",
       tone: !down("invoices") && stats.overdue ? ("down" as const) : undefined,
       to: "/app/invoicing",
       series: down("invoices") ? undefined : spark.outstanding,
@@ -407,11 +406,13 @@ export default function Dashboard() {
     <div>
       {header}
 
+      <AttentionList rows={attention} error={todayView.error} retrying={todayLoading} onRetry={loadToday} />
+
       {errors.length > 0 && (
         <div role="alert" className="mb-4 flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
           <AlertTriangle aria-hidden className="mt-0.5 size-[18px] shrink-0 text-bad" />
           <div className="min-w-[min(100%,200px)] flex-1">
-            <p className="font-semibold">Some figures could not be loaded ({errors.join(", ")}).</p>
+            <p className="font-semibold">Some totals could not be loaded ({errors.join(", ")}).</p>
             <p className="mt-1 text-muted-foreground">They show as “{NA}” until a refresh succeeds. Nothing was changed.</p>
           </div>
           <Button variant="outline" onClick={load}>
@@ -471,9 +472,9 @@ export default function Dashboard() {
       <div className="mb-4 grid gap-4 min-[1181px]:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
         <Card>
           <CardHeader className="flex-row items-center gap-2.5 space-y-0">
-            <CardTitle className="min-w-0">Revenue (paid)</CardTitle>
+            <CardTitle className="min-w-0">Cash received</CardTitle>
             <span className="ml-auto whitespace-nowrap rounded-full border border-dashed border-line-strong px-[7px] py-0.5 font-mono text-[10px] uppercase tracking-[.08em] text-muted-foreground">
-              £ per month
+              £ by month paid, latest 6
             </span>
           </CardHeader>
           <CardContent>
@@ -484,7 +485,7 @@ export default function Dashboard() {
             ) : (
               <div
                 role="img"
-                aria-label={`Paid revenue over the last ${revenueSeries.length} months, from ${revenueSeries[0]?.month} to ${revenueSeries[revenueSeries.length - 1]?.month}.`}
+                aria-label={`Cash received from paid invoices over the last ${revenueSeries.length} months, from ${revenueSeries[0]?.month} to ${revenueSeries[revenueSeries.length - 1]?.month}.`}
               >
                 <ResponsiveContainer width="100%" height={220}>
                   <AreaChart data={revenueSeries} margin={{ left: -8, right: 8, top: 8 }}>
@@ -547,7 +548,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <div className="grid gap-4 min-[901px]:grid-cols-3">
+      <div className="grid gap-4 min-[901px]:grid-cols-2">
         <Card>
           <CardHeader className="flex-row items-center gap-2.5 space-y-0">
             <CardTitle className="min-w-0">Recent leads</CardTitle>
@@ -584,52 +585,6 @@ export default function Dashboard() {
                     </button>
                   </li>
                 ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex-row items-center gap-2.5 space-y-0">
-            <CardTitle className="min-w-0">Follow-ups due</CardTitle>
-            <span className="font-mono text-xs tabular-nums text-muted-foreground">
-              {down("leads") || !followUps.ready ? NA : followUps.count}
-            </span>
-            <Button variant="ghost" size="sm" className="ml-auto" onClick={() => navigate("/app/leads?due=1")}>
-              All <ArrowRight />
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {down("leads") ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">Follow-ups could not be loaded. Refresh to try again.</p>
-            ) : !followUps.ready ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">Follow-ups are not available until the server database update has run.</p>
-            ) : followUps.top.length === 0 ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">Nothing due. No enquiry has a next action today or earlier.</p>
-            ) : (
-              <ul className="divide-y">
-                {followUps.top.map((l) => {
-                  const overdue = followUpState(l, followUps.today) === "overdue"
-                  const when = l.next_action_at ? formatYmd(l.next_action_at) : ""
-                  return (
-                    <li key={l.id}>
-                      <button
-                        type="button"
-                        onClick={() => navigate("/app/leads?due=1")}
-                        aria-label={`Follow up ${l.name}${l.company ? `, ${l.company}` : ""}, ${overdue ? `overdue since ${when}` : "due today"}. Open enquiries.`}
-                        className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3 text-left hover:text-acc"
-                      >
-                        <span className="min-w-0">
-                          <b className="block font-semibold [overflow-wrap:anywhere]">{l.company || l.name}</b>
-                          <span className="block text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
-                            {l.next_action_note || (l.company ? l.name : l.email)}
-                          </span>
-                        </span>
-                        <StatusBadge status={overdue ? "overdue" : "due today"}>{overdue ? `Overdue, ${when}` : "Due today"}</StatusBadge>
-                      </button>
-                    </li>
-                  )
-                })}
               </ul>
             )}
           </CardContent>
@@ -678,5 +633,92 @@ function Snapshot({ label, value, to, bad }: { label: string; value: string; to:
         </button>
       </dd>
     </>
+  )
+}
+
+// The attention list. One block per section the server sent (or, after a
+// failed load, per section this role should get), each in one of three states:
+// items that link to their screen, "Nothing due", or "Unavailable" with Retry.
+function AttentionList({
+  rows,
+  error,
+  retrying,
+  onRetry,
+}: {
+  rows: TodayRow[]
+  error: string | null
+  retrying: boolean
+  onRetry: () => void
+}) {
+  if (rows.length === 0) return null
+  return (
+    <section aria-labelledby="today-attention" className="mb-4 rounded-2xl border bg-card p-[18px]">
+      <h2 id="today-attention" className="text-base font-semibold">
+        Needs attention
+      </h2>
+      {error && (
+        <p role="alert" className="mt-1 text-[13.5px] text-muted-foreground">
+          The attention list could not be loaded. {error}
+        </p>
+      )}
+      <div className="mt-3 grid gap-x-6 gap-y-5 min-[901px]:grid-cols-2 xl:grid-cols-3">
+        {rows.map((row) => (
+          <AttentionSection key={row.key} row={row} retrying={retrying} onRetry={onRetry} />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function AttentionSection({ row, retrying, onRetry }: { row: TodayRow; retrying: boolean; onRetry: () => void }) {
+  const headingId = `today-${row.key}`
+  return (
+    <div aria-labelledby={headingId} role="group" className="min-w-0">
+      <div className="flex items-baseline gap-2 border-b pb-2">
+        <h3 id={headingId} className="min-w-0 text-[13.5px] font-semibold">
+          {row.label}
+        </h3>
+        <span className={cn("ml-auto font-mono text-xs tabular-nums", row.state === "items" ? "text-foreground" : "text-muted-foreground")}>
+          {row.state === "items" ? row.count : row.state === "empty" ? 0 : null}
+        </span>
+      </div>
+      {row.state === "unavailable" ? (
+        <div className="flex flex-wrap items-center gap-3 py-3">
+          <p className="text-[13.5px] text-bad">Unavailable</p>
+          <Button variant="outline" size="sm" onClick={onRetry} disabled={retrying}>
+            <RefreshCw className={cn(retrying && "animate-spin")} /> Retry
+          </Button>
+        </div>
+      ) : row.state === "empty" ? (
+        <p className="py-3 text-[13.5px] text-muted-foreground">Nothing due</p>
+      ) : (
+        <ul className="divide-y">
+          {row.items.map((item) => {
+            const when = itemWhen(item.at)
+            return (
+              <li key={`${item.type}-${item.id}`}>
+                <Link
+                  to={itemRoute(item)}
+                  className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 py-2.5 hover:text-acc focus-visible:text-acc"
+                >
+                  <span className="min-w-0">
+                    <b className="block font-semibold [overflow-wrap:anywhere]">{item.title}</b>
+                    <span className="block text-[12.5px] leading-snug text-muted-foreground [overflow-wrap:anywhere]">{item.reason}</span>
+                  </span>
+                  {when && <span className="whitespace-nowrap font-mono text-[11.5px] tabular-nums text-muted-foreground">{when}</span>}
+                </Link>
+              </li>
+            )
+          })}
+          {row.more > 0 && (
+            <li>
+              <Link to={itemRoute(row.items[row.items.length - 1])} className="block py-2.5 text-[13px] text-muted-foreground hover:text-acc">
+                And {row.more} more
+              </Link>
+            </li>
+          )}
+        </ul>
+      )}
+    </div>
   )
 }
