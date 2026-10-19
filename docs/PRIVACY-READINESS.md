@@ -103,6 +103,16 @@ imply tracking that does not exist. This must be revisited before any analytics,
 (AdSense is planned in `docs/CONTENT-AND-GROWTH.md`), embed or affiliate script is added: at
 that point a consent tool that blocks the script until the visitor chooses is required.
 
+**Consent and ad slots: built switched off (2026-10-19, Task 25, not deployed).** The settings
+live in `src/marketing/lib/monetisation.ts` and ship as `consent.mode` "none" and
+`ads.provider` "none". With those values the public site adds no script, writes nothing to
+cookies or storage, shows no banner and renders no ad slot; the build fails if any prerendered
+page carries a third-party script, frame, ad slot or consent marker. When switched on, a
+certified CMP (from an allow-listed host) loads on public pages only, never on `/app`,
+`/verify`, `/p`, `/login` or `/set-password`, and the CMP sets its own storage. That storage,
+and AdSense's, must be added to the table above, the cookie notice and the privacy notice
+before the switch is made.
+
 ## 5. Marketing and analytics
 
 - No marketing email, newsletter, subscription, list import or unsubscribe exists. The contact

@@ -82,6 +82,20 @@ and a portfolio plus a handful of thin articles is not a monetisation strategy.
    twelve weeks. Switch the pilot off if support load, performance or buyer distraction
    outweighs the income.
 
+**What is built (2026-10-19, Task 25, switched off, not deployed).** The settings are in
+`src/marketing/lib/monetisation.ts`, a tracked file rather than Site content, so switching on a
+third-party script goes through review and CI like any code change (K-033). Turning the pilot
+on needs `consent.mode` "cmp" with the CMP's https loader on an allow-listed host, and
+`ads.provider` "adsense" with the `ca-pub-` publisher ID and the in-article unit's slot ID. Ads
+never load without a CMP. A slot renders, and the AdSense script loads once, only after the CMP
+reports a settled choice with Purpose 1 consent (IAB TCF `__tcfapi`), or that GDPR does not
+apply. Slots sit only in article bodies, after the third and eighth paragraphs, at most two,
+each labelled "Advertisement", with space reserved only while shown. Leaving a public page for
+a private surface after a CMP or ad script has loaded reloads the page. Turn AdSense Auto ads
+off in the account: the script stays on the page during in-site navigation, and Auto ads would
+place ads outside articles. Withdrawal removes the slots but cannot unload a script already
+loaded, until the next page load.
+
 Rejecting consent never blocks the service content. Never ask clients, community members or
 friends to click ads, click them yourself, buy traffic or use incentivised visits. Keep
 third-party monetisation scripts out of authenticated layouts. Public and private surfaces
