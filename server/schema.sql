@@ -1008,6 +1008,7 @@ CREATE TABLE IF NOT EXISTS reference_counters (
   last_n   INT      NOT NULL DEFAULT 0, -- the highest number issued; never lowered
   PRIMARY KEY (kind, ref_year)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+DROP TEMPORARY TABLE IF EXISTS gk_ref_fill;
 CREATE TEMPORARY TABLE gk_ref_fill AS
   SELECT a.id, YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP)) AS y,
          GREATEST(
