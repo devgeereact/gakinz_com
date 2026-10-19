@@ -10,8 +10,19 @@
  *   POST /contracts.php?action=status {id, status}            status: draft | sent | void
  *   POST /contracts.php?action=sign   {id, signed_name}       records typed e-signature → status signed
  *   POST /contracts.php?action=delete {id}
+ *
+ * A contract is an agreed document (docs/PRODUCT-SPEC.md 6.1), so the list
+ * and the single contract carry `project_reference`, the GK-P-YYYY-NNNN of its
+ * project (SQL 19), for the screen and the PDF. Null with no project, before
+ * SQL 19, or while _reference.php is not on the server.
  */
 require __DIR__ . '/_bootstrap.php';
+if (is_file(__DIR__ . '/_reference.php')) require_once __DIR__ . '/_reference.php';
+
+/** The project reference column for a SELECT joining projects as `p`. */
+function ct_ref_col(mysqli $conn): string {
+  return function_exists('gk_ref_col') ? gk_ref_col($conn, 'p', 'project_reference') : 'NULL AS project_reference';
+}
 
 const STAFF = ['super_admin', 'admin', 'manager'];
 
@@ -24,7 +35,7 @@ if ($method === 'GET' && isset($_GET['id'])) {
   $stmt = $conn->prepare(
     'SELECT k.id, k.client_id, k.project_id, k.kind, k.title, k.body, k.status, k.nda_triage,
             k.signer_name, k.signer_email, k.signed_name, k.signed_ip, k.signed_at, k.created_at,
-            c.company AS client_company, p.name AS project_name
+            c.company AS client_company, p.name AS project_name, ' . ct_ref_col($conn) . '
      FROM contracts k
      LEFT JOIN clients c ON c.id = k.client_id
      LEFT JOIN projects p ON p.id = k.project_id
@@ -45,7 +56,7 @@ if ($method === 'GET') {
   $rows = [];
   $sql = 'SELECT k.id, k.client_id, k.project_id, k.kind, k.title, k.status, k.nda_triage,
                  k.signer_name, k.signed_at, k.created_at,
-                 c.company AS client_company, p.name AS project_name
+                 c.company AS client_company, p.name AS project_name, ' . ct_ref_col($conn) . '
           FROM contracts k
           LEFT JOIN clients c ON c.id = k.client_id
           LEFT JOIN projects p ON p.id = k.project_id
