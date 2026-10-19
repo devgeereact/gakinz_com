@@ -275,7 +275,7 @@ export const howIWork = {
 /** What happens after someone gets in touch. Three steps, all within the owner's control. */
 export const whatHappensNext: { title: string; detail: string }[] = [
   { title: "I read it myself", detail: "Every message. I aim to reply the next working day." },
-  { title: "A short call", detail: "Twenty minutes on the business, what the site has to do, and who it is for." },
+  { title: "A short call", detail: "Twenty minutes on the business, what you need, and who it is for." },
   { title: "A fixed price", detail: "A written scope and one number, before any work starts." },
 ]
 

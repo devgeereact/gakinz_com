@@ -54,16 +54,23 @@ export default function Contact() {
   const [params] = useSearchParams()
   const pkg = params.get("package") ?? ""
   const svc = params.get("service") ?? ""
+  // The package name carried from Pricing, if that is where the choice came
+  // from. "Ecommerce" is both a package and a service, so the source decides
+  // which note shows, not the value.
+  const [fromPackage, setFromPackage] = useState("")
   useEffect(() => {
     // Deliberately after mount: reading the query during render would make the
     // prerendered HTML and the first client render differ (a hydration error).
-    const chosen = copy.services.find((s) => s.slug === svc)?.title ?? (copy.packages.some((p) => p.name === pkg) ? pkg : "")
+    const service = copy.services.find((s) => s.slug === svc)?.title
+    const chosen = service ?? (copy.packages.some((p) => p.name === pkg) ? pkg : "")
+    if (!chosen) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (chosen) setForm((f) => (f.projectType ? f : { ...f, projectType: chosen }))
+    setForm((f) => (f.projectType ? f : { ...f, projectType: chosen }))
+    setFromPackage((p) => p || (service ? "" : chosen))
   }, [pkg, svc, copy.packages, copy.services])
   const serviceOptions = enquiryServiceOptions(copy.services)
   const chosenType = form.projectType ?? ""
-  const isPackage = chosenType !== "" && !serviceOptions.includes(chosenType)
+  const isPackage = chosenType !== "" && (chosenType === fromPackage || !serviceOptions.includes(chosenType))
 
   // Discovery-call link: shown only when the server has one configured.
   useEffect(() => {
@@ -86,6 +93,7 @@ export default function Contact() {
     if (res.ok) {
       setSentTo(form.name.trim().split(/\s+/)[0])
       setForm(EMPTY)
+      setFromPackage("")
     } else {
       // A 4xx carries the server's own reason (a field it rejected, too many
       // tries). A 5xx or no reply at all gets the way round: email directly.
@@ -172,18 +180,24 @@ export default function Contact() {
                   <label htmlFor="service">
                     Service <span>(optional)</span>
                   </label>
-                  <select id="service" value={isPackage ? "" : chosenType} onChange={(e) => set("projectType", e.target.value)}>
+                  <select id="service" value={isPackage ? "" : chosenType} onChange={(e) => {
+                      setFromPackage("")
+                      set("projectType", e.target.value)
+                    }}>
                     <option value="">{isPackage ? "As the package below" : "Not sure yet"}</option>
                     {serviceOptions.map((o) => (
                       <option key={o}>{o}</option>
                     ))}
                   </select>
                 </div>
-                {field("message", "What does the site have to do?", <textarea id="message" ref={messageRef} required maxLength={5000} aria-invalid={errors.message || undefined} aria-describedby={errors.message ? "e-message" : undefined} value={form.message} onChange={(e) => set("message", e.target.value)} onBlur={() => blur("message")} />)}
+                {field("message", "What do you need?", <textarea id="message" ref={messageRef} required maxLength={5000} aria-invalid={errors.message || undefined} aria-describedby={errors.message ? "e-message" : undefined} value={form.message} onChange={(e) => set("message", e.target.value)} onBlur={() => blur("message")} />)}
                 {isPackage && (
                   <p className="mute">
                     About the {form.projectType} package.{" "}
-                    <button type="button" className="link" style={{ background: "none", border: 0, padding: 0, font: "inherit", cursor: "pointer" }} onClick={() => set("projectType", "")}>
+                    <button type="button" className="link" style={{ background: "none", border: 0, padding: 0, font: "inherit", cursor: "pointer" }} onClick={() => {
+                        setFromPackage("")
+                        set("projectType", "")
+                      }}>
                       Not that one
                     </button>
                   </p>
