@@ -371,16 +371,48 @@ describe("project brief and measurements", () => {
       for (const gone of ["Pemberton", "PEMBERTON", CLIENT.phone, "someone@else", "hunter2", "deploy", "token", "abc123", "row-4"]) expect(md).not.toContain(gone)
     })
 
-    it("removes the client's phone in any common format", async () => {
-      const formats = ["07700900123", "07700-900-123", "(07700) 900 123", "+44 7700 900123", "+44 (0)7700 900 123", "0044 7700 900123", "+447700900123", "07700.900.123"]
-      await save({ project_id: projectA, open_decisions: formats.map((f) => `Call ${f} today`).join("\n") })
+    // Every way the client's number might be typed. "(07700) 900 123" keeps its outer brackets.
+    const PHONE_FORMATS: [string, string][] = [
+      ["07700 900123", "\\[client detail removed\\]"],
+      ["07700900123", "\\[client detail removed\\]"],
+      ["07700-900-123", "\\[client detail removed\\]"],
+      ["07700.900.123", "\\[client detail removed\\]"],
+      ["(07700) 900 123", "(\\[client detail removed\\])"],
+      ["7700 900123", "\\[client detail removed\\]"],
+      ["+44 7700 900123", "\\[client detail removed\\]"],
+      ["+44 (0)7700 900 123", "\\[client detail removed\\]"],
+      ["+447700900123", "\\[client detail removed\\]"],
+      ["0044 7700 900123", "\\[client detail removed\\]"],
+      ["44 7700 900123", "\\[client detail removed\\]"],
+    ]
+
+    for (const stored of ["07700 900123", "+44 (0)7700 900123", "+447700900123"]) {
+      it(`removes every form of the client's phone when it is stored as "${stored}", keeping the spaces around it`, async () => {
+        sql(`UPDATE clients SET phone = ${q(stored)} WHERE id = ${clientId}`)
+        await save({ project_id: projectA, open_decisions: PHONE_FORMATS.map(([f]) => `Call ${f} today`).join("\n") })
+        const md = raw(await handoff(projectA))
+        expect(md).not.toMatch(/7700/)
+        for (const [, out] of PHONE_FORMATS) expect(md).toContain(`Call ${out} today`)
+        expect(md.match(/^Call .* today$/gm)).toHaveLength(PHONE_FORMATS.length)
+        // Another number that only shares some digits is left as typed.
+        await save({ project_id: projectA, open_decisions: "Call 07700 900124 today" })
+        expect(raw(await handoff(projectA))).toContain("Call 07700 900124 today")
+      })
+    }
+
+    it("removes the client's email before the name, so a short contact name leaves nothing of the address", async () => {
+      sql(`UPDATE clients SET company = 'Bloom Studio', contact_name = 'Ann', email = 'ann@bloom.co.uk' WHERE id = ${clientId}`)
+      await save({ project_id: projectA, open_decisions: "Ask Ann at ann@bloom.co.uk or ANN@BLOOM.CO.UK, and copy ops@agency.example.test" })
       const md = raw(await handoff(projectA))
-      for (const f of formats) expect(md).not.toContain(f)
-      expect(md).not.toMatch(/7700/)
-      expect(md.match(/Call \\\[client detail removed\\\] today/g)).toHaveLength(formats.length)
-      // Another number that only shares some digits is left as typed.
-      await save({ project_id: projectA, open_decisions: "Call 07700 900124 today" })
-      expect(raw(await handoff(projectA))).toContain("Call 07700 900124 today")
+      expect(md).toContain("Ask \\[client detail removed\\] at \\[client detail removed\\] or \\[client detail removed\\], and copy \\[email removed\\]")
+      expect(md).not.toMatch(/bloom/i)
+    })
+
+    it("keeps a closing bracket and full stop that follow a stripped link", async () => {
+      await save({ project_id: projectA, open_decisions: "Results (see https://u:p@ci.example.test/run/7?key=s3cret#log) are in. Also https://ci.example.test/a?x=1." })
+      const md = raw(await handoff(projectA))
+      expect(md).toContain("Results (see https://ci.example.test/run/7) are in. Also https://ci.example.test/a.")
+      expect(md).not.toContain("s3cret")
     })
 
     it("matches client names as whole words only, so a short name inside a longer word survives", async () => {
