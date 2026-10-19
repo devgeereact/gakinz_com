@@ -39,6 +39,9 @@ import {
   type AcceptanceMethod,
 } from "@/lib/api"
 import { localIsoDate } from "@/lib/format"
+import { isDirty } from "@/lib/dirty-model"
+import { useUnsavedGuard } from "@/hooks/use-unsaved-guard"
+import { UnsavedGuardDialog } from "@/components/unsaved-guard-dialog"
 import { ACCEPTANCE_METHODS, evidenceLine, evidenceProblem, referenceHint, shortFingerprint } from "./acceptanceModel"
 import AiAssist from "@/app/components/AiAssist"
 import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/page-kit"
@@ -75,6 +78,8 @@ const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`
 
 type DraftItem = { description: string; qty: string; unit_price: string }
 const blankItem: DraftItem = { description: "", qty: "1", unit_price: "" }
+
+const BLANK_QUOTE = { title: "", clientId: "", validUntil: "", notes: "", vatRate: "20", lines: [blankItem] }
 
 export default function Proposals() {
   const navigate = useNavigate()
@@ -132,6 +137,23 @@ export default function Proposals() {
   const drafts = items.filter((p) => p.status === "draft").length
   const sum = (xs: Proposal[]) => xs.reduce((s, p) => s + p.total, 0)
 
+  // A new quote is dirty once it differs from the blank form; creating or discarding resets it.
+  const quoteDirty = open && isDirty({ title, clientId, validUntil, notes, vatRate, lines }, BLANK_QUOTE)
+  const guard = useUnsavedGuard(quoteDirty)
+  const resetQuote = () => {
+    setTitle("")
+    setClientId("")
+    setValidUntil("")
+    setNotes("")
+    setVatRate("20")
+    setLines([{ ...blankItem }])
+  }
+  const closeQuote = () =>
+    guard.requestLeave(() => {
+      resetQuote()
+      setOpen(false)
+    })
+
   const create = async () => {
     if (!title.trim()) return toast.error("A title is required.")
     const payloadItems: ProposalItemInput[] = lines
@@ -151,12 +173,7 @@ export default function Proposals() {
     setSaving(false)
     if (res.ok) {
       toast.success("Quote created as a draft.")
-      setTitle("")
-      setClientId("")
-      setValidUntil("")
-      setNotes("")
-      setVatRate("20")
-      setLines([{ ...blankItem }])
+      resetQuote()
       setOpen(false)
       load()
     } else {
@@ -242,7 +259,7 @@ export default function Proposals() {
   }
 
   const newQuoteDialog = (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(o) => (o ? setOpen(true) : closeQuote())}>
       <DialogTrigger asChild>
         <Button>
           <Plus /> New quote
@@ -359,7 +376,7 @@ export default function Proposals() {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={closeQuote}>
             Cancel
           </Button>
           <Button onClick={create} disabled={saving}>
@@ -602,6 +619,7 @@ export default function Proposals() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <UnsavedGuardDialog prompt={guard.prompt} />
     </div>
   )
 }
