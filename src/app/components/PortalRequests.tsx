@@ -12,7 +12,6 @@ import {
   CALL_SLOTS_MAX,
   CALL_TOPIC_MAX,
   MESSAGE_BODY_MAX,
-  clientMessages,
   portalRequests,
   type ClientThread,
   type PortalCallRequest,
@@ -48,51 +47,61 @@ const UPDATES_OFF = "Update requests open once the studio finishes a server upda
  * means the route is missing, and that request is hidden with a quiet line
  * instead of an error.
  */
-export function PortalRequests({ projects, onUpdateSent }: { projects: { id: number; name: string }[]; onUpdateSent: () => void }) {
+export function PortalRequests({
+  projects,
+  threads,
+  threadsError,
+  reloadThreads,
+}: {
+  projects: { id: number; name: string }[]
+  /** The client's threads, loaded once by the portal page and shared with Messages. */
+  threads: ClientThread[] | null
+  threadsError: string | null
+  reloadThreads: () => Promise<void>
+}) {
   const [mode, setMode] = useState<"update" | "call" | null>(null)
   const [sent, setSent] = useState<string | null>(null)
-  const [threads, setThreads] = useState<ClientThread[] | null>(null)
   const [calls, setCalls] = useState<PortalCallRequest[] | null>(null)
   const [callsOff, setCallsOff] = useState(false)
   const [updatesOff, setUpdatesOff] = useState(false)
-  const [loadError, setLoadError] = useState<string | null>(null)
+  const [callsError, setCallsError] = useState<string | null>(null)
 
-  const apply = useCallback(
-    ([t, c]: [Awaited<ReturnType<typeof clientMessages.list>>, Awaited<ReturnType<typeof portalRequests.calls>>]) => {
-      if (t.ok) setThreads(t.data)
-      if (c.ok) {
-        setCalls(c.data)
-        setCallsOff(false)
-      } else if (notAvailableYet(c)) {
-        setCalls([])
-        setCallsOff(true)
-      }
-      const err = !t.ok ? t.error : !c.ok && !notAvailableYet(c) ? c.error : null
-      setLoadError(err)
-    },
-    [],
-  )
-  const load = useCallback(() => Promise.all([clientMessages.list(), portalRequests.calls()]).then(apply), [apply])
+  const applyCalls = useCallback((c: Awaited<ReturnType<typeof portalRequests.calls>>) => {
+    if (c.ok) {
+      setCalls(c.data)
+      setCallsOff(false)
+      setCallsError(null)
+    } else if (notAvailableYet(c)) {
+      setCalls([])
+      setCallsOff(true)
+      setCallsError(null)
+    } else {
+      setCallsError(c.error)
+    }
+  }, [])
+  const loadCalls = useCallback(() => portalRequests.calls().then(applyCalls), [applyCalls])
+  const load = useCallback(() => Promise.all([reloadThreads(), loadCalls()]).then(() => undefined), [reloadThreads, loadCalls])
 
   useEffect(() => {
     let live = true
-    Promise.all([clientMessages.list(), portalRequests.calls()]).then((r) => {
-      if (live) apply(r)
+    portalRequests.calls().then((r) => {
+      if (live) applyCalls(r)
     })
     return () => {
       live = false
     }
-  }, [apply])
+  }, [applyCalls])
 
   const start = (m: "update" | "call") => {
     setSent(null)
     setMode(m)
   }
-  const done = async (message: string) => {
+  const done = async (message: string, reload: () => Promise<void>) => {
     setMode(null)
     setSent(message)
-    await load()
+    await reload()
   }
+  const loadError = threadsError ?? callsError
 
   const updates = threads ? openUpdateRequests(threads) : []
   const openCalls = calls ? openCallRequests(calls) : []
@@ -124,10 +133,7 @@ export function PortalRequests({ projects, onUpdateSent }: { projects: { id: num
             projects={projects}
             onCancel={() => setMode(null)}
             onUnavailable={() => setUpdatesOff(true)}
-            onSent={async () => {
-              onUpdateSent()
-              await done("Your question reached the studio. The answer will appear in Messages.")
-            }}
+            onSent={() => done("Your question reached the studio. The answer will appear in Messages.", reloadThreads)}
           />
         ) : mode === "call" ? (
           <CallForm
@@ -136,7 +142,7 @@ export function PortalRequests({ projects, onUpdateSent }: { projects: { id: num
               setCallsOff(true)
               setMode(null)
             }}
-            onSent={() => done("Your call request reached the studio. It is not booked until the studio confirms a time.")}
+            onSent={() => done("Your call request reached the studio. It is not booked until the studio confirms a time.", loadCalls)}
           />
         ) : (
           <>

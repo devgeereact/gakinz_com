@@ -63,8 +63,20 @@ export default function Portal() {
   const [attempt, setAttempt] = useState(0)
   // The client's New message form, opened from the page header.
   const [composing, setComposing] = useState(false)
-  // Bumped when an update request is sent, so Messages reloads to show it.
-  const [messagesKey, setMessagesKey] = useState(0)
+  // The client's message threads, loaded once here and shared by Requests (its
+  // open update requests) and Messages, so the portal fetches them once and a
+  // reload after an update request never remounts Messages or loses a draft.
+  const [threads, setThreads] = useState<ClientThread[] | null>(null)
+  const [threadsError, setThreadsError] = useState<string | null>(null)
+  const applyThreads = useCallback((res: Awaited<ReturnType<typeof clientMessages.list>>) => {
+    if (res.ok) {
+      setThreads(res.data)
+      setThreadsError(null)
+    } else {
+      setThreadsError(res.error)
+    }
+  }, [])
+  const loadThreads = useCallback(() => clientMessages.list().then(applyThreads), [applyThreads])
 
   // Open a Stripe Checkout link for an outstanding invoice (webhook settles it).
   const payNow = async (invoiceId: number) => {
@@ -117,6 +129,17 @@ export default function Portal() {
       setLoading(false)
     })
   }, [clientId, attempt])
+
+  useEffect(() => {
+    if (!isClient) return
+    let live = true
+    clientMessages.list().then((res) => {
+      if (live) applyThreads(res)
+    })
+    return () => {
+      live = false
+    }
+  }, [isClient, applyThreads])
 
   const retry = () => {
     setError(null)
@@ -297,8 +320,14 @@ export default function Portal() {
           {isClient ? (
             <>
               <PortalAssets />
-              <PortalRequests projects={data.projects} onUpdateSent={() => setMessagesKey((n) => n + 1)} />
-              <ClientMessages key={messagesKey} composing={composing} setComposing={setComposing} />
+              <PortalRequests projects={data.projects} threads={threads} threadsError={threadsError} reloadThreads={loadThreads} />
+              <ClientMessages
+                threads={threads}
+                loadError={threadsError}
+                reload={loadThreads}
+                composing={composing}
+                setComposing={setComposing}
+              />
               <PortalFeedback projects={data.projects} />
             </>
           ) : (
@@ -349,33 +378,24 @@ function fmtWhen(d: string) {
 /**
  * The client's own messages to the studio (support.php, client branch). The
  * server scopes everything to the signed-in client, so nothing here passes a
- * client id, and no status, priority or assignment control is rendered.
+ * client id, and no status, priority or assignment control is rendered. The
+ * threads are loaded by the page and shared with Requests; `reload` refreshes
+ * them in place, so an open draft or reply survives.
  */
-function ClientMessages({ composing, setComposing }: { composing: boolean; setComposing: (on: boolean) => void }) {
-  const [threads, setThreads] = useState<ClientThread[] | null>(null)
-  const [loadError, setLoadError] = useState<string | null>(null)
+function ClientMessages({
+  threads,
+  loadError,
+  reload: load,
+  composing,
+  setComposing,
+}: {
+  threads: ClientThread[] | null
+  loadError: string | null
+  reload: () => Promise<void>
+  composing: boolean
+  setComposing: (on: boolean) => void
+}) {
   const [openId, setOpenId] = useState<number | null>(null)
-
-  const apply = useCallback((res: Awaited<ReturnType<typeof clientMessages.list>>) => {
-    if (res.ok) {
-      setThreads(res.data)
-      setLoadError(null)
-    } else {
-      setLoadError(res.error)
-    }
-  }, [])
-
-  const load = useCallback(() => clientMessages.list().then(apply), [apply])
-
-  useEffect(() => {
-    let live = true
-    clientMessages.list().then((res) => {
-      if (live) apply(res)
-    })
-    return () => {
-      live = false
-    }
-  }, [apply])
 
   const open = openId != null ? (threads?.find((t) => t.id === openId) ?? null) : null
 
