@@ -37,15 +37,35 @@ export function statusError(status: number, verb = "Request"): string {
 }
 
 /**
- * The file name from a Content-Disposition header, or null. Only a plain
- * `filename="..."` or `filename=...` is read, and any path is stripped, so a
- * reply can never steer where the browser saves the file.
+ * A name a download may be saved under, or null: any path is stripped, and
+ * only letters, digits, spaces and `_ . ( ) -` are allowed, up to 200
+ * characters, never only dots.
+ */
+function safeFileName(raw: string): string | null {
+  const base = (raw.split(/[\\/]/).pop() ?? "").trim()
+  return /^[\p{L}\p{M}\p{N}_.() -]{1,200}$/u.test(base) && !/^\.+$/.test(base) ? base : null
+}
+
+/**
+ * The file name from a Content-Disposition header, or null. The UTF-8
+ * `filename*=UTF-8''...` form wins when it decodes to a safe name; otherwise
+ * the plain `filename="..."` or `filename=...` is read. Either way the name
+ * goes through safeFileName(), so a reply can never steer where the browser
+ * saves the file.
  */
 export function filenameFromDisposition(header: string | null): string | null {
-  const m = header?.match(/filename\s*=\s*(?:"([^"]*)"|([^;\s]+))/i)
-  const raw = (m?.[1] ?? m?.[2] ?? "").trim()
-  const base = raw.split(/[\\/]/).pop() ?? ""
-  return /^[\w.-]{1,200}$/.test(base) && !/^\.+$/.test(base) ? base : null
+  if (!header) return null
+  const star = header.match(/filename\*\s*=\s*UTF-8''([^;\s]+)/i)
+  if (star) {
+    try {
+      const name = safeFileName(decodeURIComponent(star[1]))
+      if (name) return name
+    } catch {
+      // A malformed encoding: fall back to the plain name.
+    }
+  }
+  const m = header.match(/filename\s*=\s*(?:"([^"]*)"|([^;\s]+))/i)
+  return safeFileName(m?.[1] ?? m?.[2] ?? "")
 }
 
 /**

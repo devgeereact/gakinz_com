@@ -29,10 +29,10 @@ describe("download reply types", () => {
     expect(pdf.ok && downloadName(pdf.data, "fallback")).toBe("Recommendation.pdf")
     expect(pdf.ok && (await pdf.data.text())).toBe("%PDF-1.4")
 
-    // A name with a space is not taken from the header, so the page's own fallback is used.
-    reply("a,b", "text/csv", { "Content-Disposition": 'attachment; filename="Q3 figures.csv"' })
+    // The UTF-8 name files.php sends beside its ASCII fallback is the one kept.
+    reply("a,b", "text/csv", { "Content-Disposition": "attachment; filename=\"R_sum_ Q3.csv\"; filename*=UTF-8''R%C3%A9sum%C3%A9%20Q3.csv" })
     const csv = await api.download("/files.php?action=mine_download&id=4", isFileReply)
-    expect(csv.ok && downloadName(csv.data, "Q3 figures.csv")).toBe("Q3 figures.csv")
+    expect(csv.ok && downloadName(csv.data, "fallback.csv")).toBe("Résumé Q3.csv")
   })
 
   it("refuses the app shell and a JSON 200 for a portal file, so neither is saved as the file", async () => {

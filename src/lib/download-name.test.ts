@@ -19,6 +19,18 @@ describe("download file names", () => {
     expect(filenameFromDisposition(null)).toBeNull()
   })
 
+  it("prefers the UTF-8 filename* and still refuses paths and odd names in it", () => {
+    const both = (star: string) => `attachment; filename="Plan_.pdf"; filename*=UTF-8''${star}`
+    expect(filenameFromDisposition(both("Pl%C3%A4n%20v2.pdf"))).toBe("Plän v2.pdf")
+    expect(filenameFromDisposition(both("..%2F..%2Fetc%2Fpasswd"))).toBe("passwd")
+    // Unsafe or malformed filename*: the ASCII fallback is used instead.
+    expect(filenameFromDisposition(both("a%3Cb%3E.pdf"))).toBe("Plan_.pdf")
+    expect(filenameFromDisposition(both("%E0%A4%A.pdf"))).toBe("Plan_.pdf")
+    expect(filenameFromDisposition(both("%2E%2E"))).toBe("Plan_.pdf")
+    expect(filenameFromDisposition("attachment; filename*=UTF-8''ev%0Ail.pdf")).toBeNull()
+    expect(filenameFromDisposition("attachment; filename*=UTF-8''Report.pdf")).toBe("Report.pdf")
+  })
+
   it("hands back the server's name with the file, or the fallback without one", async () => {
     vi.stubGlobal(
       "fetch",
