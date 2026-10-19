@@ -1,5 +1,6 @@
 import Seo from "@/marketing/components/Seo"
-import { CtaBand, Crumbs, Ticks } from "@/marketing/components/site-ui"
+import { BusinessDetails, CtaBand, Crumbs, Ticks } from "@/marketing/components/site-ui"
+import { useSiteCopy } from "@/marketing/data/content"
 import { delay } from "@/marketing/components/site-helpers"
 import { useProjects } from "@/marketing/data/showcase"
 import { howIWork, sectors, site } from "@/marketing/data/site"
@@ -8,6 +9,7 @@ import { howIWork, sectors, site } from "@/marketing/data/site"
 export default function About() {
   const { projects } = useProjects()
   const portrait = site.images.portrait
+  const { business } = useSiteCopy()
   return (
     <>
       <Seo title="About" description="Gideon Akinlotan, a designer and developer in London. You talk to the person doing the work." path="/about" />
@@ -23,6 +25,12 @@ export default function About() {
             <p className="lede rise" style={delay(80)}>
               I am {site.name}, a designer and developer in {site.location}. {site.studio.note} Either way, you talk to me.
             </p>
+            <p className="rise" style={delay(120)}>
+              <a className="link" href={`mailto:${business.email}`} style={{ overflowWrap: "anywhere" }}>
+                {business.email}
+              </a>
+            </p>
+            <BusinessDetails business={business} />
           </div>
           {portrait ? (
             <div className="seal">

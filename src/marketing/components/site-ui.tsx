@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react"
 import { Link, NavLink } from "react-router-dom"
-import { delay, host, ToneCtx, type Tone } from "./site-helpers"
+import { delay, host, telHref, ToneCtx, type Tone } from "./site-helpers"
 import { kindName, onColour, type Project } from "@/marketing/data/showcase"
-import { useSiteCopy } from "@/marketing/data/content"
+import { useSiteCopy, type BusinessCopy } from "@/marketing/data/content"
 
 /**
  * Shared pieces of the public site (D-046). Markup and class names follow the
@@ -209,6 +209,43 @@ const NAV: [string, string][] = [
   ["/resources", "Writing"],
 ]
 
+
+/**
+ * The published business details beyond the email: phone, address, opening
+ * note and social profiles. A field with nothing published prints nothing, and
+ * with nothing at all the whole list is left out (D-039: no placeholders).
+ */
+export function BusinessDetails({ business, className = "bizlist" }: { business: BusinessCopy; className?: string }) {
+  const { phone, address, hours, social } = business
+  if (!phone && address.length === 0 && !hours && social.length === 0) return null
+  return (
+    <ul className={className}>
+      {phone && (
+        <li>
+          <a href={telHref(phone)}>{phone}</a>
+        </li>
+      )}
+      {address.length > 0 && (
+        <li>
+          {address.map((line, i) => (
+            <span key={i} style={{ display: "block" }}>
+              {line}
+            </span>
+          ))}
+        </li>
+      )}
+      {hours && <li>{hours}</li>}
+      {social.map((l) => (
+        <li key={l.url}>
+          <a href={l.url} rel="me noopener noreferrer">
+            {l.label}
+          </a>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 export function SiteChrome({ children, projects }: { children: ReactNode; projects: Project[] }) {
   const [tone, setTone] = useState<Tone>(null)
   const [solid, setSolid] = useState(false)
@@ -302,8 +339,8 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
           <div className="foot__big">
             <div>
               <p className="mono mute">Start a project</p>
-              <a className="foot__mail" href={`mailto:${copy.contact.email}`}>
-                {copy.contact.email}
+              <a className="foot__mail" href={`mailto:${copy.business.email}`}>
+                {copy.business.email}
               </a>
             </div>
             <button className="btn" type="button" onClick={() => window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })}>
@@ -316,6 +353,7 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
               <p className="mute" style={{ maxWidth: "36ch" }}>
                 {copy.contact.footer} {copy.contact.reply}
               </p>
+              <BusinessDetails business={copy.business} />
             </div>
             <div>
               <h2>Work</h2>

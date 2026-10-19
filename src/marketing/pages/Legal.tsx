@@ -1,6 +1,8 @@
 import Seo from "@/marketing/components/Seo"
 import { site } from "@/marketing/data/site"
 import { PageHead } from "@/marketing/components/site-ui"
+import { telHref } from "@/marketing/components/site-helpers"
+import { useSiteCopy } from "@/marketing/data/content"
 
 /**
  * /privacy, /terms and /cookies: three routes from one component.
@@ -12,7 +14,8 @@ import { PageHead } from "@/marketing/components/site-ui"
  * which made them three distinct URLs advertising identical metadata.
  *
  * Changed: `company.email` no longer exists in src/marketing/data/site.ts.
- * The address comes from `site.contact.email`.
+ * The address comes from the published business record (`useSiteCopy().business`),
+ * with `site.contact.email` as the built-in fallback.
  *
  * Changed: the hard-coded "Last updated 1 June 2026" is gone. It was a date
  * nobody set and nobody reviewed on. A policy carries a review date or it
@@ -71,6 +74,7 @@ function LegalPage({
   reviewed: string | null
   blocks: Block[]
 }) {
+  const { business } = useSiteCopy()
   return (
     <>
       <PageHead crumbs={[[null, title]]} title={title} lede={intro} />
@@ -111,11 +115,21 @@ function LegalPage({
               <dt>Questions</dt>
               <dd>
                 Email{" "}
-                <a className="link" href={`mailto:${site.contact.email}`} style={{ overflowWrap: "anywhere" }}>
-                  {site.contact.email}
+                <a className="link" href={`mailto:${business.email}`} style={{ overflowWrap: "anywhere" }}>
+                  {business.email}
                 </a>
               </dd>
             </div>
+            {business.phone && (
+              <div>
+                <dt>Phone</dt>
+                <dd>
+                  <a className="link" href={telHref(business.phone)}>
+                    {business.phone}
+                  </a>
+                </dd>
+              </div>
+            )}
           </dl>
         </div>
       </section>
@@ -124,6 +138,7 @@ function LegalPage({
 }
 
 export function Privacy() {
+  const { business } = useSiteCopy()
   return (
     <>
       <Seo
@@ -139,7 +154,7 @@ export function Privacy() {
           {
             h: "Who I am",
             p: [
-              `gakinz.com is run by [legal name and trading form to supply], who decides how the information described here is used. Contact: ${site.contact.email}.`,
+              `gakinz.com is run by [legal name and trading form to supply], who decides how the information described here is used. Contact: ${business.email}.`,
               "[ICO registration number to supply, if registered]",
             ],
           },

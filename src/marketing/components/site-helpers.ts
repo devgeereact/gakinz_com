@@ -18,3 +18,6 @@ export function useNavTone(on: string | null, bg: string | null) {
     return () => set(null)
   }, [on, bg, set])
 }
+
+/** A tel: address for a published number: digits, with a leading + kept. */
+export const telHref = (phone: string) => `tel:${phone.replace(/[^+\d]/g, "")}`
