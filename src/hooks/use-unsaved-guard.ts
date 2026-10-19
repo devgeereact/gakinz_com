@@ -39,13 +39,19 @@ export function useUnsavedGuard(dirty: boolean) {
     dispatch({ type: "dirty", dirty })
   }, [dirty])
 
+  // A blocked navigation owns the prompt: drop any close request raised by the same click.
+  const navigationBlocked = blocker.state === "blocked"
+  useEffect(() => {
+    if (navigationBlocked) dispatch({ type: "navigation" })
+  }, [navigationBlocked])
+
   /** Run `leave` now if the form is clean, otherwise ask first. */
   const requestLeave = useCallback(
     (leave: () => void) => {
-      if (dirty) dispatch({ type: "request", dirty, leave })
-      else leave()
+      if (!dirty) leave()
+      else if (!navigationBlocked) dispatch({ type: "request", dirty, leave })
     },
-    [dirty],
+    [dirty, navigationBlocked],
   )
 
   const prompt = {

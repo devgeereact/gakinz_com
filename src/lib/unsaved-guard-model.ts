@@ -10,6 +10,7 @@ export type CloseAction =
   | { type: "stay" }
   | { type: "leave" }
   | { type: "dirty"; dirty: boolean }
+  | { type: "navigation" }
 
 export const idleClose: CloseState = { pending: null }
 
@@ -24,6 +25,10 @@ export function closeReducer(state: CloseState, action: CloseAction): CloseState
       return action.dirty ? { pending: action.leave } : state
     case "stay":
     case "leave":
+      return state.pending ? idleClose : state
+    case "navigation":
+      // A router navigation is now blocked and raises the prompt itself. A close request
+      // from the same click (an outside click on a link) must not prompt a second time.
       return state.pending ? idleClose : state
     case "dirty":
       // The form went clean (saved or reset) while a request was waiting: it is stale.

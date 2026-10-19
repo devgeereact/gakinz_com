@@ -32,4 +32,10 @@ describe("closeReducer", () => {
     expect(closeReducer(idleClose, { type: "stay" })).toBe(idleClose)
     expect(closeReducer(idleClose, { type: "dirty", dirty: false })).toBe(idleClose)
   })
+
+  it("a blocked navigation drops a pending close request so only one prompt is raised", () => {
+    const held = closeReducer(idleClose, { type: "request", dirty: true, leave: vi.fn() })
+    expect(closeReducer(held, { type: "navigation" }).pending).toBeNull()
+    expect(closeReducer(idleClose, { type: "navigation" })).toBe(idleClose)
+  })
 })
