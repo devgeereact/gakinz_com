@@ -106,6 +106,21 @@ export function todayRows(view: TodayView, role: Role | null | undefined): Today
   })
 }
 
+/**
+ * The screen that lists a whole section, for its "And N more" link: the list
+ * view, not any one record, since the remaining items are not on Today.
+ */
+export const TODAY_SECTION_SCREENS: Record<TodaySectionKey, string> = {
+  new_enquiries: "/app/leads",
+  follow_ups_due: "/app/leads?due=1",
+  calls: "/app/leads?view=calls",
+  overdue_tasks: "/app/projects",
+  waiting_material: "/app/projects",
+  unpaid_invoices: "/app/invoicing",
+}
+
+export const sectionRoute = (key: TodaySectionKey): string => TODAY_SECTION_SCREENS[key]
+
 /** Only an in-app CMS path is followed; anything else opens Today itself. */
 export function itemRoute(item: Pick<TodayItem, "route">): string {
   return /^\/app\/[a-z][a-z0-9-]*(\?[a-z0-9=&_-]*)?$/i.test(item.route) ? item.route : "/app"

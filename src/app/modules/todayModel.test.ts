@@ -7,6 +7,7 @@ import {
   initialTodayView,
   itemRoute,
   itemWhen,
+  sectionRoute,
   todayPanel,
   todayRows,
   updatedLabel,
@@ -230,3 +231,12 @@ describe("fallbackFollowUps", () => {
   })
 })
 
+describe("sectionRoute", () => {
+  it("opens the list view of each section, never a single record", () => {
+    expect(sectionRoute("follow_ups_due")).toBe("/app/leads?due=1")
+    expect(sectionRoute("calls")).toBe("/app/leads?view=calls")
+    expect(sectionRoute("unpaid_invoices")).toBe("/app/invoicing")
+    expect(sectionRoute("overdue_tasks")).toBe("/app/projects")
+    for (const k of expectedSections("super_admin")) expect(itemRoute({ route: sectionRoute(k) })).toBe(sectionRoute(k))
+  })
+})

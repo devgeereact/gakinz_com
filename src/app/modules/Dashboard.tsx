@@ -43,6 +43,7 @@ import {
   initialTodayView,
   itemRoute,
   itemWhen,
+  sectionRoute,
   todayPanel,
   updatedLabel,
   type TodayPanel,
@@ -787,7 +788,7 @@ function AttentionSection({ row, retrying, onRetry }: { row: TodayRow; retrying:
           })}
           {row.more > 0 && (
             <li>
-              <Link to={itemRoute(row.items[row.items.length - 1])} className="block py-2.5 text-[13px] text-muted-foreground hover:text-acc">
+              <Link to={sectionRoute(row.key)} className="block py-2.5 text-[13px] text-muted-foreground hover:text-acc">
                 And {row.more} more
               </Link>
             </li>
