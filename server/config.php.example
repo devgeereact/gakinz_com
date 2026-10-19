@@ -108,6 +108,13 @@ $GOOGLE_CLIENT_SECRET = '';
 $GOOGLE_REDIRECT      = 'https://gakinz.com/oauth.php?action=callback';
 $APP_URL              = 'https://gakinz.com'; // SPA origin the SSO callback returns to
 
+// ── Client sign-in by reference and email (client_access.php) — off. ───────────
+// docs/PRODUCT-SPEC.md 6.1. Leave false until the owner confirms the client
+// sign-in policy. Only the boolean true turns it on; while false every route of
+// client_access.php answers 404 and the sign-in page shows nothing new. Needs
+// $SMTP_HOST (links are never sent through PHP mail()) and SQL 19 (references).
+$REFERENCE_SIGNIN_ENABLED = false;
+
 // ── Scheduled jobs (cron.php) — optional. ───────────────────────────────────────
 // Set a long random $CRON_KEY, then add a cPanel cron entry, e.g. daily:
 //   wget -qO- "https://gakinz.com/cron.php?key=YOUR_CRON_KEY&job=all"

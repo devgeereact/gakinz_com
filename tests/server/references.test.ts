@@ -362,9 +362,12 @@ describe("a reference is never a key", () => {
 
   it("is read from no request parameter or body field by any endpoint", () => {
     // The only `reference` body fields are a payment's bank reference
-    // (invoices.php record_payment) and the acceptance evidence (proposals.php
-    // accept). Both are stored as text and never used to find a record.
-    const allowed: Record<string, string> = { "invoices.php": "record_payment", "proposals.php": "accept" }
+    // (invoices.php record_payment), the acceptance evidence (proposals.php
+    // accept), both stored as text and never used to find a record, and the
+    // client sign-in request (client_access.php request, switched off by
+    // default), where a reference only narrows who may be emailed a link and
+    // never answers anything about a record (tests/server/client-access.test.ts).
+    const allowed: Record<string, string> = { "invoices.php": "record_payment", "proposals.php": "accept", "client_access.php": "request" }
     const query = /\$_(GET|POST|REQUEST|COOKIE)\[\s*['"](reference|ref|project_reference)['"]/
     const fromBody = /(\$(in|body|input|data|payload|req|request)|body\(\))\[\s*['"](reference|ref|project_reference)['"]/g
     const files = fs.readdirSync(SERVER).filter((f) => f.endsWith(".php"))
