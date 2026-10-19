@@ -47,6 +47,8 @@ of their own and are denied to direct requests by `.htaccess`. The file count is
 | `_ics.php` | Builds the RFC 5545 calendar file for a confirmed call (escaping, 75-octet folding, UTC times). Required by `bookings.php` on its calendar routes, so upload the two together (2026-10-18) |
 | `_like.php` | Literal substring matching for `LIKE`, with `!` as the escape so it reads the same under any `sql_mode`. Required by `search.php`; upload the two together (2026-10-19) |
 | `_retention.php` | The read-only retention dry run: counts what each proposed rule would affect, never deletes. Used by `privacy.php` and `cron.php job=retention_report`; upload the three together (2026-10-19) |
+| `_time.php` | The shared time entry rules and the SQL 17 check, loaded on first use by `time.php` and `support.php`. Upload it with or before them, or time logging answers 503 (2026-10-19) |
+| `_templates.php` | The five project templates, pure data, loaded on first use by `projects.php`; without it only the template routes answer 503 (2026-10-19) |
 | `api.php` | Unauthenticated read-only health check: confirms PHP runs and the database answers. No writes, no application tables |
 | `contact.php` | Public enquiry form, writes to `enquiries` |
 | `verify.php` | Public certificate verification |
@@ -55,7 +57,7 @@ of their own and are denied to direct requests by `.htaccess`. The file count is
 | `oauth.php` | Google SSO. Matches existing active users only |
 | `users.php`, `audit.php`, `integrations.php` | Platform administration. Admins only |
 | `leads.php`, `clients.php`, `bookings.php`, `proposals.php`, `contracts.php` | Sales. `bookings.php` also has a client branch for portal call requests and the client's own calendar file (2026-10-18), security-critical |
-| `projects.php`, `tasks.php`, `design.php`, `dev.php`, `resourcing.php`, `time.php`, `careplan.php`, `files.php`, `assets.php`, `briefs.php` | Delivery. `assets.php` (2026-10-18) is the project asset checklist, with a client branch to list and supply items, security-critical. `briefs.php` (2026-10-19, SQL 16) is the project brief, measurements and the sanitised GEE OS handoff, staff only |
+| `projects.php`, `tasks.php`, `design.php`, `dev.php`, `resourcing.php`, `time.php`, `careplan.php`, `files.php`, `assets.php`, `briefs.php` | Delivery. `assets.php` (2026-10-18) is the project asset checklist, with a client branch to list and supply items, security-critical. `briefs.php` (2026-10-19, SQL 16) is the project brief, measurements and the sanitised GEE OS handoff, staff only. Since 2026-10-19 `files.php` also has a client branch (`mine`, `mine_download`, SQL 18), security-critical, and `projects.php` creates projects from templates |
 | `today.php`, `search.php` | Daily work (2026-10-19), read only, staff only: the Today attention list and record search. Each gates every section or record type by the role constant of the endpoint that owns the data |
 | `privacy.php` | Subject access export (super_admin, admin) and the retention report (super_admin), 2026-10-19. Reads only |
 | `invoices.php`, `payments.php`, `reports.php` | Money |

@@ -118,7 +118,7 @@ Treat these as the internet-facing attack surface.
 | `blog.php` | GET, and GET `?slug=` | Published posts without their body, and one published post with its body |
 | `testimonials.php` | GET | Approved testimonials |
 | `proposals.php` | GET `?token=` | Read-only shared proposal with its line items, at any status. Records a view. Acceptance is a staff action, not part of this link |
-| `files.php` | GET `?token=` | Streams a shared file while the token is unexpired. A token issued by `work.php?action=addImage` has **no expiry**, so it streams indefinitely. See section 7 |
+| `files.php` | GET `?token=` | Streams a shared file while the token is unexpired. A token issued by `work.php?action=addImage` has **no expiry**, so it streams indefinitely. See section 7. Since 2026-10-19 a link with no expiry sends `Cache-Control: public, max-age=86400` and an expiring one `private, no-store` (K-087); the download headers are described under Delivery |
 | `work.php` | GET `?action=list[&kind=]` | Published work records, cover folded in, ordered by featured, then `sort_order`, then id, limit 200 |
 | `work.php` | GET `?action=get&slug=` | One published record with its ordered image set |
 | `work.php` | GET `?action=hero` | Up to five published records flagged for the homepage hero, in hero order, with brand colour, hero word and screenshots. `[]` before the schema step |
@@ -281,14 +281,14 @@ security-critical, `docs/SECURITY.md` section 3):
 
 | Endpoint | Actions | Roles |
 |---|---|---|
-| `projects.php` | GET list, `create`, `status`, `stage` | STAFF |
+| `projects.php` | GET list, GET `?action=templates`, `create` (optionally from a template), `status`, `stage` | STAFF |
 | `tasks.php` | GET list, `create`, `status` | STAFF |
 | `design.php` | GET list with optional `?project_id=`, `create`, `status`, `delete` | STAFF. Two rounds maximum |
 | `dev.php` | GET `?project_id=`, GET list, `meta`, `deploy` | STAFF |
 | `resourcing.php` | GET list, `leave`, `delete` | STAFF. Weekly capacity constant is 2400 minutes |
-| `time.php` | GET list, `create`, `delete`, `approve`, `reject` | STAFF; approve and reject are management only |
+| `time.php` | GET list, `create`, `delete`, `approve`, `reject` | STAFF; approve and reject are management only. The list carries `ticket_id` (2026-10-19, SQL 17), NULL before SQL 17 or while `_time.php` is missing |
 | `careplan.php` | GET list, `check` | STAFF |
-| `files.php` | GET list with optional `?client_id=` or `?project_id=`, GET `?download=`, `upload`, `share`, `delete` | STAFF |
+| `files.php` | Staff: GET list with optional `?client_id=` or `?project_id=`, GET `?download=`, `upload`, `share`, `client_share`, `delete`. Client: GET `?action=mine`, GET `?action=mine_download&id=` | STAFF; the `client` role on its own two routes only (2026-10-19, SQL 18) |
 | `assets.php` | Staff: GET `?project_id=`, `create`, `update`, `accept`, `reopen`, `delete`. Client: GET `?action=mine`, `supply` | STAFF (as `projects.php`); the `client` role on its own two routes only (2026-10-18) |
 | `briefs.php` | GET `?project_id=`, `save`, `measure_create`, `measure_update`, `measure_delete`, GET `?action=handoff&project_id=` | STAFF (as `projects.php`); a `client` gets 403 on every route, reads included (2026-10-19) |
 
@@ -334,6 +334,53 @@ is security-critical):
   that 503, never `ok` (K-082).
 - Covered by `tests/server/project-briefs.test.ts`.
 
+`projects.php` templates (2026-10-19, `docs/PRODUCT-SPEC.md` section 6.4; staff only):
+
+- GET `?action=templates` returns the five work-type templates from `_templates.php`:
+  `business_website`, `ecommerce`, `website_care`, `it_support` and `it_consultancy`, each with
+  its starter tasks (title and days after creation), client checklist items and measurement
+  rows. Templates are code, not data: changing one needs a code change and an upload.
+- `create` takes an optional `template` key and `include_client_checklist`. An unknown key
+  answers 400 and creates nothing. The project, its tasks (due dates counted from today in
+  PHP's time zone) and its measurement rows (SQL 16, result NOT TESTED) are always written;
+  the checklist items (SQL 15) only when `include_client_checklist` is exactly `true`,
+  because the client sees them in the portal at once (K-086). No brief row is written.
+  Everything, the audit row included, is one transaction. A missing optional table (error
+  1146) is skipped and listed in `skipped`; any other failure answers 500 and leaves nothing.
+  The reply is `{ id, template, include_client_checklist, created: { tasks, assets,
+  measurements }, skipped }` with 201. A create without `template` is unchanged.
+- Both template routes answer 503 "Project templates are not available yet." while
+  `_templates.php` is not on the server; list, plain create, status and stage still work.
+- Covered by `tests/server/project-templates.test.ts`.
+
+`files.php` client sharing and downloads (2026-10-19, SQL 18, `docs/PRODUCT-SPEC.md` sections
+6.2 and 7; the client branch is security-critical):
+
+- `client_share` (staff) takes `{ id, visible }`, where `visible` is a boolean (or 0 or 1).
+  Showing a file needs exactly one owning client: a project with a client, or a client with
+  no project, and the two must agree. Otherwise 409 (no client, a removed project, or a
+  client and project that disagree). Hiding always works. `shared_at` keeps the first time a
+  file was shown and is cleared on hide. Audit action `file_client_share`, written only when
+  the value changes. The staff list adds `client_visible` and `shared_at` (`null` before
+  SQL 18).
+- `mine` (client) lists the caller's visible, live files as exactly `{ id, name, mime, size,
+  shared_at, project_name }`, never the stored name, token, uploader or client id. The
+  standing IT support project is named "IT support". `mime` is the stored type only when it
+  is on the upload allowlist, otherwise `application/octet-stream`.
+- `mine_download&id=N` (client) streams one of those files. Another client's file, a hidden,
+  deleted or missing one, or id 0 all answer the same 404 "File not found.".
+- A client gets 403 on every staff route, and staff get 403 on both client routes. The
+  client id always comes from the token; a `client_id` parameter is ignored.
+- Every download (staff `?download=`, the public `?token=` link and `mine_download`) goes
+  through one `stream_file()`. The stored name must be a plain file name
+  (`^[A-Za-z0-9][A-Za-z0-9._-]{0,254}\z`) that `realpath` resolves to a regular file directly
+  inside `uploads/`; anything else answers 404 "File is missing on disk.". Headers:
+  `Content-Disposition: attachment; filename="<ASCII fallback>"; filename*=UTF-8''<encoded
+  name>`, `X-Content-Type-Options: nosniff`, and `Cache-Control: private, no-store`, except a
+  never-expiring `?token=` link, which sends `public, max-age=86400`.
+- `client_share`, `mine` and `mine_download` answer 503 until SQL 18; every older action works.
+- Covered by `tests/server/portal-files.test.ts`.
+
 ### Money
 
 | Endpoint | Actions | Roles |
@@ -377,8 +424,8 @@ or sent clears them. Covered by `tests/server/manual-payment.test.ts`.
 
 | Endpoint | Actions | Roles |
 |---|---|---|
-| `portal.php` | GET | Any authenticated user. The `client` role is bound to its own `client_id`. The staff preview branch requires super_admin, admin or manager |
-| `support.php` | Staff: GET list, GET `?id=`, `create`, `status`, `priority`, `assign`, `reply`. Client: GET list, GET `?id=`, `create`, `reply`, `update_request` | STAFF, plus the `client` role on its own branch |
+| `portal.php` | GET | Any authenticated user. The `client` role is bound to its own `client_id`. The staff preview branch requires super_admin, admin or manager. Since 2026-10-19 each project carries `kind` (`it_support` or `null`); the standing IT support project is always named "IT support" with zero task counts |
+| `support.php` | Staff: GET list, GET `?id=`, `create`, `status`, `priority`, `assign`, `reply`, `log_time`. Client: GET list, GET `?id=`, `create`, `reply`, `update_request` | STAFF, plus the `client` role on its own branch |
 | `feedback.php` | Staff: GET list (`?client_id=` to filter), `create`, `update`. Client: `create` only | STAFF for every read; the `client` role may only create |
 | `comms.php` | GET list, GET `?id=`, `create`, `post`, `send`, `status` | STAFF |
 | `mail.php` | GET `status`, `inbox`, `message`; POST `send`, `seen` | MAIL_ROLES |
@@ -405,6 +452,28 @@ or sent clears them. Covered by `tests/server/manual-payment.test.ts`.
   question answers 400, a project that is not one of the caller's own 404, and the same open
   question again within ten minutes 409. Audit action `ticket_update_request`. Covered by
   `tests/server/portal-requests.test.ts`.
+
+`support.php?action=log_time` (2026-10-19, SQL 17, `docs/PRODUCT-SPEC.md` sections 6.4 and 7):
+
+- Staff only: super_admin, admin, manager, editor and employee, the `STAFF` list of
+  `support.php`. `time.php` create also allows `trainer`, but trainer has no Support access,
+  so log_time refuses trainer with 403, as it does a client.
+- Takes `{ id, minutes, description?, billable?, entry_date? }` with the `time.php` rules
+  from `_time.php`: minutes above zero, description trimmed and cut to 300 characters,
+  `entry_date` today in PHP's time zone when empty (K-085). The CMS always sends the
+  browser's local date.
+- Finds the client's standing IT support project (`projects.kind = 'it_support'`) or
+  creates it once ("IT support", in progress, stage support, audited `project_create`), then
+  writes a draft time entry with the ticket id, audited `ticket_time_log`. Row locks on the
+  client and the project keep two parallel calls to one project. Everything, both audit rows
+  included, is one transaction.
+- Returns `{ id, project_id, project_created }` with 201. 400 for invalid minutes, a missing
+  id or a ticket with no client; 404 for an unknown or deleted ticket; 409 "This ticket's
+  client was removed."; 503 until SQL 17, or while `_time.php` is missing.
+- The staff GET `?id=` adds `time: { total_minutes, entries[] }` (rejected and deleted
+  entries left out of the total), or `time: null` before SQL 17 or without `_time.php`. The
+  client branch never carries time.
+- Covered by `tests/server/ticket-time.test.ts`.
 
 `feedback.php` (2026-10-16, `docs/PRODUCT-SPEC.md` section 6.3; its client branch is
 security-critical):
@@ -501,7 +570,10 @@ id, title, secondary, route }` and never carries a note, message, budget or amou
   configuration, other clients' rows, and the author and IP of audit rows the subject did not
   write); `unavailable` names any table that is missing. An enquirer export lists the ids of
   client records using the same address without including them. Each export writes one
-  `privacy_export` audit row naming who exported whom, never the content.
+  `privacy_export` audit row naming who exported whom, never the content. Since 2026-10-19
+  each file row also carries `client_visible` and `shared_at` (SQL 18), so the export shows
+  what was shared to the portal and when; before SQL 18 the files rows are listed without
+  them (tested in `tests/server/privacy.test.ts`).
 - `retention_report` returns `{ dry_run: true, generated_at, rules }`; each rule is `{ key,
   label, config_key, unit, starts_from, period, status, counts }`, where `status` is
   `period_not_set`, `invalid_period` or `counted`, and `counts` maps a table to the rows the
@@ -592,7 +664,9 @@ way round, a failure would leave an attached image that silently never renders.
 
 This widens the public exposure of the `files` table, and the trade is recorded in
 `docs/DECISIONS.md` D-029. Two audit actions record it: `file_share_permanent` and
-`file_share_expiry_cleared`.
+`file_share_expiry_cleared`. Since 2026-10-19 `files.php` serves a never-expiring link with
+`Cache-Control: public, max-age=86400`, so a Work image can be cached for a day, and a change
+to the file, or revoking its token, can take as long to reach every viewer (K-087).
 
 `files.share_token` has **no unique constraint** and the public lookup in `files.php` uses
 `LIMIT 1`, so a duplicate token would serve the wrong file. `work.php` checks a token is

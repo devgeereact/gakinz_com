@@ -155,6 +155,18 @@ Measured on branch `feat/redesign-2026` at `d314833` (stacked on `feat/plan-2026
   uploaded or deployed. **Order: upload the PHP and `.htaccess`, run SQL 16, then merge.**
   Live PHP version UNVERIFIED (8.1 or later expected, K-082). Summary in `docs/STATUS.md`
   section 0.3; open items K-074 to K-082.
+  **Third batch, 2026-10-19** (`029f867..bdca4aa`, same branch, pushed): IT support time
+  from tickets on a standing "IT support" project (`support.php` `log_time`, `_time.php`,
+  SQL 17), files shared to the client portal (`files.php` `client_share`, `mine`,
+  `mine_download`, SQL 18; security-critical) with hardened downloads for every caller,
+  five project templates (`projects.php` with `_templates.php`), draft protection on six
+  screens, portal sharing in the privacy export, and a server test harness that refuses a
+  busy port and stops every `php -S` worker. Measured on the Mac at `bdca4aa`: `npm test`
+  395, `npm run test:server` 398 (ports 5395 and 5396), lint ratchet 33 and 0, `php -l`
+  over 59 files, `tsc -b` and docs check PASS. Not merged, uploaded or deployed. **Order:
+  upload the PHP (`_time.php` with or before `support.php` and `time.php`, `_templates.php`
+  with `projects.php`), run SQL 17 then 18, then merge.** Browser check on mocked API only.
+  Summary in `docs/STATUS.md` section 0.4; open items K-083 to K-088.
 - A live super-admin credential was published in an earlier revision of this file and is in
   git history. The owner reports it rotated on 2026-10-12; session revocation is unconfirmed.
   See `docs/KNOWN-ISSUES.md` K-001.

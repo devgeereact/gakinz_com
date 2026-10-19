@@ -151,7 +151,8 @@ This is the one list of server work that is committed and not known to be live. 
 every server change since `c57eb4a` (`main`, 2026-10-10) on the stacked branches in PR #8,
 including `audit/readiness-2026-10-17` (PR #20) and `feat/journeys-2026-10-18` (2026-10-18,
 stacked on PR #20, pushed to origin, not merged, deployed or uploaded; its second batch of
-2026-10-19 is in PR #21), and, conditionally, the 2026-09-22 relaunch set already on `main`. Keep it current: a change under
+2026-10-19 is in PR #21, and its third batch of 2026-10-19, `029f867..bdca4aa`, follows it on
+the same branch), and, conditionally, the 2026-09-22 relaunch set already on `main`. Keep it current: a change under
 `server/` updates this section in the same pull request (`AGENTS.md`, "Keeping documents
 current"), and `npm run docs:check` enforces that in CI.
 
@@ -221,9 +222,21 @@ statements are already live; only someone with server access can (section 5.6).
    and `_retention.php` set strict SQL error reporting themselves so an older PHP should behave
    the same, but that path is NOT TESTED (`docs/KNOWN-ISSUES.md` K-082). The live version is
    UNVERIFIED: `api.php` stopped reporting it on 2026-10-17.
-11. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
+11. **For the third journeys batch (2026-10-19, `029f867..bdca4aa`)**: upload its PHP
+   (section 5.3), run SQL 17 and then SQL 18, then merge. The order is the same as step 10:
+   upload PHP, run SQL, then merge. Two files must not go up without their include:
+   - **`_time.php` with or before `support.php` and `time.php`.** Both load it only when time
+     is logged or shown, so without it their other routes work, but logging time answers 503:
+     on a ticket ("Upload server/_time.php first") and, more importantly, on the existing Time
+     screen, where Log time would stop working for everyone until `_time.php` arrives.
+   - **`_templates.php` with `projects.php`.** Without it the two template routes answer 503
+     "Project templates are not available yet." and every other Projects route works.
+   `files.php`, `portal.php` and `privacy.php` stand alone and are each safe before SQL 17 and
+   18 (section 5.5). `files.php` changes the download headers for every caller, staff and the
+   public share link included, the moment it is uploaded (section 5.5).
+12. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
    deploys the client that expects these server changes.
-12. **Walk the post-upload checks** in section 5.6.
+13. **Walk the post-upload checks** in section 5.6.
 
 ### 5.2 SQL, in order
 
@@ -250,6 +263,8 @@ is UNVERIFIED, so check them before step 1.
 | 14 | `ALTER TABLE proposals ADD COLUMN accepted_at ..., ADD COLUMN accepted_by ..., ADD COLUMN acceptance_method ..., ADD COLUMN acceptance_reference ..., ADD COLUMN acceptance_received_on ..., ADD COLUMN accepted_terms_sha256 ...;` | 2026-10-18, quote acceptance evidence | Additive. Run once only. Once it runs, accepting a quote **requires** a method, a reference and the date received, and stores who recorded it and the terms fingerprint. Until it runs, accept behaves exactly as before, asks for no evidence and records none (the audit line says so) |
 | 15 | `CREATE TABLE IF NOT EXISTS project_assets (...)` | 2026-10-18, project asset checklist | New table, safe to run twice. After `projects` and `files`; it carries foreign keys to both. Until it runs, `assets.php` answers 503, the project board explains the step and the portal hides the checklist |
 | 16 | `CREATE TABLE IF NOT EXISTS project_briefs (...)` and `CREATE TABLE IF NOT EXISTS project_measurements (...)` | 2026-10-19, project brief and agreed measurements | Two new tables, safe to run twice. After `projects`; both carry a foreign key to it. Until it runs, every `briefs.php` route answers 503 and the project board says "The project brief needs a database update first (SQL 16 in docs/DEPLOYMENT.md)." Staff only: no client screen reads either table |
+| 17 | `ALTER TABLE time_entries ADD COLUMN ticket_id INT NULL DEFAULT NULL AFTER project_id, ADD KEY idx_time_ticket (ticket_id), ADD CONSTRAINT fk_time_ticket FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE SET NULL;` then `ALTER TABLE projects ADD COLUMN kind VARCHAR(20) NULL DEFAULT NULL AFTER stage;` | 2026-10-19, IT support time from tickets | Two statements, in that order. Additive. Run once only; a second run fails on the duplicate column. Needs `tickets` to exist (it does on any install with Support). Until it runs, `support.php?action=log_time` answers 503 naming this step, the ticket view hides "Log time", `time.php` lists `ticket_id` as null, and every existing support, time and portal action works as before |
+| 18 | `ALTER TABLE files ADD COLUMN client_visible TINYINT(1) NOT NULL DEFAULT 0 AFTER expires_at, ADD COLUMN shared_at TIMESTAMP NULL DEFAULT NULL AFTER client_visible;` | 2026-10-19, files shared to the client portal | After SQL 17. Additive. Run once only. Off by default, so nothing already stored becomes visible to a client. Until it runs, `files.php` `client_share`, `mine` and `mine_download` answer 503, the Files screen hides "Visible to client", the portal hides "Shared files", and every existing files action works as before |
 
 No existing data is migrated by any of these statements.
 
@@ -261,14 +276,15 @@ Upload all of them, with `.htaccess`:
 ```
 .htaccess           api.php             cron.php            _bootstrap.php
 _money.php (new)    _ics.php (new)      _like.php (new)     _retention.php (new)
-assets.php (new)    auth.php            blog.php            bookings.php (new)
-briefs.php (new)    clients.php         comms.php           contact.php
-content.php         contracts.php       design.php          dev.php
-feedback.php (new)  files.php           invoices.php        knowledge.php
-leads.php           oauth.php           payments.php        privacy.php (new)
-projects.php        proposals.php       resourcing.php      search.php (new)
-site.php (new)      support.php         tasks.php           testimonials.php
-time.php            today.php (new)     users.php           work.php
+_templates.php (new) _time.php (new)    assets.php (new)    auth.php
+blog.php            bookings.php (new)  briefs.php (new)    clients.php
+comms.php           contact.php         content.php         contracts.php
+design.php          dev.php             feedback.php (new)  files.php
+invoices.php        knowledge.php       leads.php           oauth.php
+payments.php        portal.php          privacy.php (new)   projects.php
+proposals.php       resourcing.php      search.php (new)    site.php (new)
+support.php         tasks.php           testimonials.php    time.php
+today.php (new)     users.php           work.php
 ```
 
 `bookings.php`, `feedback.php` and the timeline change in `clients.php` are the 2026-10-16
@@ -340,6 +356,28 @@ server`) adds `today.php`, `search.php` with `_like.php`, `briefs.php`, and `pri
 
 All the new endpoints are staff or admin only, and none serves the `client` role
 (`docs/SECURITY.md`). The existing `_*.php` deny covers `_like.php` and `_retention.php`.
+
+**The 2026-10-19 third journeys batch** (`029f867..bdca4aa`, from `git diff --name-only
+029f867..HEAD -- server`) adds `_time.php` and `_templates.php`, and changes `support.php`,
+`time.php`, `files.php`, `projects.php`, `portal.php`, `privacy.php` and `schema.sql` (SQL 17
+and 18). No `.htaccess` change: the existing `_*.php` deny covers both new includes. Upload as
+sets:
+
+- **`_time.php` with or before `support.php` and `time.php`** (section 5.1 step 11). Neither
+  requires it at the top, so neither breaks outright, but without it ticket time and the
+  existing `time.php` create answer 503, the ticket detail returns `time: null`, and the time
+  list reports `ticket_id: null`. Delete, approve and reject are unaffected. Then run SQL 17.
+- **`projects.php` with `_templates.php`.** Without `_templates.php` only the two template
+  routes answer 503; list, plain create, status and stage work.
+- **`files.php`** stands alone (no new include). Before SQL 18 `client_share` and both client
+  routes answer 503, the staff list sends `client_visible: null`, and every existing action
+  works. It changes every download the moment it is up (section 5.5). Its client branch is
+  security-critical (`docs/SECURITY.md` section 3).
+- **`portal.php`** stands alone and works before SQL 17: it names the standing project "IT
+  support" once SQL 17 has run, and treats every project as ordinary before. It no longer
+  depends on `_time.php`.
+- **`privacy.php`** stands alone: the export's files rows add `client_visible` and
+  `shared_at` once SQL 18 has run, and fall back to the old columns before.
 
 `site.php` and `work.php` are the 2026-10-14 redesign batch (homepage hero and editable site
 copy). Upload them **after** SQL statements 7 and 8 if you want the new features at once;
@@ -466,6 +504,35 @@ From the second journeys batch (2026-10-19), once its files and SQL 16 are up:
   the labelled gap "[Affiliate disclosure: owner to supply]" until the owner supplies the
   wording (`docs/STATUS.md` section 5).
 
+From the third journeys batch (2026-10-19), once its files and SQL 17 and 18 are up:
+
+- **Every `files.php` download changes headers** as soon as `files.php` is uploaded, before
+  any SQL: `Content-Disposition` carries an ASCII `filename` and a UTF-8 `filename*`, so names
+  with accents or spaces download as typed; every staff and client download, and every
+  expiring share link, sends `Cache-Control: private, no-store`; a share link with no expiry
+  (the Work images and hero screenshots on the public site) sends `public, max-age=86400`, so
+  browsers keep those images for up to a day (`docs/KNOWN-ISSUES.md` K-087). A stored name
+  that is not a plain file name directly inside `uploads/` now answers 404 "File is missing on
+  disk." instead of being read; every name `files.php` has written passes.
+- **Log time on a support ticket** (SQL 17): the first entry for a client creates its standing
+  "IT support" project (in progress, stage support) and puts the time there as a draft for
+  approval on the Time screen, which links it back to `/app/support?ticket=<id>`. A ticket
+  with no client cannot take time (400), and a ticket of a removed client answers 409. The
+  portal shows the project as "IT support", "Ongoing support", with no progress bar.
+- **Files can be shared to a client's portal** (SQL 18): a "Visible to client" switch in Files,
+  only for a file that belongs to exactly one client, and a "Shared files" card in the
+  portal, hidden while nothing is shared.
+- **New project can start from a template**: five work-type templates with a preview. The
+  client checklist is an unticked option, because its items appear in the client's portal at
+  once (K-086).
+- **Unsaved changes prompt before leaving** (client deploy only): the Blog post editor, the New
+  quote and New contract dialogs, Work, Site content and the project Brief sections ask "Leave
+  without saving?" before navigation, closing the tab or switching project. **Cancel on a
+  dirty New quote or New contract dialog now asks first and then discards the fields**; it
+  used to close and keep them silently for next time (K-084).
+- **The privacy export lists `client_visible` and `shared_at`** on each file once SQL 18 has
+  run.
+
 **What staff see in each gap**, if the merge goes first. The rule is `src/lib/notAvailable.ts`:
 a bare 404, the `app-shell.html` page with status 200, a 405, a 503, or the role gate's "Not
 allowed." from an older file all mean "not on the server yet", and the screen says so quietly
@@ -480,6 +547,11 @@ stubbed (`docs/STATUS.md` section 0.3); not seen on the live host.
 | SQL 16 only | "The project brief needs a database update first (SQL 16 in docs/DEPLOYMENT.md)." |
 | `privacy.php` | "The retention report is not available on the server yet." and "Data exports are not available on the server yet.", as a status line or a neutral toast |
 | The new `.htaccess` | No difference to staff: the CMS treats the shell page and the 404 the same way |
+| `_time.php` | No "Log time" on a ticket; Log time on the Time screen fails with "Logging time is not available yet. Upload server/_time.php first." |
+| SQL 17 only | No "Log time" on a ticket; Time entries show no ticket link; the portal shows the standing project, once made, as an ordinary project |
+| The new `support.php` | No "Log time" section on a ticket |
+| `_templates.php` or the new `projects.php` | No "Start from template" in New project; a plain create works |
+| The new `files.php`, or SQL 18 | No "Client portal" column in Files and no "Shared files" card in the portal |
 
 Uploading first and merging later is invisible to staff: the deployed client calls none of
 the new files.
@@ -563,7 +635,28 @@ the new files.
      same report and exits 0 (`docs/OPERATIONS.md` section 2). Over the web, `cron.php?job=retention_report`
      answers 400 even with the key.
    - Record the live PHP version in `docs/STATUS.md` section 3 (section 5.1 step 10).
-15. Do **not** test a real payment or a real send. Stripe behaviour is covered by
+15. After the third journeys batch (its PHP and SQL 17 and 18), from a signed-in staff
+   browser. Nothing here sends a message or moves money, but each save is a real record, so
+   use only real work.
+   - `https://gakinz.com/_time.php` and `/_templates.php` return 403.
+   - Confirm SQL 17 and 18 by the columns (`time_entries.ticket_id`, `projects.kind`,
+     `files.client_visible`, `files.shared_at`), not by a test save.
+   - Time: Log time on the Time screen still saves for a real entry. A 503 naming
+     `_time.php` means the include is missing.
+   - Support: open a real ticket that has a client. The ticket shows "Logged time" and a Log
+     time form; log time only for real work done. The first log creates that client's "IT
+     support" project, and the entry shows on the Time screen as "Ticket #N", linking back.
+   - Projects: New project shows "Start from template" with five templates and a preview.
+     Do not create a template project only to test it. Cancel the dialog.
+   - Files: the "Client portal" column shows "Visible to client". Switch it on only for a file
+     the client should really see.
+   - Downloads: download one existing file as staff and check, in the browser's network panel,
+     `Cache-Control: private, no-store` and a `filename*` in `Content-Disposition`. On the
+     public `/work` page, a Work image's `files.php?token=` response shows `Cache-Control:
+     public, max-age=86400`, and the images still load.
+   - The client side (Shared files card, the "IT support" project in the portal) needs a
+     client account. Check it only with a client the owner agrees to use.
+16. Do **not** test a real payment or a real send. Stripe behaviour is covered by
    `npm run test:server` against a fake provider; a live check needs Stripe test-mode keys on a
    non-production copy.
 

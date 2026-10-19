@@ -203,7 +203,7 @@ set these for the run (they are read by `tests/server/env.ts`; the host must be 
 | `GK_TEST_DB_USER` | the operating-system user | `gakinz_test` |
 | `GK_TEST_DB_PASS` | empty | a local test-only password, never a production one |
 | `GK_TEST_DB` | `gakinz_test` | `gakinz_test` |
-| `GK_TEST_PHP_PORT`, `GK_TEST_PROVIDER_PORT` | `5191`, `5192` | change only to run two suites at once |
+| `GK_TEST_PHP_PORT`, `GK_TEST_PROVIDER_PORT` | `5191`, `5192` | set both when the defaults are taken, or to run two suites at once (for example `5395` and `5396`) |
 
 One-time database user on Ubuntu (run as the MySQL root user; test-only credentials):
 
@@ -214,6 +214,20 @@ GRANT ALL PRIVILEGES ON `%\_test`.* TO 'gakinz_test'@'localhost';
 
 `server/config.php` and every `.env` file stay on the Mac (D-042, GEE OS two-computer rule).
 The tests never read them: they write a synthetic `config.php` into a temporary folder.
+
+**Ports and clean-up (2026-10-19, `tests/server/global-setup.ts`).** Before anything else the
+setup checks that both the PHP port and the fake-provider port are free on `127.0.0.1`. If
+either is busy it stops with "Port N (...) is already in use on 127.0.0.1. Stop whatever
+listens there (lsof ...) or pick another port." Set `GK_TEST_PHP_PORT` and
+`GK_TEST_PROVIDER_PORT` to two free ports and run again; on the Mac another project holds
+5191 and 5192. `php -S` starts in its own process group (it runs with
+`PHP_CLI_SERVER_WORKERS=6`), and teardown signals the whole group, waits up to 5 seconds for
+the port to close, then kills it. The same clean-up runs if setup fails, and on Ctrl-C,
+SIGTERM or the process exiting, so an interrupted run leaves no PHP worker on the port.
+Before this change only the parent was stopped, and the orphaned workers kept answering on
+the port, so a later run on the same port could silently use a stale copy of `server/`. That
+is the most likely cause of the intermittent server-test failures seen during the 2026-10-19
+batches (K-089). To check after a run: `lsof -nP -iTCP:<port> -sTCP:LISTEN` prints nothing.
 
 ## 9. Production acceptance gates
 

@@ -1,6 +1,6 @@
 # Data model
 
-**Status:** current for the tracked schema as at 2026-10-19 (SQL 16). Whether the live database
+**Status:** current for the tracked schema as at 2026-10-19 (SQL 18). Whether the live database
 matches it is **UNVERIFIED**, because no live database was contacted.
 
 Authority: `server/schema.sql`. MySQL or MariaDB, InnoDB, `utf8mb4`; the table count is in
@@ -9,7 +9,7 @@ Authority: `server/schema.sql`. MySQL or MariaDB, InnoDB, `utf8mb4`; the table c
 Not applied to any live database, because they were written into the file and never run:
 `work` and `work_images` (2026-09-22), `payment_events` and the three enquiry follow-up
 columns (2026-10-10), the seven work hero columns and `site_content` (2026-10-14), and every later statement up to
-SQL 16 (2026-10-19). That is not an inference from a failed check; nothing was checked. See
+SQL 18 (2026-10-19). That is not an inference from a failed check; nothing was checked. See
 section 4.
 
 ---
@@ -59,7 +59,7 @@ section 4.
 
 | Table | Purpose | Notes |
 |---|---|---|
-| `projects` | One workspace per client build | `status` is planning, in_progress, on_hold or launched. `stage` is the five-step delivery ladder: discover, design, build, launch, support |
+| `projects` | One workspace per client build | `status` is planning, in_progress, on_hold or launched. `stage` is the five-step delivery ladder: discover, design, build, launch, support. `kind` (VARCHAR 20, 2026-10-19, SQL 17) is NULL on every ordinary project and `it_support` on a client's standing IT support project, which `support.php?action=log_time` creates on the first time logged from one of that client's tickets (status in_progress, stage support, named "IT support"). No unique key: a soft-deleted standing project is not reused, and the one-per-client rule is held by row locks in a transaction. The portal and `files.php?action=mine` always name it "IT support" |
 | `tasks` | Kanban within a project | todo, doing, review, done |
 | `design_reviews` | Figma review rounds | `round` is capped at 2 in `design.php` |
 | `project_dev` | Repository and environment URLs, JSON build checklist | Also holds the monitor results: `last_http_status`, `ssl_days_left`, `last_checked_at` |
@@ -67,7 +67,7 @@ section 4.
 | `project_assets` | What a client must send for a project, added 2026-10-18 (SQL 15) | `project_id` (foreign key, cascades), `label` (VARCHAR 160), `note` (VARCHAR 1000, owner guidance), `status` (requested, supplied, accepted), `client_note` (VARCHAR 1000, the client's note when supplying, kept on reopen), `file_id` (a `files` row on the same project, set by staff only, `ON DELETE SET NULL`), `requested_by` (users.id, no foreign key), `supplied_at`, `accepted_at`, `created_at`, `updated_at`, `deleted_at` (soft delete). A client can only move an item of their own project from requested to supplied; `requested_by` and `file_id` are never returned to a client. At most 100 live items per project, enforced in `assets.php` |
 | `project_briefs` | The small brief inside a project, added 2026-10-19 (SQL 16) | One row per project (`uq_brief_project`; foreign key to `projects`, cascades). Every field optional: `problem`, `intended_users`, `agreed_outcome`, `deliverables`, `exclusions`, `milestones_note`, `open_decisions`, `handover_checklist`, `support_boundaries` (TEXT, caps of 1000 to 4000 characters enforced in `briefs.php`), `quote_reference` (VARCHAR 120), `next_action` (VARCHAR 500), `completion_ack_on` (DATE), `completion_ack_note` (VARCHAR 1000), `updated_by` (users.id, no foreign key), `created_at`, `updated_at`. Staff only; no client route reads it |
 | `project_measurements` | Agreed measurements with dated evidence, added 2026-10-19 (SQL 16) | `project_id` (foreign key, cascades), `label` (VARCHAR 200, required), `target`, `baseline`, `actual` (VARCHAR 500), `result` (`PASS`, `FAIL`, `PARTIAL`, `NOT TESTED`, the default), `measured_on` (DATE), `environment` (VARCHAR 200), `method` (VARCHAR 1000), `evidence_location` (VARCHAR 500, a non-sensitive link or file name), `kind` (`technical`, the default, or `business`), `observation_window` (VARCHAR 200, business only), `created_by`, `created_at`, `updated_at`, `deleted_at` (soft delete). At most 50 live rows per project, enforced in `briefs.php`. Staff only |
-| `time_entries` | Billable and non-billable minutes | `status` is draft, approved or rejected |
+| `time_entries` | Billable and non-billable minutes | `status` is draft, approved or rejected. `ticket_id` (INT, 2026-10-19, SQL 17, key `idx_time_ticket`, foreign key `fk_time_ticket` to `tickets`, `ON DELETE SET NULL`) is the support ticket the time was logged from, NULL on every other entry; deleting a ticket keeps its time and clears the link. In `schema.sql` the `tickets` and `ticket_replies` tables now come before `time_entries`, so a fresh install can create the key |
 | `leave_entries` | Holiday, sick and other leave | Capacity itself is derived live from `time_entries`, so there is no committed-hours table |
 
 ### Money
@@ -84,7 +84,7 @@ section 4.
 |---|---|---|
 | `tickets`, `ticket_replies` | Support, and since 2026-10-10 client messages | status open, in_progress, resolved; priority urgent, high, normal, low. A client-created ticket takes `client_id` from the token and priority `normal`. `ticket_replies` has no internal-note flag, so every reply is client facing |
 | `comm_threads`, `comm_messages` | Conversation log tied to a client or project | `channel` is email, sms, whatsapp, call, meeting, client or internal. `direction` is out, in or note. Most messages are **recorded**, not sent. Email, SMS and WhatsApp can genuinely send |
-| `files` | File metadata | Binary lives on disk under `server/uploads/`, which is gitignored. Optional `share_token`, expiring when issued by `files.php?action=share` and **non-expiring** when issued by `work.php?action=addImage`. See section 7 |
+| `files` | File metadata | Binary lives on disk under `server/uploads/`, which is gitignored. Optional `share_token`, expiring when issued by `files.php?action=share` and **non-expiring** when issued by `work.php?action=addImage`. See section 7. `client_visible` (TINYINT 1, default 0) and `shared_at` (TIMESTAMP, null) were added 2026-10-19 (SQL 18): staff switch a file on for the client's portal with `files.php?action=client_share`, and `shared_at` keeps the first time it was shown (cleared when hidden). Off by default, so nothing already stored becomes visible. This is separate from `share_token`: a visible file is still reached only by its client, signed in |
 | `client_feedback` | Private delivery feedback, added 2026-10-16 | `client_id`, optional `project_id` (must belong to that client), `source` (portal or owner), optional `rating` 1 to 5, `went_well`, `could_improve`, `follow_up_ok`. `may_publish` is the client's separate permission to quote it and defaults to 0; `attribution` is kept only with it. `follow_up` (new, following_up, closed) and `owner_note` are the owner's. **Never returned to any client**, not even its author |
 | `certificates` | Publicly verifiable certificates | `public_id` is the reference used by `/verify/:id`. `revoked_at` hides a revoked one |
 
@@ -153,6 +153,8 @@ users.client_id  ->  clients.id  ->  projects.client_id
                                  ->  client_feedback.client_id   (write only for a client)
                                  ->  bookings.client_id          (a client's own portal requests)
                      projects.id ->  project_assets.project_id   (read, and supply only, for a client)
+                     projects.id ->  files.project_id             (read only, files marked client_visible)
+                                 ->  files.client_id              (read only, files with no project)
 ```
 
 `portal.php` derives `client_id` from the authenticated token whenever the role is `client`
@@ -167,7 +169,12 @@ feedback to a client. Since 2026-10-18 three more client branches exist, each ta
 `bookings.php` `request`, `mine` and `mine_ics` (only bookings for that client created by a
 `client` user of that client; a client reads status and time, never notes, location or
 outcome), and `assets.php` `mine` and `supply` (only items on that client's live projects,
-with the client scope repeated in the write). Every other resource endpoint is staff only.
+with the client scope repeated in the write). Since 2026-10-19 `files.php` `mine` and
+`mine_download` serve a client too (SQL 18), with `client_id` from the token only: a file
+reaches a client when it is `client_visible`, not deleted, and either attached to one of that
+client's live projects (naming no client or the same client) or attached to that client with no
+project. Anything else answers 404, exactly as a missing file. Every other resource endpoint
+is staff only.
 
 ## 4. Migrations
 
@@ -202,10 +209,12 @@ Outstanding statements, grouped as they appear in the file:
 | Acceptance evidence, 2026-10-18 (SQL 14) | `ALTER TABLE proposals ADD COLUMN accepted_at`, `accepted_by`, `acceptance_method`, `acceptance_reference`, `acceptance_received_on`, `accepted_terms_sha256`. Run once |
 | Asset checklist, 2026-10-18 (SQL 15) | `CREATE TABLE IF NOT EXISTS project_assets`. Safe to run twice |
 | Project brief and measurements, 2026-10-19 (SQL 16) | `CREATE TABLE IF NOT EXISTS project_briefs`, then `project_measurements`. New tables only, safe to run twice |
+| IT support time from tickets, 2026-10-19 (SQL 17) | `ALTER TABLE time_entries ADD COLUMN ticket_id` with `idx_time_ticket` and `fk_time_ticket`, then `ALTER TABLE projects ADD COLUMN kind`. Run once; a second run fails on the duplicate column |
+| Files shared to the client portal, 2026-10-19 (SQL 18) | `ALTER TABLE files ADD COLUMN client_visible`, `shared_at`. Run once; a second run fails on the duplicate column |
 
 Which of the older statements have already been applied to the live database is
 **UNVERIFIED**. The 2026-09-22, 2026-10-10 and 2026-10-14 groups are known **not** to have been applied by
-this work, nor have the 2026-10-16 tables, the 2026-10-18 statements or SQL 16, because no database has been contacted since they were written. Their order is in
+this work, nor have the 2026-10-16 tables, the 2026-10-18 statements or SQL 16 to 18, because no database has been contacted since they were written. Their order is in
 `docs/DEPLOYMENT.md` section 5.2.
 
 **The unique key has a precondition.** `files.share_token` currently has no unique
@@ -284,6 +293,17 @@ section `unavailable` when its table or column is missing (tested with `project_
 dropped, `tests/server/today.test.ts`), `search.php` marks a type `unavailable` (tested with
 `proposals` renamed), and the privacy export lists missing tables under `unavailable`.
 
+**SQL 17 and 18 degrade too.** Without the SQL 17 columns, `support.php?action=log_time`
+answers 503 naming the step, the staff ticket detail returns `time: null` (the screen hides
+"Log time"), `time.php` lists `ticket_id` as NULL, and the portal, `files.php?action=mine` and
+the client's update request treat every project as ordinary (error 1054 is caught by a probe in
+each file). Without the SQL 18 columns, `files.php` `client_share`, `mine` and `mine_download`
+answer 503, the staff list sends `client_visible: null` (the Files screen hides the switch),
+the portal hides the Shared files card, and the privacy export lists files without the two
+columns. All of these are tested against a real database with the columns dropped
+(`tests/server/ticket-time.test.ts`, `tests/server/portal-files.test.ts`,
+`tests/server/privacy.test.ts`).
+
 ## 7. Files, share tokens and what stays public
 
 Worth reading before attaching an image to a work record, and before deleting one.
@@ -313,3 +333,14 @@ Three consequences follow from the data model rather than from the code:
 
 Two audit actions record token issuance: `file_share_permanent` and
 `file_share_expiry_cleared`. Both are searchable in the Audit module.
+
+Since 2026-10-19 a link with no expiry (in practice a Work image or hero screenshot) is sent
+with `Cache-Control: public, max-age=86400`, so browsers and any shared cache may keep it for a
+day; an expiring link, a staff download and a client download send `private, no-store`. So a
+file that changes behind the same permanent token can be served stale for up to a day, and a
+copy already cached can outlive revoking the token or deleting the file by as long
+(`docs/KNOWN-ISSUES.md` K-087).
+
+`files.client_visible` (SQL 18) is a different kind of sharing: it lists the file in the
+client's own portal, behind sign-in, and issues no token. Setting it audits
+`file_client_share` when the value changes.

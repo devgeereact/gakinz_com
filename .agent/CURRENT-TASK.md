@@ -5,8 +5,9 @@
 The client journeys work of 2026-10-18 to 2026-10-19 is built, tested locally and documented
 on `feat/journeys-2026-10-18`, in two batches: 43 commits on `audit/readiness-2026-10-17` at
 `8499761` (PR #20), then a second batch of 53 commits from `6789b47` to `def1909` (PR #21),
-each with its documentation commits. **Not merged, deployed or uploaded.** SQL 13 to 16 have
-run only on the throwaway test database.
+then a third batch of 39 commits from `029f867` to `bdca4aa` on the same branch, each with its
+documentation commits. **Not merged, deployed or uploaded.** SQL 13 to 18 have run only on the
+throwaway test database.
 
 The branch stack is now: `main` <- `feat/plan-2026-batch-1` (PR #8) <- `feat/redesign-2026` <-
 `audit/readiness-2026-10-17` (PR #20) <- `feat/journeys-2026-10-18`. Merge in that order, and
@@ -69,6 +70,56 @@ K-067, new K-074 to K-082), `docs/DEPLOYMENT.md` section 5, `docs/DATA-MODEL.md`
 `docs/OPERATIONS.md` section 2, `docs/PRODUCT-SPEC.md` section 7, `docs/ARCHITECTURE.md`,
 `server/README.md`, `CLAUDE.md`.
 
+### Done in the third batch (2026-10-19, `029f867..bdca4aa`)
+
+Server (upload by hand; `docs/DEPLOYMENT.md` section 5.3):
+
+- `_time.php` (new) with `support.php` and `time.php`: `support.php?action=log_time` (staff,
+  not trainer) logs ticket time onto the client's standing "IT support" project, made once
+  (SQL 17: `time_entries.ticket_id`, `projects.kind`). **Upload `_time.php` with or before
+  `support.php` and `time.php`**, or time logging answers 503, the Time screen included.
+- `files.php`: `client_share`, and the client routes `mine` and `mine_download` (SQL 18:
+  `files.client_visible`, `files.shared_at`), security-critical. Every download now uses one
+  hardened path: plain stored names only, `realpath` inside `uploads/`, `filename*` with an
+  ASCII fallback, `private, no-store`, except `public, max-age=86400` for a never-expiring
+  share link (K-087).
+- `projects.php` with `_templates.php` (new): five work-type templates, the client checklist
+  opt-in (K-086). Without `_templates.php` only the template routes answer 503.
+- `portal.php`: the standing project shows as "IT support". `privacy.php`: the export's file
+  rows add `client_visible` and `shared_at`.
+- `schema.sql`: SQL 17 and 18 at the foot.
+
+Client: Log time and Logged time on a ticket, `/app/support?ticket=<id>`, "Ticket #N" on the
+Time screen; "IT support" and a "Shared files" card in the portal; "Visible to client" in
+Files; "Start from template" with a preview in New project; "Leave without saving?" on the
+Blog post editor, New quote, New contract, Work, Site content and the Brief sections (K-083,
+K-084). Test harness: busy-port refusal and process-group clean-up (K-089).
+
+Documents: `docs/STATUS.md` (sections 0, 0.4, 2, 3, 4, 5), `docs/KNOWN-ISSUES.md` (K-067,
+new K-083 to K-089), `docs/DEPLOYMENT.md` section 5, `docs/DATA-MODEL.md`,
+`docs/API-SPEC.md`, `docs/SECURITY.md`, `docs/OPERATIONS.md` section 8,
+`docs/PRIVACY-READINESS.md`, `docs/PRODUCT-SPEC.md` sections 5.6 and 7, `CLAUDE.md`.
+
+### Verification status, third batch, 2026-10-19 (Mac, `bdca4aa`)
+
+- `npx tsc -b`: PASS. `npm run build`: PASS at `af151cb` and at `bdca4aa` for the browser
+  check (30 public pages prerendered); not re-run for the documentation commit.
+- `npm test`: PASS, 395 tests in 34 files.
+- `GK_TEST_DB=gakinz_docs3_test GK_TEST_PHP_PORT=5395 GK_TEST_PROVIDER_PORT=5396 npm run test:server`:
+  PASS, 398 tests in 29 files, on the rerun. The first run failed 1 of 398, a `beforeEach`
+  timeout in `blog.test.ts` under a load average of about 25; the file alone passed 4 of 4.
+- `npm run lint:ratchet`: PASS at 33 errors, 0 warnings. `npm run lint`: FAIL (K-002).
+- `php -l` over 59 server files (PHP 8.5.10): PASS. `npm run docs:check -- --base 029f867`
+  and `-- --base audit/readiness-2026-10-17`: PASS.
+- Production build in a browser with every `*.php` stubbed and off-origin requests aborted:
+  Support Log time and the Time link, the portal's IT support project and Shared files, the
+  Files switch, Start from template and the Brief draft guard, at 1440 and 390px, light and
+  dark: PASS. axe: 0 violations except an older unnamed Client select in New project (K-088).
+- NOT TESTED: the live server and database, SQL 17 and 18 on the host, a real sign-in, real
+  data, a real client download, browser Back and tab close with the draft guard, the guard on
+  the other five screens in a browser, share-link caching behind Cloudflare, real assistive
+  technology.
+
 ### Verification status, second batch, 2026-10-19 (Mac, `def1909`)
 
 - `npx tsc -b`, `npm run build` (30 public pages and `app-shell.html` prerendered): PASS.
@@ -108,13 +159,21 @@ K-067, new K-074 to K-082), `docs/DEPLOYMENT.md` section 5, `docs/DATA-MODEL.md`
 
 ## Next actions, in order
 
-1. **Owner review of PR #21** (the second batch on `feat/journeys-2026-10-18`). An agent does
-   not merge.
+1. **Owner review of PR #21** (the second and third batches on `feat/journeys-2026-10-18`).
+   An agent does not merge.
 2. **Operator order for the second batch** (`docs/DEPLOYMENT.md` section 5.1 step 10): read and
    record the live PHP version (8.1 or later expected; K-082, K-068), upload `today.php`,
    `search.php` with `_like.php`, `briefs.php`, `privacy.php` with `_retention.php` and
    `cron.php`, and the new `.htaccess`; run SQL 16; then merge. Walk section 5.6 check 14,
    including `curl -sI` on a missing `.php` (expect 404).
+   **Then the third batch** (section 5.1 step 11): upload `_time.php` with or before
+   `support.php` and `time.php`, `projects.php` with `_templates.php`, and `files.php`,
+   `portal.php` and `privacy.php`; run SQL 17, then SQL 18; then merge. Walk section 5.6
+   check 15, with no real send and only real records. The whole SQL run for this branch is
+   13 to 18, in order, after anything earlier in section 5.2 that is not yet live.
+   **Owner decisions from the third batch** (`docs/STATUS.md` section 5): review the five
+   templates' wording before using them with a client (K-086), and whether ticket time should
+   start as billable.
 3. **Owner decisions** raised by the second batch (`docs/STATUS.md` section 5): the retention
    periods for the nine `$RETENTION_*` keys and the erasure procedure (K-062); whether staff
    notes about a client go into a subject access export (K-079); the affiliate disclosure
@@ -136,9 +195,10 @@ K-067, new K-074 to K-082), `docs/DEPLOYMENT.md` section 5, `docs/DATA-MODEL.md`
 7. **Operator, P0** (`docs/STATUS.md` section 3): confirm sessions revoked after the K-001
    rotation, delete the seed-password file and check the PHP error log (K-015, K-061), record
    what is live on the server (K-006), restore a backup (K-010).
-8. **Operator, upload** (`docs/DEPLOYMENT.md` section 5): SQL 1 to 16 as needed, then the PHP
+8. **Operator, upload** (`docs/DEPLOYMENT.md` section 5): SQL 1 to 18 as needed, then the PHP
    set with `.htaccess`, keeping `_bootstrap.php`, `auth.php`, `oauth.php` and `users.php`
-   together and `bookings.php` with `_ics.php`, and `_money.php` present for `invoices.php`;
+   together and `bookings.php` with `_ics.php`, `_money.php` present for `invoices.php`,
+   `_time.php` with `support.php` and `time.php`, and `_templates.php` with `projects.php`;
    change the cPanel cron entry to the command-line form; run the post-upload checks in
    section 5.6, with no real payment and no real send.
 9. **Owner test** on real data (K-044, K-055), recorded in `docs/STATUS.md`.
@@ -148,7 +208,8 @@ K-067, new K-074 to K-082), `docs/DEPLOYMENT.md` section 5, `docs/DATA-MODEL.md`
 12. Afterwards: the server time zone (K-067, K-075), header link contrast over the hero (K-069), a
    client upload path for assets (K-072), `requested_at` for asset waits (K-074), a quote
    detail view (K-077), deep-link misses (K-078), the retention job (K-062), certificate ID length
-   and throttle (K-061), `/sectors` keep-or-fold (K-066).
+   and throttle (K-061), `/sectors` keep-or-fold (K-066), the rest of the draft guard (K-083),
+   the unnamed Client select in New project (K-088).
 
 ## Resume on another computer
 
@@ -156,14 +217,15 @@ K-067, new K-074 to K-082), `docs/DEPLOYMENT.md` section 5, `docs/DATA-MODEL.md`
    (the branch is pushed to origin). This branch holds everything in `audit/readiness-2026-10-17` plus the
    journeys batch.
 2. `npm ci` (Node 22 or newer).
-3. Read `docs/STATUS.md` (sections 0.1, 0.2, 0.3, 3 and 5) and `docs/KNOWN-ISSUES.md` K-056 to K-082,
+3. Read `docs/STATUS.md` (sections 0.1 to 0.4, 3 and 5) and `docs/KNOWN-ISSUES.md` K-056 to K-089,
    then this file and `docs/PRIVACY-READINESS.md`.
 4. Baseline: `npm run typecheck`, `npm test`, `npm run build`, `npm run lint:ratchet`,
    `npm run docs:check`; for server work, `npm run test:server` against a local `*_test`
    database (`docs/OPERATIONS.md` section 8). On the Mac run it with
    its own `GK_TEST_DB` and free ports, for example
    `GK_TEST_DB=gakinz_docs_test GK_TEST_PHP_PORT=5309 GK_TEST_PROVIDER_PORT=5310`, because
-   ports 5191 and 5192 are taken there.
+   ports 5191 and 5192 are taken there. Since 2026-10-19 the suite refuses a busy port with a
+   message naming it, and stops its PHP workers when it ends or is interrupted.
 5. `npm run dev` talks to the live API: any save is real. For browser checks use `npm run build`
    and `npx vite preview`, whose relative API paths reach no server, and stub the calls.
 6. New work goes on a new branch from `feat/journeys-2026-10-18`, one concern per commit,
@@ -213,7 +275,8 @@ agent write runs through the dev server.
   one way this set can break sign-in.
 - `bookings.php` without `_ics.php` breaks the calendar download; `invoices.php` without
   `_money.php` breaks every invoice action; `search.php` without `_like.php` breaks record
-  search; `privacy.php` without `_retention.php` breaks the retention report.
+  search; `privacy.php` without `_retention.php` breaks the retention report; `time.php`
+  without `_time.php` stops Log time on the Time screen (503).
 - Required decisions: the parked owner answers, the P0 operator actions, and the go-ahead to
   merge after the owner test.
 

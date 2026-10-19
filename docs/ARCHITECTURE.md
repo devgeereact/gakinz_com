@@ -152,11 +152,11 @@ sections 10 and 11.
 
 ## 3. Server
 
-PHP files in `server/`, one per resource. Nine are shared includes with no route of their own,
+PHP files in `server/`, one per resource. Eleven are shared includes with no route of their own,
 all denied to direct requests by `.htaccess` (K-013). `work.php` was added on 2026-09-22,
 `_money.php` on 2026-10-10, `site.php` on 2026-10-14, `assets.php` and `_ics.php` on
-2026-10-18, and `today.php`, `search.php`, `briefs.php`, `privacy.php`, `_like.php` and
-`_retention.php` on 2026-10-19.
+2026-10-18, and `today.php`, `search.php`, `briefs.php`, `privacy.php`, `_like.php`,
+`_retention.php`, `_time.php` and `_templates.php` on 2026-10-19.
 
 | Include | Role |
 |---|---|
@@ -169,6 +169,8 @@ all denied to direct requests by `.htaccess` (K-013). `work.php` was added on 20
 | `_ics.php` | RFC 5545 calendar file for a confirmed call, used by `bookings.php` |
 | `_like.php` | Literal substring matching for `LIKE` with `!` as the escape, used by `search.php` |
 | `_retention.php` | The read-only retention dry run, used by `privacy.php` and `cron.php job=retention_report` |
+| `_time.php` | The time entry rules (minutes, description, billable, date) and the SQL 17 probe, loaded on first use by `time.php` and `support.php` |
+| `_templates.php` | The five project templates as pure data, loaded on first use by the two template routes of `projects.php` |
 
 Every routed endpoint follows the same shape: require the bootstrap, read
 `$_SERVER['REQUEST_METHOD']` and `$_GET['action']`, call `require_auth($conn, ROLES)`, use
@@ -280,6 +282,18 @@ need SQL 7 and 8 and the upload in `docs/DEPLOYMENT.md` section 5.
 | Site content | One `site_content` row per section with a draft and a published copy; the public read returns published copy only | `server/site.php`, `src/app/modules/Site.tsx`, `siteContentModel.ts`, `siteContent` in `api.ts` |
 | CMS shell and screens | Graphite sidebar in both themes, new header, `AuthFrame` sign-in pages, a page kit shared by every screen | `src/layouts/AppLayout.tsx`, `src/components/app-sidebar.tsx`, `src/app/components/AuthFrame.tsx`, `src/app/components/page-kit.tsx` |
 | Enquiries | Drag and drop between stages, through the existing `move()` | `src/app/modules/Leads.tsx` |
+
+### Client journeys, third batch, 2026-10-19
+
+On the same branch (`029f867..bdca4aa`); not merged, deployed or uploaded. The server files
+need SQL 17 and 18 and the upload in `docs/DEPLOYMENT.md` section 5.
+
+| Area | Shape | Where |
+|---|---|---|
+| IT support time | Ticket time goes onto one standing project per client, found or made under row locks in one transaction; no new module | `server/support.php`, `server/_time.php`, `server/time.php`, `Support.tsx`, `Time.tsx`, `supportLink` in `deepLink.ts` |
+| Portal shared files | A visibility flag on `files` and a client branch in `files.php`; one download path for every caller | `server/files.php`, `Files.tsx`, `src/app/components/PortalFiles.tsx`, `portalFiles` in `api.ts` |
+| Project templates | Templates live only in PHP and reach the CMS through a route, so the two cannot drift | `server/projects.php`, `server/_templates.php`, `Projects.tsx`, `projectTemplateModel.ts` |
+| Draft protection | One hook per page: `beforeunload`, the router's `useBlocker`, and a request-to-leave for dialogs, over a structural dirty check | `src/hooks/use-unsaved-guard.ts`, `src/lib/dirty-model.ts`, `src/lib/unsaved-guard-model.ts`, `src/components/unsaved-guard-dialog.tsx` |
 
 ### Client journeys, second batch, 2026-10-19
 

@@ -1,7 +1,7 @@
 # Status
 
-**As at:** 2026-10-19 (sections 0, 0.2 and 0.3); 2026-10-17 (section 0.1); otherwise 2026-10-14. `main` is `c57eb4a`. All later work sits on branches stacked into
-PR #8. The newest is `feat/journeys-2026-10-18` (sections 0.2 and 0.3, PR #21), stacked on
+**As at:** 2026-10-19 (sections 0, 0.2, 0.3 and 0.4); 2026-10-17 (section 0.1); otherwise 2026-10-14. `main` is `c57eb4a`. All later work sits on branches stacked into
+PR #8. The newest is `feat/journeys-2026-10-18` (sections 0.2, 0.3 and 0.4, PR #21), stacked on
 `audit/readiness-2026-10-17` (PR #20), not merged, deployed or uploaded. `feat/plan-2026-batch-1` (PR #8) holds batch 1 (the local half of delivery phase 1), the
 seven-destination navigation, My account, enquiry follow-ups, client portal messages, public
 publishing and the article format, the lock-screen token fix, the D-037 public redesign, the
@@ -24,27 +24,28 @@ unless someone with server access has checked it.
 
 ## 0. Current measurements
 
-Re-measured on 2026-10-19 on the Mac on `feat/journeys-2026-10-18` at `def1909` (the end of
-the second batch, section 0.3), except where a row names another date or computer. Re-measure and update this table when a count changes.
+Re-measured on 2026-10-19 on the Mac on `feat/journeys-2026-10-18` at `bdca4aa` (the end of
+the third batch, section 0.4), except where a row names another date or computer. Re-measure and update this table when a count changes.
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 355 tests in 30 files on 2026-10-19 at `def1909` (second batch: `todayModel`, `recordSearchModel`, `projectBriefModel`, `privacyToolsModel`, `deepLink`, `notAvailable`, `download-name`, `ArticleBody` and `articleRecommend` added). Before that 239 tests in 21 files on 2026-10-19 (`feat/journeys-2026-10-18`: `paymentModel`, `acceptanceModel`, `portalRequestsModel`, `assetChecklistModel` and `scripts/head-assets.test.mjs` added; the final-review fixes added 16 cases for when a portal route counts as not available yet). Before that 179 tests in 16 files on 2026-10-17 (`audit/readiness-2026-10-17`: `api-errors.test.ts` and `blog-date.test.ts` added). Before that 171 in 14 files (2026-10-16, after merging `feat/generated-sitemap` and `feat/bookings-timeline-feedback`: 15 added for the page metadata checks and the sitemap, 13 in `bookingModel.test.ts`) |
-| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 340 tests in 26 files on 2026-10-19 at `def1909` on the Mac, run as `GK_TEST_DB=gakinz_docs_test GK_TEST_PHP_PORT=5309 GK_TEST_PROVIDER_PORT=5310 npm run test:server` because ports 5191 and 5192 belong to another project there (second batch: `today`, `search`, `project-briefs` and `privacy` added). Before that 275 tests in 22 files the same day on ports 5291 and 5292 (`manual-payment`, `acceptance-evidence`, `portal-requests`, `project-assets` and `booking-ics` added). Before that 184 tests in 17 files on 2026-10-17 on the Mac (20 added: `security-hardening.test.ts`, `cron-prune.test.ts`, `token-hashing.test.ts`, and new cases in `work`, `proposals` and `payments`). Before that 164 tests in 14 files, 2026-10-16 on local MariaDB 10.11, `feat/bookings-timeline-feedback` (24 added in `bookings.test.ts` and `feedback.test.ts`) |
+| Unit tests | `npm test` | **PASS.** 395 tests in 34 files on 2026-10-19 at `bdca4aa` (third batch: `projectTemplateModel`, `dirty-model`, `unsaved-guard-model` and `download-type` added, with new cases in `deepLink`, `format` and `download-name`). Before that 355 tests in 30 files on 2026-10-19 at `def1909` (second batch: `todayModel`, `recordSearchModel`, `projectBriefModel`, `privacyToolsModel`, `deepLink`, `notAvailable`, `download-name`, `ArticleBody` and `articleRecommend` added). Before that 239 tests in 21 files on 2026-10-19 (`feat/journeys-2026-10-18`: `paymentModel`, `acceptanceModel`, `portalRequestsModel`, `assetChecklistModel` and `scripts/head-assets.test.mjs` added; the final-review fixes added 16 cases for when a portal route counts as not available yet). Before that 179 tests in 16 files on 2026-10-17 (`audit/readiness-2026-10-17`: `api-errors.test.ts` and `blog-date.test.ts` added). Before that 171 in 14 files (2026-10-16, after merging `feat/generated-sitemap` and `feat/bookings-timeline-feedback`: 15 added for the page metadata checks and the sitemap, 13 in `bookingModel.test.ts`) |
+| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 398 tests in 29 files on 2026-10-19 at `bdca4aa` on the Mac, run as `GK_TEST_DB=gakinz_docs3_test GK_TEST_PHP_PORT=5395 GK_TEST_PROVIDER_PORT=5396 npm run test:server` (third batch: `ticket-time`, `portal-files` and `project-templates` added, with new cases in `privacy`). The first full run that day failed 1 of 398: a 60-second `beforeEach` timeout in `blog.test.ts` while the machine's load average was about 25 (949 s run); `blog.test.ts` alone then passed 4 of 4, and the full rerun passed 398 of 398 in 338 s with no PHP listener left on either port. Before that 340 tests in 26 files on 2026-10-19 at `def1909` on the Mac, run as `GK_TEST_DB=gakinz_docs_test GK_TEST_PHP_PORT=5309 GK_TEST_PROVIDER_PORT=5310 npm run test:server` because ports 5191 and 5192 belong to another project there (second batch: `today`, `search`, `project-briefs` and `privacy` added). Before that 275 tests in 22 files the same day on ports 5291 and 5292 (`manual-payment`, `acceptance-evidence`, `portal-requests`, `project-assets` and `booking-ics` added). Before that 184 tests in 17 files on 2026-10-17 on the Mac (20 added: `security-hardening.test.ts`, `cron-prune.test.ts`, `token-hashing.test.ts`, and new cases in `work`, `proposals` and `payments`). Before that 164 tests in 14 files, 2026-10-16 on local MariaDB 10.11, `feat/bookings-timeline-feedback` (24 added in `bookings.test.ts` and `feedback.test.ts`) |
 | Type check | `npx tsc -b` | **PASS** |
-| Build | `npm run build` | **PASS.** 30 public pages and `app-shell.html` prerendered, `sitemap.xml` with 30 URLs (re-measured 2026-10-19 at `def1909`; first 2026-10-16, `feat/generated-sitemap`) |
-| Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 33 errors, 0 warnings on 2026-10-19 at `def1909`, all `react-hooks/set-state-in-effect`; the ceiling in `scripts/lint-ratchet.mjs` was lowered from 41 and 1. **`npm run lint` still fails** (K-002) |
-| Documentation | `npm run docs:check` | **PASS.** 26 documents (re-checked 2026-10-19; `docs/PRIVACY-READINESS.md` added 2026-10-17). With `-- --base audit/readiness-2026-10-17` the sync rule also passes for this branch |
-| PHP files | `ls server/*.php \| wc -l`, then `php -l server/*.php` | 57: 48 endpoints and 9 `_`-prefixed includes, all 57 passing `php -l` (PHP 8.5.10) on 2026-10-19 at `def1909` (`today.php`, `search.php`, `briefs.php`, `privacy.php`, `_like.php` and `_retention.php` added 2026-10-19; `assets.php` and `_ics.php` 2026-10-18; `bookings.php` and `feedback.php` 2026-10-16) |
+| Build | `npm run build` | **PASS.** 30 public pages and `app-shell.html` prerendered, `sitemap.xml` with 30 URLs (2026-10-19: at `af151cb` and again at `bdca4aa` for the batch 3 browser check, not re-run for the documentation commit; first 2026-10-16, `feat/generated-sitemap`) |
+| Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 33 errors, 0 warnings on 2026-10-19 at `bdca4aa`, all `react-hooks/set-state-in-effect`; the ceiling in `scripts/lint-ratchet.mjs` was lowered from 41 and 1. **`npm run lint` still fails** (K-002) |
+| Documentation | `npm run docs:check` | **PASS.** 26 documents (re-checked 2026-10-19 at `bdca4aa` with the third batch's documents; `docs/PRIVACY-READINESS.md` added 2026-10-17). With `-- --base audit/readiness-2026-10-17` and with `-- --base 029f867` the sync rule also passes for this branch |
+| PHP files | `ls server/*.php \| wc -l`, then `php -l server/*.php` | 59: 48 endpoints and 11 `_`-prefixed includes, all 59 passing `php -l` (PHP 8.5.10) on 2026-10-19 at `bdca4aa` (`_time.php` and `_templates.php` added in the third batch; `today.php`, `search.php`, `briefs.php`, `privacy.php`, `_like.php` and `_retention.php` added 2026-10-19; `assets.php` and `_ics.php` 2026-10-18; `bookings.php` and `feedback.php` 2026-10-16) |
 | Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 41 (`project_briefs` and `project_measurements` added 2026-10-19, SQL 16; `project_assets` 2026-10-18; `bookings`, `booking_events`, `client_feedback` 2026-10-16) |
 | Public routes | `src/routes/index.tsx`, children of `PublicLayout` | 17: the home page, 15 paths and the 404. Outside the layout: `/login`, `/set-password` and `/p/:token` |
 | CMS screens | `src/routes/index.tsx` under `/app` | 26: Today (the index), 24 module routes and My account, in seven navigation groups (Site content added 2026-10-14) |
-| Client API groups | `grep -cE "^export const [a-zA-Z]+ *= *\{" src/lib/api.ts` | 45 exported groups over one `request()` helper (`today`, `recordSearch`, `projectBriefs` and `privacy` added 2026-10-19; `portalRequests` and `projectAssets` 2026-10-18; `bookings` and `feedback` 2026-10-16) |
-| Server files changed since `main` | `git diff --name-only c57eb4a -- server` | 39 PHP files, `.htaccess`, `schema.sql`, `README.md` and `config.php.example` (2026-10-19, `def1909`); the upload list is `docs/DEPLOYMENT.md` section 5 |
+| Client API groups | `grep -cE "^export const [a-zA-Z]+ *= *\{" src/lib/api.ts` | 46 exported groups over one `request()` helper (`portalFiles` added 2026-10-19 in the third batch; `today`, `recordSearch`, `projectBriefs` and `privacy` added 2026-10-19; `portalRequests` and `projectAssets` 2026-10-18; `bookings` and `feedback` 2026-10-16) |
+| Server files changed since `main` | `git diff --name-only c57eb4a -- server` | 42 PHP files, `.htaccess`, `schema.sql`, `README.md` and `config.php.example` (2026-10-19, `bdca4aa`); the upload list is `docs/DEPLOYMENT.md` section 5 |
 | Server files changed by the journeys batch | `git diff --name-only 8499761..6789b47 -- server` | `_ics.php` (new), `assets.php` (new), `bookings.php`, `invoices.php`, `proposals.php`, `support.php`, `schema.sql` |
 | Server files changed by the second journeys batch | `git diff --name-only 6789b47..def1909 -- server` | `today.php`, `search.php`, `_like.php`, `briefs.php`, `privacy.php`, `_retention.php` (all new), `cron.php`, `.htaccess`, `config.php.example`, `schema.sql` |
+| Server files changed by the third journeys batch | `git diff --name-only 029f867..bdca4aa -- server` | `_time.php`, `_templates.php` (both new), `support.php`, `time.php`, `files.php`, `projects.php`, `portal.php`, `privacy.php`, `schema.sql` |
 | Server files changed by the redesign | `git diff --stat origin/feat/plan-2026-batch-1...origin/feat/redesign-2026 -- server` | `site.php` (new), `work.php`, `schema.sql`, `README.md` |
-| `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 43 of 57 files, 156 call sites (2026-10-19, `def1909`) |
+| `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 43 of 59 files, 160 call sites (2026-10-19, `bdca4aa`); the two new includes call none |
 
 Not measured on this run: `npm audit` (last figure in K-041) and anything on the live system.
 Accessibility and performance were re-measured on the D-046 build on 2026-10-16, locally; see
@@ -137,6 +138,40 @@ and call deep links from Today, server-rendered output of a CMS post with a reco
 block, PHP before 8.1 (K-082), the `.htaccess` rule on the host's LiteSpeed and behind Cloudflare, and real assistive
 technology. The live PHP version is UNVERIFIED.
 
+## 0.4 Client journeys, third batch, 2026-10-19
+
+On `feat/journeys-2026-10-18` (the branch of PR #21), 39 commits from `029f867` to `bdca4aa`,
+on the Mac. Pushed to origin, not merged, deployed or uploaded; SQL 17 and 18 have run only on
+the throwaway test database. Same method as section 0.3: each task test
+first and reviewed, fix rounds, a final review, a fix wave and its re-review, then a browser
+check of a production build with every `*.php` stubbed and every off-origin request aborted
+(Playwright Chromium at 1440 and 390px, light and dark, axe with WCAG 2.2 AA rules).
+
+Built: IT support time logged from a ticket onto the client's standing "IT support" project
+(`support.php?action=log_time`, `_time.php`, SQL 17), linked back from the Time screen and
+opened by `/app/support?ticket=<id>`; files shared to the client portal (`files.php`
+`client_share`, `mine`, `mine_download`, SQL 18) with one hardened download path for every
+caller; project templates for five work types (`projects.php`, `_templates.php`, no SQL) with
+an opt-in client checklist; draft protection on six screens (`use-unsaved-guard`); the privacy
+export now carries portal sharing; and a test harness that refuses a busy port and leaves no
+PHP worker behind. Section 4 has the detail; the upload list, order and SQL are
+`docs/DEPLOYMENT.md` section 5.
+
+| Check | Result |
+|---|---|
+| Support Log time: deep link, logged time and total, validation, the post body, a ticket with no client, the 503 and `time: null` states; Time screen "Ticket #N" link, plain text for trainer | **PASS** (mocked API), axe 0 violations in 12 captures |
+| Portal: "IT support" with no progress bar, Shared files card, a UTF-8 download name, a hostile `filename*` refused, the card hidden on 403, 404 and the shell page | **PASS** (mocked API), axe 0 violations in 15 captures. A JSON or HTML reply to a download shows a toast, not silence |
+| Files "Visible to client": on, off, a 409 refusal shown as an error, the column hidden on an older server | **PASS** (mocked API), axe 0 violations |
+| New project "Start from template": five templates, the preview with and without the checklist, the create bodies and toasts, the picker hidden on an older server | **PASS** (mocked API). axe finds an older unnamed Client select in the dialog (K-088) |
+| Draft guard on the Brief: one prompt on a board click and on a search deep link, Stay keeps the edit, Leave switches | **PASS** (mocked API). Browser Back NOT TESTED |
+| Server: client isolation of shared files with two synthetic clients, path safety, download headers, races on the standing project, rollback, every pre-SQL path | **PASS** (`ticket-time`, `portal-files`, `project-templates`, `privacy` test files) |
+
+Recorded: K-083 to K-089 (K-089 fixed). **NOT TESTED:** the live server and database, SQL 17
+and 18 on the host, a real sign-in, real data, a real client download, the tab-close and Back
+prompts of the draft guard, the draft guard on the Blog, Proposals, Contracts, Work and Site
+content screens in a browser, the share-link caching behind Cloudflare, and real assistive
+technology.
+
 ## 1. Audit and readiness, 2026-10-10
 
 A broad planning audit of `main` at `c57eb4a`, re-verified the same day by three independent
@@ -214,7 +249,7 @@ live-state discovery and owner inputs first; no launch is promised in a fixed nu
 |---|---|---|---|
 | 0. Agree scope | Design system and six services; motion contract, core workflows and navigation, positioning and feature dispositions; actual business and pricing facts | Dated decisions with clear exclusions and remaining questions | Plan approved (D-037 to D-044). Business facts outstanding (section 5) |
 | 1. Establish safety | Owner credential actions; reconcile host PHP and SQL; backup and restore; a safe local synthetic backend and mail sink; payment defects and alternative sign-in reviewed | Rotation and revocation confirmed, restoration demonstrated, release manifest and rollback recorded, no accidental production calls in tests | Local fixes built (section 4), not deployed. Owner-side actions open |
-| 2. Complete business journeys | Enquiry follow-up, simple bookings, client conversion, quote acceptance and version, projects and tasks, invoices and reconciliation, verified reference access, scoped messages, updates and feedback, client-linked brief, portal and support isolation | Synthetic end-to-end journey, failure, retry and concurrency tests, and record ownership tests pass | Started. Enquiry follow-ups, client messages, call bookings, the client timeline and private feedback built with server tests (bookings, timeline and feedback 2026-10-16, not deployed). On 2026-10-18 (section 0.2, not deployed or uploaded): manual payment record, acceptance evidence with a terms fingerprint, portal update and call requests, the asset checklist and a calendar file for a confirmed call, each with server tests and a mocked-API browser check. On 2026-10-19 (section 0.3, not deployed or uploaded): the client-linked brief with agreed measurements (SQL 16), the Today attention list and record search. The full journey with these steps not yet run against real data |
+| 2. Complete business journeys | Enquiry follow-up, simple bookings, client conversion, quote acceptance and version, projects and tasks, invoices and reconciliation, verified reference access, scoped messages, updates and feedback, client-linked brief, portal and support isolation | Synthetic end-to-end journey, failure, retry and concurrency tests, and record ownership tests pass | Started. Enquiry follow-ups, client messages, call bookings, the client timeline and private feedback built with server tests (bookings, timeline and feedback 2026-10-16, not deployed). On 2026-10-18 (section 0.2, not deployed or uploaded): manual payment record, acceptance evidence with a terms fingerprint, portal update and call requests, the asset checklist and a calendar file for a confirmed call, each with server tests and a mocked-API browser check. On 2026-10-19 (section 0.3, not deployed or uploaded): the client-linked brief with agreed measurements (SQL 16), the Today attention list and record search. Later on 2026-10-19 (section 0.4, not deployed or uploaded): IT support time from tickets (SQL 17), files shared to the client portal (SQL 18), project templates and draft protection. The full journey with these steps not yet run against real data |
 | 3. Polish the CMS | Target design foundation, smaller navigation, My account, consistent page and form states, unavailable metrics, quiet optional modules | Owner usability task passes; keyboard, phone, zoom and theme checks on affected screens | Navigation grouped and My account built (K-032, K-023, K-024). Every CMS screen restyled to D-046 on `feat/redesign-2026`, checked against mocked API responses only. Owner usability task, keyboard and zoom checks NOT TESTED |
 | 4. Polish the public site | Hero and section design and motion, company and owner positioning, service copy, complete case studies, consent and legal content, safe publishing, metadata and sitemap | Buyer journey, publish and unpublish, share preview, responsive and accessibility evidence | Rebuilt again on D-046 (2026-10-14): brand-colour hero fed by Work, the owner's real projects with screenshots, copy editable in Site content. Publishing, article format and engineering copy fixed (K-036, K-037, K-038 in part). Six-service copy, client consent records, portrait and legal review dates wait for owner inputs. Accessibility and performance re-measured 2026-10-16 (K-045 closed); the two brand-colour contrast failures fixed (K-050, K-051), home CLS fixed and LCP measured (K-052, LCP still open), `/work` LCP measured (K-053), the heading-size regression fixed (K-054), all 2026-10-16. Public pages prerendered with checked per-page metadata and a generated sitemap (K-018, K-019, K-043), not deployed. A quiet client sign-in link (header, drawer and footer), `favicon.ico` and a web manifest added 2026-10-18, not deployed |
 | 5. Social and affiliate pilot | Owned profile set-up, approved copy and media, first resources, disclosed links | Exact profile URLs, disclosure and link checks, a repeatable small publishing routine | Not started |
@@ -239,7 +274,9 @@ reference access cannot ship until the authentication and ownership gates pass.
    includes SQL 13 to 15 and `invoices.php`, `proposals.php`, `support.php`, `bookings.php`
    with the new `_ics.php`, and the new `assets.php` (section 0.2). Since 2026-10-19 it also
    includes SQL 16, `today.php`, `search.php` with `_like.php`, `briefs.php`, `privacy.php`
-   with `_retention.php`, `cron.php` and the new `.htaccess` (section 0.3). **Live PHP
+   with `_retention.php`, `cron.php` and the new `.htaccess` (section 0.3), and then SQL 17
+   and 18, `_time.php` with or before `support.php` and `time.php`, `projects.php` with
+   `_templates.php`, `files.php`, `portal.php` and `privacy.php` (section 0.4). **Live PHP
    version: UNVERIFIED, not yet recorded.** Read it in cPanel and write it here; 8.1 or later
    is expected (K-068, K-082).
 4. Restore a backup somewhere isolated and agree the recovery targets (K-010,
@@ -252,6 +289,7 @@ reference access cannot ship until the authentication and ownership gates pass.
    `feat/journeys-2026-10-18` (section 0.2): their server files and SQL 12 to 15 go up before
    the merge that deploys their screens. For the second batch (PR #21) the order is: upload
    its PHP and `.htaccess`, run SQL 16, then merge (`docs/DEPLOYMENT.md` section 5.1 step 10).
+   The third batch keeps that order: upload its PHP, run SQL 17 and 18, then merge (step 11).
 6. Before merging, the owner tests the redesign on the other computer after
    `git pull --ff-only`: the Work hero switches, a Site content publish, Enquiries
    drag-and-drop between stages, and the Client Portal signed in as a client. Development
@@ -283,6 +321,10 @@ reference access cannot ship until the authentication and ownership gates pass.
    uploaded: the Today attention list, record search, a project brief with agreed
    measurements and the GEE OS handoff (SQL 16), and record deep links. Open points are K-074
    to K-078, K-080 and K-081.
+   **Done locally later on 2026-10-19** on the same branch (section 0.4), not merged or
+   uploaded: IT support time from tickets on a standing project (SQL 17), files shared to the
+   client portal, which also serves the consultancy recommendation file (SQL 18), project
+   templates and draft protection. Open points are K-083 to K-088.
 9. The remaining token work: `localStorage` exposure, token lifetime and a CSP review (K-033);
    honest contract labelling (K-034).
 
@@ -323,6 +365,24 @@ to 33 and 0 on 2026-10-19, locally); decide dependency exposure
 Contract: `.agent/CURRENT-TASK.md`. Every row is in the repository only: client changes deploy
 when PR #8 (and, for the redesign, `feat/redesign-2026`) merges, and server changes need the
 manual upload in `docs/DEPLOYMENT.md` section 5.
+
+### Client journeys, third batch, 2026-10-19
+
+On `feat/journeys-2026-10-18` from `029f867` to `bdca4aa`. Not merged, deployed or uploaded.
+Summary and method in section 0.4.
+
+| Area | Change | Evidence |
+|---|---|---|
+| IT support time | `support.php?action=log_time` (staff, not trainer) logs minutes from a ticket onto the client's standing "IT support" project (`projects.kind = 'it_support'`), made once on the first log under row locks, as a draft entry with `time_entries.ticket_id` (SQL 17). Everything, audit rows included, is one transaction. The ticket shows Logged time and a Log time form; Time shows "Ticket #N" linking to `/app/support?ticket=<id>`; the portal and the client's files name the project "IT support". `_time.php` holds the shared time rules and is loaded only where time is logged or shown | `tests/server/ticket-time.test.ts`, `deepLink.test.ts`, `format.test.ts`, mocked-API browser check |
+| Portal shared files | `files.php` `client_share` (staff) and the client routes `mine` and `mine_download` (SQL 18): "Visible to client" in Files for a file of exactly one client, and a "Shared files" card in the portal. Client id from the token only; every refusal is the same 404. This also serves the consultancy recommendation file | `tests/server/portal-files.test.ts` with two synthetic clients, `download-type.test.ts`, mocked-API browser check |
+| Downloads | One `stream_file()` for staff, share link and client downloads: plain stored names only, `realpath` inside `uploads/`, `filename*` with an ASCII fallback, `private, no-store`, except `public, max-age=86400` for a never-expiring link (K-087). The CMS saves the UTF-8 name when it is safe | `tests/server/portal-files.test.ts`, `download-name.test.ts` |
+| Project templates | `projects.php?action=templates` and a create with `template` (`_templates.php`): business website, ecommerce, website care, general IT support and IT consultancy, each with tasks, measurements (SQL 16) and an opt-in client checklist (SQL 15, K-086), in one transaction. "Start from template" with a preview in New project | `tests/server/project-templates.test.ts`, `projectTemplateModel.test.ts`, mocked-API browser check |
+| Draft protection | `src/hooks/use-unsaved-guard.ts`: "Leave without saving?" on the Blog post editor, New quote, New contract, Work, Site content and the Brief sections, one guard per page. Cancel on a dirty New quote or New contract dialog now discards after the prompt (K-084). Gaps in K-083 | `dirty-model.test.ts`, `unsaved-guard-model.test.ts`, mocked-API browser check of the Brief |
+| Privacy export | Each file row adds `client_visible` and `shared_at`, falling back to the old columns before SQL 18 | `tests/server/privacy.test.ts` |
+| Test harness | `tests/server/global-setup.ts` refuses a busy port and stops the whole `php -S` process group on teardown, setup failure, Ctrl-C, SIGTERM and exit (K-089) | Manual check: no listener after a run, refusal with a dummy listener, 0 PHP processes after Ctrl-C |
+
+Verification at `bdca4aa`, 2026-10-19 on the Mac: section 0. **NOT TESTED:** the live server,
+real data, a real sign-in, SQL 17 and 18 on the host and real assistive technology.
 
 ### Client journeys, second batch, 2026-10-19
 
@@ -513,6 +573,12 @@ On 2026-10-14 the owner approved the redesign that replaces D-037's visual direc
       quote (it is part of the accepted-terms fingerprint but not displayed); and the earliest
       allowed "acceptance received" date, which is the quote's creation day today because a
       quote has no sent date.
+- [ ] Raised by the third batch (section 0.4): review the wording of the five project
+      templates in `server/_templates.php` (tasks, client checklist items and measurements,
+      written by an agent and checked only for length, em dashes and banned words) before
+      using them with a client, because a ticked checklist reaches the client's portal at once
+      (K-086). Also whether IT support time logged from a ticket should start as billable (it
+      does today).
 
 **Monetisation and social (phases 5 and 6)**
 

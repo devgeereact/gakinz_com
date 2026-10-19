@@ -82,8 +82,9 @@ acceptance, blog editing, My account and the `support.php` client branch is cove
 
 The one multi-tenant rule in the system.
 
-Five files serve or accept client data from a `client`-role caller: `portal.php`, and the
-client branches of `support.php`, `feedback.php`, `bookings.php` and `assets.php`. All are
+Six files serve or accept client data from a `client`-role caller: `portal.php`, and the
+client branches of `support.php`, `feedback.php`, `bookings.php`, `assets.php` and, since
+2026-10-19, `files.php`. All are
 **security-critical**: any change to one needs isolation tests with at least two synthetic
 clients.
 
@@ -135,10 +136,32 @@ clients.
   item, a missing one and one on a deleted or moved project all answer the same 404. Only
   `id` and `note` are read from a supply body; `requested_by` and `file_id` are never
   returned. Covered by `tests/server/project-assets.test.ts` with two synthetic clients.
+- `files.php` (2026-10-19, SQL 18) has a client branch of `GET ?action=mine` and
+  `GET ?action=mine_download&id=N`, `client` role only. It runs first and always ends the
+  request; staff get 403 on both routes, and a client gets 403 on every staff route (list,
+  download, upload, share, `client_share`, delete). The client id comes from the token; a
+  `client_id` parameter is ignored, an unlinked account gets 403 and a deleted client 404. A
+  file reaches the client only when it is `client_visible`, not deleted, and either attached
+  to one of that client's live projects (with its own `client_id` NULL or the same) or
+  attached to that client with no project. A file naming client A on client B's project
+  reaches nobody, so neither learns the other's project name. Every refusal on
+  `mine_download` is the same 404 "File not found.". The list returns only `id, name, mime,
+  size, shared_at, project_name`, never the stored name, share token, uploader or client id.
+  Staff `client_share` turns visibility on only for a file that resolves to exactly one
+  client (409 otherwise). Covered by `tests/server/portal-files.test.ts` with two synthetic
+  clients, including the raw JSON.
+- `portal.php` changed on 2026-10-19 only to name a client's standing IT support project "IT
+  support" (`projects.kind`, SQL 17) with zero task counts; its scope is unchanged. The
+  staff-only `support.php?action=log_time` and the ticket's logged time never reach the client
+  branch, which carries no time.
 
 A client also reaches its own account through `auth.php` (sessions, two-factor). Every other
 resource endpoint is staff only, including the staff routes of `bookings.php` and `assets.php`
-and the new `invoices.php?action=record_payment` (super_admin, admin, manager). Reads in `clients.php`, `invoices.php`, `comms.php` and
+and the new `invoices.php?action=record_payment` (super_admin, admin, manager). Since
+2026-10-19 `support.php?action=log_time` is the `STAFF` list of `support.php` (super_admin,
+admin, manager, editor, employee): `trainer`, which `time.php` create allows, gets 403 because
+it has no Support access. The project template routes (`projects.php?action=templates` and a
+create with `template`) are staff only, as every `projects.php` route is. Reads in `clients.php`, `invoices.php`, `comms.php` and
 `leads.php` carry explicit comments saying so.
 
 `users.php` will not create a `client` account without a validated `client_id`, and its
@@ -244,6 +267,20 @@ against the invoice.
   `Deny from all`, so the binaries are not directly servable.
 - Everything is streamed back through `files.php`, with `X-Content-Type-Options: nosniff`
   and an attachment disposition.
+- Since 2026-10-19 every download (staff, public share link, client) goes through one
+  `stream_file()` that never trusts the stored name: it must be a plain file name
+  (`^[A-Za-z0-9][A-Za-z0-9._-]{0,254}\z`, so no separator, no `..`, no leading dot, no
+  trailing newline), and `realpath` must resolve it to a regular file directly inside
+  `uploads/`, which also defeats a symlink. Anything else answers 404 "File is missing on
+  disk.". Tested with `../config.php`, `.htaccess`, `/etc/passwd`, a newline-suffixed name
+  and a symlink to `config.php`, on all three routes. Every name `files.php` has written (32
+  hex characters and an extension) passes.
+- The download name is sent as `filename="<ASCII fallback>"` and `filename*=UTF-8''<encoded>`,
+  with control characters dropped from both, so a stored name cannot break the header. The
+  CMS keeps the `filename*` name only when it decodes to a safe name (`safeFileName()`).
+- `Cache-Control: private, no-store` on every download, except a share link with no expiry
+  (Work images), which sends `public, max-age=86400`, so a cached copy can outlive revoking
+  the token by up to a day (K-087).
 - Public share tokens are 40 hex characters, expire between 1 and 90 days, and the lookup
   requires the row to be undeleted and unexpired.
 

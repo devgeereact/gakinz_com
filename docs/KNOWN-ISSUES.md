@@ -93,6 +93,13 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-080 | The handoff export's redaction is a safety net: other personal data typed by staff goes out as typed | Medium | Open. By design; staff must not type personal data into the brief |
 | K-081 | axe reports `aria-required-children` on the search dialog's empty state | Low | Open. Inside the third-party `cmdk` list |
 | K-082 | Strict SQL errors in `briefs.php`, `privacy.php` and `_retention.php` are not tested on PHP before 8.1 | Low | Open. Live PHP version UNVERIFIED |
+| K-083 | Draft protection does not cover the Brief Measurements form, the Work images, sign and accept dialogs, or the New project dialog | Low | Open. Six screens covered 2026-10-19, not deployed |
+| K-084 | Cancel on a dirty New quote or New contract dialog now asks, then discards the fields | Low | Behaviour change 2026-10-19, not deployed |
+| K-085 | Ticket time with no date, and template due dates, use PHP's time zone, which is not set | Low | Open. Same cause as K-067; live time zone UNVERIFIED |
+| K-086 | A template's client checklist appears in the client's portal as soon as the project is created | Low | Mitigated 2026-10-19: opt-in, off by default. Not uploaded |
+| K-087 | A never-expiring share link (Work images) is cached for up to a day | Low | Accepted 2026-10-19, not uploaded |
+| K-088 | The New project dialog's Client select has no accessible name | Medium | Open. Found 2026-10-19 by axe; predates the batch |
+| K-089 | Server test runs left `php -S` workers on the port, making later runs flaky | Low | **Fixed 2026-10-19** in `tests/server/global-setup.ts` |
 
 
 ---
@@ -1432,7 +1439,8 @@ today is refused as in the future. The owner can enter it an hour later or use y
 date. Call requests are not affected: they compare UTC instants (`UTC_TIMESTAMP()`). The
 live PHP and database time zones are UNVERIFIED. Resolution: set one zone for the business
 (Europe/London) in `_bootstrap.php` and compare dates in it, with a test at 00:30 BST. The
-Today list (2026-10-19) shares the cause: K-075.
+Today list (2026-10-19) shares the cause: K-075, and so do ticket time and template due dates:
+K-085.
 
 ---
 
@@ -1660,3 +1668,114 @@ way nothing answers `ok`. The tests ran on PHP 8.5.10 only; no PHP before 8.1 wa
 path is NOT TESTED. The live PHP version is UNVERIFIED (K-068 also depends on it). Resolution:
 read the version in cPanel and record it in `docs/STATUS.md` (`docs/DEPLOYMENT.md` section 5.1
 step 10).
+
+---
+
+## K-083 · Draft protection does not cover the Brief Measurements form, the Work images, sign and accept dialogs, or the New project dialog
+**Severity:** low · **Status:** open. Recorded 2026-10-19 with the draft protection work.
+
+`src/hooks/use-unsaved-guard.ts` (with `src/lib/dirty-model.ts`,
+`src/lib/unsaved-guard-model.ts` and `src/components/unsaved-guard-dialog.tsx`) asks "Leave
+without saving?" before in-app navigation, closing or reloading the tab, and closing a guarded
+dialog. It covers the Blog post editor, the New quote dialog (Proposals), the New contract
+dialog (Contracts), the Work record editor, the Site content editor and the project Brief
+sections, including switching project on the board and a `?project=` link arriving over a
+dirty Brief (one prompt, `bdca4aa`). One guard is mounted per page. Not covered: the Brief
+"Measurements" add and edit form (`MeasureForm`), the Work images dialog, the contract sign
+dialog, the quote accept dialog and the New project dialog, so text typed there is lost
+without a prompt. The browser check of 2026-10-19 (mocked API) confirmed one prompt for a
+board click and for a search deep link, Stay and Leave; browser Back and the tab-close prompt
+were NOT TESTED there, and there is no DOM test environment for the hook. Resolution: wire the
+same hook into the remaining forms.
+
+---
+
+## K-084 · Cancel on a dirty New quote or New contract dialog now asks, then discards the fields
+**Severity:** low · **Status:** behaviour change, 2026-10-19, not deployed.
+
+Before the draft guard, Cancel on the New quote dialog (`src/app/modules/Proposals.tsx`) or
+the New contract dialog (`src/app/modules/Contracts.tsx`) closed it and kept the typed fields
+in component state, so they reappeared when the dialog was opened again. Now Cancel, Escape
+or the overlay on a dirty dialog asks "Leave without saving?", and Leave resets the fields.
+Someone used to closing the dialog to check something and coming back to their draft will
+find it gone after choosing Leave. Recorded rather than changed: a draft that silently
+survives was the inconsistency. Browser behaviour of these two dialogs: NOT TESTED.
+
+---
+
+## K-085 · Ticket time with no date, and template due dates, use PHP's time zone, which is not set
+**Severity:** low · **Status:** open. Found 2026-10-19 in review; same cause as K-067.
+
+`gk_time_entry_input()` in `server/_time.php` dates a time entry `(new DateTime())->format('Y-m-d')`
+when no `entry_date` is sent, in PHP's default zone, which nothing in `server/` sets. The CMS
+always sends the browser's local date (`localIsoDate` in `src/app/modules/Support.tsx`), so
+this affects only a caller that leaves the date out. Template tasks in `server/projects.php`
+are due `new DateTimeImmutable('today')` plus N days, in the same zone, while the New project
+preview (`templatePreview()`) counts from the browser's date; near midnight, or when the
+zones differ, the preview can be a day off what is stored. The live PHP time zone is
+UNVERIFIED. Resolution: the K-067 fix, one business zone (Europe/London) set in
+`_bootstrap.php`.
+
+---
+
+## K-086 · A template's client checklist appears in the client's portal as soon as the project is created
+**Severity:** low · **Status:** mitigated 2026-10-19, not uploaded.
+
+The project templates in `server/_templates.php` carry client checklist items (SQL 15
+`project_assets`). Checklist items are read by the client's portal at once (`assets.php`
+`mine`), so creating a project from a template for a client would have sent them a list of
+requests before the owner had spoken to them. Since `891ef71` the items are written only when
+`include_client_checklist` is exactly `true`, and New project shows an unticked box "Add the
+client checklist (the client sees it in their portal straight away)". The cost is one tick
+when the owner wants the checklist. Tested in `tests/server/project-templates.test.ts` (the
+default adds nothing and the portal shows nothing) and in the browser check (mocked API).
+Also by design: templates are code, so changing one needs a code change and an upload.
+
+---
+
+## K-087 · A never-expiring share link (Work images) is cached for up to a day
+**Severity:** low · **Status:** accepted 2026-10-19 (`29f651a`), not uploaded.
+
+`files.php?token=` sends `Cache-Control: public, max-age=86400` when the file's `expires_at`
+is NULL, which in practice means Work images and hero screenshots issued by `work.php`
+(`docs/DECISIONS.md` D-029), so the public site's images are not fetched on every view.
+Every other download sends `private, no-store`. Consequences: if the file behind such a token
+changes, viewers and any shared cache can see the old copy for up to a day, and a copy already
+cached can outlive revoking the token or deleting the file by as long. A `files.php` share
+always sets an expiry of 1 to 90 days, so ordinary client links are never cached. Tested in
+`tests/server/portal-files.test.ts`; the behaviour behind Cloudflare is NOT TESTED.
+Resolution if it matters: upload a replacement as a new file rather than changing one in
+place.
+
+---
+
+## K-088 · The New project dialog's Client select has no accessible name
+**Severity:** medium · **Status:** open. Found 2026-10-19 in the batch 3 browser check; older than the batch.
+
+axe 4.13 reports `button-name` (critical) on the Client `SelectTrigger` in the New project
+dialog (`src/app/modules/Projects.tsx`, around line 220, from `2cdff4a` on 2026-10-14): its
+`<Label>Client</Label>` has no `htmlFor` and the trigger no `id`, so a screen reader announces
+an unnamed button. It shows in all ten captures of the dialog (390 and 1440px, light and
+dark, mocked API). The new "Start from template" select (`#ptemplate`) is labelled correctly.
+Real assistive technology: NOT TESTED. Resolution: give the trigger an `id` and the label a
+matching `htmlFor`.
+
+---
+
+## K-089 · Server test runs left `php -S` workers on the port, making later runs flaky
+**Severity:** low · **Status:** **fixed 2026-10-19** (`af151cb`, `650be1e`), test harness only.
+
+`tests/server/global-setup.ts` starts `php -S` with `PHP_CLI_SERVER_WORKERS=6` and used to
+stop only the parent process. The six workers survived (re-parented to PID 1) and kept
+answering on the port, so a later run on the same port could silently use workers serving an
+older copy of `server/`. On 2026-10-19 this explained intermittent failures during the batch
+work, for example two `payments.test.ts` cases that passed alone and passed again once 6
+orphaned workers were stopped, and an agent stopped 48 leaked processes on ports 5291 to
+5309. The earlier failures were most likely this or machine load; that is not proven for each
+one. Fix: setup refuses a busy PHP or provider port with a message naming the port, starts
+`php -S` detached in its own process group, and stops the whole group on teardown, on a setup
+failure, and on Ctrl-C, SIGTERM or exit. Checked: no listener left on the port after a full
+run, setup refused a port held by a dummy listener, and Ctrl-C mid-run left 0 PHP processes.
+One later failure is not this: on 2026-10-19 a full run timed out in a `blog.test.ts`
+`beforeEach` under a load average of about 25, then passed alone and in a full rerun with the
+fixed harness (`docs/STATUS.md` section 0). How to run with other ports: `docs/OPERATIONS.md` section 8.

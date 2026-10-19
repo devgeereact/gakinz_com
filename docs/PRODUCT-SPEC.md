@@ -695,7 +695,12 @@ size and dependency in section 7.
 - **First:** enquiry next-action date; linked call record; unified client timeline; asset
   checklist; quote acceptance reference and version; verified manual payment reference;
   own-account security access; unavailable-data states; draft protection; archive and safe
-  export.
+  export. Draft protection was built 2026-10-19 (`src/hooks/use-unsaved-guard.ts`, client
+  only, no SQL): a "Leave without saving?" prompt on the Blog post editor, the New quote and
+  New contract dialogs, the Work record editor, the Site content editor, and the project Brief
+  sections, including switching project with a Brief edit open. Not yet covered: the Brief
+  Measurements form, the Work images, sign and accept dialogs, and the New project dialog
+  (`docs/KNOWN-ISSUES.md` K-083). Browser behaviour NOT TESTED.
 - **Next:** approved portfolio publication checklist; safe article links and recommendation
   blocks; business and social-link settings; a published sitemap; simple source reporting.
 - **Optional later:** ICS export, one project template, an occasional recurring care reminder.
@@ -865,7 +870,7 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 |---|---|---|---|---|---|
 | One client timeline: enquiries, calls, quotes, projects, invoices, messages | Answers "what happened with this client?" | Built 2026-10-16 in the client record | 2 | M | None |
 | Private owner notes kept apart from client-visible information | Nothing internal leaks | Partly | 2 | S | None |
-| Client portal: project summary, next step, invoices, shared files | Clients help themselves | Read-only portal exists | 2 | M | Isolation tests |
+| Client portal: project summary, next step, invoices, shared files | Clients help themselves | Read-only portal exists. Shared files built 2026-10-19 (`files.php` `client_share`, `mine`, `mine_download`; SQL 18): staff switch "Visible to client" on a file in Files, and the portal shows a "Shared files" card; needs SQL 18 and the upload. Isolation tested with two synthetic clients | 2 | M | Isolation tests |
 | Client messages through support tickets | Two-way conversation without a new chat system | Built 2026-10-10 (K-039) | 2 | M | Client branch in `support.php` |
 | Request an update, request a call, supply assets | Fewer chasing emails | Built 2026-10-18 (`support.php`, `bookings.php`, `assets.php`); calls need SQL 9 and 10, assets need SQL 15. Supply is a note, not an upload (K-072) | 2 | M | Client messages |
 | Private delivery feedback, with separate permission to publish | Honest feedback and lawful testimonials | Built 2026-10-16 (`feedback.php`); needs SQL 11. The excerpt-approval request is not built | 2 | S | Client messages |
@@ -891,10 +896,10 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 | Task list with due dates, one next milestone, one client-visible progress note | Clear delivery without a project suite | Tasks exist | 2 | S | None |
 | Asset request checklist | Clients know what to send | Built 2026-10-18 (`assets.php`); needs SQL 15 | 2 | S | Portal |
 | Project brief and agreed measurements under the client ID | Scope and evidence in one place (section 6.4) | Built 2026-10-19 (`briefs.php`) on the project board; needs SQL 16 and the upload | 2 | M | None |
-| Standing "IT support" project per support client; tickets plus billable time | Bill IT support without a new module | Time requires a project | 2 | S | None |
-| Consultancy project closes with a shared recommendation file | A clear consultancy deliverable | Files exist | 2 | S | Portal files |
+| Standing "IT support" project per support client; tickets plus billable time | Bill IT support without a new module | Built 2026-10-19 (`support.php?action=log_time`, `_time.php`; SQL 17): Log time on a ticket puts a draft entry on the client's standing "IT support" project, made on the first log; the Time screen links the entry to `/app/support?ticket=<id>`, and the portal shows the project as "IT support" with no progress bar. Needs SQL 17 and the upload | 2 | S | None |
+| Consultancy project closes with a shared recommendation file | A clear consultancy deliverable | Built 2026-10-19 through portal shared files (SQL 18): the recommendation is uploaded to the project and made visible to the client. The IT consultancy template's measurement asks for the shared file, the client's acknowledgement and a follow-up date. Needs SQL 18 and the upload | 2 | S | Portal files |
 | Manual sanitised GEE OS handoff export | Plan development safely on the owner's computer | Built 2026-10-19 (`briefs.php?action=handoff`, Markdown download); needs SQL 16 and the upload. Redaction is a safety net only (K-080) | 3 | S | Project brief |
-| One reusable project template | Faster set-up | Missing | Later | S | None |
+| One reusable project template | Faster set-up | Built 2026-10-19 (`projects.php?action=templates`, `_templates.php`, no new SQL): five work-type templates (business website, ecommerce, website care, general IT support, IT consultancy) in New project, with a preview, starter tasks and measurements (SQL 16 if run). The client checklist (SQL 15) is opt-in, off by default (K-086). Templates change only through code and an upload. Needs the upload | Later | S | None |
 
 ### Website and content
 
