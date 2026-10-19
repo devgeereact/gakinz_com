@@ -2,20 +2,49 @@
 /**
  * Projects (GAkinzOS §6 Projects & Tasks). Protected.
  *
- *   GET  /projects.php                → list projects (with client + task counts)
- *   POST /projects.php?action=create  {name, client_id?, due_date?}
- *   POST /projects.php?action=status  {id, status}
+ *   GET  /projects.php                   → list projects (with client + task counts)
+ *   GET  /projects.php?action=templates  → the project templates (_templates.php)
+ *   POST /projects.php?action=create     {name, client_id?, due_date?, template?}
+ *   POST /projects.php?action=status     {id, status}
  *
  * Status: planning | in_progress | on_hold | launched
+ *
+ * Creating from a template: `template` is a key from _templates.php; an unknown
+ * key answers 400 and creates nothing. The project, its starter tasks (due
+ * the given number of days after today), its asset checklist items
+ * (project_assets, SQL 15) and its measurement rows (project_measurements,
+ * SQL 16) are written in one transaction, so a failure part way leaves no
+ * project behind. A table whose SQL step has not run is skipped, not an
+ * error: the reply lists it in `skipped`, and the project is still created.
+ * No brief row is written; deliverables and exclusions are agreed per client.
  */
 require __DIR__ . '/_bootstrap.php';
+require __DIR__ . '/_templates.php';
 
 const STATUSES = ['planning', 'in_progress', 'on_hold', 'launched'];
 const STAGES = ['discover', 'design', 'build', 'launch', 'support']; // 5-stage delivery
 const STAFF = ['super_admin', 'admin', 'manager', 'editor', 'employee'];
 
+/** Whether a table exists in this database (an SQL step may not have run yet). */
+function pj_table_exists(mysqli $conn, string $table): bool {
+  $s = $conn->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?');
+  $s->bind_param('s', $table);
+  $s->execute();
+  return (int)$s->get_result()->fetch_row()[0] > 0;
+}
+
+const TEMPLATE_SKIPS = [
+  'project_assets' => 'Asset checklist items were not added: the asset checklist needs the 2026-10-18 database update (SQL 15) first.',
+  'project_measurements' => 'Measurement rows were not added: the project brief needs the 2026-10-19 database update (SQL 16) first.',
+];
+
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';
+
+if ($method === 'GET' && $action === 'templates') {
+  require_auth($conn, STAFF); // staff only, as creating a project is
+  ok(project_template_list());
+}
 
 if ($method === 'GET') {
   require_auth($conn, STAFF); // staff only
@@ -47,12 +76,82 @@ if ($method === 'POST' && $action === 'create') {
   $due = str_field($in, 'due_date', 10);
   $due = $due !== '' ? $due : null;
 
-  $stmt = $conn->prepare('INSERT INTO projects (name, client_id, due_date) VALUES (?, ?, ?)');
-  $stmt->bind_param('sis', $name, $clientId, $due);
-  if (!$stmt->execute()) fail('Could not create the project.', 500);
-  $newId = $conn->insert_id; // read before audit(), which inserts its own row
-  audit($conn, $user['id'], 'project_create', $name);
-  ok(['id' => $newId], 201);
+  $templateKey = $in['template'] ?? null;
+  if ($templateKey === '') $templateKey = null;
+  $template = null;
+  if ($templateKey !== null) {
+    if (!is_string($templateKey) || ($template = project_template($templateKey)) === null) fail('Unknown project template.');
+  }
+
+  if ($template === null) {
+    $stmt = $conn->prepare('INSERT INTO projects (name, client_id, due_date) VALUES (?, ?, ?)');
+    $stmt->bind_param('sis', $name, $clientId, $due);
+    if (!$stmt->execute()) fail('Could not create the project.', 500);
+    $newId = $conn->insert_id; // read before audit(), which inserts its own row
+    audit($conn, $user['id'], 'project_create', $name);
+    ok(['id' => $newId], 201);
+  }
+
+  // Decided before the transaction starts, so a missing table is a skip, not a failure.
+  $skipped = [];
+  $have = [];
+  foreach (TEMPLATE_SKIPS as $table => $note) {
+    $have[$table] = pj_table_exists($conn, $table);
+    if (!$have[$table]) $skipped[] = ['table' => $table, 'note' => $note];
+  }
+  $created = ['tasks' => 0, 'assets' => 0, 'measurements' => 0];
+  $today = new DateTimeImmutable('today');
+  $uid = (int)$user['id'];
+
+  // Every failure must throw so the catch rolls back, whatever config.php sets.
+  mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
+  $conn->begin_transaction();
+  try {
+    $stmt = $conn->prepare('INSERT INTO projects (name, client_id, due_date) VALUES (?, ?, ?)');
+    $stmt->bind_param('sis', $name, $clientId, $due);
+    $stmt->execute();
+    $newId = $conn->insert_id;
+
+    $t = $conn->prepare("INSERT INTO tasks (project_id, title, status, due_date) VALUES (?, ?, 'todo', ?)");
+    foreach ($template['tasks'] as $task) {
+      $title = $task['title'];
+      $taskDue = $today->modify('+' . (int)$task['offset_days'] . ' days')->format('Y-m-d');
+      $t->bind_param('iss', $newId, $title, $taskDue);
+      $t->execute();
+      $created['tasks']++;
+    }
+
+    if ($have['project_assets']) {
+      $a = $conn->prepare("INSERT INTO project_assets (project_id, label, note, status, requested_by) VALUES (?, ?, ?, 'requested', ?)");
+      foreach ($template['assets'] as $item) {
+        $label = $item['label'];
+        $note = $item['note'];
+        $a->bind_param('issi', $newId, $label, $note, $uid);
+        $a->execute();
+        $created['assets']++;
+      }
+    }
+
+    if ($have['project_measurements']) {
+      $m = $conn->prepare("INSERT INTO project_measurements (project_id, label, target, method, result, kind, created_by)
+                           VALUES (?, ?, ?, ?, 'NOT TESTED', 'technical', ?)");
+      foreach ($template['brief']['measurements'] as $row) {
+        $label = $row['label'];
+        $target = $row['target'];
+        $howChecked = $row['method'];
+        $m->bind_param('isssi', $newId, $label, $target, $howChecked, $uid);
+        $m->execute();
+        $created['measurements']++;
+      }
+    }
+    $conn->commit();
+  } catch (Throwable $e) {
+    $conn->rollback();
+    fail('Could not create the project from the template. Nothing was saved.', 500);
+  }
+  audit($conn, $user['id'], 'project_create', "$name (template $templateKey: {$created['tasks']} tasks, "
+    . "{$created['assets']} assets, {$created['measurements']} measurements)");
+  ok(['id' => $newId, 'template' => $templateKey, 'created' => $created, 'skipped' => $skipped], 201);
 }
 
 if ($method === 'POST' && $action === 'status') {
