@@ -250,6 +250,19 @@ export default function Portal() {
                 ) : (
                   <ul className="divide-y">
                     {data.projects.map((p) => {
+                      // The standing IT support project holds support time, not delivery
+                      // work, so it has no progress to show (SQL 17).
+                      if (p.kind === "it_support") {
+                        return (
+                          <li key={p.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3">
+                            <span className="min-w-0">
+                              <b className="block font-semibold">IT support</b>
+                              <span className="block text-[13px] text-muted-foreground">Ongoing support</span>
+                            </span>
+                            <StatusBadge status={p.status} />
+                          </li>
+                        )
+                      }
                       const pct = p.task_count > 0 ? Math.round((p.done_count / p.task_count) * 100) : 0
                       return (
                         <li key={p.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3">

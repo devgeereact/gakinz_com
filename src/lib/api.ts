@@ -586,6 +586,8 @@ export type TimeEntry = {
   entry_date: string
   user_name: string | null
   user_id: number | null
+  /** The support ticket this IT support time is for (SQL 17); null for other time, or from an older server. */
+  ticket_id?: number | null
 }
 export const time = {
   list: () => api.get<TimeEntry[]>("/time.php"),
@@ -617,7 +619,23 @@ export type Ticket = {
   created_at: string
 }
 export type TicketReply = { id: number; body: string; created_at: string; author: string | null }
-export type TicketDetail = Ticket & { body: string | null; replies: TicketReply[] }
+/** One IT support time entry logged from a ticket (SQL 17). Staff only. */
+export type TicketTimeEntry = {
+  id: number
+  minutes: number
+  description: string | null
+  billable: boolean
+  status: TimeStatus
+  entry_date: string
+  user_name: string | null
+}
+export type TicketTime = { total_minutes: number; entries: TicketTimeEntry[] }
+export type TicketDetail = Ticket & {
+  body: string | null
+  replies: TicketReply[]
+  /** Logged time; null before SQL 17, missing from an older server. */
+  time?: TicketTime | null
+}
 export const support = {
   list: () => api.get<Ticket[]>("/support.php"),
   get: (id: number) => api.get<TicketDetail>(`/support.php?id=${id}`),
@@ -628,6 +646,10 @@ export const support = {
   setPriority: (id: number, priority: TicketPriority) =>
     api.post<{ ok: boolean }>("/support.php?action=priority", { id, priority }),
   reply: (id: number, body: string) => api.post<{ id: number }>("/support.php?action=reply", { id, body }),
+  // IT support time onto the client's standing "IT support" project (SQL 17).
+  // New route: an older server or a missing SQL 17 answers as notAvailableYet().
+  logTime: (payload: { id: number; minutes: number; description?: string; billable?: boolean; entry_date?: string }) =>
+    api.post<{ id: number; project_id: number; project_created: boolean }>("/support.php?action=log_time", payload),
 }
 
 // A `client`-role user's own messages: the client branch of support.php. The
@@ -842,7 +864,8 @@ export const recordSearch = {
 // Client portal (§6 Client Portal). Aggregated client-facing view.
 export type PortalData = {
   client: { id: number; company: string; contact_name: string | null; email: string | null }
-  projects: { id: number; name: string; status: string; due_date: string | null; task_count: number; done_count: number }[]
+  /** kind "it_support" is the standing IT support project (SQL 17): no task progress to show. */
+  projects: { id: number; name: string; status: string; due_date: string | null; task_count: number; done_count: number; kind?: "it_support" | null }[]
   invoices: { id: number; number: string | null; status: string; issued_at: string; due_at: string | null; subtotal: number; vat_rate: number; vat_amount: number; total: number }[]
   tickets: { id: number; subject: string; status: string; priority: string; created_at: string }[]
 }

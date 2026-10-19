@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react"
-import { AlertCircle, Loader2, Plus, RefreshCw, Send } from "lucide-react"
+import { useLocation, useSearchParams } from "react-router-dom"
+import { AlertCircle, Clock, Loader2, Plus, RefreshCw, Send } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PageHeader, StatusBadge } from "@/app/components/page-kit"
 import { TableSkeleton } from "@/app/components/TableSkeleton"
@@ -33,6 +35,10 @@ import {
   type Client,
 } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { hoursMinutes, localIsoDate, formatYmd } from "@/lib/format"
+import { linkMark, supportLink } from "@/lib/deepLink"
+import { notAvailableYet } from "@/lib/notAvailable"
+import { useApplyLink } from "@/hooks/use-reveal"
 import AiAssist from "@/app/components/AiAssist"
 
 const STATUSES: { key: TicketStatus; label: string }[] = [
@@ -76,6 +82,19 @@ export default function Support() {
     load()
     clientsApi.list().then((r) => r.ok && setClientList(r.data))
   }, [])
+
+  // ?ticket=<id> (from a ticket's time on the Time screen) opens that ticket
+  // once the list has loaded, and again whenever the link changes or is
+  // re-sent (useApplyLink). An id that is not listed leaves the plain screen.
+  const [searchParams] = useSearchParams()
+  const location = useLocation()
+  const link = supportLink(searchParams)
+  useApplyLink(linkMark(link, location.state), !loading && error === null, () => {
+    if (link.ticket !== null && items.some((t) => t.id === link.ticket)) {
+      setFilter("all")
+      setSelectedId(link.ticket)
+    }
+  })
 
   const create = async () => {
     if (!form.subject.trim()) return toast.error("A subject is required.")
@@ -436,6 +455,112 @@ function TicketPanel({ id, onChanged }: { id: number; onChanged: () => void }) {
           Send reply
         </Button>
       </div>
+
+      <TicketTimeSection ticket={ticket} onLogged={load} />
     </div>
+  )
+}
+
+/**
+ * IT support time for one ticket (SQL 17). Logged time goes onto the client's
+ * standing "IT support" project, which the server creates on the first log.
+ * Hidden while the server has no ticket time (`time` null or missing, or the
+ * log route answers as not available yet). Staff only: a client never sees it.
+ */
+function TicketTimeSection({ ticket, onLogged }: { ticket: TicketDetail; onLogged: () => void }) {
+  const [minutes, setMinutes] = useState("")
+  const [desc, setDesc] = useState("")
+  const [billable, setBillable] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [unavailable, setUnavailable] = useState(false)
+
+  const time = ticket.time
+  if (!time || unavailable) return null
+
+  const log = async () => {
+    const mins = Number(minutes)
+    if (!Number.isInteger(mins) || mins <= 0) return toast.error("Enter the minutes spent, as a whole number above zero.")
+    setSaving(true)
+    const res = await support.logTime({
+      id: ticket.id,
+      minutes: mins,
+      description: desc.trim() || undefined,
+      billable,
+      entry_date: localIsoDate(),
+    })
+    setSaving(false)
+    if (res.ok) {
+      toast.success(res.data.project_created ? "Time logged. The client's IT support project was created for it." : "Time logged.")
+      setMinutes("")
+      setDesc("")
+      onLogged()
+    } else if (notAvailableYet(res)) {
+      setUnavailable(true)
+      toast.info("Logging time on a ticket is not available yet.")
+    } else {
+      toast.error(res.error || "Could not log the time.")
+    }
+  }
+
+  return (
+    <section className="mt-5 border-t pt-4" aria-labelledby={`ttime-${ticket.id}`}>
+      <div className="mb-2.5 flex flex-wrap items-baseline gap-2">
+        <h3 id={`ttime-${ticket.id}`} className="flex items-center gap-2 font-semibold">
+          <Clock aria-hidden className="h-4 w-4 text-muted-foreground" /> Logged time
+        </h3>
+        <span className="text-[13px] text-muted-foreground">
+          Total <b className="font-mono font-semibold tabular-nums text-foreground">{hoursMinutes(time.total_minutes)}</b>
+        </span>
+      </div>
+
+      {time.entries.length === 0 ? (
+        <p className="text-sm text-muted-foreground">No time logged on this ticket yet.</p>
+      ) : (
+        <ul className="m-0 list-none divide-y p-0">
+          {time.entries.map((e) => (
+            <li key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 py-2">
+              <span className="min-w-0 [overflow-wrap:anywhere]">
+                <span className="block">{e.description || <span className="text-muted-foreground">No description</span>}</span>
+                <small className="text-[12.5px] text-muted-foreground">
+                  {formatYmd(e.entry_date)} · {e.user_name || "Unknown"} · {e.billable ? "Billable" : "Internal"}
+                </small>
+              </span>
+              <span className="flex flex-col items-end gap-1">
+                <span className="font-mono text-sm tabular-nums">{hoursMinutes(e.minutes)}</span>
+                <StatusBadge status={e.status === "approved" ? "approved" : e.status === "rejected" ? "rejected" : "pending"} />
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {ticket.client_id === null ? (
+        <p className="mt-3 text-sm text-muted-foreground">
+          This ticket has no client, so time logged on it would have nobody to bill.
+        </p>
+      ) : (
+        <div className="mt-3 grid items-end gap-3 sm:grid-cols-[7rem_minmax(0,1fr)_auto_auto]">
+          <div className="grid min-w-0 gap-1.5">
+            <Label htmlFor={`ttmin-${ticket.id}`}>Minutes</Label>
+            <Input id={`ttmin-${ticket.id}`} type="number" inputMode="numeric" min={1} step={1} value={minutes} onChange={(e) => setMinutes(e.target.value)} />
+          </div>
+          <div className="grid min-w-0 gap-1.5">
+            <Label htmlFor={`ttdesc-${ticket.id}`}>What did you do?</Label>
+            <Input id={`ttdesc-${ticket.id}`} maxLength={300} value={desc} onChange={(e) => setDesc(e.target.value)} />
+          </div>
+          <div className="flex min-h-[40px] items-center gap-2">
+            <Switch id={`ttbill-${ticket.id}`} checked={billable} onCheckedChange={setBillable} />
+            <Label htmlFor={`ttbill-${ticket.id}`} className="cursor-pointer">Billable</Label>
+          </div>
+          <Button onClick={log} disabled={saving}>
+            {saving ? <Loader2 className="animate-spin" /> : <Plus />}
+            Log time
+          </Button>
+          <p className="text-[13px] text-muted-foreground sm:col-span-4">
+            Goes on {ticket.client_company || "the client"}&apos;s IT support project as a draft, for approval on the Time screen.
+          </p>
+        </div>
+      )}
+    </section>
   )
 }

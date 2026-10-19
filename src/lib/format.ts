@@ -55,3 +55,10 @@ export function followUpState(
   if (!at || lead.status === "won" || lead.status === "lost") return null
   return at < today ? "overdue" : at === today ? "today" : "upcoming"
 }
+
+/** Logged minutes as "1h 5m", or "45m" under an hour. */
+export function hoursMinutes(minutes: number) {
+  const h = Math.floor(minutes / 60)
+  const m = minutes % 60
+  return h > 0 ? `${h}h ${m}m` : `${m}m`
+}

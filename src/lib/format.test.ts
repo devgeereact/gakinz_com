@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { followUpState, formatYmd, localIsoDate } from "./format"
+import { followUpState, formatYmd, hoursMinutes, localIsoDate } from "./format"
 
 // Enquiry follow-ups: "due" means a next action on or before today on an
 // enquiry that is still open.
@@ -27,5 +27,14 @@ describe("local dates", () => {
   it("formats the local calendar day, not the UTC one", () => {
     expect(localIsoDate(new Date(2026, 0, 5, 23, 30))).toBe("2026-01-05")
     expect(formatYmd("2026-10-12")).toBe("12 Oct")
+  })
+})
+
+describe("hoursMinutes", () => {
+  it("shows minutes alone under an hour and hours with minutes from an hour", () => {
+    expect(hoursMinutes(0)).toBe("0m")
+    expect(hoursMinutes(45)).toBe("45m")
+    expect(hoursMinutes(60)).toBe("1h 0m")
+    expect(hoursMinutes(125)).toBe("2h 5m")
   })
 })

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { Link } from "react-router-dom"
 import { AlertCircle, Clock, Loader2, Play, Square, Plus, Trash2, RefreshCw, Check, X, Download } from "lucide-react"
 import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/page-kit"
 import { TableSkeleton } from "@/app/components/TableSkeleton"
@@ -25,12 +26,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { time, projects as projectsApi, type TimeEntry, type Project } from "@/lib/api"
+import { hoursMinutes } from "@/lib/format"
+import { canAccess } from "@/lib/access"
 
-function hm(minutes: number) {
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  return h > 0 ? `${h}h ${m}m` : `${m}m`
-}
+const hm = hoursMinutes
 function fmtDate(d: string) {
   return new Date(d.replace(" ", "T")).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
 }
@@ -49,6 +48,8 @@ const APPROVER_ROLES = ["super_admin", "admin", "manager"]
 export default function Time() {
   const role = useAuth((s) => s.user?.role)
   const canApprove = !!role && APPROVER_ROLES.includes(role)
+  // A trainer may log time but has no Support screen, so sees the ticket number without a link.
+  const canOpenTickets = canAccess(role, "support")
   const [entries, setEntries] = useState<TimeEntry[]>([])
   const [projectList, setProjectList] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
@@ -289,7 +290,20 @@ export default function Time() {
               {entries.map((e) => (
                 <TableRow key={e.id}>
                   <TableCell className="whitespace-nowrap">{fmtDate(e.entry_date)}</TableCell>
-                  <TableCell className="min-w-[140px]">{e.project_name}</TableCell>
+                  <TableCell className="min-w-[140px]">
+                    {e.project_name}
+                    {e.ticket_id ? (
+                      <span className="block text-[13px] text-muted-foreground">
+                        {canOpenTickets ? (
+                          <Link to={`/app/support?ticket=${e.ticket_id}`} className="underline underline-offset-2 hover:text-foreground">
+                            Ticket #{e.ticket_id}
+                          </Link>
+                        ) : (
+                          <>Ticket #{e.ticket_id}</>
+                        )}
+                      </span>
+                    ) : null}
+                  </TableCell>
                   <TableCell className="min-w-[180px]">{e.description || <span className="text-muted-foreground">None</span>}</TableCell>
                   <TableCell className="whitespace-nowrap">{e.user_name || <span className="text-muted-foreground">Unknown</span>}</TableCell>
                   <TableCell className="whitespace-nowrap text-right font-mono">{hm(e.minutes)}</TableCell>

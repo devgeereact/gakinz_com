@@ -10,6 +10,7 @@
  *   /app/leads?enquiry=<id>                 (also with the existing ?due=1)
  *   /app/leads?view=calls&call=<id>
  *   /app/clients?client=<id>               (opens the client's detail sheet)
+ *   /app/support?ticket=<id>               (opens the ticket, e.g. from its time on /app/time)
  *
  * Quotes have no detail view on /app/proposals, so the search opens that
  * screen plainly.
@@ -41,6 +42,10 @@ export function invoicingLink(params: URLSearchParams): { invoice: number | null
 
 export function clientsLink(params: URLSearchParams): { client: number | null } {
   return { client: idParam(params, "client") }
+}
+
+export function supportLink(params: URLSearchParams): { ticket: number | null } {
+  return { ticket: idParam(params, "ticket") }
 }
 
 /** `call` only counts inside the Calls view, where calls are listed. */

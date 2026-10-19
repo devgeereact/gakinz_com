@@ -12,6 +12,7 @@ import {
   linkRevision,
   projectsLink,
   recordElementId,
+  supportLink,
 } from "./deepLink"
 
 const p = (q: string) => new URLSearchParams(q)
@@ -26,6 +27,26 @@ describe("idParam", () => {
     }
     expect(idParam(p(""), "x")).toBeNull()
     expect(idParam(p("x=2147483647"), "x")).toBe(2147483647)
+  })
+})
+
+describe("supportLink", () => {
+  it("reads the ticket a Time entry links to", () => {
+    expect(supportLink(p("ticket=12"))).toEqual({ ticket: 12 })
+  })
+  it("ignores a missing or malformed ticket, so the plain screen shows", () => {
+    expect(supportLink(p(""))).toEqual({ ticket: null })
+    expect(supportLink(p("ticket=0"))).toEqual({ ticket: null })
+    expect(supportLink(p("ticket=12x"))).toEqual({ ticket: null })
+    expect(supportLink(p("client=12"))).toEqual({ ticket: null })
+  })
+  it("marks a new ticket link, and the same ticket again only with a fresh nonce", () => {
+    const first = linkMark(supportLink(p("ticket=12")), null)
+    expect(first.value).toBe("ticket=12")
+    expect(isNewLink(null, first)).toBe(true)
+    expect(isNewLink(first, linkMark(supportLink(p("ticket=12")), null))).toBe(false)
+    expect(isNewLink(first, linkMark(supportLink(p("ticket=12")), linkNavigationState()))).toBe(true)
+    expect(isNewLink(first, linkMark(supportLink(p("ticket=13")), null))).toBe(true)
   })
 })
 
