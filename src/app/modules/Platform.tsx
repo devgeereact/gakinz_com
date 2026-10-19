@@ -34,6 +34,7 @@ import { PageHeader, StatusBadge } from "@/app/components/page-kit"
 import { TableSkeleton } from "@/app/components/TableSkeleton"
 import { users, audit, announcements, integrations, privacy, downloadName, clients as clientsApi, type RetentionReport, type ManagedUser, type AuditEntry, type Client, type Announcement, type IntegrationStatus } from "@/lib/api"
 import { useAuth, type Role } from "@/store/auth.store"
+import { exportOutcome, PRIVACY_NOT_AVAILABLE, RETENTION_NOT_AVAILABLE, retentionState } from "@/app/modules/privacyToolsModel"
 import { TwoFactorPanel, SessionsPanel } from "@/app/components/AccountSecurity"
 
 const ROLES: Role[] = ["super_admin", "admin", "manager", "trainer", "editor", "employee", "client"]
@@ -704,6 +705,7 @@ function PrivacyTab() {
   const role = useAuth((s) => s.user?.role)
   const [email, setEmail] = useState("")
   const [exporting, setExporting] = useState(false)
+  const [exportMissing, setExportMissing] = useState(false)
 
   const exportEmail = async () => {
     const e = email.trim()
@@ -712,12 +714,13 @@ function PrivacyTab() {
       return
     }
     setExporting(true)
-    const res = await privacy.exportEnquiryEmail(e)
+    const out = exportOutcome(await privacy.exportEnquiryEmail(e))
     setExporting(false)
-    if (res.ok) {
-      saveAs(res.data, downloadName(res.data, `gakinz-data-export-enquiry-${new Date().toISOString().slice(0, 10)}.json`))
+    setExportMissing(out.kind === "not_on_server")
+    if (out.kind === "saved") {
+      saveAs(out.file, downloadName(out.file, `gakinz-data-export-enquiry-${new Date().toISOString().slice(0, 10)}.json`))
       toast.success("Export downloaded. It holds personal data: store it safely and delete it once sent.")
-    } else toast.error(res.error || "Could not export that enquirer's data.")
+    } else if (out.kind === "error") toast.error(out.error || "Could not export that enquirer's data.")
   }
 
   return (
@@ -743,6 +746,9 @@ function PrivacyTab() {
             {exporting ? <Loader2 className="animate-spin" /> : <FileJson />} Export data
           </Button>
         </form>
+        <p role="status" className="text-[13px] text-muted-foreground empty:hidden">
+          {exportMissing ? PRIVACY_NOT_AVAILABLE : null}
+        </p>
       </div>
       {role === "super_admin" ? (
         <RetentionCard />
@@ -757,12 +763,13 @@ function RetentionCard() {
   const [report, setReport] = useState<RetentionReport | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [missing, setMissing] = useState(false)
 
   const apply = (res: Awaited<ReturnType<typeof privacy.retentionReport>>) => {
-    if (res.ok) {
-      setReport(res.data)
-      setError(null)
-    } else setError(res.error)
+    const next = retentionState(res)
+    setReport(next.kind === "ready" ? next.report : null)
+    setError(next.kind === "error" ? next.error : null)
+    setMissing(next.kind === "not_on_server")
     setLoading(false)
   }
   const load = async () => {
@@ -792,7 +799,8 @@ function RetentionCard() {
         legal advice and set in the server's <code className="font-mono text-[13px]">config.php</code>. Nothing is deleted or
         changed, by this report or anything else.
       </p>
-      {error && <LoadError what="the retention report" detail={`${error}. The privacy endpoint must be live.`} onRetry={load} />}
+      {missing && <p className="text-[13px] text-muted-foreground">{RETENTION_NOT_AVAILABLE}</p>}
+      {error && <LoadError what="the retention report" detail={error} onRetry={load} />}
       {loading ? (
         <TableSkeleton rows={4} cols={3} />
       ) : report ? (

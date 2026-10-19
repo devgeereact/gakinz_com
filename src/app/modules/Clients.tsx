@@ -39,6 +39,7 @@ import { PageHeader } from "@/app/components/page-kit"
 import { ClientFeedback } from "@/app/components/ClientFeedback"
 import { TableSkeleton } from "@/app/components/TableSkeleton"
 import { useAuth } from "@/store/auth.store"
+import { exportOutcome, PRIVACY_NOT_AVAILABLE } from "@/app/modules/privacyToolsModel"
 
 const TIMELINE_LABEL: Record<ClientDetail["timeline"][number]["type"], string> = {
   enquiry: "Enquiry",
@@ -88,12 +89,13 @@ export default function Clients() {
   const [exporting, setExporting] = useState(false)
   const exportData = async (id: number) => {
     setExporting(true)
-    const res = await privacy.exportClient(id)
+    const out = exportOutcome(await privacy.exportClient(id))
     setExporting(false)
-    if (res.ok) {
-      saveAs(res.data, downloadName(res.data, `gakinz-data-export-client-${id}-${new Date().toISOString().slice(0, 10)}.json`))
+    if (out.kind === "saved") {
+      saveAs(out.file, downloadName(out.file, `gakinz-data-export-client-${id}-${new Date().toISOString().slice(0, 10)}.json`))
       toast.success("Export downloaded. It holds personal data: store it safely and delete it once sent.")
-    } else toast.error(res.error || "Could not export the client's data.")
+    } else if (out.kind === "not_on_server") toast(PRIVACY_NOT_AVAILABLE)
+    else toast.error(out.error || "Could not export the client's data.")
   }
 
   const openDetail = async (id: number) => {
