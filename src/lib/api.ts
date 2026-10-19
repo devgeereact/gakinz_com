@@ -1236,6 +1236,7 @@ export type Contract = {
   created_at: string
   client_company: string | null
   project_name: string | null
+  project_reference?: string | null // the project's GK-P-YYYY-NNNN (SQL 19); null before that step has run
 }
 export type ContractDetail = Contract & {
   body: string | null

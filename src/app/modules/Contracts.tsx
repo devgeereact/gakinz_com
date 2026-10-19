@@ -358,6 +358,9 @@ export default function Contracts() {
                           {TRIAGE[c.nda_triage].label}
                         </Badge>
                       )}
+                      {c.project_reference && (
+                        <span className="mt-0.5 block font-mono text-xs tabular-nums text-muted-foreground">Project {c.project_reference}</span>
+                      )}
                     </TableCell>
                     <TableCell className="min-w-[9rem] [overflow-wrap:anywhere]">{c.client_company || <span className="text-muted-foreground">No client</span>}</TableCell>
                     <TableCell className="whitespace-nowrap">{KIND_LABEL[c.kind] ?? c.kind}</TableCell>
@@ -445,6 +448,12 @@ async function renderContractPdf(c: ContractDetail) {
   doc.setFont("helvetica", "bold")
   doc.setFontSize(18)
   doc.text("GAkinz", M, 44)
+  // The project's work reference (SQL 19): a contract is an agreed document.
+  if (c.project_reference) {
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(10)
+    doc.text(`Project ${c.project_reference}`, W - M, 44, { align: "right" })
+  }
   doc.setTextColor(42, 42, 74)
   doc.setFont("helvetica", "bold")
   doc.setFontSize(14)
