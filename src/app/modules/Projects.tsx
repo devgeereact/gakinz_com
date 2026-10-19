@@ -24,6 +24,8 @@ import {
 import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/page-kit"
 import { ProjectAssetsPanel } from "@/app/components/AssetChecklist"
 import { ProjectBriefPanel } from "@/app/components/ProjectBrief"
+import { useUnsavedGuard } from "@/hooks/use-unsaved-guard"
+import { UnsavedGuardDialog } from "@/components/unsaved-guard-dialog"
 import { LINKED_RECORD, linkMark, linkRevision, projectsLink, recordElementId } from "@/lib/deepLink"
 import { useApplyLink, useReveal } from "@/hooks/use-reveal"
 import {
@@ -90,10 +92,19 @@ export default function Projects() {
   const link = projectsLink(searchParams)
   const mark = linkMark(link, location.state)
 
+  // An open Brief edit is lost when another project is chosen, so ask first.
+  const [briefDirty, setBriefDirty] = useState(false)
+  const guard = useUnsavedGuard(briefDirty)
+
   const select = (p: Project) => {
-    setSelected(p)
-    // The prototype brings the selected project's board into view.
-    requestAnimationFrame(() => boardRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" }))
+    const apply = () => {
+      setSelected(p)
+      // The prototype brings the selected project's board into view.
+      requestAnimationFrame(() => boardRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" }))
+    }
+    // Re-choosing the open project keeps its panel (same key), so nothing is lost.
+    if (p.id === selected?.id) apply()
+    else guard.requestLeave(apply)
   }
 
   const loadProjects = async () => {
@@ -325,9 +336,10 @@ export default function Projects() {
             linkedAsset={link.project === selected.id ? link.asset : null}
             linkRevision={linkRevision(mark)}
           />
-          <ProjectBriefPanel key={`brief-${selected.id}`} projectId={selected.id} projectName={selected.name} />
+          <ProjectBriefPanel key={`brief-${selected.id}`} projectId={selected.id} projectName={selected.name} onDirtyChange={setBriefDirty} requestLeave={guard.requestLeave} />
         </div>
       )}
+      <UnsavedGuardDialog prompt={guard.prompt} />
     </div>
   )
 }

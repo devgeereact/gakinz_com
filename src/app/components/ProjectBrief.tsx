@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { saveAs } from "file-saver"
-import { useUnsavedGuard } from "@/hooks/use-unsaved-guard"
-import { UnsavedGuardDialog } from "@/components/unsaved-guard-dialog"
 import { Download, FileText, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -49,14 +47,25 @@ import {
  * and the sanitised GEE OS handoff download (6.5). Until SQL 16 runs,
  * briefs.php answers 503 and this panel says so.
  */
-export function ProjectBriefPanel({ projectId, projectName }: { projectId: number; projectName: string }) {
+export function ProjectBriefPanel({
+  projectId,
+  projectName,
+  onDirtyChange,
+  requestLeave,
+}: {
+  projectId: number
+  projectName: string
+  /** Tells the page whether any section holds unsaved edits. The page owns the single unsaved-changes guard. */
+  onDirtyChange: (dirty: boolean) => void
+  /** The page guard's requestLeave: runs the action now, or after Leave is confirmed. */
+  requestLeave: (leave: () => void) => void
+}) {
   const [data, setData] = useState<BriefView | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   // Why the panel cannot be used yet, or null: SQL 16 not run, or briefs.php not uploaded.
   const [unavailable, setUnavailable] = useState<Exclude<BriefFailure, "error"> | null>(null)
   const [downloading, setDownloading] = useState(false)
-  // Sections being edited with unsaved changes. One guard covers the whole panel,
-  // so several open sections raise a single "Leave without saving?" prompt.
+  // Sections being edited with unsaved changes, reported up as one flag.
   const [dirtySections, setDirtySections] = useState<ReadonlySet<string>>(new Set())
   const reportDirty = useCallback((id: string, isDirty: boolean) => {
     setDirtySections((prev) => {
@@ -67,7 +76,11 @@ export function ProjectBriefPanel({ projectId, projectName }: { projectId: numbe
       return next
     })
   }, [])
-  const guard = useUnsavedGuard(dirtySections.size > 0)
+  const anyDirty = dirtySections.size > 0
+  useEffect(() => {
+    onDirtyChange(anyDirty)
+    return () => onDirtyChange(false)
+  }, [anyDirty, onDirtyChange])
 
   const apply = useCallback((res: Awaited<ReturnType<typeof projectBriefs.get>>) => {
     if (res.ok) {
@@ -144,7 +157,7 @@ export function ProjectBriefPanel({ projectId, projectName }: { projectId: numbe
           </p>
           <div className="grid gap-3 lg:grid-cols-2">
             {BRIEF_SECTIONS.map((section) => (
-              <BriefSection key={section.title} projectId={projectId} section={section} brief={brief} onSaved={setBrief} onUnavailable={() => setUnavailable("sql")} reportDirty={reportDirty} requestLeave={guard.requestLeave} />
+              <BriefSection key={section.title} projectId={projectId} section={section} brief={brief} onSaved={setBrief} onUnavailable={() => setUnavailable("sql")} reportDirty={reportDirty} requestLeave={requestLeave} />
             ))}
           </div>
           <Measurements
@@ -156,7 +169,6 @@ export function ProjectBriefPanel({ projectId, projectName }: { projectId: numbe
           />
         </>
       )}
-      <UnsavedGuardDialog prompt={guard.prompt} />
     </section>
   )
 }
@@ -288,7 +300,7 @@ function BriefSection({
         </p>
       )}
       <div className="flex flex-wrap justify-end gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={() => requestLeave(() => setEditing(false))} disabled={saving}>
+        <Button type="button" variant="outline" size="sm" onClick={() => (dirty ? requestLeave(() => setEditing(false)) : setEditing(false))} disabled={saving}>
           Cancel
         </Button>
         <Button type="submit" size="sm" disabled={!!problem || saving}>
