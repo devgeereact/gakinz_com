@@ -22,6 +22,15 @@
  * if a number is already taken (a backfill run late, say), the next one is
  * tried.
  *
+ * The gate: a number is issued only when the type's anchor row exists (the
+ * locking read in gk_ref_next finds it). SQL 19 inserts the anchors last,
+ * after the columns, the backfill and the counter seed, so no new record can
+ * take a number the backfill is about to use. Deleting the anchors closes the
+ * gate again (the recovery step in schema.sql). The anchor is checked by that
+ * locking read and not by a plain SELECT, because a plain read inside the
+ * caller's transaction would fix its snapshot before the anchor wait, and
+ * MariaDB's snapshot isolation then refuses the counter update (error 1020).
+ *
  * Optional by design. Endpoints load this file only when it is on the server,
  * and every function answers "no reference" until SQL 19 has run, so creating
  * an enquiry or project never fails because of a reference.
@@ -31,20 +40,24 @@ const GK_REF_KINDS = ['enquiries' => 'E', 'projects' => 'P'];
 const GK_REF_TRIES = 5;
 
 /**
- * True once SQL 19 has run: both reference columns and reference_counters
- * exist. Cached for the request.
+ * True once SQL 19's columns and reference_counters exist, so references can
+ * be read and searched. Issuing one also needs the anchor (see above). Cached
+ * for the request. Never throws: any other database error is logged and reads
+ * as "not ready", so a probe can never turn a saved record into an error reply.
  */
 function gk_ref_ready(mysqli $conn): bool {
   static $ready = null;
   if ($ready !== null) return $ready;
   try {
-    // LIMIT 0 reads no rows; it only proves the columns and the table are there.
+    // LIMIT 0 reads no rows (and so fixes no snapshot); it only proves the
+    // columns and the table are there.
     $a = $conn->query('SELECT reference FROM enquiries LIMIT 0');
     $b = $a !== false ? $conn->query('SELECT reference FROM projects LIMIT 0') : false;
     $c = $b !== false ? $conn->query('SELECT last_n FROM reference_counters LIMIT 0') : false;
     $ready = $c !== false; // older mysqli reporting returns false instead of throwing
   } catch (mysqli_sql_exception $e) {
-    if (!in_array($e->getCode(), [1054, 1146], true)) throw $e; // missing column or table only
+    // 1054 / 1146: a column or the table is not there yet. Anything else is unexpected.
+    if (!in_array($e->getCode(), [1054, 1146], true)) error_log('GAkinz reference probe failed: database error ' . $e->getCode());
     $ready = false;
   }
   return $ready;
@@ -78,8 +91,9 @@ function gk_ref_col(mysqli $conn, string $alias, string $as = 'reference'): stri
  */
 function gk_ref_assign(mysqli $conn, string $table, int $id, bool $inTransaction = false): ?string {
   $kind = GK_REF_KINDS[$table] ?? null;
-  if ($kind === null || $id <= 0 || !gk_ref_ready($conn)) return null;
+  if ($kind === null || $id <= 0) return null;
   try {
+    if (!gk_ref_ready($conn)) return null;
     if (!$inTransaction) $conn->begin_transaction();
     $ref = gk_ref_next($conn, $table, $kind, $id);
     if (!$inTransaction) $conn->commit();
@@ -97,17 +111,12 @@ function gk_ref_assign(mysqli $conn, string $table, int $id, bool $inTransaction
 
 /** The assignment itself, inside a transaction. Throws mysqli_sql_exception on a database error. */
 function gk_ref_next(mysqli $conn, string $table, string $kind, int $id): ?string {
-  // Take this type's turn: the anchor row, created once if SQL 19 left it out.
+  // Take this type's turn on its anchor row. No anchor means the gate is shut
+  // (SQL 19 step 2 not finished, or closed for recovery): assign nothing.
   $anchor = $conn->prepare('SELECT last_n FROM reference_counters WHERE kind = ? AND ref_year = 0 FOR UPDATE');
   $anchor->bind_param('s', $kind);
   $anchor->execute();
-  if (!$anchor->get_result()->fetch_row()) {
-    $seed = $conn->prepare('INSERT IGNORE INTO reference_counters (kind, ref_year, last_n) VALUES (?, 0, 0)');
-    $seed->bind_param('s', $kind);
-    $seed->execute();
-    $anchor->execute();
-    $anchor->get_result();
-  }
+  if (!$anchor->get_result()->fetch_row()) return null;
 
   // $table is one of the two fixed keys of GK_REF_KINDS, never request input.
   $row = $conn->prepare("SELECT YEAR(COALESCE(created_at, CURRENT_TIMESTAMP)) AS y, reference FROM $table WHERE id = ? LIMIT 1");

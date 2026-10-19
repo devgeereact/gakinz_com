@@ -963,62 +963,77 @@ CREATE TABLE IF NOT EXISTS project_measurements (
 -- new project GK-P-YYYY-NNNN, NNNN counting from 0001 per type and per year
 -- (the year the row was created, by the database clock). The visitor sees
 -- their enquiry reference on the contact form's thank-you; staff see both in
--- Enquiries, Projects and search; the client sees their own project
--- references in the portal, on the shared quote and on invoice PDFs. A
--- reference identifies work. It is never a password: no endpoint looks a
+-- Enquiries, Projects, Contracts and search; the client sees their own
+-- project references in the portal, on the shared quote and on invoice PDFs.
+-- A reference identifies work. It is never a password: no endpoint looks a
 -- record up by it without staff sign-in, and nothing signs anyone in with it.
 -- Numbers come from reference_counters, one row per type and year, raised by
 -- one atomic statement. Each assignment first locks its type's anchor row
 -- (ref_year 0), so assignments take turns: two parallel creates never get
 -- the same number or deadlock, and a number is never issued twice, even
 -- after its record is deleted. The unique keys are the backstop: a clash
--- takes the next number. Fresh installs get the columns from the CREATE
--- TABLEs above and the table and anchors below. Run in this order, once, in
--- one sitting: the CREATE TABLE and the anchor INSERT (both safe to repeat),
--- the two ALTERs (a second run fails on the duplicate column), then the
--- backfill, which numbers existing rows per year in id order and seeds the
--- counters (run it straight after the ALTERs, before any new enquiry or
--- project is saved; if a row was saved in between, the UPDATE stops on the
--- unique key and changes nothing). Until the ALTERs run, enquiries and
--- projects are created exactly as before with no reference, every list
--- answers reference null, the screens show none and search ignores it.
+-- takes the next number.
+-- The anchors are also the gate: the server issues references only once
+-- both anchor rows exist, and step 2 inserts them last. Until then,
+-- enquiries and projects are created exactly as before with no reference,
+-- the lists answer reference null, the screens show none and search ignores
+-- it, so a record saved after step 1 is numbered by step 2's backfill rather
+-- than taking a number the backfill needs. Fresh installs get the columns
+-- from the CREATE TABLEs above and run step 2 as written.
+-- Step 1, once (a second run fails on the duplicate column):
+--   ALTER TABLE enquiries ADD COLUMN reference VARCHAR(20) NULL DEFAULT NULL AFTER ip,
+--     ADD UNIQUE KEY uq_enquiry_reference (reference);
+--   ALTER TABLE projects ADD COLUMN reference VARCHAR(20) NULL DEFAULT NULL AFTER due_date,
+--     ADD UNIQUE KEY uq_project_reference (reference);
+-- Step 2, straight after step 1, in one go: the backfill, the counters, then
+-- the gate. The backfill numbers every row still without a reference per
+-- year in id order (no window functions, so it also runs on MySQL 5.7); the
+-- seed starts each year's counter at the highest number in use; the anchors
+-- go last. Safe to repeat: run it again if a record was saved while it ran.
+-- MySQL 8.0.20 and later warn that VALUES() in the seed is deprecated, which
+-- is harmless.
+CREATE TEMPORARY TABLE gk_ref_fill AS
+  SELECT a.id, YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP)) AS y,
+         (SELECT COUNT(*) FROM enquiries b
+           WHERE YEAR(COALESCE(b.created_at, CURRENT_TIMESTAMP)) = YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP))
+             AND b.id <= a.id) AS n
+  FROM enquiries a WHERE a.reference IS NULL;
+UPDATE enquiries e JOIN gk_ref_fill f ON f.id = e.id
+  SET e.reference = CONCAT('GK-E-', f.y, '-', LPAD(f.n, GREATEST(4, CHAR_LENGTH(f.n)), '0'))
+  WHERE e.reference IS NULL;
+DROP TEMPORARY TABLE gk_ref_fill;
+CREATE TEMPORARY TABLE gk_ref_fill AS
+  SELECT a.id, YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP)) AS y,
+         (SELECT COUNT(*) FROM projects b
+           WHERE YEAR(COALESCE(b.created_at, CURRENT_TIMESTAMP)) = YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP))
+             AND b.id <= a.id) AS n
+  FROM projects a WHERE a.reference IS NULL;
+UPDATE projects p JOIN gk_ref_fill f ON f.id = p.id
+  SET p.reference = CONCAT('GK-P-', f.y, '-', LPAD(f.n, GREATEST(4, CHAR_LENGTH(f.n)), '0'))
+  WHERE p.reference IS NULL;
+DROP TEMPORARY TABLE gk_ref_fill;
 CREATE TABLE IF NOT EXISTS reference_counters (
   kind     CHAR(1)  NOT NULL,           -- 'E' enquiry | 'P' project
   ref_year SMALLINT NOT NULL,           -- the year in the reference; 0 for the type's anchor row
   last_n   INT      NOT NULL DEFAULT 0, -- the highest number issued; never lowered
   PRIMARY KEY (kind, ref_year)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
--- One anchor row per type (ref_year 0): each assignment locks it first, so
--- assignments take turns and cannot deadlock creating a new year's row.
+INSERT INTO reference_counters (kind, ref_year, last_n)
+  SELECT 'E', r.y, MAX(r.n) FROM (
+    SELECT CAST(SUBSTRING(reference, 6, 4) AS UNSIGNED) AS y, CAST(SUBSTRING(reference, 11) AS UNSIGNED) AS n
+    FROM enquiries WHERE reference LIKE 'GK-E-%') r
+  GROUP BY r.y
+  ON DUPLICATE KEY UPDATE last_n = GREATEST(last_n, VALUES(last_n));
+INSERT INTO reference_counters (kind, ref_year, last_n)
+  SELECT 'P', r.y, MAX(r.n) FROM (
+    SELECT CAST(SUBSTRING(reference, 6, 4) AS UNSIGNED) AS y, CAST(SUBSTRING(reference, 11) AS UNSIGNED) AS n
+    FROM projects WHERE reference LIKE 'GK-P-%') r
+  GROUP BY r.y
+  ON DUPLICATE KEY UPDATE last_n = GREATEST(last_n, VALUES(last_n));
+-- The anchors open the gate, so they go last.
 INSERT IGNORE INTO reference_counters (kind, ref_year, last_n) VALUES ('E', 0, 0), ('P', 0, 0);
---   ALTER TABLE enquiries ADD COLUMN reference VARCHAR(20) NULL DEFAULT NULL AFTER ip,
---     ADD UNIQUE KEY uq_enquiry_reference (reference);
---   ALTER TABLE projects ADD COLUMN reference VARCHAR(20) NULL DEFAULT NULL AFTER due_date,
---     ADD UNIQUE KEY uq_project_reference (reference);
--- Backfill (no window functions, so it also runs on MySQL 5.7):
---   CREATE TEMPORARY TABLE gk_ref_fill AS
---     SELECT a.id, YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP)) AS y,
---            (SELECT COUNT(*) FROM enquiries b
---              WHERE YEAR(COALESCE(b.created_at, CURRENT_TIMESTAMP)) = YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP))
---                AND b.id <= a.id) AS n
---     FROM enquiries a;
---   UPDATE enquiries e JOIN gk_ref_fill f ON f.id = e.id
---     SET e.reference = CONCAT('GK-E-', f.y, '-', LPAD(f.n, GREATEST(4, CHAR_LENGTH(f.n)), '0'))
---     WHERE e.reference IS NULL;
---   INSERT INTO reference_counters (kind, ref_year, last_n)
---     SELECT 'E', y, MAX(n) FROM gk_ref_fill GROUP BY y
---     ON DUPLICATE KEY UPDATE last_n = GREATEST(last_n, VALUES(last_n));
---   DROP TEMPORARY TABLE gk_ref_fill;
---   CREATE TEMPORARY TABLE gk_ref_fill AS
---     SELECT a.id, YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP)) AS y,
---            (SELECT COUNT(*) FROM projects b
---              WHERE YEAR(COALESCE(b.created_at, CURRENT_TIMESTAMP)) = YEAR(COALESCE(a.created_at, CURRENT_TIMESTAMP))
---                AND b.id <= a.id) AS n
---     FROM projects a;
---   UPDATE projects p JOIN gk_ref_fill f ON f.id = p.id
---     SET p.reference = CONCAT('GK-P-', f.y, '-', LPAD(f.n, GREATEST(4, CHAR_LENGTH(f.n)), '0'))
---     WHERE p.reference IS NULL;
---   INSERT INTO reference_counters (kind, ref_year, last_n)
---     SELECT 'P', y, MAX(n) FROM gk_ref_fill GROUP BY y
---     ON DUPLICATE KEY UPDATE last_n = GREATEST(last_n, VALUES(last_n));
---   DROP TEMPORARY TABLE gk_ref_fill;
+-- Recovery, only if an earlier draft of this block was run (table and anchors
+-- first) and the step 2 UPDATE stopped on the unique key: close the gate and
+-- clear the references issued meanwhile, then run step 2 again. A reference
+-- shown in that short window may change.
+--   DELETE FROM reference_counters; UPDATE enquiries SET reference = NULL; UPDATE projects SET reference = NULL;
