@@ -98,7 +98,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-085 | Ticket time with no date, and template due dates, use PHP's time zone, which is not set | Low | Open. Same cause as K-067; live time zone UNVERIFIED |
 | K-086 | A template's client checklist appears in the client's portal as soon as the project is created | Low | Mitigated 2026-10-19: opt-in, off by default. Not uploaded |
 | K-087 | A never-expiring share link (Work images) is cached for up to a day | Low | Accepted 2026-10-19, not uploaded |
-| K-088 | The New project dialog's Client select has no accessible name | Medium | Open. Found 2026-10-19 by axe; predates the batch |
+| K-088 | Several CMS selects had no accessible name (New project Client first) | Medium | **Fixed 2026-10-19.** Found by axe; predates the batch |
 | K-089 | Server test runs left `php -S` workers on the port, making later runs flaky | Low | **Fixed 2026-10-19** in `tests/server/global-setup.ts` |
 
 
@@ -1749,16 +1749,19 @@ place.
 
 ---
 
-## K-088 · The New project dialog's Client select has no accessible name
-**Severity:** medium · **Status:** open. Found 2026-10-19 in the batch 3 browser check; older than the batch.
+## K-088 · Several CMS selects had no accessible name (New project Client first)
+**Severity:** medium · **Status:** **fixed 2026-10-19.** Found 2026-10-19 in the batch 3 browser check; older than the batch.
 
 axe 4.13 reports `button-name` (critical) on the Client `SelectTrigger` in the New project
 dialog (`src/app/modules/Projects.tsx`, around line 220, from `2cdff4a` on 2026-10-14): its
 `<Label>Client</Label>` has no `htmlFor` and the trigger no `id`, so a screen reader announces
 an unnamed button. It shows in all ten captures of the dialog (390 and 1440px, light and
 dark, mocked API). The new "Start from template" select (`#ptemplate`) is labelled correctly.
-Real assistive technology: NOT TESTED. Resolution: give the trigger an `id` and the label a
-matching `htmlFor`.
+Real assistive technology: NOT TESTED. Fix: each trigger now has an `id` and its label a
+matching `htmlFor`. Fields fixed: New project Client; Blog editor Cover and Status; New quote
+Client (Proposals); Clients Tag; Content Tone and Goal; Contracts Template, Client, Project and
+NDA triage; Design Project; Invoicing Client; Knowledge Audience; Leads Score; Platform Role
+and Client; Resourcing Team member and Type; Support Client and Priority; Testimonials Rating.
 
 ---
 
