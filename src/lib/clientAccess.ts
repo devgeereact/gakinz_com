@@ -6,7 +6,13 @@
  */
 import type { ApiResult } from "@/lib/api"
 
-/** True only when the server answered 200 with `enabled: true`. A 404, an error or any other value is off. */
+/**
+ * True only when the server answered 200 with `enabled: true`. A 404, an error
+ * or any other value is off, silently: the page shows nothing. The browser may
+ * still log the 404 of the status probe in its console; that is the fetch
+ * itself and cannot be hidden from script, and the server must answer 404
+ * while off.
+ */
 export function referenceSignInEnabled(r: ApiResult<{ enabled?: unknown }>): boolean {
   return r.ok && r.data?.enabled === true
 }
@@ -29,4 +35,18 @@ export function normaliseReference(input: string): string {
 /** GK-E-2026-0001 or GK-P-2026-0001, the shapes server/_reference.php issues. */
 export function isReferenceShape(ref: string): boolean {
   return /^GK-[EP]-\d{4}-\d{4,9}$/.test(ref)
+}
+
+export const INVALID_LINK = "That sign-in link is invalid or expired."
+
+/**
+ * What the sign-in page says when a link does not work. A 404 means the
+ * feature is switched off (or the file is not on the server), which to the
+ * person holding the link is simply a link that no longer works. Other
+ * answers (expired, refused, too many attempts) carry the server's text.
+ */
+export function redeemErrorMessage(r: ApiResult<unknown>): string {
+  if (r.ok) return ""
+  if (r.status === 404) return INVALID_LINK
+  return r.error || INVALID_LINK
 }

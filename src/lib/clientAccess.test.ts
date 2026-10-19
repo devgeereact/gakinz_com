@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { isReferenceShape, normaliseReference, readAccessToken, referenceSignInEnabled } from "./clientAccess"
+import { INVALID_LINK, isReferenceShape, normaliseReference, readAccessToken, redeemErrorMessage, referenceSignInEnabled } from "./clientAccess"
 
 const TOKEN = "0123456789abcdef".repeat(4)
 
@@ -41,5 +41,16 @@ describe("references", () => {
     for (const v of ["", "GK-X-2026-0001", "GK-P-26-0001", "GK-P-2026-001", "Alpha Ltd", "gk-p-2026-0001"]) {
       expect(isReferenceShape(v)).toBe(false)
     }
+  })
+})
+
+describe("redeemErrorMessage", () => {
+  it("shows a switched-off 404 as an invalid link, not as a missing page", () => {
+    expect(redeemErrorMessage({ ok: false, error: "Not found.", status: 404 })).toBe(INVALID_LINK)
+  })
+  it("keeps the server's own words for other refusals, with a fallback", () => {
+    expect(redeemErrorMessage({ ok: false, error: "Too many attempts. Please wait a few minutes and try again.", status: 429 }))
+      .toMatch(/Too many attempts/)
+    expect(redeemErrorMessage({ ok: false, error: "", status: 400 })).toBe(INVALID_LINK)
   })
 })

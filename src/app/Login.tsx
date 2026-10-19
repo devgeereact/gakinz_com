@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { auth, clientAccess, API_BASE } from "@/lib/api"
-import { isReferenceShape, normaliseReference, readAccessToken, referenceSignInEnabled } from "@/lib/clientAccess"
+import { isReferenceShape, normaliseReference, readAccessToken, redeemErrorMessage, referenceSignInEnabled } from "@/lib/clientAccess"
 import { useAuth } from "@/store/auth.store"
 import { defaultPathForRole } from "@/lib/access"
 import AuthFrame from "@/app/components/AuthFrame"
@@ -83,7 +83,7 @@ export default function Login() {
           setAuth(r.data.token, r.data.user)
           navigate(defaultPathForRole(r.data.user.role), { replace: true })
         } else {
-          setError(r.error || "That sign-in link is invalid or expired.")
+          setError(redeemErrorMessage(r))
         }
       })
     } else if (magic) {
