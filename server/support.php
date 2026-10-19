@@ -383,6 +383,10 @@ if ($method === 'POST' && $action === 'log_time') {
   // The support staff roles, every one of which time.php also lets log time.
   // A trainer may log time in time.php but has no access to Support at all.
   $user = require_auth($conn, STAFF);
+  // Every failure must throw so the catch rolls back, whatever config.php sets.
+  // In this mode prepare() throws rather than returning false, so no
+  // bind_param() below can be reached with a failed statement.
+  mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
   if (!gk_ticket_time_ready($conn)) {
     fail('Logging time on a ticket is not available yet. Run SQL 17 on the database first.', 503);
   }
@@ -406,10 +410,10 @@ if ($method === 'POST' && $action === 'log_time') {
   // row makes two first logs for the same client take turns, and the project
   // read is a locking read too, so the second sees the project the first
   // committed instead of an older snapshot.
-  // Any statement that fails, by exception or by returning false, rolls the
-  // whole log back.
-  $run = function ($stmt) {
-    if ($stmt === false || !$stmt->execute()) throw new mysqli_sql_exception('log_time statement failed');
+  // Any statement that fails, the audit rows included, rolls the whole log
+  // back: no project, no entry and no audit row.
+  $run = function (mysqli_stmt $stmt): mysqli_stmt {
+    if (!$stmt->execute()) throw new mysqli_sql_exception('log_time statement failed');
     return $stmt;
   };
   $created = false;
@@ -442,14 +446,15 @@ if ($method === 'POST' && $action === 'log_time') {
     $te->bind_param('iiisiis', $projectId, $id, $uid, $e['description'], $e['minutes'], $e['billable'], $e['entry_date']);
     $run($te);
     $entryId = (int)$conn->insert_id; // read before audit(), which inserts its own row
+    // Audited inside the transaction, so a log is never saved unaudited.
+    if ($created) audit($conn, $uid, 'project_create', IT_SUPPORT_NAME . " (client #$clientId, standing, from ticket #$id)");
+    audit($conn, $uid, 'ticket_time_log', "#$id · project #$projectId · {$e['minutes']}m");
     if (!$conn->commit()) throw new mysqli_sql_exception('log_time commit failed');
   } catch (mysqli_sql_exception $ex) {
     $conn->rollback();
     fail('Could not log the time.', 500);
   }
 
-  if ($created) audit($conn, $uid, 'project_create', IT_SUPPORT_NAME . " (client #$clientId, standing, from ticket #$id)");
-  audit($conn, $uid, 'ticket_time_log', "#$id · project #$projectId · {$e['minutes']}m");
   ok(['id' => $entryId, 'project_id' => $projectId, 'project_created' => $created], 201);
 }
 

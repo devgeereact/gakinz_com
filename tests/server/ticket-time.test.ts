@@ -151,6 +151,31 @@ describe("log_time", () => {
     expect(count("time_entries")).toBe(0)
   })
 
+  it("writes its audit rows inside the transaction: a failed audit leaves no entry, project or audit row", async () => {
+    // Only the last write fails, after the project, the entry and the
+    // project_create audit row are already in the transaction.
+    // A compound trigger body holds semicolons, so the mysql client needs another delimiter.
+    sql(
+      `DELIMITER //\nCREATE TRIGGER gk_test_fail_time_audit BEFORE INSERT ON audit_log FOR EACH ROW ` +
+        `BEGIN IF NEW.action = 'ticket_time_log' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'synthetic failure'; END IF; END//\nDELIMITER ;`,
+    )
+    try {
+      const r = await logTime({ id: ticketId, minutes: 30 })
+      expect(r.status).toBe(500)
+      expect(r.json.error).toBe("Could not log the time.")
+    } finally {
+      sql(`DROP TRIGGER IF EXISTS gk_test_fail_time_audit`)
+    }
+    expect(count("projects")).toBe(0)
+    expect(count("time_entries")).toBe(0)
+    expect(auditCount("project_create")).toBe(0)
+    expect(auditCount("ticket_time_log")).toBe(0)
+    // Nothing was half saved, so the next log starts cleanly.
+    const retry = await logTime({ id: ticketId, minutes: 30 })
+    expect(retry.status).toBe(201)
+    expect(retry.json.project_created).toBe(true)
+  })
+
   it("refuses a ticket with no client, in plain words, and creates nothing", async () => {
     const orphan = createTicket(null, "Internal: rotate backups")
     const r = await logTime({ id: orphan, minutes: 30 })
