@@ -6,7 +6,7 @@ import { Command as CommandPrimitive } from "cmdk"
 import { Search } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { Dialog, DialogContent } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog"
 
 const Command = React.forwardRef<
   React.ElementRef<typeof CommandPrimitive>,
@@ -24,15 +24,27 @@ const Command = React.forwardRef<
 Command.displayName = CommandPrimitive.displayName
 
 // `commandProps` reaches the inner Command, for a controlled selection
-// (`value` / `onValueChange`) or key handling.
+// (`value` / `onValueChange`) or key handling. `title` and `description` give
+// the dialog its accessible name and description; both are visually hidden,
+// since the input's placeholder already says what the dialog is for.
 type CommandDialogProps = DialogProps & {
   commandProps?: Omit<React.ComponentPropsWithoutRef<typeof CommandPrimitive>, "className" | "children">
+  title?: string
+  description?: string
 }
 
-const CommandDialog = ({ children, commandProps, ...props }: CommandDialogProps) => {
+const CommandDialog = ({
+  children,
+  commandProps,
+  title = "Search",
+  description = "Type to filter, use the arrow keys to move and Enter to open.",
+  ...props
+}: CommandDialogProps) => {
   return (
     <Dialog {...props}>
       <DialogContent className="top-[12vh] max-w-[620px] translate-y-0 overflow-hidden p-0 data-[state=closed]:slide-out-to-top-[2%] data-[state=open]:slide-in-from-top-[2%] [&>button:last-child]:hidden">
+        <DialogTitle className="sr-only">{title}</DialogTitle>
+        <DialogDescription className="sr-only">{description}</DialogDescription>
         <Command {...commandProps} className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-group]]:px-2 [&_[cmdk-input-wrapper]_svg]:h-5 [&_[cmdk-input-wrapper]_svg]:w-5 [&_[cmdk-input]]:h-12 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-3 [&_[cmdk-item]_svg]:h-5 [&_[cmdk-item]_svg]:w-5">
           {children}
         </Command>
