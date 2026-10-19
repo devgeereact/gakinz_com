@@ -40,13 +40,19 @@
  *     observation window, and every user id or name (created_by, updated_by)
  *   - files, messages, invoices, tasks, assets, tokens, configuration and
  *     anything secret
- * Defence in depth on the text that is exported (all staff-written):
- *   - any occurrence of this client's company, contact name, email or phone
- *     is replaced with "[client detail removed]" (so a project called
- *     "Acme Ltd relaunch" exports as "[client detail removed] relaunch")
- *   - any other email address becomes "[email removed]"
- *   - credentials in a URL (https://user:pass@host) become
- *     https://[credentials removed]@host
+ * The exported fields are staff-written and go out as typed, after one
+ * narrow redaction pass (md_sanitise). It is a safety net, not a guarantee:
+ * staff must not type personal data or secrets into the brief.
+ *   - this client's exact company, contact name and email, matched as whole
+ *     words, ignoring case (a value under 3 characters is skipped, and "Ann"
+ *     never touches "Annual"), become "[client detail removed]"
+ *   - this client's phone, matched by its digits whatever the spaces,
+ *     dashes, dots or brackets, with +44, 0044 and a leading 0 treated as
+ *     the same, becomes "[client detail removed]"
+ *   - any email address becomes "[email removed]"
+ *   - every link loses its query string, fragment and user:pass@ login,
+ *     because the spec asks for non-sensitive evidence links
+ * Other personal data typed into these fields is not detected.
  * Markdown safety: user text can never change the document's structure.
  * Control characters are removed; \ ` * _ { } [ ] < > # | ! ~ & are
  * backslash-escaped everywhere, so no heading, link, image, table, HTML tag,
@@ -61,6 +67,10 @@
 require __DIR__ . '/_bootstrap.php';
 
 const STAFF = ['super_admin', 'admin', 'manager', 'editor', 'employee']; // as projects.php
+/** Also shown as the brief panel's hint (HANDOFF_NOTE in projectBriefModel.ts). Keep the two the same. */
+const HANDOFF_NOTE = "Staff-written fields are exported as typed, after removing this client's exact company, contact name, email "
+  . "and phone, and any email address; links lose their query string, fragment and login. "
+  . 'Do not type personal data or secrets into the brief.';
 const BRIEF_MIGRATION = 'The project brief needs the 2026-10-19 database update (SQL 16) first.';
 /** Brief text fields and their length caps, in characters. */
 const BRIEF_FIELDS = [
@@ -240,20 +250,46 @@ function md_block(string $s): string {
   return implode("\n", $lines);
 }
 
+const REDACTED = '[client detail removed]';
+
 /**
- * Staff text with known client details, any email address and URL
- * credentials removed. $known: this client's company, contact name, email
- * and phone (blank ones skipped).
+ * A pattern for a phone number by its digits: any spaces, dashes, dots or
+ * brackets between them, and +44, 0044, 44 or a leading 0 as one prefix.
+ * Null when the number has fewer than 6 digits, which is too little to match
+ * safely.
+ */
+function md_phone_pattern(string $phone): ?string {
+  $d = preg_replace('/\D+/', '', $phone);
+  if (str_starts_with($d, '00')) $d = substr($d, 2);
+  $uk = false;
+  if (str_starts_with($d, '44')) { $d = substr($d, 2); $uk = true; }
+  elseif (str_starts_with($d, '0')) { $d = substr($d, 1); $uk = true; }
+  if (strlen($d) < 6) return null;
+  $sep = '[\s\-.()]*';
+  $prefix = $uk ? '(?:(?:\+|00)?\s*44(?:\s*\(\s*0\s*\))?|\(\s*0|0)' : '(?:\+|00)';
+  // The separator after the prefix sits inside the optional group, so a bare
+  // number never swallows the space in front of it.
+  return '/(?<![\d+])(?:' . $prefix . $sep . ')?' . implode($sep, str_split($d)) . '(?!\d)/u';
+}
+
+/**
+ * Staff text with this client's details, any email address and the
+ * sensitive parts of links removed (see the file header). $known: the
+ * client's company, contact_name, email and phone.
  */
 function md_sanitise(?string $s, array $known): ?string {
   if ($s === null || trim($s) === '') return null;
-  foreach ($known as $k) {
-    $k = trim((string)$k);
-    if (mb_strlen($k) >= 3) $s = str_ireplace($k, '[client detail removed]', $s);
+  // Links first: drop the login, the query string and the fragment.
+  $s = preg_replace('#\b([a-z][a-z0-9+.-]*://)(?:[^\s/?\#@]*@)?([^\s?\#]*)(?:\?[^\s\#]*)?(?:\#\S*)?#iu', '$1$2', $s);
+  foreach (['company', 'contact_name', 'email'] as $key) {
+    $k = trim((string)($known[$key] ?? ''));
+    if (mb_strlen($k) < 3) continue;
+    // Whole words only: no letter, digit or underscore either side.
+    $s = preg_replace('/(?<![\p{L}\p{N}_])' . preg_quote($k, '/') . '(?![\p{L}\p{N}_])/iu', REDACTED, $s);
   }
-  // Credentials first, so user:pass@host is not read as an email address.
-  $s = preg_replace('#([a-z][a-z0-9+.-]*://)[^/\s@]+@#i', '$1[credentials removed]@', $s);
-  return preg_replace('/[A-Z0-9._%+\'-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i', '[email removed]', $s);
+  $phone = md_phone_pattern((string)($known['phone'] ?? ''));
+  if ($phone !== null) $s = preg_replace($phone, REDACTED, $s);
+  return preg_replace('/[\p{L}\p{N}._%+\'-]+@[\p{L}\p{N}.-]+\.\p{L}{2,}/iu', '[email removed]', $s);
 }
 
 function md_section(string $heading, ?string $body, bool $block = true): string {
@@ -283,7 +319,7 @@ function br_handoff(mysqli $conn, array $project): string {
     $c = br_stmt($conn, 'SELECT company, contact_name, email, phone FROM clients WHERE id = ? LIMIT 1');
     $c->bind_param('i', $clientId);
     $c->execute();
-    $known = array_values($c->get_result()->fetch_assoc() ?: []);
+    $known = $c->get_result()->fetch_assoc() ?: [];
   }
   $clean = fn(?string $s) => md_sanitise($s, $known);
 
@@ -299,8 +335,9 @@ function br_handoff(mysqli $conn, array $project): string {
   $measures = $m->get_result()->fetch_all(MYSQLI_ASSOC);
 
   $out = "# GEE OS handoff: project $pid\n\n";
-  $out .= "Sanitised export from GAkinzOS on " . gmdate('Y-m-d') . ". It holds the project reference, approved scope, "
-    . "acceptance criteria, decisions and evidence locations only. Client personal data, notes and secrets are left out.\n\n";
+  $out .= "Export from GAkinzOS on " . gmdate('Y-m-d') . ". It holds the project reference, approved scope, "
+    . "acceptance criteria, decisions and evidence locations only, and no client record fields beyond the client ID.\n\n"
+    . HANDOFF_NOTE . "\n\n";
   $out .= "## Project reference\n\n";
   $out .= "- Project ID: $pid\n";
   $out .= '- Project name: ' . md_line($clean($project['name']) ?? '') . "\n";
@@ -387,6 +424,7 @@ try {
     $cols[] = 'updated_by';
     $vals[] = $uid;
     // Column names come from the constants above, never from the request.
+    // VALUES(c), not the MySQL 8 row alias: MariaDB has no alias form (MySQL 8 only warns).
     $sql = 'INSERT INTO project_briefs (project_id, ' . implode(', ', $cols) . ') VALUES (?' . str_repeat(', ?', count($cols)) . ')
       ON DUPLICATE KEY UPDATE ' . implode(', ', array_map(fn($c) => "$c = VALUES($c)", $cols));
     $types = 'i';
