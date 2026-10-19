@@ -1,6 +1,6 @@
 import type { Block } from "./articleFormat"
 import { loadScriptOnce, type ConsentEnv } from "./consent"
-import { ADSENSE_SCRIPT } from "./monetisation"
+import { ADSENSE_SCRIPT, type MonetisationConfig } from "./monetisation"
 
 /**
  * Where an article may carry an ad slot (Task 25): after the third paragraph
@@ -17,6 +17,29 @@ export function slotPositions(blocks: Block[]): number[] {
     if ((SLOT_AFTER_PARAGRAPHS as readonly number[]).includes(paragraphs) && i < blocks.length - 1) out.push(i)
   })
   return out.slice(0, 2)
+}
+
+/**
+ * The ad unit a slot shows, or null for none. A slot shows only when AdSense
+ * is configured, a CMP is configured to ask, and the visitor has consented.
+ */
+export function adToShow(cfg: MonetisationConfig, consent: boolean): MonetisationConfig["ads"] {
+  return cfg.ads && cfg.consent && consent ? cfg.ads : null
+}
+
+/** The page global AdSense reads its requests from. */
+export type AdQueueHost = { adsbygoogle?: object[] }
+
+/**
+ * Ask AdSense to fill one ins element, once. A second push for the same
+ * element makes AdSense throw, so the element is marked. Returns true when
+ * this call made the request.
+ */
+export function requestAdOnce(ins: { dataset: DOMStringMap }, host: AdQueueHost): boolean {
+  if (ins.dataset.gkPushed) return false
+  ins.dataset.gkPushed = "1"
+  ;(host.adsbygoogle = host.adsbygoogle || []).push({})
+  return true
 }
 
 /** Add the AdSense script for this publisher, once. Google's documented tag: async, crossorigin="anonymous". */

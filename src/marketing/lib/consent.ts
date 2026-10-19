@@ -20,7 +20,12 @@ import { monetisation, type MonetisationConfig } from "./monetisation"
  * /verify, /p (shared proposals), /login and /set-password.
  */
 
-/** Paths that must never carry a third-party script. Matched by whole first segment. */
+/**
+ * Paths that must never carry a third-party script. Matched by whole first
+ * segment. The client portal itself is /app/portal; "/portal" is kept as a
+ * guard in case a short public link to it is ever added, since a portal page
+ * must never load a CMP or ad script.
+ */
 export const PRIVATE_PREFIXES = ["/app", "/verify", "/p", "/login", "/set-password", "/portal"] as const
 
 export function isPrivatePath(pathname: string): boolean {
@@ -32,7 +37,6 @@ export function isPrivatePath(pathname: string): boolean {
 export type TcData = {
   gdprApplies?: boolean
   eventStatus?: string
-  listenerId?: number
   purpose?: { consents?: Record<string, boolean | undefined> }
 }
 export type TcfApi = (command: string, version: number, callback: (data: TcData, success: boolean) => void, parameter?: unknown) => void

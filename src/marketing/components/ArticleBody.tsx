@@ -119,4 +119,3 @@ export function ArticleBody({ blocks, slot }: { blocks: Block[]; slot?: (n: numb
     )
   }
 }
-

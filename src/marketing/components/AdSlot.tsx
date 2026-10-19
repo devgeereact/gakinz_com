@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useRef, useSyncExternalStore } from "react"
 import { getAdConsent, subscribeAdConsent, type ConsentEnv } from "@/marketing/lib/consent"
-import { ensureAdScript } from "@/marketing/lib/adSlots"
+import { adToShow, ensureAdScript, requestAdOnce, type AdQueueHost } from "@/marketing/lib/adSlots"
 import { monetisation } from "@/marketing/lib/monetisation"
 
 /**
@@ -37,15 +37,13 @@ export default function AdSlot() {
   const cfg = monetisation()
   const consent = useSyncExternalStore(subscribeAdConsent, getAdConsent, () => false)
   const ref = useRef<HTMLModElement>(null)
-  const ads = cfg.consent && consent ? cfg.ads : null
+  const ads = adToShow(cfg, consent)
 
   useEffect(() => {
     const ins = ref.current
-    if (!ads || !ins || ins.dataset.gkPushed) return
-    ensureAdScript(window as unknown as ConsentEnv, ads.clientId)
-    ins.dataset.gkPushed = "1"
-    const w = window as unknown as { adsbygoogle?: object[] }
-    ;(w.adsbygoogle = w.adsbygoogle || []).push({})
+    if (!ads || !ins) return
+    const w = window as unknown as ConsentEnv & AdQueueHost
+    if (requestAdOnce(ins, w)) ensureAdScript(w, ads.clientId)
   }, [ads])
 
   if (!ads) return null

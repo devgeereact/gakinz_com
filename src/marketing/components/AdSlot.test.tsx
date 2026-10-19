@@ -1,11 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server"
 import { afterEach, describe, expect, it } from "vitest"
 import { parseArticle, type Block } from "@/marketing/lib/articleFormat"
-import { setMonetisationForTests } from "@/marketing/lib/monetisation"
+import { normaliseMonetisation, setMonetisationForTests } from "@/marketing/lib/monetisation"
 import { resetConsentForTests } from "@/marketing/lib/consent"
 import AdSlot, { AdSlotView } from "./AdSlot"
 import { ArticleBody } from "./ArticleBody"
-import { slotPositions } from "@/marketing/lib/adSlots"
+import { adToShow, requestAdOnce, slotPositions, type AdQueueHost } from "@/marketing/lib/adSlots"
 
 const ON = {
   ads: { provider: "adsense", client_id: "ca-pub-1234567890123456", slot_id: "1234567890" },
@@ -23,11 +23,57 @@ describe("AdSlot", () => {
     expect(renderToStaticMarkup(<AdSlot />)).toBe("")
   })
 
-  it("renders nothing when configured but consent is not known", () => {
+  it("renders nothing in the server render even when configured, so prerendered pages never carry a slot", () => {
     setMonetisationForTests(ON)
     expect(renderToStaticMarkup(<AdSlot />)).toBe("")
   })
+})
 
+describe("adToShow", () => {
+  const configured = normaliseMonetisation(ON)
+
+  it("shows nothing with everything off, whatever the consent", () => {
+    const off = normaliseMonetisation(undefined)
+    expect(adToShow(off, false)).toBeNull()
+    expect(adToShow(off, true)).toBeNull()
+  })
+
+  it("shows nothing when configured but the visitor has not consented", () => {
+    expect(adToShow(configured, false)).toBeNull()
+  })
+
+  it("shows the configured unit once the visitor has consented", () => {
+    expect(adToShow(configured, true)).toEqual({ provider: "adsense", clientId: "ca-pub-1234567890123456", slotId: "1234567890" })
+  })
+
+  it("shows nothing when AdSense is set but no CMP is, even with a consent signal", () => {
+    const noCmp = normaliseMonetisation({ ...ON, consent: { mode: "none", cmp_script_url: "" } })
+    expect(noCmp.ads).not.toBeNull()
+    expect(adToShow(noCmp, true)).toBeNull()
+  })
+})
+
+describe("requestAdOnce", () => {
+  it("pushes one request per ins element, however often the effect runs", () => {
+    const host: AdQueueHost = {}
+    const a = { dataset: {} as DOMStringMap }
+    const b = { dataset: {} as DOMStringMap }
+    expect(requestAdOnce(a, host)).toBe(true)
+    expect(requestAdOnce(a, host)).toBe(false)
+    expect(requestAdOnce(b, host)).toBe(true)
+    expect(host.adsbygoogle).toEqual([{}, {}])
+  })
+
+  it("keeps a queue AdSense already created", () => {
+    const queue: object[] = [{ earlier: true }]
+    const host: AdQueueHost = { adsbygoogle: queue }
+    requestAdOnce({ dataset: {} as DOMStringMap }, host)
+    expect(host.adsbygoogle).toBe(queue)
+    expect(queue).toHaveLength(2)
+  })
+})
+
+describe("AdSlotView", () => {
   it("draws a labelled unit with the configured publisher and slot", () => {
     const out = renderToStaticMarkup(<AdSlotView clientId="ca-pub-1234567890123456" slotId="1234567890" />)
     expect(out).toContain('aria-label="Advertisement"')
