@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react"
-import { AlertCircle, Loader2, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react"
+import { AlertCircle, FileJson, Loader2, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react"
+import { saveAs } from "file-saver"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -31,7 +32,7 @@ import {
 } from "@/components/ui/table"
 import { PageHeader, StatusBadge } from "@/app/components/page-kit"
 import { TableSkeleton } from "@/app/components/TableSkeleton"
-import { users, audit, announcements, integrations, clients as clientsApi, type ManagedUser, type AuditEntry, type Client, type Announcement, type IntegrationStatus } from "@/lib/api"
+import { users, audit, announcements, integrations, privacy, clients as clientsApi, type RetentionReport, type ManagedUser, type AuditEntry, type Client, type Announcement, type IntegrationStatus } from "@/lib/api"
 import { useAuth, type Role } from "@/store/auth.store"
 import { TwoFactorPanel, SessionsPanel } from "@/app/components/AccountSecurity"
 
@@ -120,6 +121,7 @@ export default function Platform() {
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="sessions">My sessions</TabsTrigger>
           <TabsTrigger value="audit">Audit log</TabsTrigger>
+          <TabsTrigger value="privacy">Privacy</TabsTrigger>
         </TabsList>
         <TabsContent value="team" className="mt-0">
           <TeamTab open={addOpen} setOpen={setAddOpen} />
@@ -138,6 +140,9 @@ export default function Platform() {
         </TabsContent>
         <TabsContent value="audit" className="mt-0">
           <AuditTab />
+        </TabsContent>
+        <TabsContent value="privacy" className="mt-0">
+          <PrivacyTab />
         </TabsContent>
       </Tabs>
     </div>
@@ -686,6 +691,157 @@ function AuditTab() {
           </Table>
         </div>
       )}
+    </div>
+  )
+}
+
+/**
+ * Privacy tools (privacy.php). An export by enquiry email for super_admin and
+ * admin (a client's export is on the client record), and the read-only
+ * retention report for super_admin. Nothing here deletes or changes a row.
+ */
+function PrivacyTab() {
+  const role = useAuth((s) => s.user?.role)
+  const [email, setEmail] = useState("")
+  const [exporting, setExporting] = useState(false)
+
+  const exportEmail = async () => {
+    const e = email.trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
+      toast.error("Enter the email address the enquiry came from.")
+      return
+    }
+    setExporting(true)
+    const res = await privacy.exportEnquiryEmail(e)
+    setExporting(false)
+    if (res.ok) {
+      saveAs(res.data, "gakinz-data-export-enquiry.json")
+      toast.success("Export downloaded. It holds personal data: store it safely and delete it once sent.")
+    } else toast.error(res.error || "Could not export that enquirer's data.")
+  }
+
+  return (
+    <div className="grid gap-4">
+      <div className="grid min-w-0 content-start gap-3 rounded-2xl border bg-card p-[18px]">
+        <b className="font-semibold">Export an enquirer's data</b>
+        <p className="text-[13px] text-muted-foreground">
+          For an access request from someone who sent an enquiry. It downloads every enquiry from that address, the calls on
+          them and the audit entries that name it. For a client, use Export data on the client record instead.
+        </p>
+        <form
+          className="flex flex-wrap items-end gap-2.5"
+          onSubmit={(ev) => {
+            ev.preventDefault()
+            exportEmail()
+          }}
+        >
+          <div className="grid min-w-[min(100%,260px)] flex-1 gap-1.5">
+            <Label htmlFor="privacy-email">Email address</Label>
+            <Input id="privacy-email" type="email" autoComplete="off" value={email} onChange={(ev) => setEmail(ev.target.value)} />
+          </div>
+          <Button type="submit" variant="outline" disabled={exporting}>
+            {exporting ? <Loader2 className="animate-spin" /> : <FileJson />} Export data
+          </Button>
+        </form>
+      </div>
+      {role === "super_admin" ? (
+        <RetentionCard />
+      ) : (
+        <p className="text-[13px] text-muted-foreground">The retention report is for the super admin.</p>
+      )}
+    </div>
+  )
+}
+
+function RetentionCard() {
+  const [report, setReport] = useState<RetentionReport | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const apply = (res: Awaited<ReturnType<typeof privacy.retentionReport>>) => {
+    if (res.ok) {
+      setReport(res.data)
+      setError(null)
+    } else setError(res.error)
+    setLoading(false)
+  }
+  const load = async () => {
+    setLoading(true)
+    apply(await privacy.retentionReport())
+  }
+  // The first load starts with `loading` already true, so the effect sets
+  // state only once the reply arrives.
+  useEffect(() => {
+    let live = true
+    privacy.retentionReport().then((res) => {
+      if (live) apply(res)
+    })
+    return () => {
+      live = false
+    }
+  }, [])
+
+  return (
+    <div className="grid min-w-0 content-start gap-3 rounded-2xl border bg-card p-[18px]">
+      <span className="flex flex-wrap items-start justify-between gap-2">
+        <b className="font-semibold">Retention report</b>
+        <Badge variant="secondary">Read only</Badge>
+      </span>
+      <p className="text-[13px] text-muted-foreground">
+        How many rows each proposed retention rule would affect if its period were set. Periods are decided by the owner with
+        legal advice and set in the server's <code className="font-mono text-[13px]">config.php</code>. Nothing is deleted or
+        changed, by this report or anything else.
+      </p>
+      {error && <LoadError what="the retention report" detail={`${error}. The privacy endpoint must be live.`} onRetry={load} />}
+      {loading ? (
+        <TableSkeleton rows={4} cols={3} />
+      ) : report ? (
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Rule</TableHead>
+                <TableHead>Period</TableHead>
+                <TableHead>Would affect</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {report.rules.map((r) => (
+                <TableRow key={r.key}>
+                  <TableCell className="min-w-[180px]">
+                    {r.label}
+                    <small className="block text-[12.5px] text-muted-foreground">From {r.starts_from}</small>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {r.status === "counted" && r.period !== null ? (
+                      `${r.period} ${r.unit}${r.period === 1 ? "" : "s"}`
+                    ) : (
+                      <span className="text-muted-foreground">{r.status === "invalid_period" ? "Invalid period" : "Period not set"}</span>
+                    )}
+                    <small className="block font-mono text-[12px] text-muted-foreground">{r.config_key}</small>
+                  </TableCell>
+                  <TableCell className="tabular-nums">
+                    {r.counts ? (
+                      Object.entries(r.counts).map(([table, n]) => (
+                        <span key={table} className="block">
+                          {n === null ? "Not available" : n} <span className="text-muted-foreground">{table.replace(/_/g, " ")}</span>
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-muted-foreground">Nothing happens</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      ) : null}
+      <div>
+        <Button variant="outline" onClick={load} disabled={loading}>
+          <RefreshCw /> Refresh
+        </Button>
+      </div>
     </div>
   )
 }

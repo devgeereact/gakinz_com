@@ -861,6 +861,29 @@ export const audit = {
   list: () => api.get<AuditEntry[]>("/audit.php"),
 }
 
+// Privacy tools (privacy.php). The export is a JSON attachment for super_admin
+// and admin; the retention report is super_admin only and read only: it counts
+// what each proposed rule would affect and never deletes or changes a row.
+export type RetentionRule = {
+  key: string
+  label: string
+  config_key: string
+  unit: "month" | "day"
+  starts_from: string
+  period: number | null
+  status: "period_not_set" | "invalid_period" | "counted"
+  /** Table name to row count; a null count means that table is not there yet. */
+  counts: Record<string, number | null> | null
+}
+export type RetentionReport = { dry_run: true; generated_at: string; rules: RetentionRule[] }
+export const privacy = {
+  exportClient: (clientId: number) =>
+    api.download(`/privacy.php?action=export&client_id=${clientId}`, "application/json"),
+  exportEnquiryEmail: (email: string) =>
+    api.download(`/privacy.php?action=export&enquiry_email=${encodeURIComponent(email)}`, "application/json"),
+  retentionReport: () => api.get<RetentionReport>("/privacy.php?action=retention_report"),
+}
+
 // Auth (§6.1). Token + user persisted in the auth store; api attaches the bearer.
 export type LoginResponse = { token: string; expires: string; user: AuthUser }
 export const auth = {

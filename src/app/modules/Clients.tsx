@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
-import { Loader2, Download, RefreshCw, Plus, Building2, Search } from "lucide-react"
+import { Loader2, Download, RefreshCw, Plus, Building2, Search, FileJson } from "lucide-react"
+import { saveAs } from "file-saver"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -30,13 +31,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { clients, type Client, type ClientInput, type ClientTag, type ClientDetail } from "@/lib/api"
+import { clients, privacy, type Client, type ClientInput, type ClientTag, type ClientDetail } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { gbp } from "@/lib/format"
 import { EmptyState, LoadError } from "@/app/components/EmptyState"
 import { PageHeader } from "@/app/components/page-kit"
 import { ClientFeedback } from "@/app/components/ClientFeedback"
 import { TableSkeleton } from "@/app/components/TableSkeleton"
+import { useAuth } from "@/store/auth.store"
 
 const TIMELINE_LABEL: Record<ClientDetail["timeline"][number]["type"], string> = {
   enquiry: "Enquiry",
@@ -78,6 +80,21 @@ export default function Clients() {
   const [detail, setDetail] = useState<ClientDetail | null>(null)
   const [detailOpen, setDetailOpen] = useState(false)
   const [detailLoading, setDetailLoading] = useState(false)
+
+  // Subject access export (privacy.php): super_admin and admin only, which the
+  // server enforces; this only hides the button from other roles.
+  const role = useAuth((s) => s.user?.role)
+  const canExport = role === "super_admin" || role === "admin"
+  const [exporting, setExporting] = useState(false)
+  const exportData = async (id: number) => {
+    setExporting(true)
+    const res = await privacy.exportClient(id)
+    setExporting(false)
+    if (res.ok) {
+      saveAs(res.data, `gakinz-data-export-client-${id}.json`)
+      toast.success("Export downloaded. It holds personal data: store it safely and delete it once sent.")
+    } else toast.error(res.error || "Could not export the client's data.")
+  }
 
   const openDetail = async (id: number) => {
     setDetailOpen(true)
@@ -405,6 +422,11 @@ export default function Clients() {
             )}
           </div>
           <SheetFooter className="m-0 px-5 pb-[calc(14px+env(safe-area-inset-bottom,0px))]">
+            {canExport && detail && (
+              <Button variant="outline" onClick={() => exportData(detail.client.id)} disabled={exporting}>
+                {exporting ? <Loader2 className="animate-spin" /> : <FileJson />} Export data
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setDetailOpen(false)}>
               Close
             </Button>
