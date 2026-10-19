@@ -436,7 +436,13 @@ function ProjectBoard({
           <span className="sr-only">Loading tasks…</span>
         </div>
       ) : (
-        <div className="grid auto-cols-[minmax(250px,1fr)] grid-flow-col gap-3.5 overflow-x-auto pb-2" data-kanban>
+        <div
+          role="region"
+          aria-label="Task board, scrolls sideways"
+          tabIndex={0}
+          className="grid auto-cols-[minmax(250px,1fr)] grid-flow-col gap-3.5 overflow-x-auto rounded-2xl pb-2 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30"
+          data-kanban
+        >
           {TASK_COLS.map((col) => (
             <div key={col.key} className="flex min-h-[200px] flex-col gap-2 rounded-2xl border bg-secondary p-2.5">
               <div className="flex items-center gap-2 px-1.5 pb-2 pt-1">
