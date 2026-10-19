@@ -284,7 +284,8 @@ if ($method === 'POST' && $action === 'client_share') {
 
   if ($visible === 1) {
     if ($f['project_id'] !== null) {
-      $owner = $f['project_deleted_at'] === null && $f['project_client_id'] !== null ? (int)$f['project_client_id'] : 0;
+      if ($f['project_deleted_at'] !== null) fail('This file’s project was removed, so there is nobody to share it with.', 409);
+      $owner = $f['project_client_id'] !== null ? (int)$f['project_client_id'] : 0;
       if ($owner <= 0) fail('This file’s project has no client, so there is nobody to share it with.', 409);
       if ($f['client_id'] !== null && (int)$f['client_id'] !== $owner) {
         fail('This file names a different client from its project. Fix that before sharing it.', 409);
@@ -303,7 +304,9 @@ if ($method === 'POST' && $action === 'client_share') {
     WHERE id = ? AND deleted_at IS NULL');
   $stmt->bind_param('iii', $visible, $visible, $id);
   $stmt->execute();
-  if ((int)$f['client_visible'] !== $visible) {
+  // Audit what the write actually changed: no row changes when the file was
+  // already in that state (or a concurrent request got there first).
+  if ($stmt->affected_rows > 0) {
     audit($conn, $user['id'], 'file_client_share', "#$id " . ($visible ? 'visible to client' : 'hidden from client'));
   }
   $stmt = $conn->prepare('SELECT client_visible, shared_at FROM files WHERE id = ? LIMIT 1');
@@ -351,11 +354,26 @@ function fl_client_shape(array $r): array {
  * rules out a symlink pointing elsewhere.
  */
 function stored_path(string $stored): ?string {
-  if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,254}$/', $stored)) return null;
+  // \z, not $: a `$` would also match before a trailing newline.
+  if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,254}\z/', $stored)) return null;
   $dir = realpath(UPLOAD_DIR);
   $real = realpath(UPLOAD_DIR . '/' . $stored);
   if ($dir === false || $real === false || dirname($real) !== $dir || !is_file($real)) return null;
   return $real;
+}
+
+/**
+ * The Content-Disposition value for a download (RFC 6266). Control characters
+ * are dropped so the name can never break the header (upload strips line
+ * breaks; older rows may not have). `filename` is an ASCII-only fallback, with
+ * any other byte, quote or backslash replaced by `_`; `filename*` carries the
+ * real UTF-8 name, percent-encoded.
+ */
+function attachment_disposition(string $name): string {
+  $name = (string)preg_replace('/[\x00-\x1F\x7F]+/', '', $name);
+  // One `_` per character when the name is valid UTF-8, else one per byte.
+  $ascii = preg_replace('/[^\x20-\x7E]|["\\\\]/u', '_', $name) ?? (string)preg_replace('/[^\x20-\x7E]|["\\\\]/', '_', $name);
+  return 'attachment; filename="' . $ascii . '"; filename*=UTF-8\'\'' . rawurlencode($name);
 }
 
 function stream_file(array $f): void {
@@ -367,11 +385,8 @@ function stream_file(array $f): void {
   // to anyone with the token.
   $mime = (string)($f['mime'] ?? '');
   if (!isset(allowed_mimes()[$mime])) $mime = 'application/octet-stream';
-  // Control characters are dropped from the name so it can never break the
-  // header (upload already strips line breaks; older rows may not have).
-  $name = (string)preg_replace('/[\x00-\x1F\x7F]+/', '', (string)$f['name']);
   header('Content-Type: ' . $mime);
-  header('Content-Disposition: attachment; filename="' . addslashes($name) . '"');
+  header('Content-Disposition: ' . attachment_disposition((string)$f['name']));
   header('Content-Length: ' . filesize($path));
   header('X-Content-Type-Options: nosniff');
   header('Cache-Control: private, no-store');
