@@ -96,6 +96,14 @@ off in the account: the script stays on the page during in-site navigation, and 
 place ads outside articles. Withdrawal removes the slots but cannot unload a script already
 loaded, until the next page load.
 
+Two limits to settle before switching on. First, the loader takes a URL only: some CMPs need
+more than that, for example OneTrust's `data-domain-script` attribute, Cookiebot's
+`data-cbid` and `data-framework` attributes, or Google's Privacy & messaging tag and its
+`signalGooglefcPresent` call. For any of those, a URL alone may not be enough and the loader
+needs a small code change for that CMP. Second, as a business choice, a slot shows only with
+Purpose 1 consent (storing and reading on the device). Google's limited ads, which can serve
+without that consent, are therefore not shown to visitors who refuse it.
+
 Rejecting consent never blocks the service content. Never ask clients, community members or
 friends to click ads, click them yourself, buy traffic or use incentivised visits. Keep
 third-party monetisation scripts out of authenticated layouts. Public and private surfaces

@@ -111,7 +111,11 @@ page carries a third-party script, frame, ad slot or consent marker. When switch
 certified CMP (from an allow-listed host) loads on public pages only, never on `/app`,
 `/verify`, `/p`, `/login` or `/set-password`, and the CMP sets its own storage. That storage,
 and AdSense's, must be added to the table above, the cookie notice and the privacy notice
-before the switch is made.
+before the switch is made. The loader takes a URL only, and some CMPs need extra attributes or
+calls (OneTrust `data-domain-script`, Cookiebot `data-cbid` and `data-framework`, Google's
+`signalGooglefcPresent`), so a URL alone may not be enough. Ads show only with Purpose 1
+consent, a business choice that also suppresses Google's limited ads for visitors who refuse
+(`docs/CONTENT-AND-GROWTH.md` section 3).
 
 ## 5. Marketing and analytics
 
