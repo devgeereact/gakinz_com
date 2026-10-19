@@ -200,10 +200,29 @@ describe("files shared to the client portal", () => {
     expect(res.headers.get("content-type")).toBe("application/pdf")
     expect(res.headers.get("content-disposition")).toMatch(/^attachment; filename="Public brief\.pdf"/)
     expect(res.headers.get("x-content-type-options")).toBe("nosniff")
+    // A link that expires is never cached, so it cannot outlive its expiry.
     expect(res.headers.get("cache-control")).toBe("private, no-store")
 
     sql(`UPDATE files SET expires_at = NOW() - INTERVAL 1 MINUTE WHERE id = ${up.id}`)
     expect((await fetch(`${BASE}/files.php?token=${link.json.token}`)).status).toBe(404)
+  })
+
+  it("lets a browser cache a share link that never expires, as every public Work image uses", async () => {
+    const up = await upload(owner, "Work hero.pdf", PDF, { project_id: projectA })
+    const token = "c0ffee".padEnd(40, "0")
+    sql(`UPDATE files SET share_token = ${q(token)}, expires_at = NULL WHERE id = ${up.id}`)
+    const res = await fetch(`${BASE}/files.php?token=${token}`)
+    expect(res.status).toBe(200)
+    expect(Buffer.from(await res.arrayBuffer()).equals(PDF)).toBe(true)
+    expect(res.headers.get("cache-control")).toBe("public, max-age=86400")
+    // Everything else about the response is unchanged from the expiring link.
+    expect(res.headers.get("content-disposition")).toMatch(/^attachment; filename="Work hero\.pdf"/)
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff")
+    // The signed-in downloads of the same file stay private.
+    expect((await fetchRaw(`files.php?download=${up.id}`, owner)).headers.get("cache-control")).toBe("private, no-store")
+    // Giving it an expiry makes the same link uncached again.
+    sql(`UPDATE files SET expires_at = NOW() + INTERVAL 1 DAY WHERE id = ${up.id}`)
+    expect((await fetch(`${BASE}/files.php?token=${token}`)).headers.get("cache-control")).toBe("private, no-store")
   })
 
   it("answers another client's file, a hidden file, a deleted file and a missing id with the same 404", async () => {

@@ -145,12 +145,15 @@ if ($method === 'GET' && ($action === 'mine' || $action === 'mine_download')) {
 if ($method === 'GET' && isset($_GET['token'])) {
   $token = preg_replace('/[^a-f0-9]/', '', (string)$_GET['token']);
   if ($token === '') fail('Invalid link.', 404);
-  $stmt = $conn->prepare('SELECT name, `stored`, mime FROM files WHERE share_token = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > NOW()) LIMIT 1');
+  $stmt = $conn->prepare('SELECT name, `stored`, mime, expires_at FROM files WHERE share_token = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > NOW()) LIMIT 1');
   $stmt->bind_param('s', $token);
   $stmt->execute();
   $f = $stmt->get_result()->fetch_assoc();
   if (!$f) fail('This link is invalid or has expired.', 404);
-  stream_file($f);
+  // A link that never expires is what every public Work image and hero shot
+  // uses, so a browser may keep it for a day. A link with an expiry stays
+  // uncached, so it stops working the moment it lapses.
+  stream_file($f, $f['expires_at'] === null ? 'public, max-age=86400' : 'private, no-store');
 }
 
 // ── Authenticated download ───────────────────────────────────────────────────
@@ -376,7 +379,11 @@ function attachment_disposition(string $name): string {
   return 'attachment; filename="' . $ascii . '"; filename*=UTF-8\'\'' . rawurlencode($name);
 }
 
-function stream_file(array $f): void {
+/**
+ * Stream a stored file and end the request. Every route sends the same
+ * download headers; only the caching differs (see the share-link route).
+ */
+function stream_file(array $f, string $cacheControl = 'private, no-store'): void {
   $path = stored_path((string)($f['stored'] ?? ''));
   if ($path === null) fail('File is missing on disk.', 404);
   // Override the JSON content-type set in _bootstrap. Only a type on the
@@ -389,7 +396,7 @@ function stream_file(array $f): void {
   header('Content-Disposition: ' . attachment_disposition((string)$f['name']));
   header('Content-Length: ' . filesize($path));
   header('X-Content-Type-Options: nosniff');
-  header('Cache-Control: private, no-store');
+  header('Cache-Control: ' . $cacheControl);
   readfile($path);
   exit;
 }
