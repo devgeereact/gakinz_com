@@ -20,7 +20,7 @@
  *
  * Fields searched, at most SEARCH_PER_TYPE results per type, newest first:
  *
- *   client   company, contact name, email        → /app/clients
+ *   client   company, contact name, email        → /app/clients?client=<id>
  *   project  name                                 → /app/projects?project=<id>
  *   enquiry  name, company, email                 → /app/leads?enquiry=<id>
  *   invoice  number                               → /app/invoicing?invoice=<id>
@@ -101,7 +101,7 @@ function sr_type(mysqli $conn, string $type, string $p): array {
         WHERE deleted_at IS NULL AND (company' . $like . ' OR contact_name' . $like . ' OR email' . $like . ')
         ORDER BY id DESC' . $limit, $p, 3);
       return array_map(fn($r) => sr_result('client', $r['id'], (string)$r['company'],
-        sr_join([$r['contact_name'], $r['email']]), '/app/clients'), $rows);
+        sr_join([$r['contact_name'], $r['email']]), '/app/clients?client=' . (int)$r['id']), $rows);
     }
     case 'project': {
       $rows = sr_rows($conn, 'SELECT p.id, p.name, p.status, c.company FROM projects p

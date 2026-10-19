@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import {
   LINK_NONCE,
+  clientsLink,
   idParam,
   invoicingLink,
   isNewLink,
@@ -116,5 +117,23 @@ describe("isNewLink", () => {
   it("keys a scroll by link and nonce", () => {
     expect(linkRevision(m("invoice=4"))).not.toBe(linkRevision(m("invoice=4", "n1")))
     expect(linkRevision(m("invoice=4", "n1"))).toBe(linkRevision(m("invoice=4", "n1")))
+  })
+})
+
+describe("clientsLink", () => {
+  it("reads ?client=<id> for the client detail sheet", () => {
+    expect(clientsLink(p("client=7"))).toEqual({ client: 7 })
+  })
+  it("ignores a malformed or missing id, so the plain screen shows", () => {
+    expect(clientsLink(p("client=07"))).toEqual({ client: null })
+    expect(clientsLink(p("client=abc"))).toEqual({ client: null })
+    expect(clientsLink(p(""))).toEqual({ client: null })
+  })
+  it("gives a mark that is new once, and again only with a fresh nonce", () => {
+    const first = linkMark(clientsLink(p("client=7")), null)
+    expect(isNewLink(null, first)).toBe(true)
+    expect(isNewLink(first, linkMark(clientsLink(p("client=7")), null))).toBe(false)
+    expect(isNewLink(first, linkMark(clientsLink(p("client=7")), linkNavigationState()))).toBe(true)
+    expect(isNewLink(first, linkMark(clientsLink(p("client=8")), null))).toBe(true)
   })
 })

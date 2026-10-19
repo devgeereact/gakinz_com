@@ -9,6 +9,10 @@
  *   /app/invoicing?invoice=<id>
  *   /app/leads?enquiry=<id>                 (also with the existing ?due=1)
  *   /app/leads?view=calls&call=<id>
+ *   /app/clients?client=<id>               (opens the client's detail sheet)
+ *
+ * Quotes have no detail view on /app/proposals, so the search opens that
+ * screen plainly.
  */
 
 const ID = /^[1-9]\d{0,9}$/
@@ -33,6 +37,10 @@ export function projectsLink(params: URLSearchParams): ProjectsLink {
 
 export function invoicingLink(params: URLSearchParams): { invoice: number | null } {
   return { invoice: idParam(params, "invoice") }
+}
+
+export function clientsLink(params: URLSearchParams): { client: number | null } {
+  return { client: idParam(params, "client") }
 }
 
 /** `call` only counts inside the Calls view, where calls are listed. */

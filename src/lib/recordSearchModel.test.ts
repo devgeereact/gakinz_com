@@ -69,6 +69,8 @@ describe("recordRoute", () => {
     expect(recordRoute({ type: "invoice", route: "/app/clients" })).toBe("/app/invoicing")
     expect(recordRoute({ type: "client", route: "https://evil.example/app/clients" })).toBe("/app/clients")
     expect(recordRoute({ type: "client", route: "//evil.example" })).toBe("/app/clients")
+    expect(recordRoute({ type: "client", route: "/app/clients?client=12" })).toBe("/app/clients?client=12")
+    expect(recordRoute({ type: "quote", route: "/app/clients?client=12" })).toBe("/app/proposals")
     expect(recordRoute({ type: "quote", route: "/app/proposals?x=<script>" })).toBe("/app/proposals")
     expect(recordRoute({ type: "quote", route: "" })).toBe("/app/proposals")
   })

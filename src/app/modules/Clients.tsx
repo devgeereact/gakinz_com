@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { useLocation, useSearchParams } from "react-router-dom"
 import { Loader2, Download, RefreshCw, Plus, Building2, Search, FileJson } from "lucide-react"
 import { saveAs } from "file-saver"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
@@ -40,6 +41,8 @@ import { ClientFeedback } from "@/app/components/ClientFeedback"
 import { TableSkeleton } from "@/app/components/TableSkeleton"
 import { useAuth } from "@/store/auth.store"
 import { exportOutcome, PRIVACY_NOT_AVAILABLE } from "@/app/modules/privacyToolsModel"
+import { clientsLink, linkMark } from "@/lib/deepLink"
+import { useApplyLink } from "@/hooks/use-reveal"
 
 const TIMELINE_LABEL: Record<ClientDetail["timeline"][number]["type"], string> = {
   enquiry: "Enquiry",
@@ -123,6 +126,17 @@ export default function Clients() {
   useEffect(() => {
     load()
   }, [])
+
+  // ?client=<id> (from the record search) opens that client's detail sheet
+  // once the list has loaded, and again whenever the link changes or the
+  // search re-sends it (useApplyLink). An id that is not listed leaves the
+  // plain screen.
+  const [searchParams] = useSearchParams()
+  const location = useLocation()
+  const link = clientsLink(searchParams)
+  useApplyLink(linkMark(link, location.state), !loading && error === null, () => {
+    if (link.client !== null && items.some((c) => c.id === link.client)) openDetail(link.client)
+  })
 
   const set = (k: keyof ClientInput, v: string) => setForm((f) => ({ ...f, [k]: v }))
 

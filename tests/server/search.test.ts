@@ -104,7 +104,7 @@ describe("search.php record search", () => {
     expect(idsOf(r.json, "invoice")).toEqual([])
 
     expect(of(r.json, "client").find((x) => x.id === byCompany)).toEqual({
-      type: "client", id: byCompany, title: "Harbour Bakery Ltd", secondary: "Ann Lee, ann@harbour.example", route: "/app/clients",
+      type: "client", id: byCompany, title: "Harbour Bakery Ltd", secondary: "Ann Lee, ann@harbour.example", route: `/app/clients?client=${byCompany}`,
     })
     expect(of(r.json, "project")[0]).toEqual({
       type: "project", id: proj, title: "Harbour website rebuild", secondary: "Harbour Bakery Ltd, in progress",
