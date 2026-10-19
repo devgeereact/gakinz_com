@@ -2,6 +2,7 @@ import { useEffect } from "react"
 import { useLocation } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TwoFactorPanel, SessionsPanel } from "@/app/components/AccountSecurity"
+import { DeletionRequestCard } from "@/app/components/DeletionRequest"
 import { PageHeader } from "@/app/components/page-kit"
 import { useAuth } from "@/store/auth.store"
 import { ROLE_LABEL } from "@/lib/access"
@@ -58,6 +59,12 @@ export default function Account() {
           </CardContent>
         </Card>
       </div>
+
+      {me?.role === "client" && (
+        <div className="mt-4 grid items-start gap-4 min-[901px]:grid-cols-2">
+          <DeletionRequestCard email={me.email} />
+        </div>
+      )}
 
       <section aria-labelledby="account-sessions" className="mt-6 min-w-0">
         <h2 id="account-sessions" className="mb-3 font-display text-[1.05rem] font-semibold leading-tight tracking-[-0.01em]">
