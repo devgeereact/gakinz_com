@@ -280,6 +280,12 @@ export default function Blog() {
             <div>
               <Label htmlFor="bbody">Body</Label>
               <Textarea id="bbody" rows={10} value={form.body} onChange={(e) => set("body", e.target.value)} className="mt-1.5" placeholder={"Write the post. Separate paragraphs with a blank line.\n## Heading, - bullet, 1. numbered, **bold**, [text](https://…), and [text](https://…){sponsored} for a paid link."} />
+              <p className="mt-2 text-xs text-muted-foreground">
+                For a recommendation card, write these lines on their own. Only title and an http(s) url are required. A block
+                missing either shows as plain text. With affiliate: yes, the public post shows an affiliate label and a
+                disclosure placeholder until the disclosure wording is supplied.
+              </p>
+              <pre className="mt-1 overflow-x-auto rounded-md bg-muted p-2 text-xs">{":::recommend\ntitle: Product or service name\nurl: https://example.com/item\nnote: One or two sentences on why.\naffiliate: yes\n:::"}</pre>
             </div>
             <div>
               <Label>Status</Label>
