@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { BAD_REPLY_ERROR, NETWORK_ERROR, type ApiResult, type RecordResult, type RecordSearchData } from "@/lib/api"
 import {
   RECORD_SEARCH_DEBOUNCE_MS,
+  autoSelectRecord,
   canSearchRecords,
+  isSelectionKey,
+  recordItemValue,
   createRecordSearcher,
   mergeRecords,
   recordRoute,
@@ -100,9 +103,16 @@ describe("mergeRecords", () => {
 })
 
 describe("stateFromReply", () => {
-  it("hides the group when search.php is missing or refuses the role", () => {
+  it("hides the group only when search.php is missing", () => {
     expect(stateFromReply("ac", { ok: false, error: "x", status: 404 }, "admin")).toEqual({ status: "hidden" })
-    expect(stateFromReply("ac", { ok: false, error: "Not allowed.", status: 403 }, "admin")).toEqual({ status: "hidden" })
+  })
+
+  it("shows a 403 as a failure rather than hiding it", () => {
+    expect(stateFromReply("ac", { ok: false, error: "Not allowed.", status: 403 }, "admin")).toEqual({
+      status: "failed",
+      query: "ac",
+      error: "Not allowed.",
+    })
   })
 
   it("reports a network or server failure as failed with its message", () => {
@@ -120,6 +130,34 @@ describe("stateFromReply", () => {
     expect(ok).toMatchObject({ status: "ok", query: "ac", partial: true })
     const full = stateFromReply("ac", { ok: true, data: reply([], { client: "ok" }) }, "admin")
     expect(full).toEqual({ status: "ok", query: "ac", groups: [], partial: false })
+  })
+})
+
+describe("autoSelectRecord", () => {
+  const ok = (results: RecordResult[]): RecordSearchState => ({
+    status: "ok",
+    query: "ac",
+    groups: mergeRecords(reply(results), "admin"),
+    partial: false,
+  })
+
+  it("selects the first record in group order when results arrive", () => {
+    expect(autoSelectRecord(ok([res("quote", 4), res("client", 9)]), false)).toBe(recordItemValue({ type: "client", id: 9 }))
+    expect(recordItemValue({ type: "client", id: 9 })).toBe("record-client-9")
+  })
+
+  it("leaves the selection alone after the user moved it, with no results, or while loading", () => {
+    expect(autoSelectRecord(ok([res("client", 9)]), true)).toBeNull()
+    expect(autoSelectRecord(ok([]), false)).toBeNull()
+    expect(autoSelectRecord({ status: "loading", query: "ac" }, false)).toBeNull()
+    expect(autoSelectRecord({ status: "failed", query: "ac", error: "x" }, false)).toBeNull()
+  })
+
+  it("knows which keys move the selection", () => {
+    expect(isSelectionKey({ key: "ArrowDown", ctrlKey: false })).toBe(true)
+    expect(isSelectionKey({ key: "n", ctrlKey: true })).toBe(true)
+    expect(isSelectionKey({ key: "n", ctrlKey: false })).toBe(false)
+    expect(isSelectionKey({ key: "Enter", ctrlKey: false })).toBe(false)
   })
 })
 
@@ -186,6 +224,54 @@ describe("createRecordSearcher", () => {
     await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
     expect(calls).toHaveLength(1)
     expect(states.at(-1)).toEqual({ status: "hidden" })
+  })
+
+  it("selects the first record on arrival unless the user moved since the query changed", async () => {
+    const calls: Call[] = []
+    const picks: string[] = []
+    const searcher = createRecordSearcher({
+      role: "admin",
+      find: (query, signal) => new Promise((resolve) => calls.push({ query, signal, resolve })),
+      onState: () => {},
+      onSelect: (v) => picks.push(v),
+    })
+    searcher.update("ac")
+    await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
+    calls[0].resolve({ ok: true, data: reply([res("project", 3), res("client", 7)]) })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(picks).toEqual(["record-client-7"])
+
+    searcher.update("acm")
+    searcher.markMoved()
+    await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
+    calls[1].resolve({ ok: true, data: reply([res("client", 8)]) })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(picks).toEqual(["record-client-7"])
+
+    // A new query clears the "moved" mark.
+    searcher.update("acme")
+    await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
+    calls[2].resolve({ ok: true, data: reply([res("client", 9)]) })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(picks).toEqual(["record-client-7", "record-client-9"])
+  })
+
+  it("warns on a 403, shows it as failed and keeps searching", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      const { calls, states, searcher } = setup()
+      searcher.update("ac")
+      await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
+      calls[0].resolve({ ok: false, error: "Not allowed.", status: 403 })
+      await vi.advanceTimersByTimeAsync(0)
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(states.at(-1)).toEqual({ status: "failed", query: "ac", error: "Not allowed." })
+      searcher.update("acme")
+      await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
+      expect(calls).toHaveLength(2)
+    } finally {
+      warn.mockRestore()
+    }
   })
 
   it("never asks the server for a role with no searchable type", async () => {

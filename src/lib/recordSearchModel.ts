@@ -128,14 +128,16 @@ export type RecordSearchState =
   | { status: "hidden" } // the server has no record search yet, or refuses this role
 
 /**
- * The state after a reply. A 404 (search.php not uploaded yet) or a 403 (an
- * older role list) hides the group for the session rather than show an error
- * on every keystroke. `partial` is true when any type the server searched was
- * unavailable, so the list may be missing rows.
+ * The state after a reply. A 404 (search.php not uploaded yet) hides the
+ * group for the session rather than show an error on every keystroke. Any
+ * other failure, a 403 included, is shown: a staff role refused here means the
+ * server and access.ts disagree, which should be seen, not hidden. `partial`
+ * is true when any type the server searched was unavailable, so the list may
+ * be missing rows.
  */
 export function stateFromReply(query: string, res: ApiResult<RecordSearchData>, role: Role | undefined): RecordSearchState {
   if (!res.ok) {
-    if (res.status === 404 || res.status === 403) return { status: "hidden" }
+    if (res.status === 404) return { status: "hidden" }
     return { status: "failed", query, error: res.error }
   }
   const data = res.data
@@ -146,10 +148,35 @@ export function stateFromReply(query: string, res: ApiResult<RecordSearchData>, 
   return { status: "ok", query, groups: mergeRecords(data, role), partial: types.includes("unavailable") }
 }
 
+/** The menu value of a record item; unique across the whole menu. */
+export function recordItemValue(r: Pick<RecordResult, "type" | "id">): string {
+  return `record-${r.type}-${r.id}`
+}
+
+/**
+ * Which menu item to select when a reply lands: the first record, so Enter
+ * opens the best record match, unless the user has moved the selection
+ * (arrow keys or pointer) since the query last changed. Null means leave the
+ * selection alone.
+ */
+export function autoSelectRecord(state: RecordSearchState, userMoved: boolean): string | null {
+  if (userMoved || state.status !== "ok") return null
+  const first = state.groups[0]?.items[0]
+  return first ? recordItemValue(first) : null
+}
+
+/** Keys with which cmdk moves the selection (its arrow, Home/End and Ctrl+N/P/J/K bindings). */
+export function isSelectionKey(e: Pick<KeyboardEvent, "key" | "ctrlKey">): boolean {
+  if (["ArrowUp", "ArrowDown", "Home", "End"].includes(e.key)) return true
+  return e.ctrlKey && ["n", "p", "j", "k"].includes(e.key)
+}
+
 export type RecordSearcherOptions = {
   role: Role | undefined
   find: (query: string, signal: AbortSignal) => Promise<ApiResult<RecordSearchData>>
   onState: (state: RecordSearchState) => void
+  /** Called with the menu value to select when a reply lands (see autoSelectRecord). */
+  onSelect?: (value: string) => void
   delayMs?: number
 }
 
@@ -164,6 +191,7 @@ export function createRecordSearcher(opts: RecordSearcherOptions) {
   let controller: AbortController | null = null
   let hidden = !canSearchRecords(opts.role)
   let last: RecordSearchState | null = null
+  let moved = false // the user moved the selection since the query last changed
 
   const emit = (s: RecordSearchState) => {
     last = s
@@ -177,8 +205,13 @@ export function createRecordSearcher(opts: RecordSearcherOptions) {
   }
 
   return {
+    /** The user moved the menu selection: arriving records leave it alone. */
+    markMoved(): void {
+      moved = true
+    },
     update(raw: string): void {
       cancel()
+      moved = false
       if (hidden) {
         if (last?.status !== "hidden") emit({ status: "hidden" })
         return
@@ -196,9 +229,14 @@ export function createRecordSearcher(opts: RecordSearcherOptions) {
         const res = await opts.find(q, mine.signal)
         if (mine.signal.aborted) return
         controller = null
+        if (!res.ok && res.status === 403) {
+          console.warn("Record search refused this role (403). server/search.php and src/lib/access.ts may disagree.")
+        }
         const next = stateFromReply(q, res, opts.role)
         if (next.status === "hidden") hidden = true
         emit(next)
+        const pick = autoSelectRecord(next, moved)
+        if (pick) opts.onSelect?.(pick)
       }, delay)
     },
     dispose(): void {
