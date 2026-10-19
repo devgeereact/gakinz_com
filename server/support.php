@@ -246,6 +246,9 @@ if ($user['role'] === 'client') {
     // Fixed text, so nothing from the request reaches the ticket. The client
     // row is locked for the check and the insert, so two requests at once
     // still make one ticket.
+    // Every failure must throw so the catch rolls back, whatever config.php
+    // sets: prepare() then throws rather than returning false.
+    mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
     $conn->begin_transaction();
     try {
       $lock = $conn->prepare('SELECT id FROM clients WHERE id = ? FOR UPDATE');
