@@ -698,6 +698,34 @@ export const projectAssets = {
   supply: (id: number, note: string | null) => api.post<PortalAsset>("/assets.php?action=supply", { id, note }),
 }
 
+// Today attention list (server/today.php). Staff only. A section the caller's
+// role cannot read is absent from `sections`; a section whose source failed is
+// `unavailable` with a null count, never an empty zero.
+export const TODAY_SECTION_KEYS = [
+  "new_enquiries",
+  "follow_ups_due",
+  "calls",
+  "overdue_tasks",
+  "waiting_material",
+  "unpaid_invoices",
+] as const
+export type TodaySectionKey = (typeof TODAY_SECTION_KEYS)[number]
+export type TodayItem = {
+  type: "enquiry" | "booking" | "task" | "asset" | "invoice"
+  id: number
+  title: string
+  reason: string
+  at: string | null // UTC ISO time ("...Z"), or a plain YYYY-MM-DD due date
+  route: string // the CMS screen that holds the record
+}
+export type TodaySection =
+  | { status: "ok"; count: number; items: TodayItem[] }
+  | { status: "unavailable"; count: null; items: TodayItem[] }
+export type TodayData = { generated_at: string; sections: Partial<Record<TodaySectionKey, TodaySection>> }
+export const today = {
+  get: () => api.get<TodayData>("/today.php"),
+}
+
 // Client portal (§6 Client Portal). Aggregated client-facing view.
 export type PortalData = {
   client: { id: number; company: string; contact_name: string | null; email: string | null }
