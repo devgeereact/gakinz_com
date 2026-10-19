@@ -850,3 +850,63 @@ CREATE TABLE IF NOT EXISTS project_assets (
   CONSTRAINT fk_asset_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
   CONSTRAINT fk_asset_file    FOREIGN KEY (file_id)    REFERENCES files(id)    ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- 2026-10-19 · SQL 16 · Project brief and measurements (briefs.php).
+-- docs/PRODUCT-SPEC.md sections 6.4 and 6.5: a small brief inside an existing
+-- project (problem, users, agreed outcome, scope, milestones, decisions,
+-- handover and completion acknowledgement) and a few agreed measurements with
+-- dated evidence. One brief row per project; every field is optional, because
+-- no field is required to open a project. Long text is TEXT with a length cap
+-- enforced in briefs.php, so the caps can change without a migration.
+-- Measurement result: PASS | FAIL | PARTIAL | NOT TESTED (default). Kind:
+-- technical (default) | business; observation_window is kept for business
+-- observations only and cleared for technical ones. Measurements are soft
+-- deleted. Staff only, with the roles of projects.php: a client sees nothing
+-- from either table. briefs.php also serves the manual, sanitised GEE OS
+-- handoff export (Markdown); its include and exclude lists are in that file.
+-- New tables only, so safe to run as-is on the live DB. Until it runs,
+-- briefs.php answers 503 and the project board explains the step.
+CREATE TABLE IF NOT EXISTS project_briefs (
+  id                  INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  project_id          INT NOT NULL,
+  problem             TEXT NULL,                       -- cap 2000
+  intended_users      TEXT NULL,                       -- cap 1000
+  agreed_outcome      TEXT NULL,                       -- cap 2000
+  deliverables        TEXT NULL,                       -- cap 4000
+  exclusions          TEXT NULL,                       -- cap 2000
+  quote_reference     VARCHAR(120) NULL DEFAULT NULL,  -- e.g. "Q-0042", the approved quote
+  milestones_note     TEXT NULL,                       -- cap 2000
+  next_action         VARCHAR(500) NULL DEFAULT NULL,
+  open_decisions      TEXT NULL,                       -- cap 2000
+  handover_checklist  TEXT NULL,                       -- cap 4000
+  support_boundaries  TEXT NULL,                       -- cap 2000
+  completion_ack_on   DATE NULL DEFAULT NULL,          -- when the client acknowledged completion
+  completion_ack_note VARCHAR(1000) NULL DEFAULT NULL, -- how, e.g. "by email, reply kept in Files"
+  updated_by          INT NULL DEFAULT NULL,           -- users.id of the last editor
+  created_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at          TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_brief_project (project_id),
+  CONSTRAINT fk_brief_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS project_measurements (
+  id                 INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  project_id         INT NOT NULL,
+  label              VARCHAR(200)  NOT NULL,              -- what is measured, e.g. "Enquiry form reaches the inbox"
+  target             VARCHAR(500)  NULL DEFAULT NULL,     -- the agreed target
+  baseline           VARCHAR(500)  NULL DEFAULT NULL,     -- where available
+  actual             VARCHAR(500)  NULL DEFAULT NULL,     -- the actual result
+  result             VARCHAR(12)   NOT NULL DEFAULT 'NOT TESTED', -- PASS | FAIL | PARTIAL | NOT TESTED
+  measured_on        DATE NULL DEFAULT NULL,
+  environment        VARCHAR(200)  NULL DEFAULT NULL,     -- e.g. "staging, Safari 18 on iPhone"
+  method             VARCHAR(1000) NULL DEFAULT NULL,     -- how it was checked, with caveats
+  evidence_location  VARCHAR(500)  NULL DEFAULT NULL,     -- a non-sensitive link or file name
+  kind               VARCHAR(10)   NOT NULL DEFAULT 'technical', -- technical | business
+  observation_window VARCHAR(200)  NULL DEFAULT NULL,     -- business only, e.g. "1 to 31 March"
+  created_by         INT NULL DEFAULT NULL,               -- users.id
+  created_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at         TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at         TIMESTAMP NULL DEFAULT NULL,
+  KEY idx_measure_project (project_id),
+  CONSTRAINT fk_measure_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
