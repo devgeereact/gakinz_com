@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 import { BAD_REPLY_ERROR, NETWORK_ERROR, type EnquiryErasure } from "@/lib/api"
-import { confirmMatches, deletionRequestOutcome, erasePreviewState, erasureOutcome, otherEnquiriesNote } from "./erasureModel"
+import { site } from "@/marketing/data/site"
+import { DELETION_NOT_AVAILABLE, confirmMatches, deletionRequestOutcome, erasePreviewState, erasureOutcome, otherEnquiriesNote } from "./erasureModel"
 
 describe("confirmMatches", () => {
   it("accepts the address with different case and outer spaces", () => {
@@ -74,5 +75,12 @@ describe("deletionRequestOutcome", () => {
     expect(deletionRequestOutcome({ ok: false, error: "Not allowed.", status: 403, details: { error: "Not allowed." } })).toEqual({ kind: "not_on_server" })
     const unlinked = "Your account is not linked to a client."
     expect(deletionRequestOutcome({ ok: false, error: unlinked, status: 403, details: { error: unlinked } })).toEqual({ kind: "error", error: unlinked })
+  })
+})
+
+describe("DELETION_NOT_AVAILABLE", () => {
+  it("names the site's contact address, the one the public pages print", () => {
+    expect(site.contact.email).toMatch(/^[^@\s]+@[^@\s]+\.[a-z]+$/)
+    expect(DELETION_NOT_AVAILABLE.endsWith(`email ${site.contact.email}.`)).toBe(true)
   })
 })

@@ -9,9 +9,11 @@
  */
 import type { ApiResult, EnquiryErasePreview, EnquiryErasure } from "@/lib/api"
 import { notAvailableYet } from "@/lib/notAvailable"
+import { site } from "@/marketing/data/site"
 
 export const ERASE_NOT_AVAILABLE = "Erasing an enquiry is not available on the server yet."
-export const DELETION_NOT_AVAILABLE = "Deletion requests open once GAkinz finishes a server update. Until then, email hello@gakinz.com."
+/** The address comes from the site's contact details, so it changes in one place. */
+export const DELETION_NOT_AVAILABLE = `Deletion requests open once GAkinz finishes a server update. Until then, email ${site.contact.email}.`
 
 /**
  * True when the typed confirmation is the enquiry's email address. Case and
