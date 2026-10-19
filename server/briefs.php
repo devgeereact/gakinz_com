@@ -297,21 +297,28 @@ function md_phone_replace(array $m): string {
 }
 
 /**
- * One link without its login, query string and fragment. A closing bracket
- * the link does not open (as in "(see https://x.test/a)") is kept after it.
+ * One link without its login, query string and fragment. Trailing sentence
+ * punctuation and a closing bracket the link does not open (as in
+ * "(see https://x.test/a)." or "https://x.test/a?t=1#f).") are kept after it.
+ * They are peeled in a loop until nothing more comes off, in either order,
+ * and before the query is stripped, so the strip cannot take them with it.
  */
 function md_link_replace(array $m): string {
   $url = $m[0];
   $tail = '';
-  while (str_ends_with($url, ')') && substr_count($url, '(') < substr_count($url, ')')) {
-    $url = substr($url, 0, -1);
-    $tail = ')' . $tail;
-  }
-  // Trailing sentence punctuation is not part of the link.
-  if (preg_match('/[.,;:!]+$/', $url, $p)) {
-    $url = substr($url, 0, -strlen($p[0]));
-    $tail = $p[0] . $tail;
-  }
+  do {
+    $before = $url;
+    if (preg_match('/[.,;:!?]+$/', $url, $p)) {
+      $url = substr($url, 0, -strlen($p[0]));
+      $tail = $p[0] . $tail;
+    }
+    foreach ([')' => '(', ']' => '['] as $close => $open) {
+      if (str_ends_with($url, $close) && substr_count($url, $open) < substr_count($url, $close)) {
+        $url = substr($url, 0, -1);
+        $tail = $close . $tail;
+      }
+    }
+  } while ($url !== $before && $url !== '');
   $url = preg_replace('/[?#].*$/s', '', $url);
   [$scheme, $rest] = explode('://', $url, 2);
   $slash = strpos($rest, '/');

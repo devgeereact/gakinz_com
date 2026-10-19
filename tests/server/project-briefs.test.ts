@@ -415,6 +415,15 @@ describe("project brief and measurements", () => {
       expect(md).not.toContain("s3cret")
     })
 
+    it("keeps a bracket and full stop after a link whose fragment runs into them", async () => {
+      await save({ project_id: projectA, open_decisions: "See https://u:p@ex.com/a?t=1#f)." })
+      await save({ project_id: projectA, next_action: "(see https://x.test/a?k=1)." })
+      const md = raw(await handoff(projectA))
+      expect(md).toContain("See https://ex.com/a).")
+      expect(md).toContain("(see https://x.test/a).")
+      expect(md).not.toMatch(/u:p@|t=1|#f|k=1/)
+    })
+
     it("matches client names as whole words only, so a short name inside a longer word survives", async () => {
       sql(`UPDATE clients SET company = 'Ann', contact_name = 'Bo', email = 'ann@example.test' WHERE id = ${clientId}`)
       await save({ project_id: projectA, deliverables: "Annual planning for Ann, and a page for ANN's banner with Bo and Bob" })
