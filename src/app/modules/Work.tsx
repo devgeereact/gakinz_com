@@ -50,6 +50,9 @@ import {
   validateHero,
   type HeroForm,
 } from "./siteContentModel"
+import { isDirty } from "@/lib/dirty-model"
+import { useUnsavedGuard } from "@/hooks/use-unsaved-guard"
+import { UnsavedGuardDialog } from "@/components/unsaved-guard-dialog"
 
 // The Work module: one record type (server/work.php) for the studio's own
 // portfolio, feeding the public /work pages. Not a page builder — a plain admin
@@ -135,6 +138,8 @@ export default function Work() {
   // Record form.
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<FormState>(blank)
+  // The record as last loaded or saved; the editor is dirty when form or hero differ from it.
+  const [formInitial, setFormInitial] = useState<FormState>(blank)
   const [errs, setErrs] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   // The attached images of the record being edited, and whether the long
@@ -225,6 +230,7 @@ export default function Work() {
 
   const startNew = () => {
     setForm(blank)
+    setFormInitial(blank)
     setErrs({})
     setDetailImages([])
     setNarrativeLoaded(true)
@@ -237,7 +243,7 @@ export default function Work() {
   const startEdit = async (row: WorkAdminRow) => {
     setErrs({})
     const narrative = await loadDetail(row)
-    setForm({
+    const loaded: FormState = {
       id: row.id,
       title: row.title,
       slug: row.slug,
@@ -255,13 +261,18 @@ export default function Work() {
       featured: row.featured === 1,
       sort_order: row.sort_order,
       ...narrative,
-    })
+    }
+    setForm(loaded)
+    setFormInitial(loaded)
     const h = heroFormFromRow(row)
     setHero(h)
     setHeroInitial(h)
     setOpen(true)
     loadLibrary()
   }
+
+  const guard = useUnsavedGuard(open && (isDirty(form, formInitial) || isDirty(hero, heroInitial)))
+  const closeEditor = () => guard.requestLeave(() => setOpen(false))
 
   const setH = <K extends keyof HeroForm>(k: K, v: HeroForm[K]) => setHero((h) => ({ ...h, [k]: v }))
 
@@ -643,7 +654,7 @@ export default function Work() {
       </div>
 
       {/* ── Record form ───────────────────────────────────────────────────── */}
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(o) => (o ? setOpen(true) : closeEditor())}>
         <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{form.id ? "Edit work" : "New work"}</DialogTitle>
@@ -1029,6 +1040,8 @@ export default function Work() {
           </form>
         </DialogContent>
       </Dialog>
+
+      <UnsavedGuardDialog prompt={guard.prompt} />
 
       {/* ── Images ────────────────────────────────────────────────────────── */}
       <Dialog open={!!imgFor} onOpenChange={(v) => !v && setImgFor(null)}>
