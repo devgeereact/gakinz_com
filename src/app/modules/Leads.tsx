@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react"
 import { leadsLink, linkMark, linkRevision, recordElementId } from "@/lib/deepLink"
 import { useApplyLink, useReveal } from "@/hooks/use-reveal"
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
-import { Loader2, Download, RefreshCw, Mail, UserPlus, Tag, CalendarClock, Inbox, Phone, Plus } from "lucide-react"
+import { Loader2, Download, RefreshCw, Mail, UserPlus, Tag, CalendarClock, Inbox, Phone, Plus, Trash2 } from "lucide-react"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -32,6 +32,8 @@ import AiAssist from "@/app/components/AiAssist"
 import { EmptyState, LoadError } from "@/app/components/EmptyState"
 import { PageHeader, StatusBadge } from "@/app/components/page-kit"
 import { CallList, RecordCallDialog, type CallLink } from "@/app/components/CallBookings"
+import { EraseEnquiryDialog } from "@/app/components/EraseEnquiryDialog"
+import { useAuth } from "@/store/auth.store"
 import { sortCalls } from "@/app/modules/bookingModel"
 import { cn } from "@/lib/utils"
 
@@ -87,6 +89,10 @@ export default function Leads() {
   const [converting, setConverting] = useState<number | null>(null)
   // A view filter only; nothing is saved.
   const [hotOnly, setHotOnly] = useState(false)
+  // Erasing a prospect's enquiry (privacy.php): super admin only, and the
+  // server checks the role and every client link again.
+  const canErase = useAuth((s) => s.user?.role) === "super_admin"
+  const [eraseFor, setEraseFor] = useState<Lead | null>(null)
 
   // Lost-reason capture
   const [lostFor, setLostFor] = useState<Lead | null>(null)
@@ -661,6 +667,11 @@ export default function Leads() {
                   {converting === openLead.id ? <Loader2 className="animate-spin" /> : <UserPlus />}
                   Convert to client
                 </Button>
+                {canErase && openLead.status !== "won" && (
+                  <Button variant="destructive" onClick={() => fromDrawer(() => setEraseFor(openLead))}>
+                    <Trash2 /> Erase enquiry
+                  </Button>
+                )}
               </SheetFooter>
             </>
           )}
@@ -674,6 +685,18 @@ export default function Leads() {
           onDone={upsertCall}
           fixed={{ enquiry_id: openLead.id }}
           title={`Record a call with ${openLead.name}`}
+        />
+      )}
+
+      {eraseFor && (
+        <EraseEnquiryDialog
+          key={eraseFor.id}
+          lead={eraseFor}
+          onClose={() => setEraseFor(null)}
+          onErased={(id) => {
+            setEraseFor(null)
+            setItems((xs) => xs.filter((l) => l.id !== id))
+          }}
         />
       )}
 
