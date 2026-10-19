@@ -162,7 +162,7 @@ Measured on branch `feat/redesign-2026` at `d314833` (stacked on `feat/plan-2026
   five project templates (`projects.php` with `_templates.php`), draft protection on six
   screens, portal sharing in the privacy export, and a server test harness that refuses a
   busy port and stops every `php -S` worker. Measured on the Mac at `bdca4aa`: `npm test`
-  395, `npm run test:server` 398 (ports 5395 and 5396), lint ratchet 33 and 0, `php -l`
+  396, `npm run test:server` 398 (ports 5395 and 5396), lint ratchet 33 and 0, `php -l`
   over 59 files, `tsc -b` and docs check PASS. Not merged, uploaded or deployed. **Order:
   upload the PHP (`_time.php` with or before `support.php` and `time.php`, `_templates.php`
   with `projects.php`), run SQL 17 then 18, then merge.** Browser check on mocked API only.

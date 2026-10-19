@@ -104,7 +104,7 @@ new K-083 to K-089), `docs/DEPLOYMENT.md` section 5, `docs/DATA-MODEL.md`,
 
 - `npx tsc -b`: PASS. `npm run build`: PASS at `af151cb` and at `bdca4aa` for the browser
   check (30 public pages prerendered); not re-run for the documentation commit.
-- `npm test`: PASS, 395 tests in 34 files.
+- `npm test`: PASS, 396 tests in 34 files (at 2ba81ae; 395 at bdca4aa).
 - `GK_TEST_DB=gakinz_docs3_test GK_TEST_PHP_PORT=5395 GK_TEST_PROVIDER_PORT=5396 npm run test:server`:
   PASS, 398 tests in 29 files, on the rerun. The first run failed 1 of 398, a `beforeEach`
   timeout in `blog.test.ts` under a load average of about 25; the file alone passed 4 of 4.
