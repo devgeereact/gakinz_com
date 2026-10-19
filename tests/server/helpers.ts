@@ -46,6 +46,7 @@ const TABLES = [
   "site_content", "payment_events", "audit_log", "magic_links", "password_resets", "auth_tokens", "invoice_items", "invoices",
   "ticket_replies", "tickets", "work_images", "work", "files",
   "proposal_items", "proposals", "tasks", "projects", "posts", "users", "clients", "enquiries",
+  "contracts", "certificates", "leave_entries",
 ]
 
 /** Empty every table the tests touch. */

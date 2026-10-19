@@ -55,6 +55,12 @@ $GOOGLE_CLIENT_ID = ''; $GOOGLE_CLIENT_SECRET = ''; $GOOGLE_REDIRECT = ''; $APP_
 $CRON_KEY = ''; $REPORT_RECIPIENTS = '';
 $PAYPAL_CLIENT_ID = ''; $PAYPAL_SECRET = ''; $PAYPAL_MODE = 'sandbox';
 $GITHUB_TOKEN = ''; $FIGMA_TOKEN = ''; $SLACK_WEBHOOK_URL = ''; $CALENDLY_URL = '';
+// Retention periods (_retention.php): two rules set so privacy.test.ts can check
+// the counts, the rest null ("period not set"). The report never changes a row.
+$RETENTION_ENQUIRY_MONTHS = 12; $RETENTION_DELETED_FILE_DAYS = 30;
+$RETENTION_CLIENT_MONTHS = null; $RETENTION_INVOICE_MONTHS = null; $RETENTION_AUDIT_MONTHS = null;
+$RETENTION_SUPPORT_MONTHS = null; $RETENTION_COMMS_MONTHS = null; $RETENTION_STAFF_MONTHS = null;
+$RETENTION_CERTIFICATE_MONTHS = null;
 $conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 if ($conn->connect_errno) { http_response_code(500); echo json_encode(['error' => 'Test database connection failed']); exit; }
 $conn->set_charset('utf8mb4');
