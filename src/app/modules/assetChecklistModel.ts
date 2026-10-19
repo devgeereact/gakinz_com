@@ -5,13 +5,26 @@
  * rule; these only stop an obviously bad form being sent and decide what the
  * panel shows.
  */
-import { ASSET_LABEL_MAX, ASSET_NOTE_MAX, type AssetStatus, type PortalAsset } from "@/lib/api"
+import { ASSET_LABEL_MAX, ASSET_NOTE_MAX, type ApiResult, type AssetStatus, type PortalAsset } from "@/lib/api"
+import { notAvailableYet } from "@/app/modules/portalRequestsModel"
+
+/**
+ * Whether a failed client call to assets.php (?action=mine or ?action=supply)
+ * means assets.php is not on the server yet, or SQL 15 has not run. The rule
+ * is the one notAvailableYet() in portalRequestsModel.ts documents: a 503, a
+ * 405, a 403 "Not allowed.", a 404 with no JSON body, or a reply that is not
+ * JSON (a never-uploaded assets.php is rewritten to app-shell.html). A supply
+ * that answers 404 "Item not found." is about that item, not the route, so it
+ * stays an error, as does "Your account is not linked to a client." (403).
+ * Not for the staff routes: staff panels treat only a 503 as unavailable.
+ */
+export const portalAssetsUnavailable = (res: Extract<ApiResult<unknown>, { ok: false }>): boolean => notAvailableYet(res)
 
 export type AssetsView = "unavailable" | "error" | "loading" | "ready"
 
 /**
- * What a checklist panel shows. `unavailable` (SQL 15 has not run, a 503)
- * wins, then a load failure with a retry, so the panel never spins for ever.
+ * What a checklist panel shows. `unavailable` (a 503 before SQL 15 for staff;
+ * portalAssetsUnavailable() for the portal) wins, then a load failure with a retry, so the panel never spins for ever.
  */
 export function assetsLoadState(items: unknown[] | null, loadError: string | null, unavailable: boolean): AssetsView {
   if (unavailable) return "unavailable"

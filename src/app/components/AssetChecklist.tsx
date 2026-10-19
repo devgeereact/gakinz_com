@@ -17,6 +17,7 @@ import {
   labelProblem,
   noteProblem,
   noteValue,
+  portalAssetsUnavailable,
   staffActions,
 } from "@/app/modules/assetChecklistModel"
 
@@ -256,7 +257,9 @@ function AssetForm({
  * The portal card: what the studio needs from the client, per project, and a
  * way to say each item has been sent. The server takes the client from the
  * token, so nothing here sends a client id. Uploads are not taken here; the
- * client says how they sent it. Hidden until SQL 15 runs (a 503).
+ * client says how they sent it. Hidden until assets.php is uploaded and SQL 15
+ * runs: portalAssetsUnavailable() (assetChecklistModel.ts) says which refusals
+ * mean that, and every other failure shows as an error with a retry.
  */
 export function PortalAssets() {
   const [items, setItems] = useState<PortalAsset[] | null>(null)
@@ -269,7 +272,7 @@ export function PortalAssets() {
     if (res.ok) {
       setItems(res.data)
       setLoadError(null)
-    } else if (res.status === 503) {
+    } else if (portalAssetsUnavailable(res)) {
       setUnavailable(true)
     } else {
       setLoadError(res.error)
@@ -371,6 +374,7 @@ function SupplyForm({ item, onCancel, onDone }: { item: PortalAsset; onCancel: (
   const [note, setNote] = useState("")
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [off, setOff] = useState(false) // the supply route is not on the server yet
   const inFlight = useRef(false) // blocks a second submit before React re-renders
 
   const problem = noteProblem(note)
@@ -387,9 +391,13 @@ function SupplyForm({ item, onCancel, onDone }: { item: PortalAsset; onCancel: (
       await onDone(`Thank you. The studio can see that you sent "${item.label}".`)
       return
     }
-    setError(res.error || "That did not go through.")
     inFlight.current = false
     setSending(false)
+    if (portalAssetsUnavailable(res)) {
+      setOff(true)
+      return
+    }
+    setError(res.error || "That did not go through.")
   }
 
   const id = `asset-supply-${item.id}`
@@ -402,6 +410,11 @@ function SupplyForm({ item, onCancel, onDone }: { item: PortalAsset; onCancel: (
           For example, by email or in a shared folder. {NO_SECRETS}
         </p>
       </div>
+      {off && (
+        <p role="status" className="text-[13px] text-muted-foreground">
+          Marking an item as sent opens once the studio finishes a server update. Please tell the studio in a message for now.
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-sm text-bad">
           {error} Your note is still here, so you can try again.
@@ -411,7 +424,7 @@ function SupplyForm({ item, onCancel, onDone }: { item: PortalAsset; onCancel: (
         <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={sending}>
           Cancel
         </Button>
-        <Button type="submit" size="sm" disabled={!!problem || sending}>
+        <Button type="submit" size="sm" disabled={!!problem || sending || off}>
           {sending ? <Loader2 className="animate-spin" /> : <Send />}
           {sending ? "Sending…" : "Mark as sent"}
         </Button>

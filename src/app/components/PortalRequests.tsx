@@ -25,6 +25,7 @@ import {
   callFormProblem,
   callPayload,
   emptyCallForm,
+  notAvailableYet,
   openCallRequests,
   openUpdateRequests,
   requestsLoadState,
@@ -34,12 +35,18 @@ import {
 
 const NO_PROJECT = "none"
 const CALLS_OFF = "Call requests open once the studio finishes a server update. Please send a message instead for now."
+const UPDATES_OFF = "Update requests open once the studio finishes a server update. Please send a message instead for now."
 
 /**
  * The portal's two requests (docs/PRODUCT-SPEC.md 6.2): ask the studio for an
  * update, or propose times for a call. The server takes the client from the
  * token, so nothing here sends a client id, and only the client's own open
  * requests come back to be listed.
+ *
+ * Both requests use routes that are new on the server. Until those files are
+ * uploaded, notAvailableYet() (portalRequestsModel.ts) decides when a refusal
+ * means the route is missing, and that request is hidden with a quiet line
+ * instead of an error.
  */
 export function PortalRequests({ projects, onUpdateSent }: { projects: { id: number; name: string }[]; onUpdateSent: () => void }) {
   const [mode, setMode] = useState<"update" | "call" | null>(null)
@@ -47,6 +54,7 @@ export function PortalRequests({ projects, onUpdateSent }: { projects: { id: num
   const [threads, setThreads] = useState<ClientThread[] | null>(null)
   const [calls, setCalls] = useState<PortalCallRequest[] | null>(null)
   const [callsOff, setCallsOff] = useState(false)
+  const [updatesOff, setUpdatesOff] = useState(false)
   const [loadError, setLoadError] = useState<string | null>(null)
 
   const apply = useCallback(
@@ -55,11 +63,11 @@ export function PortalRequests({ projects, onUpdateSent }: { projects: { id: num
       if (c.ok) {
         setCalls(c.data)
         setCallsOff(false)
-      } else if (c.status === 503) {
+      } else if (notAvailableYet(c)) {
         setCalls([])
         setCallsOff(true)
       }
-      const err = !t.ok ? t.error : !c.ok && c.status !== 503 ? c.error : null
+      const err = !t.ok ? t.error : !c.ok && !notAvailableYet(c) ? c.error : null
       setLoadError(err)
     },
     [],
@@ -97,9 +105,11 @@ export function PortalRequests({ projects, onUpdateSent }: { projects: { id: num
         <CardTitle id="portal-requests-heading">Requests</CardTitle>
         {mode === null && (
           <span className="ml-auto flex flex-wrap gap-2">
-            <Button size="sm" variant="outline" onClick={() => start("update")}>
-              <MessageCircleQuestion /> Ask for an update
-            </Button>
+            {!updatesOff && (
+              <Button size="sm" variant="outline" onClick={() => start("update")}>
+                <MessageCircleQuestion /> Ask for an update
+              </Button>
+            )}
             {!callsOff && (
               <Button size="sm" variant="outline" onClick={() => start("call")}>
                 <CalendarClock /> Request a call
@@ -113,6 +123,7 @@ export function PortalRequests({ projects, onUpdateSent }: { projects: { id: num
           <UpdateForm
             projects={projects}
             onCancel={() => setMode(null)}
+            onUnavailable={() => setUpdatesOff(true)}
             onSent={async () => {
               onUpdateSent()
               await done("Your question reached the studio. The answer will appear in Messages.")
@@ -134,6 +145,7 @@ export function PortalRequests({ projects, onUpdateSent }: { projects: { id: num
                 {sent}
               </p>
             )}
+            {updatesOff && <p className="mb-3 text-[13px] text-muted-foreground">{UPDATES_OFF}</p>}
             {callsOff && <p className="mb-3 text-[13px] text-muted-foreground">{CALLS_OFF}</p>}
             {view === "error" ? (
               <LoadError what="your requests" detail={loadError ?? ""} onRetry={load} />
@@ -189,18 +201,23 @@ function UpdateForm({
   projects,
   onCancel,
   onSent,
+  onUnavailable,
 }: {
   projects: { id: number; name: string }[]
   onCancel: () => void
   onSent: () => Promise<void>
+  onUnavailable: () => void
 }) {
   const [project, setProject] = useState(NO_PROJECT)
   const [question, setQuestion] = useState("")
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  // The route is not on the server yet. The form stays open so the question
+  // can be copied into a message; the button is hidden once it closes.
+  const [off, setOff] = useState(false)
   const inFlight = useRef(false) // blocks a second submit before React re-renders
 
-  const canSend = question.trim() !== "" && !sending
+  const canSend = question.trim() !== "" && !sending && !off
 
   const send = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -213,10 +230,15 @@ function UpdateForm({
       await onSent() // a 409 means the same question already arrived
       return
     }
-    // Keep what they wrote so nothing is lost.
-    setError(res.error || "Your question was not sent.")
     inFlight.current = false
     setSending(false)
+    if (notAvailableYet(res)) {
+      setOff(true)
+      onUnavailable()
+      return
+    }
+    // Keep what they wrote so nothing is lost.
+    setError(res.error || "Your question was not sent.")
   }
 
   return (
@@ -252,6 +274,11 @@ function UpdateForm({
           required
         />
       </div>
+      {off && (
+        <p role="status" className="text-[13px] text-muted-foreground">
+          {UPDATES_OFF} Your question is still here, so you can copy it into a new message.
+        </p>
+      )}
       {error && (
         <p role="alert" className="text-sm text-bad">
           {error} Your question is still here, so you can try again.
@@ -294,7 +321,7 @@ function CallForm({ onCancel, onSent, onUnavailable }: { onCancel: () => void; o
     }
     inFlight.current = false
     setSending(false)
-    if (res.status === 503) {
+    if (notAvailableYet(res)) {
       onUnavailable()
       return
     }

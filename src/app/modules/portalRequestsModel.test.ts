@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
-import type { ClientThread, PortalCallRequest } from "@/lib/api"
+import { BAD_REPLY_ERROR, NETWORK_ERROR, statusError, type ClientThread, type PortalCallRequest } from "@/lib/api"
 import {
+  notAvailableYet,
   callFormProblem,
   callPayload,
   emptyCallForm,
@@ -105,5 +106,57 @@ describe("the requests panel state", () => {
     expect(requestsLoadState(null, null, null)).toBe("loading")
     expect(requestsLoadState([], null, null)).toBe("loading")
     expect(requestsLoadState([], [], null)).toBe("ready")
+  })
+})
+
+// The shapes below are what api.ts builds from the real replies of the old and
+// new bookings.php and support.php (see the notAvailableYet() comment).
+const refused = (status: number, error: string) => ({ ok: false as const, status, error, details: { error } })
+
+describe("notAvailableYet", () => {
+  it("treats the role gate of an old staff-only file as not available yet", () => {
+    // Older bookings.php answers a client GET ?action=mine this way, and older
+    // support.php sends update_request, which it does not list, to require_auth(STAFF).
+    expect(notAvailableYet(refused(403, "Not allowed."))).toBe(true)
+  })
+
+  it("reads the server's own words, not the fallback text, for a 403", () => {
+    // A 403 with no JSON body gets statusError()'s words, which are not the role gate.
+    expect(notAvailableYet({ ok: false, status: 403, error: statusError(403) })).toBe(false)
+  })
+
+  it("treats an old bookings.php ending an unknown POST (?action=request) with 405 as not available yet", () => {
+    expect(notAvailableYet(refused(405, "Method not allowed."))).toBe(true)
+  })
+
+  it("treats a never-uploaded file, served as app-shell.html with a 200, as not available yet", () => {
+    expect(notAvailableYet({ ok: false, status: 200, error: BAD_REPLY_ERROR })).toBe(true)
+  })
+
+  it("treats the host's own 404 page, with no JSON body, as not available yet", () => {
+    expect(notAvailableYet({ ok: false, status: 404, error: statusError(404) })).toBe(true)
+  })
+
+  it("treats a 503 (the SQL step has not run) as not available yet", () => {
+    expect(notAvailableYet(refused(503, "Call requests are not set up yet."))).toBe(true)
+  })
+
+  it("keeps a client account with no client link as an error", () => {
+    expect(notAvailableYet(refused(403, "Your account is not linked to a client."))).toBe(false)
+  })
+
+  it("keeps an inactive account as an error", () => {
+    expect(notAvailableYet(refused(403, "Account is not active."))).toBe(false)
+  })
+
+  it("keeps a record-level 404 from the new server as an error", () => {
+    expect(notAvailableYet(refused(404, "Client not found."))).toBe(false)
+    expect(notAvailableYet(refused(404, "Project not found."))).toBe(false)
+  })
+
+  it("keeps a server failure, a validation refusal and a lost connection as errors", () => {
+    expect(notAvailableYet({ ok: false, status: 500, error: statusError(500) })).toBe(false)
+    expect(notAvailableYet(refused(400, "Propose at least one time."))).toBe(false)
+    expect(notAvailableYet({ ok: false, error: NETWORK_ERROR })).toBe(false)
   })
 })

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
-import type { AssetStatus, PortalAsset } from "@/lib/api"
+import { BAD_REPLY_ERROR, statusError, type AssetStatus, type PortalAsset } from "@/lib/api"
 import {
+  portalAssetsUnavailable,
   assetCounts,
   assetSummary,
   assetsLoadState,
@@ -95,5 +96,35 @@ describe("staffActions", () => {
     expect(staffActions("requested")).toEqual({ accept: true, reopen: false })
     expect(staffActions("supplied")).toEqual({ accept: true, reopen: true })
     expect(staffActions("accepted")).toEqual({ accept: false, reopen: true })
+  })
+})
+
+describe("portalAssetsUnavailable", () => {
+  const refused = (status: number, error: string) => ({ ok: false as const, status, error, details: { error } })
+
+  it("hides the card when assets.php was never uploaded and app-shell.html came back", () => {
+    expect(portalAssetsUnavailable({ ok: false, status: 200, error: BAD_REPLY_ERROR })).toBe(true)
+  })
+
+  it("hides the card before SQL 15 runs", () => {
+    expect(portalAssetsUnavailable(refused(503, "The asset checklist is not set up yet."))).toBe(true)
+  })
+
+  it("hides the card for a missing route: a bare 404, a 405 or the role gate", () => {
+    expect(portalAssetsUnavailable({ ok: false, status: 404, error: statusError(404) })).toBe(true)
+    expect(portalAssetsUnavailable(refused(405, "Method not allowed."))).toBe(true)
+    expect(portalAssetsUnavailable(refused(403, "Not allowed."))).toBe(true)
+  })
+
+  it("shows a supply for an item that is not the client's, or is gone, as an error", () => {
+    expect(portalAssetsUnavailable(refused(404, "Item not found."))).toBe(false)
+  })
+
+  it("shows an account with no client link as an error", () => {
+    expect(portalAssetsUnavailable(refused(403, "Your account is not linked to a client."))).toBe(false)
+  })
+
+  it("shows a note that is too long as an error", () => {
+    expect(portalAssetsUnavailable(refused(400, "Keep the note to 1000 characters or fewer."))).toBe(false)
   })
 })
