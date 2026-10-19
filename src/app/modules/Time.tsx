@@ -29,7 +29,6 @@ import { time, projects as projectsApi, type TimeEntry, type Project } from "@/l
 import { hoursMinutes } from "@/lib/format"
 import { canAccess } from "@/lib/access"
 
-const hm = hoursMinutes
 function fmtDate(d: string) {
   return new Date(d.replace(" ", "T")).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
 }
@@ -184,8 +183,8 @@ export default function Time() {
 
       {/* Weekly summary: approved time only */}
       <StatGrid>
-        <StatTile label="Billable this week" value={hm(weekBillable)} note="Approved entries" />
-        <StatTile label="Non-billable" value={hm(weekNon)} note="Internal work" />
+        <StatTile label="Billable this week" value={hoursMinutes(weekBillable)} note="Approved entries" />
+        <StatTile label="Non-billable" value={hoursMinutes(weekNon)} note="Internal work" />
         <StatTile label="Utilisation" value={`${utilisation}%`} note="Billable share of approved time" tone={utilisation > 0 ? "up" : undefined} />
         <StatTile label="Awaiting approval" value={pending} note={pending === 1 ? "Entry" : "Entries"} />
       </StatGrid>
@@ -306,7 +305,7 @@ export default function Time() {
                   </TableCell>
                   <TableCell className="min-w-[180px]">{e.description || <span className="text-muted-foreground">None</span>}</TableCell>
                   <TableCell className="whitespace-nowrap">{e.user_name || <span className="text-muted-foreground">Unknown</span>}</TableCell>
-                  <TableCell className="whitespace-nowrap text-right font-mono">{hm(e.minutes)}</TableCell>
+                  <TableCell className="whitespace-nowrap text-right font-mono">{hoursMinutes(e.minutes)}</TableCell>
                   <TableCell>{e.billable ? "Billable" : <span className="text-muted-foreground">Internal</span>}</TableCell>
                   <TableCell>
                     <StatusBadge status={e.status === "approved" ? "approved" : e.status === "rejected" ? "rejected" : "pending"} />
