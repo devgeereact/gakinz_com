@@ -10,6 +10,7 @@
  *   POST /support.php?action=priority {id, priority}
  *   POST /support.php?action=assign   {id, assignee_id}
  *   POST /support.php?action=reply    {id, body}
+ *   POST /support.php?action=log_time {id, minutes, description?, billable?, entry_date?}   (staff, SQL 17)
  *
  * Status: open | in_progress | resolved.  Priority: urgent | high | normal | low.
  *
@@ -24,14 +25,26 @@
  * in Support like any other. tickets has no project link, so a chosen project
  * is named in the body, and only after it is proven to belong to the caller's
  * client; any other project answers 404 exactly like a missing one.
+ *
+ * IT support time (SQL 17, docs/PRODUCT-SPEC.md sections 6.4 and 7). Staff log
+ * time from a ticket with action=log_time. The entry goes onto the client's
+ * standing project named "IT support" (projects.kind = 'it_support'), which
+ * the first log creates, once, and every later log reuses. The entry carries
+ * the ticket id, and uses the time.php rules (_time.php). A ticket with no
+ * client is refused, because the time would have no client to bill. The staff
+ * ticket detail returns the logged time; a client never sees it. Until SQL 17
+ * runs, log_time answers 503 and the detail returns `time: null`.
  */
 require __DIR__ . '/_bootstrap.php';
+require __DIR__ . '/_time.php';
 
 const STAFF = ['super_admin', 'admin', 'manager', 'editor', 'employee'];
 const STAFF_OR_CLIENT = ['super_admin', 'admin', 'manager', 'editor', 'employee', 'client'];
 const STATUSES = ['open', 'in_progress', 'resolved'];
 const PRIORITIES = ['urgent', 'high', 'normal', 'low'];
 const UPDATE_PREFIX = 'Update request: ';
+const IT_SUPPORT_KIND = 'it_support';
+const IT_SUPPORT_NAME = 'IT support';
 
 /** The caller's own client id. A client account with no client is refused. */
 function own_client_id(array $user): int {
@@ -234,6 +247,31 @@ if ($method === 'GET' && isset($_GET['id'])) {
     $replies[] = $r;
   }
   $t['replies'] = $replies;
+
+  // Logged IT support time, staff only. NULL before SQL 17, so the screen
+  // knows to hide "Log time".
+  $t['time'] = null;
+  if (gk_ticket_time_ready($conn)) {
+    $entries = [];
+    $total = 0;
+    $stmt = $conn->prepare(
+      'SELECT e.id, e.minutes, e.description, e.billable, e.status, e.entry_date, u.name AS user_name
+       FROM time_entries e LEFT JOIN users u ON u.id = e.user_id
+       WHERE e.ticket_id = ? AND e.deleted_at IS NULL
+       ORDER BY e.entry_date DESC, e.id DESC'
+    );
+    $stmt->bind_param('i', $id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($e = $res->fetch_assoc()) {
+      $e['id'] = (int)$e['id'];
+      $e['minutes'] = (int)$e['minutes'];
+      $e['billable'] = (bool)$e['billable'];
+      if ($e['status'] !== 'rejected') $total += $e['minutes']; // rejected time is listed, not counted
+      $entries[] = $e;
+    }
+    $t['time'] = ['total_minutes' => $total, 'entries' => $entries];
+  }
   ok($t);
 }
 
@@ -335,6 +373,74 @@ if ($method === 'POST' && $action === 'reply') {
   $touch->execute();
   audit($conn, $uid, 'ticket_reply', "#$id");
   ok(['id' => $newId], 201);
+}
+
+if ($method === 'POST' && $action === 'log_time') {
+  // The support staff roles, every one of which time.php also lets log time.
+  // A trainer may log time in time.php but has no access to Support at all.
+  $user = require_auth($conn, STAFF);
+  if (!gk_ticket_time_ready($conn)) {
+    fail('Logging time on a ticket is not available yet. Run SQL 17 on the database first.', 503);
+  }
+  $in = body();
+  $id = (int)($in['id'] ?? 0);
+  if ($id <= 0) fail('A ticket id is required.');
+  $e = gk_time_entry_input($in); // the same rules as time.php create
+
+  $find = $conn->prepare('SELECT id, client_id FROM tickets WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+  $find->bind_param('i', $id);
+  $find->execute();
+  $ticket = $find->get_result()->fetch_assoc();
+  if (!$ticket) fail('Ticket not found.', 404);
+  if ($ticket['client_id'] === null) {
+    fail('This ticket has no client, so the time has nobody to bill. Link it to a client first.');
+  }
+  $clientId = (int)$ticket['client_id'];
+  $uid = $user['id'];
+
+  // Find or create the client's standing project, once. Locking the client
+  // row makes two first logs for the same client take turns, and the project
+  // read is a locking read too, so the second sees the project the first
+  // committed instead of an older snapshot.
+  $created = false;
+  $conn->begin_transaction();
+  try {
+    $lock = $conn->prepare('SELECT id FROM clients WHERE id = ? FOR UPDATE');
+    $lock->bind_param('i', $clientId);
+    $lock->execute();
+    if (!$lock->get_result()->fetch_assoc()) {
+      $conn->rollback();
+      fail('Ticket not found.', 404);
+    }
+    $kind = IT_SUPPORT_KIND;
+    $p = $conn->prepare('SELECT id FROM projects WHERE client_id = ? AND kind = ? AND deleted_at IS NULL ORDER BY id ASC LIMIT 1 FOR UPDATE');
+    $p->bind_param('is', $clientId, $kind);
+    $p->execute();
+    $row = $p->get_result()->fetch_assoc();
+    if ($row) {
+      $projectId = (int)$row['id'];
+    } else {
+      $name = IT_SUPPORT_NAME;
+      $ins = $conn->prepare("INSERT INTO projects (client_id, name, status, stage, kind) VALUES (?, ?, 'in_progress', 'support', ?)");
+      $ins->bind_param('iss', $clientId, $name, $kind);
+      $ins->execute();
+      $projectId = (int)$conn->insert_id;
+      $created = true;
+    }
+    // New entries start as 'draft', pending timesheet approval, as in time.php.
+    $te = $conn->prepare("INSERT INTO time_entries (project_id, ticket_id, user_id, description, minutes, billable, status, entry_date) VALUES (?, ?, ?, ?, ?, ?, 'draft', ?)");
+    $te->bind_param('iiisiis', $projectId, $id, $uid, $e['description'], $e['minutes'], $e['billable'], $e['entry_date']);
+    $te->execute();
+    $entryId = (int)$conn->insert_id; // read before audit(), which inserts its own row
+    $conn->commit();
+  } catch (mysqli_sql_exception $ex) {
+    $conn->rollback();
+    fail('Could not log the time.', 500);
+  }
+
+  if ($created) audit($conn, $uid, 'project_create', IT_SUPPORT_NAME . " (client #$clientId, standing, from ticket #$id)");
+  audit($conn, $uid, 'ticket_time_log', "#$id · project #$projectId · {$e['minutes']}m");
+  ok(['id' => $entryId, 'project_id' => $projectId, 'project_created' => $created], 201);
 }
 
 fail('Method not allowed.', 405);

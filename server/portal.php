@@ -6,10 +6,15 @@
  *
  *   GET /portal.php?client_id=N → { client, projects[], invoices[], tickets[] }
  *
+ * A project with kind 'it_support' (the standing IT support project, SQL 17)
+ * is named "IT support" and carries no task counts. Time entries are never
+ * returned here.
+ *
  * Phase 2: a `client`-role user is linked to a client and only sees their own;
  * for now staff pass the client_id to preview the portal.
  */
 require __DIR__ . '/_bootstrap.php';
+require __DIR__ . '/_time.php'; // gk_ticket_time_ready() for the SQL 17 project kind
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') fail('Method not allowed.', 405);
 $user = require_auth($conn);
@@ -39,13 +44,17 @@ $client = $stmt->get_result()->fetch_assoc();
 if (!$client) fail('Client not found.', 404);
 $client['id'] = (int)$client['id'];
 
-// Projects with task progress
+// Projects with task progress. The standing IT support project (SQL 17,
+// projects.kind = 'it_support') is listed as "IT support" with no task
+// counts: it holds ticket time, which a client never sees, not delivery work.
+// Before SQL 17 there is no kind column, so every project reads as kind NULL.
+$kindCol = gk_ticket_time_ready($conn) ? 'p.kind' : 'NULL AS kind';
 $projects = [];
 $stmt = $conn->prepare(
-  'SELECT p.id, p.name, p.status, p.due_date,
+  "SELECT p.id, p.name, p.status, p.due_date, $kindCol,
           (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL) AS task_count,
-          (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL AND t.status = "done") AS done_count
-   FROM projects p WHERE p.client_id = ? AND p.deleted_at IS NULL ORDER BY p.id DESC'
+          (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL AND t.status = 'done') AS done_count
+   FROM projects p WHERE p.client_id = ? AND p.deleted_at IS NULL ORDER BY p.id DESC"
 );
 $stmt->bind_param('i', $clientId);
 $stmt->execute();
@@ -54,6 +63,13 @@ while ($r = $res->fetch_assoc()) {
   $r['id'] = (int)$r['id'];
   $r['task_count'] = (int)$r['task_count'];
   $r['done_count'] = (int)$r['done_count'];
+  if ($r['kind'] === 'it_support') {
+    $r['name'] = 'IT support';
+    $r['task_count'] = 0;
+    $r['done_count'] = 0;
+  } else {
+    $r['kind'] = null; // only the IT support marker is ever shown to a client
+  }
   $projects[] = $r;
 }
 

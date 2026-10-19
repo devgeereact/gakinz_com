@@ -127,6 +127,7 @@ CREATE TABLE IF NOT EXISTS projects (
   name       VARCHAR(200) NOT NULL,
   status     VARCHAR(30) NOT NULL DEFAULT 'planning', -- planning | in_progress | on_hold | launched
   stage      VARCHAR(20) NOT NULL DEFAULT 'discover', -- discover | design | build | launch | support (5-stage delivery)
+  kind       VARCHAR(20) NULL DEFAULT NULL,           -- NULL, or 'it_support' for the client's standing IT support project (SQL 17)
   due_date   DATE NULL DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -217,22 +218,6 @@ CREATE TABLE IF NOT EXISTS invoice_items (
   CONSTRAINT fk_invitem_invoice FOREIGN KEY (invoice_id) REFERENCES invoices(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- Time tracking (§6 Time). Billable hours against projects → feed invoices.
-CREATE TABLE IF NOT EXISTS time_entries (
-  id          INT AUTO_INCREMENT PRIMARY KEY,
-  project_id  INT NOT NULL,
-  user_id     INT NULL,
-  description VARCHAR(300) DEFAULT NULL,
-  minutes     INT NOT NULL DEFAULT 0,
-  billable    TINYINT(1) NOT NULL DEFAULT 1,
-  status      VARCHAR(10) NOT NULL DEFAULT 'draft',  -- draft | approved | rejected (timesheet approval)
-  entry_date  DATE NOT NULL,
-  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  deleted_at  TIMESTAMP NULL DEFAULT NULL,
-  CONSTRAINT fk_time_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-  CONSTRAINT fk_time_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
 -- Support tickets (§6 Support). Post-launch care without the chaos.
 CREATE TABLE IF NOT EXISTS tickets (
   id          INT AUTO_INCREMENT PRIMARY KEY,
@@ -257,6 +242,25 @@ CREATE TABLE IF NOT EXISTS ticket_replies (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT fk_reply_ticket FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE CASCADE,
   CONSTRAINT fk_reply_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Time tracking (§6 Time). Billable hours against projects → feed invoices.
+CREATE TABLE IF NOT EXISTS time_entries (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  project_id  INT NOT NULL,
+  ticket_id   INT NULL DEFAULT NULL,                 -- the support ticket this IT support time is for (SQL 17)
+  user_id     INT NULL,
+  description VARCHAR(300) DEFAULT NULL,
+  minutes     INT NOT NULL DEFAULT 0,
+  billable    TINYINT(1) NOT NULL DEFAULT 1,
+  status      VARCHAR(10) NOT NULL DEFAULT 'draft',  -- draft | approved | rejected (timesheet approval)
+  entry_date  DATE NOT NULL,
+  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  deleted_at  TIMESTAMP NULL DEFAULT NULL,
+  KEY idx_time_ticket (ticket_id),
+  CONSTRAINT fk_time_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
+  CONSTRAINT fk_time_ticket FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE SET NULL,
+  CONSTRAINT fk_time_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Certificates with public verification (§6.8)
@@ -911,3 +915,22 @@ CREATE TABLE IF NOT EXISTS project_measurements (
   KEY idx_measure_project (project_id),
   CONSTRAINT fk_measure_project FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-10-19 · SQL 17 · IT support time from tickets (support.php, time.php).
+-- docs/PRODUCT-SPEC.md sections 6.4 and 7: IT support is billed through time
+-- on a standing "IT support" project per support client, so no new module is
+-- needed. support.php?action=log_time finds that project (projects.kind =
+-- 'it_support') or creates it once, then logs the time on it with the ticket
+-- id. Every other project keeps kind NULL. The tickets table now comes before
+-- time_entries above, so a fresh install can create the foreign key; deleting
+-- a ticket keeps its time and clears the link. Fresh installs get the columns
+-- from the CREATE TABLEs above. Additive. Run once only; a second run fails on
+-- the duplicate column. Until it runs, log_time answers 503, the ticket view
+-- hides "Log time", time.php lists ticket_id as NULL, and every existing
+-- support, time and portal action works as before.
+--   ALTER TABLE time_entries
+--     ADD COLUMN ticket_id INT NULL DEFAULT NULL AFTER project_id,
+--     ADD KEY idx_time_ticket (ticket_id),
+--     ADD CONSTRAINT fk_time_ticket FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE SET NULL;
+--   ALTER TABLE projects ADD COLUMN kind VARCHAR(20) NULL DEFAULT NULL AFTER stage;
