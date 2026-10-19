@@ -11,6 +11,7 @@
 import { spawn, spawnSync, type ChildProcess } from "node:child_process"
 import fs from "node:fs"
 import http from "node:http"
+import net from "node:net"
 import path from "node:path"
 import {
   assertSafeTarget, BASE, DB_HOST, DB_NAME, DB_PASS, DB_USER, PHP_PORT, PROVIDER_BASE,
@@ -97,8 +98,54 @@ async function waitFor(url: string, ms = 10_000): Promise<void> {
   throw new Error(`Timed out waiting for ${url}`)
 }
 
+/**
+ * Throws when something already listens on `port`. Without this, a stale
+ * `php -S` left by an earlier run would silently answer this run's requests
+ * from whatever it was started with.
+ */
+async function assertPortFree(port: number, what: string): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const probe = net.createServer()
+    probe.once("error", (e: NodeJS.ErrnoException) =>
+      reject(new Error(e.code === "EADDRINUSE"
+        ? `Port ${port} (${what}) is already in use on 127.0.0.1. Stop whatever listens there (lsof -nP -iTCP:${port} -sTCP:LISTEN) or pick another port.`
+        : `Could not check port ${port} (${what}): ${e.message}`)))
+    probe.once("listening", () => probe.close(() => resolve()))
+    probe.listen(port, "127.0.0.1")
+  })
+}
+
+/** True once nothing accepts a connection on `port`. */
+async function portClosed(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const s = net.connect(port, "127.0.0.1")
+    s.once("connect", () => { s.destroy(); resolve(false) })
+    s.once("error", () => resolve(true))
+  })
+}
+
+/**
+ * Stops `php -S` and every worker it forked. With PHP_CLI_SERVER_WORKERS the
+ * workers outlive a kill of the parent alone, so the server is started in its
+ * own process group and the whole group is signalled.
+ */
+async function stopPhp(php: ChildProcess): Promise<void> {
+  const signal = (sig: NodeJS.Signals) => {
+    try { if (php.pid) process.kill(-php.pid, sig) } catch { /* group already gone */ }
+  }
+  signal("SIGTERM")
+  const until = Date.now() + 5_000
+  while (Date.now() < until) {
+    if (await portClosed(PHP_PORT)) return
+    await new Promise((r) => setTimeout(r, 100))
+  }
+  signal("SIGKILL")
+}
+
 export default async function setup(): Promise<() => Promise<void>> {
   assertSafeTarget()
+  await assertPortFree(PHP_PORT, "PHP test server")
+  await assertPortFree(PROVIDER_PORT, "fake payment provider")
 
   const admin = spawnSync("mysql", [...mysqlArgs(), "-e", `DROP DATABASE IF EXISTS ${DB_NAME}; CREATE DATABASE ${DB_NAME} CHARACTER SET utf8mb4;`], { encoding: "utf8" })
   if (admin.status !== 0) throw new Error(`Could not create ${DB_NAME}: ${admin.stderr}`)
@@ -118,12 +165,19 @@ export default async function setup(): Promise<() => Promise<void>> {
     ["-d", "sendmail_path=/usr/bin/true", "-d", "display_errors=0", "-d", "log_errors=1",
      "-d", `error_log=${path.join(WORK_DIR, "php-error.log")}`, "-S", `127.0.0.1:${PHP_PORT}`, "-t", WORK_DIR],
     // Several workers so concurrency tests exercise real parallel requests.
-    { stdio: "ignore", env: { ...process.env, PHP_CLI_SERVER_WORKERS: "6" } },
+    // detached: its own process group, so teardown can stop the workers too.
+    { stdio: "ignore", detached: true, env: { ...process.env, PHP_CLI_SERVER_WORKERS: "6" } },
   )
-  await waitFor(`${BASE}/book.php`)
+  try {
+    await waitFor(`${BASE}/book.php`)
+  } catch (e) {
+    await stopPhp(php)
+    provider.close()
+    throw e
+  }
 
   return async () => {
-    php.kill()
+    await stopPhp(php)
     provider.close()
     spawnSync("mysql", [...mysqlArgs(), "-e", `DROP DATABASE IF EXISTS ${DB_NAME};`])
   }
