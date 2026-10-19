@@ -41,6 +41,9 @@ function createProject(clientId: number | null, name: string): number {
   return Number(one(`SELECT MAX(id) FROM projects`))
 }
 
+const HANDOFF_NOTE_TEXT =
+  "Staff-written fields are exported as typed, after removing this client's exact company, contact name, email and phone, and any email address; links lose their query string, fragment and login. Do not type personal data or secrets into the brief."
+
 const auditCount = (action: string) => Number(one(`SELECT COUNT(*) FROM audit_log WHERE action = ${q(action)}`))
 const raw = (r: { json: unknown }) => (r.json as { _raw?: string })._raw ?? ""
 
@@ -317,6 +320,8 @@ describe("project brief and measurements", () => {
       expect(r.headers.get("x-content-type-options")).toBe("nosniff")
       expect(r.headers.get("cache-control")).toBe("private, no-store")
       expect(auditCount("brief_handoff_export")).toBe(1)
+      // The honest note on what was removed, the same words as HANDOFF_NOTE in projectBriefModel.ts.
+      expect(raw(r)).toContain(HANDOFF_NOTE_TEXT)
     })
 
     it("includes the project and client references, scope, criteria, decisions, next action and evidence", async () => {

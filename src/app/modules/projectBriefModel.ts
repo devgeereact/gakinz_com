@@ -19,6 +19,13 @@ import {
   type ProjectBrief,
 } from "@/lib/api"
 
+/**
+ * What the handoff does with staff text, word for word as HANDOFF_NOTE in
+ * server/briefs.php, which prints it in the export. Shown as the panel's hint.
+ */
+export const HANDOFF_NOTE =
+  "Staff-written fields are exported as typed, after removing this client's exact company, contact name, email and phone, and any email address; links lose their query string, fragment and login. Do not type personal data or secrets into the brief."
+
 export type BriefFieldKey = BriefTextField | "completion_ack_on"
 
 export type BriefFieldSpec = { key: BriefFieldKey; label: string; multiline: boolean; hint?: string }

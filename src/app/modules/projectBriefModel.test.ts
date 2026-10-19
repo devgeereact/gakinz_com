@@ -7,6 +7,7 @@ import {
   briefProgress,
   draftFromBrief,
   handoffFileName,
+  HANDOFF_NOTE,
   isIsoDate,
   measureDraft,
   measureInput,
@@ -155,4 +156,11 @@ describe("measurements", () => {
 
 it("names the download as the server does", () => {
   expect(handoffFileName(12)).toBe("gakinz-handoff-project-12.md")
+})
+
+it("keeps the panel hint word for word with the note briefs.php prints in the export", () => {
+  // tests/server/project-briefs.test.ts asserts the same sentence in a real export.
+  expect(HANDOFF_NOTE).toBe(
+    "Staff-written fields are exported as typed, after removing this client's exact company, contact name, email and phone, and any email address; links lose their query string, fragment and login. Do not type personal data or secrets into the brief.",
+  )
 })

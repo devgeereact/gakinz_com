@@ -29,6 +29,7 @@ import {
   briefProgress,
   draftFromBrief,
   handoffFileName,
+  HANDOFF_NOTE,
   measureDraft,
   measureInput,
   measureProblem,
@@ -37,9 +38,6 @@ import {
   type BriefDraft,
   type MeasureDraft,
 } from "@/app/modules/projectBriefModel"
-
-const NO_SECRETS =
-  "Never put a password, key or the client's personal details here. The handoff for development carries the scope, criteria, decisions and evidence locations."
 
 /**
  * Staff panel on a project board: the brief and the agreed measurements
@@ -65,6 +63,11 @@ export function ProjectBriefPanel({ projectId, projectName }: { projectId: numbe
     }
   }, [])
   const load = useCallback(() => projectBriefs.get(projectId).then(apply), [projectId, apply])
+  // Retry clears the error first, so the panel shows its loading line while it asks again.
+  const retry = useCallback(() => {
+    setLoadError(null)
+    return load()
+  }, [load])
 
   useEffect(() => {
     // The parent keys this panel on the project, so a new project starts from fresh state.
@@ -107,7 +110,7 @@ export function ProjectBriefPanel({ projectId, projectName }: { projectId: numbe
       {view === "unavailable" ? (
         <p className="text-sm text-muted-foreground">The project brief needs a database update first (SQL 16 in docs/DEPLOYMENT.md).</p>
       ) : view === "error" ? (
-        <LoadError what="the brief" detail={loadError ?? ""} onRetry={load} />
+        <LoadError what="the brief" detail={loadError ?? ""} onRetry={retry} />
       ) : view === "loading" || !data ? (
         <div role="status" className="flex items-center gap-2 py-3 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" /> Loading the brief…
@@ -115,7 +118,7 @@ export function ProjectBriefPanel({ projectId, projectName }: { projectId: numbe
       ) : (
         <>
           <p className="mb-3 text-[13px] text-muted-foreground">
-            No field is required. Fill in what is known and come back as the project moves. {NO_SECRETS}
+            No field is required. Fill in what is known and come back as the project moves. {HANDOFF_NOTE}
           </p>
           <div className="grid gap-3 lg:grid-cols-2">
             {BRIEF_SECTIONS.map((section) => (
@@ -494,16 +497,21 @@ function MeasureForm({
           </div>
         ))}
       </div>
-      {(error || (problem && d.label.trim() !== "")) && (
+      {error && (
         <p role="alert" className="text-sm text-bad">
-          {error || problem}
+          {error}
+        </p>
+      )}
+      {!error && problem && (
+        <p id={`${idPrefix}-why`} className="text-[13px] text-muted-foreground">
+          {problem}
         </p>
       )}
       <div className="flex flex-wrap justify-end gap-2">
         <Button type="button" variant="outline" size="sm" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
-        <Button type="submit" size="sm" disabled={!!problem || saving}>
+        <Button type="submit" size="sm" disabled={!!problem || saving} aria-describedby={!error && problem ? `${idPrefix}-why` : undefined}>
           {saving ? <Loader2 className="animate-spin" /> : <Plus />}
           {submitLabel}
         </Button>
