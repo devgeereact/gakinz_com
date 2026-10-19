@@ -48,7 +48,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-035 | CI ran no tests and the deploy did not wait for CI | High | **Fixed 2026-10-10** |
 | K-036 | Public pages bring back unpublished posts and work from the static fallback | Medium | **Fixed 2026-10-10.** Not deployed |
 | K-037 | The article renderer has no links or lists | Medium | **Fixed 2026-10-10.** Not deployed |
-| K-038 | Public fallback copy shows engineering counts and internal file paths | Medium | **Partly fixed:** engineering copy removed 2026-10-10; screenshot placeholders gone in the D-046 rebuild. **Correction 2026-10-17:** "Portrait to come" (About) and "Outcome figures: not measured yet" (every work page) are still shown, as D-027 labelled gaps, with the legal review date. Not deployed |
+| K-038 | Public fallback copy shows engineering counts and internal file paths | Medium | **Partly fixed:** engineering copy removed 2026-10-10; screenshot placeholders gone in the D-046 rebuild. **Correction 2026-10-17:** "Portrait to come" (About) and "Outcome figures: not measured yet" (every work page) are still shown, as D-027 labelled gaps, with the legal review date. Not deployed. **Update 2026-10-19:** the six service pages are built from spec 4.3 and not deployed; coverage and area, IT prices and package price confirmation remain owner inputs (K-090 to K-092) |
 | K-039 | Clients cannot message the owner from the portal | High | **Fixed 2026-10-10.** Not deployed or uploaded. Private feedback built 2026-10-16, not uploaded |
 | K-040 | `stored` is a MySQL 8 reserved word, so the schema failed on MySQL | High | **Fixed 2026-10-10.** Not uploaded |
 | K-041 | `npm audit` reports 15 affected packages, ten of them high | Medium | Open. Owner decision |
@@ -100,6 +100,10 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-087 | A never-expiring share link (Work images) is cached for up to a day | Low | Accepted 2026-10-19, not uploaded |
 | K-088 | Several CMS selects had no accessible name (New project Client first) | Medium | **Fixed 2026-10-19.** Found by axe; predates the batch |
 | K-089 | Server test runs left `php -S` workers on the port, making later runs flaky | Low | **Fixed 2026-10-19** in `tests/server/global-setup.ts` |
+| K-090 | The IT support pages omit coverage, area and response time, so spec 4.2 acceptance is unmet | Medium | Open, waiting on the owner. Built 2026-10-19, not deployed |
+| K-091 | Enquiry budget bands are unchanged, so the lowest is still "Under £1,500" | Low | Open by owner decision 2026-10-19; not deployed |
+| K-092 | Three exclusions on the website service pages are inferred from `site.ts`, not stated in spec 4.3 | Low | Open, waiting on the owner. Built 2026-10-19, not deployed |
+| K-093 | An older services list shows the built-in six until the owner saves once, and a custom row without every page field is no longer published | Medium | Open by design (D-047). Built 2026-10-19, not uploaded or deployed |
 
 
 ---
@@ -913,6 +917,15 @@ home page rendered project gaps, the portrait placeholder and technical build co
 buyer reads that as an unfinished business. Resolution: replace it with buyer-relevant proof
 and complete content, and unpublish incomplete entries rather than invent replacements (D-039
 narrows D-027).
+
+**Update 2026-10-19 (journeys batch 4, `8193555..ebcb002`, not deployed).** The six service
+pages are built from the approved copy in `docs/PRODUCT-SPEC.md` section 4.3 (D-047): hook,
+typical needs, what you get, not included and price basis for each, in the groups Websites and
+IT support, with the six choices on the enquiry form. Nothing is invented. What remains for the
+owner: IT coverage, area and response time (K-090); IT prices; confirmation of the package
+prices with a stated VAT basis; the three inferred exclusions (K-092); and the budget bands if
+a smaller band is wanted (K-091). Checked in the browser against mocked responses only; the
+live server and published rows are UNVERIFIED.
 
 ## K-039 · Clients cannot message the owner from the portal
 **Severity:** high · **Status:** **fixed 2026-10-10, not deployed or uploaded.** `support.php`
@@ -1782,3 +1795,55 @@ run, setup refused a port held by a dummy listener, and Ctrl-C mid-run left 0 PH
 One later failure is not this: on 2026-10-19 a full run timed out in a `blog.test.ts`
 `beforeEach` under a load average of about 25, then passed alone and in a full rerun with the
 fixed harness (`docs/STATUS.md` section 0). How to run with other ports: `docs/OPERATIONS.md` section 8.
+
+## K-090 · The IT support pages omit coverage, area and response time, so spec 4.2 acceptance is unmet
+**Severity:** medium · **Status:** open, waiting on the owner. Built 2026-10-19, not deployed.
+
+`docs/PRODUCT-SPEC.md` section 4.2 asks the IT pages to state remote or on-site coverage and
+the area, and section 4.3 lists a response expectation and the price basis. None of these is
+known: the owner has not answered, and the approved copy does not hold them. The General IT
+support and IT consultancy pages therefore leave coverage, area and response time out
+altogether rather than show a labelled gap (D-039, which narrows D-027, forbids a visible gap
+on a buyer page). They say "Priced per job, ask for a quote." and "Networking installation and
+hardware repair are not offered." The acceptance line "IT pages state remote or on-site
+coverage and area" is **not met** until the owner answers (`docs/STATUS.md` section 5). Fix:
+add the answers as service page text in Site content, or in `site.ts`, and a test that the
+words appear.
+
+## K-091 · Enquiry budget bands are unchanged: the lowest is still "Under £1,500"
+**Severity:** low · **Status:** open by owner decision, 2026-10-19. Not deployed.
+
+The enquiry form now offers the six service names, but the budget bands did not change, so a
+small IT job still meets "Under £1,500" as the lowest choice. `docs/PRODUCT-SPEC.md` section 7
+asked for bands that fit small IT jobs; the owner decided to leave the bands as they are for
+now. The band list lives in `src/marketing/pages/Contact.tsx`. Revisit when IT prices are known
+(K-090).
+
+## K-092 · Three exclusions on the website service pages are inferred, not approved
+**Severity:** low · **Status:** open, waiting on the owner. Built 2026-10-19, not deployed.
+
+Spec 4.3 gives exclusions for the IT pages only. For the website pages the build priced the
+"not included" lines from the figures already in `src/marketing/data/site.ts`: copywriting as
+an add-on, new pages at £180 each, and integrations quoted as Bespoke. They match the existing
+price list, which itself awaits confirmation with a VAT basis (`docs/STATUS.md` section 5), but
+the owner has not approved the wording. Confirm or replace them in Site content.
+
+## K-093 · An older services list shows the built-in six until the owner saves once, and an incomplete custom row is no longer published
+**Severity:** medium · **Status:** open by design (D-047). Built 2026-10-19, not uploaded or deployed.
+
+Two behaviour changes follow from making a service a whole page.
+1. **A legacy list.** While the published services list holds only title-and-summary rows (no
+   web addresses), the website shows the built-in six in their default order. A row that names a
+   built-in service, by name or by the former name "Care and support", replaces that service's
+   title and summary; a row that names none is not shown. When the owner opens Site content >
+   Services, the editor upgrades such a list: matching rows become whole pages keeping their
+   title and summary, missing built-ins (the two IT pages for the old four-row list) are added
+   at the end with a note, and the upgrade counts as an unsaved edit. Saving and publishing
+   once writes web addresses, and from then on the published list sets which services appear and
+   in what order.
+2. **A custom row.** A previously published row that is not one of the built-in six, and so
+   lacks every page field, is no longer published as a service. The editor names it
+   ("Row N: ... needs every page field before it can be published") and the owner either
+   completes it or removes it.
+Neither is tested against the live server or real published rows (UNVERIFIED). The server
+refuses a half page on save, so no new incomplete row can reach the public site.

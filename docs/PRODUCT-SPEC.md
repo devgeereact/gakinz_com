@@ -149,7 +149,7 @@ hero, services, process, pricing, FAQs and contact copy come from published Site
 |---|---|---|
 | `/` | Home | Hero from `work.php?action=hero` or `showcase.ts`; Site content over `content.ts`; live blog and work |
 | `/about` | About | `site.ts` |
-| `/services`, `/services/:slug` | Services index and detail | Site content `services`, default from `site.ts` (four today; six approved, D-038) |
+| `/services`, `/services/:slug` | Services index and detail | Site content `services`, default from `site.ts` (six since 2026-10-19, D-038; not deployed) |
 | `/pricing` | Pricing | Site content `packages`, `addons`, `terms`, `faqs`, defaults from `site.ts` |
 | `/sectors` | Sectors | `site.ts` `sectors` |
 | `/work`, `/work/:slug` | Work index and detail | `work.php`, fallback to the built-in projects in `showcase.ts` |
@@ -207,9 +207,9 @@ questions and the next step.
 | General IT support | "Everyday IT problems sorted by someone who explains what went wrong." | Typical jobs (email and account set-up, device and software set-up, backups, Microsoft 365 or Google Workspace help), remote or on-site coverage, response expectation, price basis (hourly or block). Excludes networking installation and hardware repair |
 | IT consultancy | "Straight answers before you spend money on technology." | A fixed-scope session or short written review; typical questions (which tools, what to replace, how to organise accounts and files); the deliverable is a written recommendation; price basis |
 
-`site.ts` holds four services today and no prices for the two IT services. Those pages render
-a price only once the owner supplies one; until then they say "Priced per job, ask for a
-quote". Existing prices in `site.ts` (Starter £1,500, Business £3,500, Ecommerce £6,000,
+`site.ts` holds all six services since 2026-10-19 (not deployed), with no prices for the two IT
+services. Those pages say "Priced per job, ask for a quote" until the owner supplies a price,
+and omit coverage, area and response time until answered (`docs/KNOWN-ISSUES.md` K-090). Existing prices in `site.ts` (Starter £1,500, Business £3,500, Ecommerce £6,000,
 Bespoke quoted, £180 per extra page, £350 copywriting, £600 brand mark, care £90 and £450 per
 month, 40/30/30 terms) await the owner's confirmation and a stated VAT basis.
 
@@ -862,7 +862,7 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 | Call record: requested or confirmed time, time zone, link, outcome | Bookings tracked against the enquiry | Built 2026-10-16 (`bookings.php`); needs SQL 9 and 10 | 2 | M | None |
 | Optional calendar file (ICS) for a confirmed call | Adds to any calendar without OAuth | Built 2026-10-18 (`bookings.php`, `_ics.php`), for staff and for the client's own call; needs SQL 9 and 10. The client's file has no meeting link (K-070) | Later | S | Call record |
 | Convert enquiry to client once, matching existing email or company | No duplicate clients | Exists, untested for duplicates | 2 | S | Synthetic tests |
-| Six service options on the enquiry form with the website's labels; budget bands that fit small IT jobs | Clean source data | Five project types that do not match service names; lowest budget band "Under £5k" (`Contact.tsx`) | 4 | S | Services and prices approved |
+| Six service options on the enquiry form with the website's labels; budget bands that fit small IT jobs | Clean source data | Built 2026-10-19, not deployed: the six service names, "Not sure yet" and "Something else", carried from each service page. Budget bands unchanged by owner decision, lowest "Under £1,500" (K-091) | 4 | S | Services and prices approved |
 
 ### Clients and portal
 
@@ -907,7 +907,7 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 |---|---|---|---|---|---|
 | Target design on both surfaces (D-037, superseded by D-046), one light and one dark CMS theme | One consistent look (`docs/DESIGN-SYSTEM.md` sections 10 and 11) | D-037 public surface built 2026-10-10; both surfaces rebuilt on D-046 on 2026-10-14, not deployed | 3 to 4 | M | Font licence confirmed |
 | Hero and section motion with a reduced-motion fallback | An original feel without hurting speed | Built on the public surface 2026-10-10 | 4 | M | Design tokens |
-| Six service pages with buyer hooks, scope, exclusions and price basis | Services up front for companies | Four pages | 4 | M | Prices approved |
+| Six service pages with buyer hooks, scope, exclusions and price basis | Services up front for companies | Built 2026-10-19 from section 4.3, not deployed: six pages in two groups. IT coverage, area and prices, and the website exclusions, await the owner (K-038, K-090, K-092) | 4 | M | Prices approved |
 | Blog edit that keeps the body | Safe content editing | Fixed in source 2026-10-10 (K-016) | 1 | S | None |
 | Safe article format: links, lists, recommendation blocks | Needed for affiliate links | Links, lists and bold built 2026-10-10 (K-037); recommendation blocks built 2026-10-19 (`:::recommend`), not deployed | 4 | S | None |
 | Publish and unpublish that really removes content | Fallback no longer resurrects posts | Fixed 2026-10-10 (K-036) | 4 | S | None |

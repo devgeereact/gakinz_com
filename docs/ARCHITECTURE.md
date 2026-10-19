@@ -279,7 +279,7 @@ need SQL 7 and 8 and the upload in `docs/DEPLOYMENT.md` section 5.
 |---|---|---|
 | Public site | `.gk-site` styles; shared parts; projects and hero from Work with a built-in fallback; copy from Site content over built-in defaults | `src/marketing/site.css`, `components/site-ui.tsx`, `components/site-helpers.ts`, `data/showcase.ts`, `data/content.ts` |
 | Homepage hero | Up to five published Work records in CMS order, each in its brand colour | `work.php?action=hero`, `showcase.ts` |
-| Site content | One `site_content` row per section with a draft and a published copy; the public read returns published copy only | `server/site.php`, `src/app/modules/Site.tsx`, `siteContentModel.ts`, `siteContent` in `api.ts` |
+| Site content | One `site_content` row per section with a draft and a published copy; the public read returns published copy only. A `services` row may be a whole service page (slug, group, hook, needs, deliverables, exclusions, price basis), all together or none, and the public site falls back to its built-in six services (`content.ts`) | `server/site.php`, `src/app/modules/Site.tsx`, `siteContentModel.ts`, `siteContent` in `api.ts` |
 | CMS shell and screens | Graphite sidebar in both themes, new header, `AuthFrame` sign-in pages, a page kit shared by every screen | `src/layouts/AppLayout.tsx`, `src/components/app-sidebar.tsx`, `src/app/components/AuthFrame.tsx`, `src/app/components/page-kit.tsx` |
 | Enquiries | Drag and drop between stages, through the existing `move()` | `src/app/modules/Leads.tsx` |
 

@@ -234,9 +234,21 @@ statements are already live; only someone with server access can (section 5.6).
    `files.php`, `portal.php` and `privacy.php` stand alone and are each safe before SQL 17 and
    18 (section 5.5). `files.php` changes the download headers for every caller, staff and the
    public share link included, the moment it is uploaded (section 5.5).
-12. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
+12. **For the fourth journeys batch (2026-10-19, six service pages, `8193555..ebcb002`)**: upload
+   `server/site.php` (section 5.3), then merge. There is **no SQL**. The order matters on one
+   side only: the redesigned Site content editor sends the new service page fields (`slug`,
+   `group`, `hook`, `detail`, `needs`, `deliverables`, `exclusions`, `price_basis`), and the
+   `site.php` already on the host refuses them as "unknown field", so saving services would fail
+   until the new file is up. The public site is safe in either order, because it reads
+   `site.php?action=get` the same way and falls back to its built-in six services. `contact.php`
+   is unchanged. **After the merge, the owner opens Site content > Services once and saves** to
+   upgrade an older title-and-summary list: the editor turns it into whole pages, adds the two
+   IT pages at the end and explains this in a note. Until that save the website shows the
+   built-in six in their default order (`docs/KNOWN-ISSUES.md` K-093). NOT TESTED against the
+   live host.
+13. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
    deploys the client that expects these server changes.
-13. **Walk the post-upload checks** in section 5.6.
+14. **Walk the post-upload checks** in section 5.6.
 
 ### 5.2 SQL, in order
 
@@ -381,7 +393,9 @@ sets:
 
 `site.php` and `work.php` are the 2026-10-14 redesign batch (homepage hero and editable site
 copy). Upload them **after** SQL statements 7 and 8 if you want the new features at once;
-either order is safe, because both degrade until their statement has run.
+either order is safe, because both degrade until their statement has run. `site.php` changed
+again on 2026-10-19 (six service pages): upload the new file **before the merge** (step 12 of
+section 5.1), because the new CMS editor sends fields the 2026-10-14 file refuses. No SQL.
 
 **If the 2026-09-22 relaunch set was never uploaded**, which is UNVERIFIED, also upload these
 files from `main`. The other relaunch files, `invoices.php` included since 2026-10-18, are in
@@ -449,6 +463,10 @@ From the branch:
   makes that file permanently public, exactly as attaching a work image does.
 - **Public-site copy can be edited in the CMS** through `site.php` (2026-10-14). Nothing
   changes on the public site until a section is published.
+- **Services are whole pages** (2026-10-19). A services row carries its page fields all
+  together or none, so a half page is refused on save and never published. A previously
+  published row without every field is no longer shown as a service; while the list has no web
+  addresses the website shows its built-in six (`docs/KNOWN-ISSUES.md` K-093).
 - **Calls are recorded inside Enquiries** (2026-10-16) through `bookings.php`, staff only.
   A customer is emailed about a reschedule or cancellation only when the owner switches that
   on for the change; nothing is sent automatically.

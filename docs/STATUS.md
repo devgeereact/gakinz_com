@@ -1,7 +1,7 @@
 # Status
 
-**As at:** 2026-10-19 (sections 0, 0.2, 0.3 and 0.4); 2026-10-17 (section 0.1); otherwise 2026-10-14. `main` is `c57eb4a`. All later work sits on branches stacked into
-PR #8. The newest is `feat/journeys-2026-10-18` (sections 0.2, 0.3 and 0.4, PR #21), stacked on
+**As at:** 2026-10-19 (sections 0, 0.2, 0.3, 0.4 and 0.5); 2026-10-17 (section 0.1); otherwise 2026-10-14. `main` is `c57eb4a`. All later work sits on branches stacked into
+PR #8. The newest is `feat/journeys-2026-10-18` (sections 0.2 to 0.5, PR #21), stacked on
 `audit/readiness-2026-10-17` (PR #20), not merged, deployed or uploaded. `feat/plan-2026-batch-1` (PR #8) holds batch 1 (the local half of delivery phase 1), the
 seven-destination navigation, My account, enquiry follow-ups, client portal messages, public
 publishing and the article format, the lock-screen token fix, the D-037 public redesign, the
@@ -24,18 +24,18 @@ unless someone with server access has checked it.
 
 ## 0. Current measurements
 
-Re-measured on 2026-10-19 on the Mac on `feat/journeys-2026-10-18` at `bdca4aa` (the end of
-the third batch, section 0.4), except where a row names another date or computer. Re-measure and update this table when a count changes.
+Re-measured on 2026-10-19 on the Mac on `feat/journeys-2026-10-18` at `ebcb002` (the end of
+the fourth batch, section 0.5), except where a row names another date or computer. Re-measure and update this table when a count changes.
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 396 tests in 34 files on 2026-10-19 at `2ba81ae` (one added with the single-prompt fix). Before that 395 at `bdca4aa` (third batch: `projectTemplateModel`, `dirty-model`, `unsaved-guard-model` and `download-type` added, with new cases in `deepLink`, `format` and `download-name`). Before that 355 tests in 30 files on 2026-10-19 at `def1909` (second batch: `todayModel`, `recordSearchModel`, `projectBriefModel`, `privacyToolsModel`, `deepLink`, `notAvailable`, `download-name`, `ArticleBody` and `articleRecommend` added). Before that 239 tests in 21 files on 2026-10-19 (`feat/journeys-2026-10-18`: `paymentModel`, `acceptanceModel`, `portalRequestsModel`, `assetChecklistModel` and `scripts/head-assets.test.mjs` added; the final-review fixes added 16 cases for when a portal route counts as not available yet). Before that 179 tests in 16 files on 2026-10-17 (`audit/readiness-2026-10-17`: `api-errors.test.ts` and `blog-date.test.ts` added). Before that 171 in 14 files (2026-10-16, after merging `feat/generated-sitemap` and `feat/bookings-timeline-feedback`: 15 added for the page metadata checks and the sitemap, 13 in `bookingModel.test.ts`) |
-| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 398 tests in 29 files on 2026-10-19 at `bdca4aa` on the Mac, run as `GK_TEST_DB=gakinz_docs3_test GK_TEST_PHP_PORT=5395 GK_TEST_PROVIDER_PORT=5396 npm run test:server` (third batch: `ticket-time`, `portal-files` and `project-templates` added, with new cases in `privacy`). The first full run that day failed 1 of 398: a 60-second `beforeEach` timeout in `blog.test.ts` while the machine's load average was about 25 (949 s run); `blog.test.ts` alone then passed 4 of 4, and the full rerun passed 398 of 398 in 338 s with no PHP listener left on either port. Before that 340 tests in 26 files on 2026-10-19 at `def1909` on the Mac, run as `GK_TEST_DB=gakinz_docs_test GK_TEST_PHP_PORT=5309 GK_TEST_PROVIDER_PORT=5310 npm run test:server` because ports 5191 and 5192 belong to another project there (second batch: `today`, `search`, `project-briefs` and `privacy` added). Before that 275 tests in 22 files the same day on ports 5291 and 5292 (`manual-payment`, `acceptance-evidence`, `portal-requests`, `project-assets` and `booking-ics` added). Before that 184 tests in 17 files on 2026-10-17 on the Mac (20 added: `security-hardening.test.ts`, `cron-prune.test.ts`, `token-hashing.test.ts`, and new cases in `work`, `proposals` and `payments`). Before that 164 tests in 14 files, 2026-10-16 on local MariaDB 10.11, `feat/bookings-timeline-feedback` (24 added in `bookings.test.ts` and `feedback.test.ts`) |
+| Unit tests | `npm test` | **PASS.** 415 tests in 34 files on 2026-10-19 at `ebcb002` (fourth batch: new cases in `content.test.ts` and `siteContentModel.test.ts` for the six service pages, the legacy list upgrade and the all-or-none rule). Before that 396 tests in 34 files at `2ba81ae` (one added with the single-prompt fix). Before that 395 at `bdca4aa` (third batch: `projectTemplateModel`, `dirty-model`, `unsaved-guard-model` and `download-type` added, with new cases in `deepLink`, `format` and `download-name`). Before that 355 tests in 30 files on 2026-10-19 at `def1909` (second batch: `todayModel`, `recordSearchModel`, `projectBriefModel`, `privacyToolsModel`, `deepLink`, `notAvailable`, `download-name`, `ArticleBody` and `articleRecommend` added). Before that 239 tests in 21 files on 2026-10-19 (`feat/journeys-2026-10-18`: `paymentModel`, `acceptanceModel`, `portalRequestsModel`, `assetChecklistModel` and `scripts/head-assets.test.mjs` added; the final-review fixes added 16 cases for when a portal route counts as not available yet). Before that 179 tests in 16 files on 2026-10-17 (`audit/readiness-2026-10-17`: `api-errors.test.ts` and `blog-date.test.ts` added). Before that 171 in 14 files (2026-10-16, after merging `feat/generated-sitemap` and `feat/bookings-timeline-feedback`: 15 added for the page metadata checks and the sitemap, 13 in `bookingModel.test.ts`) |
+| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 405 tests in 30 files on 2026-10-19 at `ebcb002` on the Mac, run as `GK_TEST_DB=gakinz_docs4_test GK_TEST_PHP_PORT=5399 GK_TEST_PROVIDER_PORT=5400 npm run test:server` in 336 s (fourth batch: `enquiry-services.test.ts` added, with new cases in `site.test.ts`). Before that 398 tests in 29 files on 2026-10-19 at `bdca4aa` on the Mac, run as `GK_TEST_DB=gakinz_docs3_test GK_TEST_PHP_PORT=5395 GK_TEST_PROVIDER_PORT=5396 npm run test:server` (third batch: `ticket-time`, `portal-files` and `project-templates` added, with new cases in `privacy`). The first full run that day failed 1 of 398: a 60-second `beforeEach` timeout in `blog.test.ts` while the machine's load average was about 25 (949 s run); `blog.test.ts` alone then passed 4 of 4, and the full rerun passed 398 of 398 in 338 s with no PHP listener left on either port. Before that 340 tests in 26 files on 2026-10-19 at `def1909` on the Mac, run as `GK_TEST_DB=gakinz_docs_test GK_TEST_PHP_PORT=5309 GK_TEST_PROVIDER_PORT=5310 npm run test:server` because ports 5191 and 5192 belong to another project there (second batch: `today`, `search`, `project-briefs` and `privacy` added). Before that 275 tests in 22 files the same day on ports 5291 and 5292 (`manual-payment`, `acceptance-evidence`, `portal-requests`, `project-assets` and `booking-ics` added). Before that 184 tests in 17 files on 2026-10-17 on the Mac (20 added: `security-hardening.test.ts`, `cron-prune.test.ts`, `token-hashing.test.ts`, and new cases in `work`, `proposals` and `payments`). Before that 164 tests in 14 files, 2026-10-16 on local MariaDB 10.11, `feat/bookings-timeline-feedback` (24 added in `bookings.test.ts` and `feedback.test.ts`) |
 | Type check | `npx tsc -b` | **PASS** |
-| Build | `npm run build` | **PASS.** 30 public pages and `app-shell.html` prerendered, `sitemap.xml` with 30 URLs (2026-10-19: at `af151cb` and again at `bdca4aa` for the batch 3 browser check, not re-run for the documentation commit; first 2026-10-16, `feat/generated-sitemap`) |
-| Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 33 errors, 0 warnings on 2026-10-19 at `bdca4aa`, all `react-hooks/set-state-in-effect`; the ceiling in `scripts/lint-ratchet.mjs` was lowered from 41 and 1. **`npm run lint` still fails** (K-002) |
+| Build | `npm run build` | **PASS.** 32 public pages and `app-shell.html` prerendered, `sitemap.xml` with 32 URLs (2026-10-19 at `ebcb002`; the two IT support pages added to the 30 of the third batch; first 2026-10-16, `feat/generated-sitemap`) |
+| Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 33 errors, 0 warnings on 2026-10-19 at `ebcb002`, all `react-hooks/set-state-in-effect`; the ceiling in `scripts/lint-ratchet.mjs` was lowered from 41 and 1. **`npm run lint` still fails** (K-002) |
 | Documentation | `npm run docs:check` | **PASS.** 26 documents (re-checked 2026-10-19 at `bdca4aa` with the third batch's documents; `docs/PRIVACY-READINESS.md` added 2026-10-17). With `-- --base audit/readiness-2026-10-17` and with `-- --base 029f867` the sync rule also passes for this branch |
-| PHP files | `ls server/*.php \| wc -l`, then `php -l server/*.php` | 59: 48 endpoints and 11 `_`-prefixed includes, all 59 passing `php -l` (PHP 8.5.10) on 2026-10-19 at `bdca4aa` (`_time.php` and `_templates.php` added in the third batch; `today.php`, `search.php`, `briefs.php`, `privacy.php`, `_like.php` and `_retention.php` added 2026-10-19; `assets.php` and `_ics.php` 2026-10-18; `bookings.php` and `feedback.php` 2026-10-16) |
+| PHP files | `ls server/*.php \| wc -l`, then `php -l server/*.php` | 59: 48 endpoints and 11 `_`-prefixed includes, all 59 passing `php -l` (PHP 8.5.10) on 2026-10-19 at `ebcb002` (`_time.php` and `_templates.php` added in the third batch; `today.php`, `search.php`, `briefs.php`, `privacy.php`, `_like.php` and `_retention.php` added 2026-10-19; `assets.php` and `_ics.php` 2026-10-18; `bookings.php` and `feedback.php` 2026-10-16) |
 | Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 41 (`project_briefs` and `project_measurements` added 2026-10-19, SQL 16; `project_assets` 2026-10-18; `bookings`, `booking_events`, `client_feedback` 2026-10-16) |
 | Public routes | `src/routes/index.tsx`, children of `PublicLayout` | 17: the home page, 15 paths and the 404. Outside the layout: `/login`, `/set-password` and `/p/:token` |
 | CMS screens | `src/routes/index.tsx` under `/app` | 26: Today (the index), 24 module routes and My account, in seven navigation groups (Site content added 2026-10-14) |
@@ -44,6 +44,7 @@ the third batch, section 0.4), except where a row names another date or computer
 | Server files changed by the journeys batch | `git diff --name-only 8499761..6789b47 -- server` | `_ics.php` (new), `assets.php` (new), `bookings.php`, `invoices.php`, `proposals.php`, `support.php`, `schema.sql` |
 | Server files changed by the second journeys batch | `git diff --name-only 6789b47..def1909 -- server` | `today.php`, `search.php`, `_like.php`, `briefs.php`, `privacy.php`, `_retention.php` (all new), `cron.php`, `.htaccess`, `config.php.example`, `schema.sql` |
 | Server files changed by the third journeys batch | `git diff --name-only 029f867..bdca4aa -- server` | `_time.php`, `_templates.php` (both new), `support.php`, `time.php`, `files.php`, `projects.php`, `portal.php`, `privacy.php`, `schema.sql` |
+| Server files changed by the fourth journeys batch | `git diff --name-only 8d85100..ebcb002 -- server` | `site.php` only (no SQL) |
 | Server files changed by the redesign | `git diff --stat origin/feat/plan-2026-batch-1...origin/feat/redesign-2026 -- server` | `site.php` (new), `work.php`, `schema.sql`, `README.md` |
 | `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 43 of 59 files, 160 call sites (2026-10-19, `bdca4aa`); the two new includes call none |
 
@@ -172,6 +173,40 @@ prompts of the draft guard, the draft guard on the Blog, Proposals, Contracts, W
 content screens in a browser, the share-link caching behind Cloudflare, and real assistive
 technology.
 
+## 0.5 Client journeys, fourth batch: six service pages, 2026-10-19
+
+On `feat/journeys-2026-10-18`, nine commits from `8193555` to `ebcb002` on the Mac (Task 20 of
+the journeys plan). Pushed to origin, not merged, deployed or uploaded; no SQL. The work uses
+only the approved service content in `docs/PRODUCT-SPEC.md` sections 4.1 to 4.3 (D-038, D-047),
+so it invents no fact. Same method as section 0.3: a test-first build, a review that found
+legacy CMS rows, two fix rounds, a re-review, then a browser check.
+
+Built: the six services as full pages in two groups, Websites (Web design, Web development,
+Ecommerce, Website care) and IT support (General IT support, IT consultancy). Each page shows a
+buyer hook, typical needs, what you get, what is not included and a price basis, then links to
+Pricing, Work and `/contact?service=<slug>`. The IT pages say "Priced per job, ask for a
+quote." and "Networking installation and hardware repair are not offered." The enquiry form
+offers the six service names, "Not sure yet" and "Something else", and a service page carries
+its choice across. `site.php` accepts the page fields on a services row (all together or none,
+`docs/API-SPEC.md` section 7a), and Site content > Services edits whole pages and refuses a
+half page. A published list of title-and-summary rows (the older shape) keeps working: the
+website shows the built-in six, and the editor upgrades such a list when it is opened
+(K-038, K-090 to K-093, D-047). Section 4 has the detail.
+
+| Check | Result |
+|---|---|
+| `npx tsc -b`, `npm run build` (32 public pages, 32 sitemap URLs), `php -l` over 59 files | **PASS** at `ebcb002` |
+| `npm test` 415, `npm run test:server` 405, `npm run lint:ratchet` 33 and 0 | **PASS** at `ebcb002` |
+| Public `/services` and the six detail pages at 390, 1024 and 1440px: groups, hook, needs, deliverables, exclusions, price, no gap marker, links to Pricing, Work and Contact; 12 click-throughs and 2 direct loads preselect the service in the enquiry form after hydration; unique prerendered title and description for all six | **PASS** (mocked API), axe 0 violations on the index and three detail pages, no console errors, no horizontal scroll |
+| CMS Site content > Services: defaults load all six with every field; an edit saves one request with every key on all six rows; a cleared required field is refused with the row named and nothing is sent; legacy title-and-summary rows save as they are | **PASS** (mocked API, 390 and 1440px, axe 0). **Ran on the build before fix rounds 1 and 2** |
+| Single "Leave without saving?" prompt on the Blog editor (pointer click on a link behind the dialog, Stay, Leave, Escape, Cancel) | **PASS** in the browser at 1440px |
+
+**NOT TESTED:** the editor's legacy-list note and upgrade in a browser (they came after the CMS
+check), the `?package=` note after hydration, the live server and what is published there
+(UNVERIFIED), a real sign-in, a real publish of a services list, the whole path against real
+data, and real assistive technology. Accessibility and performance of the new pages beyond axe
+were not measured.
+
 ## 1. Audit and readiness, 2026-10-10
 
 A broad planning audit of `main` at `c57eb4a`, re-verified the same day by three independent
@@ -251,7 +286,7 @@ live-state discovery and owner inputs first; no launch is promised in a fixed nu
 | 1. Establish safety | Owner credential actions; reconcile host PHP and SQL; backup and restore; a safe local synthetic backend and mail sink; payment defects and alternative sign-in reviewed | Rotation and revocation confirmed, restoration demonstrated, release manifest and rollback recorded, no accidental production calls in tests | Local fixes built (section 4), not deployed. Owner-side actions open |
 | 2. Complete business journeys | Enquiry follow-up, simple bookings, client conversion, quote acceptance and version, projects and tasks, invoices and reconciliation, verified reference access, scoped messages, updates and feedback, client-linked brief, portal and support isolation | Synthetic end-to-end journey, failure, retry and concurrency tests, and record ownership tests pass | Started. Enquiry follow-ups, client messages, call bookings, the client timeline and private feedback built with server tests (bookings, timeline and feedback 2026-10-16, not deployed). On 2026-10-18 (section 0.2, not deployed or uploaded): manual payment record, acceptance evidence with a terms fingerprint, portal update and call requests, the asset checklist and a calendar file for a confirmed call, each with server tests and a mocked-API browser check. On 2026-10-19 (section 0.3, not deployed or uploaded): the client-linked brief with agreed measurements (SQL 16), the Today attention list and record search. Later on 2026-10-19 (section 0.4, not deployed or uploaded): IT support time from tickets (SQL 17), files shared to the client portal (SQL 18), project templates and draft protection. The full journey with these steps not yet run against real data |
 | 3. Polish the CMS | Target design foundation, smaller navigation, My account, consistent page and form states, unavailable metrics, quiet optional modules | Owner usability task passes; keyboard, phone, zoom and theme checks on affected screens | Navigation grouped and My account built (K-032, K-023, K-024). Every CMS screen restyled to D-046 on `feat/redesign-2026`, checked against mocked API responses only. Owner usability task, keyboard and zoom checks NOT TESTED |
-| 4. Polish the public site | Hero and section design and motion, company and owner positioning, service copy, complete case studies, consent and legal content, safe publishing, metadata and sitemap | Buyer journey, publish and unpublish, share preview, responsive and accessibility evidence | Rebuilt again on D-046 (2026-10-14): brand-colour hero fed by Work, the owner's real projects with screenshots, copy editable in Site content. Publishing, article format and engineering copy fixed (K-036, K-037, K-038 in part). Six-service copy, client consent records, portrait and legal review dates wait for owner inputs. Accessibility and performance re-measured 2026-10-16 (K-045 closed); the two brand-colour contrast failures fixed (K-050, K-051), home CLS fixed and LCP measured (K-052, LCP still open), `/work` LCP measured (K-053), the heading-size regression fixed (K-054), all 2026-10-16. Public pages prerendered with checked per-page metadata and a generated sitemap (K-018, K-019, K-043), not deployed. A quiet client sign-in link (header, drawer and footer), `favicon.ico` and a web manifest added 2026-10-18, not deployed |
+| 4. Polish the public site | Hero and section design and motion, company and owner positioning, service copy, complete case studies, consent and legal content, safe publishing, metadata and sitemap | Buyer journey, publish and unpublish, share preview, responsive and accessibility evidence | Rebuilt again on D-046 (2026-10-14): brand-colour hero fed by Work, the owner's real projects with screenshots, copy editable in Site content. Publishing, article format and engineering copy fixed (K-036, K-037, K-038 in part). Six-service copy, client consent records, portrait and legal review dates wait for owner inputs. Accessibility and performance re-measured 2026-10-16 (K-045 closed); the two brand-colour contrast failures fixed (K-050, K-051), home CLS fixed and LCP measured (K-052, LCP still open), `/work` LCP measured (K-053), the heading-size regression fixed (K-054), all 2026-10-16. Public pages prerendered with checked per-page metadata and a generated sitemap (K-018, K-019, K-043), not deployed. The six service pages are built from spec 4.3 (2026-10-19, section 0.5, not deployed); coverage and area for IT support, IT prices, package price confirmation and the VAT basis remain owner inputs (K-038, K-090) A quiet client sign-in link (header, drawer and footer), `favicon.ico` and a web manifest added 2026-10-18, not deployed |
 | 5. Social and affiliate pilot | Owned profile set-up, approved copy and media, first resources, disclosed links | Exact profile URLs, disclosure and link checks, a repeatable small publishing routine | Not started |
 | 6. AdSense pilot | Account approval and a certified consent platform, article-only slots | Consent and network proof, no scripts on private layouts, performance comparison, reversible switch | Not started |
 | 7. Consolidate and operate | Promote approved requirements to canonical documents, retire duplicates, review monthly | Valid references, one source per fact, accurate task, decision and release records | Documents consolidated 2026-10-10 (D-043, D-044); sync rule and `npm run docs:check` added (D-045) |
@@ -333,8 +368,11 @@ reference access cannot ship until the authentication and ownership gates pass.
 10. **Done locally 2026-10-14 (D-046):** every CMS screen restyled on the page kit, on
     `feat/redesign-2026`. Still open: a check with real data, a keyboard and zoom pass, and a
     first CMS accessibility check (item 14).
-11. Six service pages, authorised case studies, owner portrait and biography, and complete
-    public copy (K-038, owner inputs in section 5). The technical parts are **done locally
+11. **Six service pages built locally 2026-10-19** from spec 4.3 (section 0.5, not deployed).
+    Still owner inputs (K-038, K-090 to K-092, section 5): IT coverage and area, IT prices,
+    confirmation of the package prices with a VAT basis, and the three inferred exclusions on the
+    website pages. Authorised case studies, owner portrait and biography, and complete public
+    copy also wait on the owner. The technical parts are **done locally
     2026-10-16**, not deployed: the public pages are prerendered with their own metadata, which
     the build now checks page by page, and `sitemap.xml` is generated by the build (K-018,
     K-019); the canonical conflict is fixed (K-043); the hero contrast and CLS findings are
@@ -365,6 +403,23 @@ to 33 and 0 on 2026-10-19, locally); decide dependency exposure
 Contract: `.agent/CURRENT-TASK.md`. Every row is in the repository only: client changes deploy
 when PR #8 (and, for the redesign, `feat/redesign-2026`) merges, and server changes need the
 manual upload in `docs/DEPLOYMENT.md` section 5.
+
+### Client journeys, fourth batch: six service pages, 2026-10-19
+
+On `feat/journeys-2026-10-18` from `8193555` to `ebcb002`. Not merged, deployed or uploaded; no
+SQL. Summary and method in section 0.5.
+
+| Area | Change | Evidence |
+|---|---|---|
+| Service content | `src/marketing/data/site.ts` and `content.ts` hold six services in two groups with hook, typical needs, what you get, not included and price basis, all from spec 4.3. The IT pages say "Priced per job, ask for a quote." and omit coverage, area and response time rather than mark a gap (D-039, K-090). The Website care slug stays `care-and-support` | `content.test.ts` |
+| Public pages | Services lists the groups with numbering that restarts in each group; each detail page shows the page in full and links to Pricing, Work and `/contact?service=<slug>`; Home links the six. New classes `.svc--2`, `.svc-group` and `.nots` in `site.css`; the service titles are `h3` under a group `h2`. `public/llms.txt` lists the six. Two IT URLs join the prerender and the sitemap | `src/prerender/pages.test.tsx`, browser check |
+| Enquiry form | The service select offers the six names, "Not sure yet" and "Something else"; `?service=<slug>` preselects, and a `?package=` choice keeps its package note. The message label is "What do you need?". Budget bands are unchanged (K-091) | `tests/server/enquiry-services.test.ts`, browser check |
+| `site.php` | A services row may carry `slug`, `group`, `hook`, `detail`, `needs`, `deliverables`, `exclusions` and `price_basis`. The set `slug`, `group`, `hook`, `needs`, `deliverables`, `exclusions`, `price_basis` comes all together or not at all, and `slug` is unique. `docs/API-SPEC.md` section 7a | `tests/server/site.test.ts` |
+| CMS editor | Site content > Services edits whole pages, one list line per row, refuses a half page naming the row and field, and checks the slug length. An older title-and-summary list is upgraded when opened: rows naming a built-in service (or its former name "Care and support") become whole pages keeping the published title and summary, the missing built-ins are added at the end, and a note names them. The upgrade counts as an unsaved edit (K-093) | `siteContentModel.test.ts` |
+| Public fallback | While the published list has no slugs the website shows the built-in six in their default order, with matching titles and summaries replaced; a custom row without every page field is not shown (K-093, D-047) | `content.test.ts` |
+
+Verification at `ebcb002`, 2026-10-19 on the Mac: section 0. **NOT TESTED:** the live server,
+real data, a real sign-in, the editor upgrade note in a browser, and real assistive technology.
 
 ### Client journeys, third batch, 2026-10-19
 
@@ -516,8 +571,13 @@ On 2026-10-14 the owner approved the redesign that replaces D-037's visual direc
       Ecommerce £6,000, Bespoke quoted, £180 per extra page, £350 copywriting, £600 brand mark,
       care £90 and £450 per month.
 - [ ] New prices: general IT support (hourly or block) and IT consultancy (session or fixed
-      review).
-- [ ] IT support coverage: remote only, or on-site, and which area.
+      review). The pages say "Priced per job, ask for a quote." until then (K-090).
+- [ ] IT support coverage: remote only, or on-site, and which area, and the response time. The
+      IT pages omit all three until answered, so spec 4.2 acceptance is unmet (K-090).
+- [ ] The three exclusions inferred on the website pages: copywriting as an add-on, new pages
+      at £180, and integrations quoted as Bespoke (K-092).
+- [ ] Budget bands on the enquiry form: keep "Under £1,500" as the lowest, or add a smaller
+      band for small IT jobs (K-091).
 - [ ] Payment schedule: keep 40/30/30 (ex-VAT, due at acceptance, +30 and +60 days) or change
       it (D-035). Also whether partial payments are always separate instalment invoices.
 - [ ] Cancellation, change and revision terms.

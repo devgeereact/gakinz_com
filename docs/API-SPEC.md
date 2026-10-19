@@ -701,13 +701,23 @@ Lists hold 1 to 12 rows. Unknown sections and unknown keys are refused.
 | Section | Shape |
 |---|---|
 | `hero` | `{ status, lead, cta1, cta2, secs }`, `secs` a whole number from 4 to 10 |
-| `services` | `[{ title, summary }]` |
+| `services` | `[{ title, summary, slug?, group?, hook?, detail?, needs?, deliverables?, exclusions?, price_basis? }]`. See below |
 | `process` | `[{ title, detail }]` |
 | `packages` | `[{ name, price, best, featured? }]`, `featured` a boolean |
 | `addons` | `[{ name, price }]` |
 | `terms` | `[{ stage, share }]` |
 | `faqs` | `[{ q, a }]` |
 | `contact` | `{ email, reply, footer }`, `email` a valid address |
+
+Service page fields (2026-10-19). `slug` is lower-case words joined by single hyphens, at most
+80 characters, unique within the list; `group` is `websites` or `it`; `hook` and `price_basis`
+are at most 300 characters; `detail` is at most 1200; `needs`, `deliverables` and `exclusions`
+are lists of 1 to 10 lines of up to 300 characters each. `slug`, `group`, `hook`, `needs`,
+`deliverables`, `exclusions` and `price_basis` come **all together or not at all**: a row with
+some but not all of them is refused with a message naming the row. `detail` is optional. A row
+with only `title` and `summary` is still accepted (the older shape). Unknown keys are refused as
+before. The public site shows a custom row only when it has every one of those fields
+(`docs/KNOWN-ISSUES.md` K-093).
 
 Before the table exists, `get` answers `{}` and the staff actions answer 503 with a message
 naming the schema step.

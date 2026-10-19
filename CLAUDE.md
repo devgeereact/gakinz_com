@@ -167,6 +167,14 @@ Measured on branch `feat/redesign-2026` at `d314833` (stacked on `feat/plan-2026
   upload the PHP (`_time.php` with or before `support.php` and `time.php`, `_templates.php`
   with `projects.php`), run SQL 17 then 18, then merge.** Browser check on mocked API only.
   Summary in `docs/STATUS.md` section 0.4; open items K-083 to K-088.
+  **Fourth batch, 2026-10-19** (`8193555..ebcb002`, same branch, pushed): the six service pages
+  from spec 4.3 (Websites and IT support groups), six service choices on the enquiry form,
+  and whole-page services in `site.php` and Site content (D-047). Measured on the Mac at
+  `ebcb002`: `npm test` 415, `npm run test:server` 405 (ports 5399 and 5400), lint ratchet 33
+  and 0, 32 pages prerendered, `php -l` over 59 files, `tsc -b` and docs check PASS. Not
+  merged, uploaded or deployed. **Upload `site.php` before merging (no SQL), then save Site
+  content > Services once.** IT coverage, area and prices are owner inputs (K-090). Browser
+  check on mocked API only. Open items K-090 to K-093.
 - A live super-admin credential was published in an earlier revision of this file and is in
   git history. The owner reports it rotated on 2026-10-12; session revocation is unconfirmed.
   See `docs/KNOWN-ISSUES.md` K-001.

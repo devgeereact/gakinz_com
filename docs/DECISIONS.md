@@ -826,3 +826,30 @@ informative portfolio of real projects and a CMS of the same standard, and wante
 and key sections editable without a developer. **Evidence:** prototypes reviewed and approved
 by the owner on 2026-10-14; screenshots of the owner's projects captured from their local
 builds on 2026-10-13. Client sites are named with the owner's confirmation.
+
+## D-047 · The six service pages use the approved copy only, and an incomplete service is never published
+**Date:** 2026-10-19 · **Status:** active. Builds on D-038; D-039's rule against visible gaps
+still holds.
+
+Three rules govern the service pages built in journeys batch 4.
+1. **Spec 4.3 copy only.** Each page is made from the hooks, typical needs, deliverables,
+   exclusions and price basis approved in `docs/PRODUCT-SPEC.md` sections 4.1 to 4.3, and from
+   figures already in `site.ts`. Where the owner has not answered (IT coverage, area, response
+   time, IT prices) the page leaves the fact out and says "Priced per job, ask for a quote."
+   It shows no gap marker and invents nothing (K-090). Three website exclusions were priced
+   from `site.ts` and are recorded for the owner to confirm (K-092).
+2. **A service is published whole or not at all.** A services row carries `slug`, `group`,
+   `hook`, `needs`, `deliverables`, `exclusions` and `price_basis` together or none of them.
+   `site.php` refuses a half page on save, and the public site shows a custom row only when it
+   has every field, so a half page cannot appear on a buyer page.
+3. **A legacy list falls back to the built-in six.** A published list of title-and-summary rows
+   shows the built-in six in their default order, with matching titles and summaries, until the
+   owner saves once. The editor upgrades such a list on opening and adds the missing built-ins
+   at the end (K-093). The Website care slug stays `care-and-support`.
+
+**Why:** the owner approved the services and their content on 2026-10-10 (D-038) but not the
+missing facts; building from the approved text unblocks the pages without inventing a claim,
+and an all-or-none page avoids a published service that looks unfinished. **Evidence:**
+`src/marketing/data/content.test.ts`, `src/app/modules/siteContentModel.test.ts`,
+`tests/server/site.test.ts`, and a mocked-API browser check recorded in `docs/STATUS.md`
+section 0.5. Live behaviour is NOT TESTED.

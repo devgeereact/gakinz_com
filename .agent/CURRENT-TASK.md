@@ -5,7 +5,8 @@
 The client journeys work of 2026-10-18 to 2026-10-19 is built, tested locally and documented
 on `feat/journeys-2026-10-18`, in two batches: 43 commits on `audit/readiness-2026-10-17` at
 `8499761` (PR #20), then a second batch of 53 commits from `6789b47` to `def1909` (PR #21),
-then a third batch of 39 commits from `029f867` to `bdca4aa` on the same branch, each with its
+then a third batch of 39 commits from `029f867` to `bdca4aa` on the same branch, then a fourth
+batch of nine commits from `8193555` to `ebcb002` (the six service pages), each with its
 documentation commits. **Not merged, deployed or uploaded.** SQL 13 to 18 have run only on the
 throwaway test database.
 
@@ -100,6 +101,47 @@ new K-083 to K-089), `docs/DEPLOYMENT.md` section 5, `docs/DATA-MODEL.md`,
 `docs/API-SPEC.md`, `docs/SECURITY.md`, `docs/OPERATIONS.md` section 8,
 `docs/PRIVACY-READINESS.md`, `docs/PRODUCT-SPEC.md` sections 5.6 and 7, `CLAUDE.md`.
 
+### Done in the fourth batch (2026-10-19, `8193555..ebcb002`)
+
+Server (upload by hand; `docs/DEPLOYMENT.md` section 5.1 step 12):
+
+- `site.php`: a services row may carry `slug`, `group`, `hook`, `detail`, `needs`,
+  `deliverables`, `exclusions` and `price_basis`; all but `detail` come together or not at
+  all. No SQL. **Upload before merging**: the new Site content editor sends those fields and
+  the 2026-10-14 file refuses them. The public site is safe in either order.
+
+Client: six service pages in two groups (Websites, IT support) from spec 4.3, each with hook,
+needs, what you get, not included and price basis; the six choices on the enquiry form, carried
+from each service page (`/contact?service=<slug>`); Site content > Services edits whole pages,
+refuses a half page and upgrades an older title-and-summary list when opened (adding the IT
+pages at the end). After the merge the owner opens Site content > Services once and saves
+(K-093). Prerender now 32 pages.
+
+Documents: `docs/STATUS.md` (sections 0, 0.5, 2, 3, 4, 5), `docs/KNOWN-ISSUES.md` (K-038, new
+K-090 to K-093), `docs/DEPLOYMENT.md` section 5, `docs/DECISIONS.md` D-047, `docs/API-SPEC.md`
+section 7a, `docs/ARCHITECTURE.md`, `docs/PRODUCT-SPEC.md` sections 4.1, 4.3 and 7, `CLAUDE.md`.
+
+Owner inputs this batch leaves open (`docs/STATUS.md` section 5): IT coverage, area and
+response time (K-090); IT prices; confirmation of the package prices with a VAT basis; the three
+inferred website exclusions (K-092); whether the budget bands should add a smaller band (K-091).
+
+### Verification status, fourth batch, 2026-10-19 (Mac, `ebcb002`)
+
+- `npx tsc -b`, `npm run build` (32 public pages and `app-shell.html`, 32 sitemap URLs): PASS.
+- `npm test`: PASS, 415 tests in 34 files.
+- `GK_TEST_DB=gakinz_docs4_test GK_TEST_PHP_PORT=5399 GK_TEST_PROVIDER_PORT=5400 npm run test:server`:
+  PASS, 405 tests in 30 files.
+- `npm run lint:ratchet`: PASS at 33 errors, 0 warnings. `npm run lint`: FAIL (K-002).
+- `php -l` over 59 server files: PASS. `npm run docs:check -- --base audit/readiness-2026-10-17`:
+  PASS.
+- Production build in a browser with the API stubbed: public Services and six detail pages at
+  390, 1024 and 1440px, enquiry preselection (12 click-throughs, 2 direct loads), the CMS
+  Services editor (on the build before fix rounds 1 and 2) and the single leave prompt: PASS,
+  axe 0 violations.
+- NOT TESTED: the editor's legacy-list note and upgrade in a browser, the `?package=` note after
+  hydration, the live server and what is published there (UNVERIFIED), a real sign-in, real
+  data, real assistive technology.
+
 ### Verification status, third batch, 2026-10-19 (Mac, `bdca4aa`)
 
 - `npx tsc -b`: PASS. `npm run build`: PASS at `af151cb` and at `bdca4aa` for the browser
@@ -159,7 +201,7 @@ new K-083 to K-089), `docs/DEPLOYMENT.md` section 5, `docs/DATA-MODEL.md`,
 
 ## Next actions, in order
 
-1. **Owner review of PR #21** (the second and third batches on `feat/journeys-2026-10-18`).
+1. **Owner review of PR #21** (the second, third and fourth batches on `feat/journeys-2026-10-18`).
    An agent does not merge.
 2. **Operator order for the second batch** (`docs/DEPLOYMENT.md` section 5.1 step 10): read and
    record the live PHP version (8.1 or later expected; K-082, K-068), upload `today.php`,
@@ -177,8 +219,11 @@ new K-083 to K-089), `docs/DEPLOYMENT.md` section 5, `docs/DATA-MODEL.md`,
 3. **Owner decisions** raised by the second batch (`docs/STATUS.md` section 5): the retention
    periods for the nine `$RETENTION_*` keys and the erasure procedure (K-062); whether staff
    notes about a client go into a subject access export (K-079); the affiliate disclosure
-   wording that replaces the gap on recommendation blocks (D-027); and the six service pages'
-   copy and prices (K-038), which blocked the last planned page work.
+   wording that replaces the gap on recommendation blocks (D-027). **The fourth batch** (section
+   5.1 step 12): upload `site.php` before the merge, then save Site content > Services once;
+   the six service pages are built, and IT coverage, area, IT prices, the package price
+   confirmation and VAT basis, and the inferred exclusions wait on the owner (K-038, K-090 to
+   K-092).
 4. **Housekeeping for the owner**: the stash `int-wave-lintcheck-x1` (made by an agent for a
    lint comparison and already applied back; a hook blocked dropping it) and four agent
    worktrees under `.claude/worktrees/` can be removed. The git-ignored `.playwright-mcp`
@@ -217,7 +262,7 @@ new K-083 to K-089), `docs/DEPLOYMENT.md` section 5, `docs/DATA-MODEL.md`,
    (the branch is pushed to origin). This branch holds everything in `audit/readiness-2026-10-17` plus the
    journeys batch.
 2. `npm ci` (Node 22 or newer).
-3. Read `docs/STATUS.md` (sections 0.1 to 0.4, 3 and 5) and `docs/KNOWN-ISSUES.md` K-056 to K-089,
+3. Read `docs/STATUS.md` (sections 0.1 to 0.5, 3 and 5) and `docs/KNOWN-ISSUES.md` K-056 to K-093,
    then this file and `docs/PRIVACY-READINESS.md`.
 4. Baseline: `npm run typecheck`, `npm test`, `npm run build`, `npm run lint:ratchet`,
    `npm run docs:check`; for server work, `npm run test:server` against a local `*_test`
