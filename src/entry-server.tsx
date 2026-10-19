@@ -5,7 +5,7 @@ import AppRoot from "@/AppRoot"
 import { publicRoute } from "@/routes/public"
 
 export { prerenderPaths, outputFile, normalisePath, contentDate } from "@/marketing/prerender-paths"
-export { buildPage, buildShell, splitHead, withFontPreloads } from "@/prerender/html"
+export { buildPage, buildShell, splitHead, thirdPartyProblems, withFontPreloads } from "@/prerender/html"
 export { readHead, checkHeads, isIndexable } from "@/prerender/head"
 export { buildSitemap } from "@/prerender/sitemap"
 

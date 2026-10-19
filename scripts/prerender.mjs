@@ -15,6 +15,10 @@
  * title, description or canonical. The sitemap's <lastmod> is a post's own
  * date where it has one, and otherwise the day the build ran (UTC).
  *
+ * Every page, the shell included, is checked for third-party code
+ * (thirdPartyProblems): any script or frame from another origin, or any ad or
+ * consent marker, fails the build (Task 25).
+ *
  * Every page, the shell included, preloads the three Latin font files the first
  * screen is set in (withFontPreloads).
  *
@@ -54,7 +58,10 @@ const template = ssr.withFontPreloads(
   fonts.filter(Boolean).map((f) => `/assets/${f}`),
 )
 
-await writeFile(join(dist, "app-shell.html"), ssr.buildShell(template))
+const shell = ssr.buildShell(template)
+const shellProblems = ssr.thirdPartyProblems(shell)
+if (shellProblems.length) throw new Error(`prerender: app-shell.html carries third-party code:\n  ${shellProblems.join("\n  ")}`)
+await writeFile(join(dist, "app-shell.html"), shell)
 
 const paths = ssr.prerenderPaths()
 const heads = []
@@ -64,9 +71,13 @@ for (const path of paths) {
   // Every listed path is a real page. A 404 here means the list and the
   // built-in content have drifted apart.
   if (markup.includes("<title>Page not found")) throw new Error(`prerender: ${path} rendered the 404 page`)
+  const page = ssr.buildPage(template, { path, markup })
+  // No third-party script, frame, ad slot or consent code in a built page (Task 25).
+  const thirdParty = ssr.thirdPartyProblems(page)
+  if (thirdParty.length) throw new Error(`prerender: ${path} carries third-party code:\n  ${thirdParty.join("\n  ")}`)
   const file = join(dist, ssr.outputFile(path))
   await mkdir(dirname(file), { recursive: true })
-  await writeFile(file, ssr.buildPage(template, { path, markup }))
+  await writeFile(file, page)
 }
 
 const problems = ssr.checkHeads(heads)

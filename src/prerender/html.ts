@@ -75,3 +75,22 @@ export function buildShell(template: string): string {
   assertTemplate(template)
   return template.replace(/[ \t]*<!--(seo|noscript):(start|end)-->\n?/g, "")
 }
+
+/**
+ * Third-party code in a built page (Task 25). The public site ships with
+ * advertising and consent switched off, and even when they are on, both load
+ * only in the browser after the page runs. So a built page must contain no
+ * script or frame from another origin, no AdSense or CMP marker and no ad slot.
+ * The prerender fails the build on any of them. Returns one line per problem.
+ */
+export function thirdPartyProblems(html: string): string[] {
+  const problems: string[] = []
+  for (const m of html.matchAll(/<(script|iframe)\b([^>]*)>/gi)) {
+    const src = /\ssrc\s*=\s*["']?([^"'\s>]+)/i.exec(m[2])?.[1]
+    if (src && /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(src)) problems.push(`<${m[1].toLowerCase()}> from another origin: ${src}`)
+  }
+  for (const marker of ["adsbygoogle", "googlesyndication", "data-gk-ad", "data-gk-third-party", "__tcfapi"]) {
+    if (html.includes(marker)) problems.push(`contains ${marker}`)
+  }
+  return problems
+}
