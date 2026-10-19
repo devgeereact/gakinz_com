@@ -2,11 +2,11 @@
 
 ## Outcome
 
-The client journeys batch of 2026-10-18 to 2026-10-19 is built, tested locally and documented
-on `feat/journeys-2026-10-18`: 43 commits on `audit/readiness-2026-10-17` at `8499761`
-(PR #20), plus the documentation commits. **Pushed to origin, not merged, deployed or uploaded.** SQL 13
-to 15 have run only on the throwaway test database. The owner reviews it at 06:00 on
-2026-10-19.
+The client journeys work of 2026-10-18 to 2026-10-19 is built, tested locally and documented
+on `feat/journeys-2026-10-18`, in two batches: 43 commits on `audit/readiness-2026-10-17` at
+`8499761` (PR #20), then a second batch of 53 commits from `6789b47` to `def1909` (PR #21),
+each with its documentation commits. **Not merged, deployed or uploaded.** SQL 13 to 16 have
+run only on the throwaway test database.
 
 The branch stack is now: `main` <- `feat/plan-2026-batch-1` (PR #8) <- `feat/redesign-2026` <-
 `audit/readiness-2026-10-17` (PR #20) <- `feat/journeys-2026-10-18`. Merge in that order, and
@@ -41,7 +41,55 @@ K-046, K-048, K-054 row, K-055, K-066, new K-067 to K-073), `docs/DEPLOYMENT.md`
 `docs/DATA-MODEL.md`, `docs/API-SPEC.md`, `docs/SECURITY.md`, `docs/PRODUCT-SPEC.md` section 7,
 `docs/ARCHITECTURE.md`, `server/README.md`, `CLAUDE.md`.
 
-### Verification status, 2026-10-19 (Mac)
+### Done in the second batch (2026-10-19, `6789b47..def1909`, PR #21)
+
+Server (upload by hand; `docs/DEPLOYMENT.md` section 5.3; all staff or admin only):
+
+- `today.php` (new): the Today attention list, six sections gated per role. No SQL.
+- `search.php` with `_like.php` (both new): record search across clients, projects,
+  enquiries, invoices and quotes. **Upload together.**
+- `briefs.php` (new): project brief, measurements and the sanitised GEE OS handoff (SQL 16;
+  K-080).
+- `privacy.php` with `_retention.php` (both new) and `cron.php job=retention_report`: subject
+  access export and a read-only retention dry run, nine `$RETENTION_*` keys all `null`. No
+  deletion (K-062, K-079). **Upload the three together.**
+- `.htaccess`: a missing `.php` answers 404 instead of the SPA shell (LiteSpeed NOT TESTED).
+- `schema.sql`: SQL 16 (`project_briefs`, `project_measurements`).
+
+Client: "Needs attention" leads the dashboard; a Records group in Cmd or Ctrl+K; the Brief
+panel on the project board; "Export data" on the client record and a Privacy tab in Settings;
+record deep links (`?project=` with `&task=` or `&asset=`, `?invoice=`, `?enquiry=`,
+`?view=calls&call=`, `?client=`); recommendation blocks in articles; one shared "not on the
+server yet" rule (`src/lib/notAvailable.ts`); a named search dialog with its status outside the
+listbox, and a focusable retention table.
+
+Documents: `docs/STATUS.md` (sections 0, 0.3, 2, 3, 4, 5), `docs/KNOWN-ISSUES.md` (K-062,
+K-067, new K-074 to K-082), `docs/DEPLOYMENT.md` section 5, `docs/DATA-MODEL.md`,
+`docs/API-SPEC.md`, `docs/SECURITY.md`, `docs/PRIVACY-READINESS.md` sections 6 and 7,
+`docs/OPERATIONS.md` section 2, `docs/PRODUCT-SPEC.md` section 7, `docs/ARCHITECTURE.md`,
+`server/README.md`, `CLAUDE.md`.
+
+### Verification status, second batch, 2026-10-19 (Mac, `def1909`)
+
+- `npx tsc -b`, `npm run build` (30 public pages and `app-shell.html` prerendered): PASS.
+- `npm test`: PASS, 355 tests in 30 files.
+- `GK_TEST_DB=gakinz_docs_test GK_TEST_PHP_PORT=5309 GK_TEST_PROVIDER_PORT=5310 npm run test:server`
+  (local MariaDB `*_test`; ports 5191 and 5192 belong to another project on the Mac): PASS,
+  340 tests in 26 files.
+- `npm run lint:ratchet`: PASS at 33 errors, 0 warnings. `npm run lint`: FAIL (K-002).
+- `php -l` over 57 server files (PHP 8.5.10): PASS. `npm run docs:check -- --base
+  audit/readiness-2026-10-17`: PASS.
+- Production build in a browser with every `*.php` stubbed and off-origin requests aborted:
+  Today, record search, the Brief panel, client export, Settings Privacy, recommendation
+  blocks, and each new endpoint missing, at 1440 and 390px, light and dark. axe 4.13: 0
+  violations after the fix wave, except the `cmdk` empty state (K-081). `.htaccess` rule on a
+  local Apache: PASS.
+- NOT TESTED: the live server and database, SQL 16 on the host, a real sign-in, real data,
+  asset and call deep links from Today, server-rendered recommendation blocks, PHP before 8.1
+  (K-082), the `.htaccess` rule on LiteSpeed, real assistive technology. Live PHP version:
+  UNVERIFIED.
+
+### Verification status, first batch, 2026-10-19 (Mac)
 
 - `npx tsc -b`, `npm run build` (30 pages prerendered): PASS.
 - `npm test`: PASS, 239 (223 before the final-review fixes added 16 in `portalRequestsModel` and `assetChecklistModel`). `GK_TEST_PHP_PORT=5291 GK_TEST_PROVIDER_PORT=5292 npm run test:server`
@@ -60,30 +108,46 @@ K-046, K-048, K-054 row, K-055, K-066, new K-067 to K-073), `docs/DEPLOYMENT.md`
 
 ## Next actions, in order
 
-1. **Owner review** of `feat/journeys-2026-10-18` (06:00, 2026-10-19), then push it and open a
-   pull request into `audit/readiness-2026-10-17` (PR #20's branch). An agent does not merge.
-2. **Owner decisions** raised by this batch (`docs/STATUS.md` section 5): whether clients see
+1. **Owner review of PR #21** (the second batch on `feat/journeys-2026-10-18`). An agent does
+   not merge.
+2. **Operator order for the second batch** (`docs/DEPLOYMENT.md` section 5.1 step 10): read and
+   record the live PHP version (8.1 or later expected; K-082, K-068), upload `today.php`,
+   `search.php` with `_like.php`, `briefs.php`, `privacy.php` with `_retention.php` and
+   `cron.php`, and the new `.htaccess`; run SQL 16; then merge. Walk section 5.6 check 14,
+   including `curl -sI` on a missing `.php` (expect 404).
+3. **Owner decisions** raised by the second batch (`docs/STATUS.md` section 5): the retention
+   periods for the nine `$RETENTION_*` keys and the erasure procedure (K-062); whether staff
+   notes about a client go into a subject access export (K-079); the affiliate disclosure
+   wording that replaces the gap on recommendation blocks (D-027); and the six service pages'
+   copy and prices (K-038), which blocked the last planned page work.
+4. **Housekeeping for the owner**: the stash `int-wave-lintcheck-x1` (made by an agent for a
+   lint comparison and already applied back; a hook blocked dropping it) and four agent
+   worktrees under `.claude/worktrees/` can be removed. The git-ignored `.playwright-mcp`
+   folder (other sessions' browser logs) was deleted by an agent on 2026-10-19; its contents
+   were captured in the session tool results before deletion.
+5. **Owner decisions** raised by the first batch (`docs/STATUS.md` section 5): whether clients see
    the meeting link in their calendar file and portal (K-070); whether and how the owner is
    notified of portal requests and supplied assets (K-071); whether the 40/30/30 schedule is
    shown on the public shared quote; the earliest allowed "acceptance received" date (the
    quote's creation day today, as there is no sent date).
-3. **Owner answers parked on 2026-10-17** (`docs/STATUS.md` section 5, "Parked by the owner";
+6. **Owner answers parked on 2026-10-17** (`docs/STATUS.md` section 5, "Parked by the owner";
    `docs/PRIVACY-READINESS.md` section 10). Each answer replaces a placeholder; do not invent
    any of them.
-4. **Operator, P0** (`docs/STATUS.md` section 3): confirm sessions revoked after the K-001
+7. **Operator, P0** (`docs/STATUS.md` section 3): confirm sessions revoked after the K-001
    rotation, delete the seed-password file and check the PHP error log (K-015, K-061), record
    what is live on the server (K-006), restore a backup (K-010).
-5. **Operator, upload** (`docs/DEPLOYMENT.md` section 5): SQL 1 to 15 as needed, then the PHP
+8. **Operator, upload** (`docs/DEPLOYMENT.md` section 5): SQL 1 to 16 as needed, then the PHP
    set with `.htaccess`, keeping `_bootstrap.php`, `auth.php`, `oauth.php` and `users.php`
    together and `bookings.php` with `_ics.php`, and `_money.php` present for `invoices.php`;
    change the cPanel cron entry to the command-line form; run the post-upload checks in
    section 5.6, with no real payment and no real send.
-6. **Owner test** on real data (K-044, K-055), recorded in `docs/STATUS.md`.
-7. **Adviser review** of the legal pages and `docs/PRIVACY-READINESS.md` sections 9 and 11.
-8. **Merge** PR #8, then `feat/redesign-2026`, then PR #20, then this branch (or each into the
+9. **Owner test** on real data (K-044, K-055), recorded in `docs/STATUS.md`.
+10. **Adviser review** of the legal pages and `docs/PRIVACY-READINESS.md` sections 9 and 11.
+11. **Merge** PR #8, then `feat/redesign-2026`, then PR #20, then this branch (or each into the
    one below first). An agent does not merge.
-9. Afterwards: the server time zone (K-067), header link contrast over the hero (K-069), a
-   client upload path for assets (K-072), the retention job (K-062), certificate ID length
+12. Afterwards: the server time zone (K-067, K-075), header link contrast over the hero (K-069), a
+   client upload path for assets (K-072), `requested_at` for asset waits (K-074), a quote
+   detail view (K-077), deep-link misses (K-078), the retention job (K-062), certificate ID length
    and throttle (K-061), `/sectors` keep-or-fold (K-066).
 
 ## Resume on another computer
@@ -92,12 +156,14 @@ K-046, K-048, K-054 row, K-055, K-066, new K-067 to K-073), `docs/DEPLOYMENT.md`
    (the branch is pushed to origin). This branch holds everything in `audit/readiness-2026-10-17` plus the
    journeys batch.
 2. `npm ci` (Node 22 or newer).
-3. Read `docs/STATUS.md` (sections 0.1, 0.2, 3 and 5) and `docs/KNOWN-ISSUES.md` K-056 to K-073,
+3. Read `docs/STATUS.md` (sections 0.1, 0.2, 0.3, 3 and 5) and `docs/KNOWN-ISSUES.md` K-056 to K-082,
    then this file and `docs/PRIVACY-READINESS.md`.
 4. Baseline: `npm run typecheck`, `npm test`, `npm run build`, `npm run lint:ratchet`,
    `npm run docs:check`; for server work, `npm run test:server` against a local `*_test`
    database (`docs/OPERATIONS.md` section 8). On the Mac run it with
-   `GK_TEST_PHP_PORT=5291 GK_TEST_PROVIDER_PORT=5292`, because port 5192 is taken there.
+   its own `GK_TEST_DB` and free ports, for example
+   `GK_TEST_DB=gakinz_docs_test GK_TEST_PHP_PORT=5309 GK_TEST_PROVIDER_PORT=5310`, because
+   ports 5191 and 5192 are taken there.
 5. `npm run dev` talks to the live API: any save is real. For browser checks use `npm run build`
    and `npx vite preview`, whose relative API paths reach no server, and stub the calls.
 6. New work goes on a new branch from `feat/journeys-2026-10-18`, one concern per commit,
@@ -114,7 +180,7 @@ agent write runs through the dev server.
 - In scope:
   - Filling the parked placeholders as the owner supplies each answer.
   - Fixes from the owner's review of this branch, the operator's upload checks and the owner's test.
-  - Building each owner decision listed in next action 2 once it is made.
+  - Building each owner decision listed in next actions 3 and 5 once it is made.
   - The retention job once periods are decided; the K-061 and K-066 leftovers.
   - Keeping every affected document current in the same pull request.
 - Out of scope:
@@ -146,7 +212,8 @@ agent write runs through the dev server.
 - The upload-together rule for `_bootstrap.php`, `auth.php`, `oauth.php` and `users.php` is the
   one way this set can break sign-in.
 - `bookings.php` without `_ics.php` breaks the calendar download; `invoices.php` without
-  `_money.php` breaks every invoice action.
+  `_money.php` breaks every invoice action; `search.php` without `_like.php` breaks record
+  search; `privacy.php` without `_retention.php` breaks the retention report.
 - Required decisions: the parked owner answers, the P0 operator actions, and the go-ahead to
   merge after the owner test.
 

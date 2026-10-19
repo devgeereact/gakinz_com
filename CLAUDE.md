@@ -145,6 +145,16 @@ Measured on branch `feat/redesign-2026` at `d314833` (stacked on `feat/plan-2026
   Mac (ports 5291 and 5292). Not merged, uploaded or deployed. Needs SQL 13 to 15 and the
   upload list in `docs/DEPLOYMENT.md` section 5.3; **upload `bookings.php` with `_ics.php`.**
   Summary in `docs/STATUS.md` section 0.2.
+  **Second batch, 2026-10-19** (PR #21, `6789b47..def1909`): the Today attention list
+  (`today.php`), record search (`search.php` with `_like.php`), project brief, measurements
+  and GEE OS handoff (`briefs.php`, SQL 16), subject access export and a read-only retention
+  dry run (`privacy.php`, `_retention.php`, `cron.php`; nine `$RETENTION_*` keys, all null; no
+  deletion), recommendation blocks, record deep links and quiet degradation before upload.
+  Measured on the Mac at `def1909`: `npm test` 355, `npm run test:server` 340 (ports 5309 and
+  5310), lint ratchet 33 and 0, `php -l` over 57 files, build and docs check PASS. Not merged,
+  uploaded or deployed. **Order: upload the PHP and `.htaccess`, run SQL 16, then merge.**
+  Live PHP version UNVERIFIED (8.1 or later expected, K-082). Summary in `docs/STATUS.md`
+  section 0.3; open items K-074 to K-082.
 - A live super-admin credential was published in an earlier revision of this file and is in
   git history. The owner reports it rotated on 2026-10-12; session revocation is unconfirmed.
   See `docs/KNOWN-ISSUES.md` K-001.

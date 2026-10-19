@@ -72,7 +72,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-059 | Session, reset, magic-link and share tokens are stored in plain text | Medium | **Fixed 2026-10-17** for sessions, reset and magic links, no schema change, not uploaded. Share tokens open by design |
 | K-060 | Proposal share links never expire and cannot be revoked | Low | **Fixed 2026-10-17**, not uploaded |
 | K-061 | Smaller server findings from the 2026-10-17 audit | Low | Four fixed (PHP version, non-image Work files, cron key, PayPal return), not uploaded. Certificate IDs and the seed-password log open |
-| K-062 | No retention, deletion or export: personal data is kept indefinitely | High | Open. Owner and legal decisions (`docs/PRIVACY-READINESS.md`) |
+| K-062 | No retention, deletion or export: personal data is kept indefinitely | High | **Partly addressed 2026-10-19:** subject access export and a read-only retention dry run built, not uploaded. No deletion; periods and erasure are owner and legal decisions (`docs/PRIVACY-READINESS.md`) |
 | K-063 | The privacy and cookie pages did not match what the site does | High | **Partly fixed 2026-10-17:** facts corrected and the full structure in place with labelled placeholders for owner facts, not deployed. Placeholders and adviser review outstanding (K-021) |
 | K-064 | Enquiry and client text can reach an AI provider, undisclosed | Medium | Open. Owner and legal decision |
 | K-065 | Testimonials default to five stars and carry no source or consent record | Medium | Open. Owner decision |
@@ -84,6 +84,15 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-071 | Portal call requests, update requests and supplied assets notify nobody | Low | Open. Owner decision |
 | K-072 | Asset supply is a note only: a client cannot upload a file | Low | Open. Needs a client upload path in `files.php` |
 | K-073 | Toasts failed AA contrast and ignored dark mode; the Projects board scroll region was not focusable; a refused acceptance showed only in a toast | Medium | **Fixed 2026-10-19**, not deployed |
+| K-074 | Today's three-day wait for a requested asset restarts whenever the item is edited | Low | Open. Needs a `requested_at` column (SQL) |
+| K-075 | Today's sections and "overdue" use the database clock, whose time zone is not set | Low | Open. Same cause as K-067; live time zones UNVERIFIED |
+| K-076 | The dashboard's "Updated" time covers the attention list only, not the totals or chart | Low | Open. Wording or design decision |
+| K-077 | Quotes have no detail view, so a quote found in search opens the plain Proposals screen | Low | Open. Needs a quote detail view |
+| K-078 | A record created after a screen loaded is not found by a deep link until the screen reloads | Low | Open |
+| K-079 | The subject access export includes staff notes about the client, and is built whole in memory | Medium | Open. Notes: owner and legal decision. Memory: accepted at current volumes |
+| K-080 | The handoff export's redaction is a safety net: other personal data typed by staff goes out as typed | Medium | Open. By design; staff must not type personal data into the brief |
+| K-081 | axe reports `aria-required-children` on the search dialog's empty state | Low | Open. Inside the third-party `cmdk` list |
+| K-082 | Strict SQL errors in `briefs.php`, `privacy.php` and `_retention.php` are not tested on PHP before 8.1 | Low | Open. Live PHP version UNVERIFIED |
 
 
 ---
@@ -1304,7 +1313,21 @@ Share issues a different link, and Proposals has a Revoke button. Six tests in
 ---
 
 ## K-062 · No retention, deletion or export: personal data is kept indefinitely
-**Severity:** high · **Status:** open. Owner and legal decisions.
+**Severity:** high · **Status:** open, **partly addressed 2026-10-19** on
+`feat/journeys-2026-10-18` (PR #21), not uploaded. Owner and legal decisions.
+
+**2026-10-19.** Two parts with no business judgement are now built, neither uploaded:
+`server/privacy.php?action=export` gives a super admin or admin a JSON file of every row held
+about one client or one enquirer email (soft-deleted rows included, secrets and token values
+left out), and `?action=retention_report` (super admin) with `cron.php job=retention_report`
+(command line only) counts what each proposed rule in `docs/PRIVACY-READINESS.md` section 6
+would affect. The periods are nine `$RETENTION_*` keys in `config.php`, all `null` (not
+decided). **Nothing deletes or anonymises a row:** there is no deletion job, no erasure
+action and no self-service request. Those wait on the owner's periods and legal advice. The
+export's open questions are K-079. Checked by `tests/server/privacy.test.ts` against a local
+database; NOT TESTED on the live host.
+
+The original finding, 2026-10-17:
 
 There is no purge, retention job or anonymisation anywhere. Enquiries, clients, users,
 invoices, tickets and messages have no delete action; users are only suspended; soft-deleted
@@ -1408,7 +1431,8 @@ time, today's UK date is still "tomorrow" to the server, so a payment or an acce
 today is refused as in the future. The owner can enter it an hour later or use yesterday's
 date. Call requests are not affected: they compare UTC instants (`UTC_TIMESTAMP()`). The
 live PHP and database time zones are UNVERIFIED. Resolution: set one zone for the business
-(Europe/London) in `_bootstrap.php` and compare dates in it, with a test at 00:30 BST.
+(Europe/London) in `_bootstrap.php` and compare dates in it, with a test at 00:30 BST. The
+Today list (2026-10-19) shares the cause: K-075.
 
 ---
 
@@ -1504,3 +1528,135 @@ Evidence: axe 0 violations on the rerun at 1440 and 390px, light and dark, again
 API. Screen-reader announcement of the new alert and the focus ring in a screenshot: NOT
 TESTED.
 
+---
+
+## K-074 · Today's three-day wait for a requested asset restarts whenever the item is edited
+**Severity:** low · **Status:** open. Found 2026-10-19 in review of the Today list.
+
+`server/today.php` lists a project asset under "Waiting client material" when it has been
+`requested` for more than three days, and measures that from `project_assets.updated_at`
+(line 159), because the table has no column for when the request was made. Any edit to a
+requested item, such as fixing its label or note, moves `updated_at` and starts the three
+days again, so an item can stay off the list for longer than intended. A reopen is meant to
+restart the clock and does. Resolution: add `requested_at` (a new SQL statement), set it on
+create and reopen only, and read it in `today.php`.
+
+---
+
+## K-075 · Today's sections and "overdue" use the database clock, whose time zone is not set
+**Severity:** low · **Status:** open. Found 2026-10-19; same cause as K-067.
+
+`server/today.php` decides "follow-up due today or earlier", "overdue task" and "unpaid past
+due" with the database's `CURRENT_DATE`, and asset waits with `NOW()`. Calls use
+`UTC_TIMESTAMP()` against UTC start times, which is correct. Nothing sets the database or PHP
+time zone (K-067), so if the host runs on UTC, between 00:00 and 01:00 UK time during British
+Summer Time the server's date is still yesterday: an item due today is not yet "due" and a
+task due yesterday is not yet "overdue" for that hour. `generated_at` is labelled UTC and is.
+The live time zones are UNVERIFIED. Resolution: the K-067 fix, one business zone
+(Europe/London), applied to these queries too.
+
+---
+
+## K-076 · The dashboard's "Updated" time covers the attention list only, not the totals or chart
+**Severity:** low · **Status:** open. Found 2026-10-19 in review of the Today list.
+
+Since 2026-10-19 the dashboard subtitle reads "Updated <time>", which is the last successful
+load of the attention list (`updatedLabel` in `src/app/modules/todayModel.ts`, used at
+`src/app/modules/Dashboard.tsx` line 315). The totals and the "Cash received" chart load
+separately and can be older or have failed (they then show their own "Some totals could not
+be loaded" alert). Someone could read the stamp as covering the whole page. Resolution: say
+"Attention list updated", or stamp the totals separately; an owner wording choice.
+
+---
+
+## K-077 · Quotes have no detail view, so a quote found in search opens the plain Proposals screen
+**Severity:** low · **Status:** open. Found 2026-10-19 in the record search review.
+
+Record search (`server/search.php`) returns quotes, matched on title because `proposals` has
+no number column. Clients, projects, enquiries and invoices open their own record through a
+deep link, but `src/app/modules/Proposals.tsx` has no detail view (only the New quote and
+Accept dialogs), so a quote result goes to `/app/proposals` and the user finds the quote in
+the list by eye. The route check in `src/lib/recordSearchModel.ts` refuses a query string on
+a quote route on purpose. Resolution: a quote detail view with a `?quote=` link.
+
+---
+
+## K-078 · A record created after a screen loaded is not found by a deep link until the screen reloads
+**Severity:** low · **Status:** open. Found 2026-10-19 in the deep-link review.
+
+The deep links (`?project=`, `?task=`, `?asset=`, `?invoice=`, `?enquiry=`, `?view=calls&call=`,
+`?client=`) select a record from the list the screen already loaded
+(`src/lib/deepLink.ts`; for example `list.find` at `src/app/modules/Projects.tsx` line 112).
+If the record was created after that load, for example by another member of staff, the link
+finds nothing and leaves the plain screen with no message, as an unknown id does. Reloading
+the page loads it. This is most likely when a Today item or a search result names something
+new while the target screen is already open in the same tab. Resolution: on a miss, fetch the
+one record, or reload the list once, before giving up.
+
+---
+
+## K-079 · The subject access export includes staff notes about the client, and is built whole in memory
+**Severity:** medium · **Status:** open. Found 2026-10-19 in review of `server/privacy.php`.
+
+1. **Staff notes.** The client export includes `clients.notes`, booking notes and outcomes,
+   proposal notes and the owner's feedback follow-up note: staff-written text about the
+   person. UK GDPR access rights generally cover such notes, but some content can be withheld
+   (for example where it names another person). Whether to include them all, review them
+   before sending, or leave some out is a legal call for the owner, not a code choice. Until
+   then the export includes them, and the docblock of `privacy.php` says so. Treat each export
+   as something to read before it is sent.
+2. **Memory.** The whole document is built as one PHP array and then encoded (`pv_encode`,
+   line 323). That suits a business whose client has hundreds of rows, as the docblock says,
+   but a very large client or enquirer history could reach the PHP memory limit and answer
+   500. File contents are never included, only metadata, which keeps it small.
+
+Also by design: on audit rows the subject did not write, the author and IP are removed
+(2026-10-19, `b09ab0c`). Checked by `tests/server/privacy.test.ts`; a real export from the
+live database: NOT TESTED.
+
+---
+
+## K-080 · The handoff export's redaction is a safety net: other personal data typed by staff goes out as typed
+**Severity:** medium · **Status:** open, by design. Recorded 2026-10-19.
+
+The GEE OS handoff (`server/briefs.php?action=handoff`) selects only scope, acceptance
+criteria, decisions and evidence locations, never the client record. Those fields are typed
+by staff, so `md_sanitise` then removes this client's exact company, contact name and email
+(whole words, case-insensitive), this client's phone by its digits, any email address, and the
+query, fragment and login of every link. It cannot recognise anything else: another person's
+name, a street address, a phone number that is not this client's, or a secret typed into a
+brief field all go out as typed. The panel and the file's header both say so, and staff must
+not type personal data or secrets into the brief. Checked by
+`tests/server/project-briefs.test.ts` and by running the function on sample text; a real
+project's handoff: NOT TESTED. Resolution: none planned beyond the rule; read each handoff
+before sharing it.
+
+---
+
+## K-081 · axe reports `aria-required-children` on the search dialog's empty state
+**Severity:** low · **Status:** open. Found 2026-10-19 in the browser check; predates the branch.
+
+When no module matches and no record results show, the Cmd or Ctrl+K dialog's
+`role="listbox"` holds only "No results found.", which is the empty state of the `cmdk`
+library, and axe 4.13 reports `aria-required-children` (critical). The record search status
+and failure messages were moved out of the listbox on 2026-10-19 (`ebe7b1a`), and those
+captures are clean. Real screen readers: NOT TESTED. Resolution: render the empty message
+outside the list, or upgrade `cmdk` if a later version fixes it.
+
+---
+
+## K-082 · Strict SQL errors in `briefs.php`, `privacy.php` and `_retention.php` are not tested on PHP before 8.1
+**Severity:** low · **Status:** open. Recorded 2026-10-19.
+
+PHP 8.1 made mysqli throw on SQL errors by default. On an older PHP a failed statement
+returns `false`, which could let a route answer `ok` after a failed write or export a section
+it failed to read. `briefs.php` and `privacy.php` now call
+`mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT)` themselves, `briefs.php` checks
+every `execute()` through `br_exec()`, and `_retention.php` checks each step and throws
+(`fa8849d`). One side effect on an older PHP: a `briefs.php` prepare error other than a
+missing table (1146) now surfaces as an uncaught exception, a 500 without a JSON body, rather
+than `fail('Database error.', 500)`. PHP 8.1 and later already behaved that way, and either
+way nothing answers `ok`. The tests ran on PHP 8.5.10 only; no PHP before 8.1 was available, so the older
+path is NOT TESTED. The live PHP version is UNVERIFIED (K-068 also depends on it). Resolution:
+read the version in cPanel and record it in `docs/STATUS.md` (`docs/DEPLOYMENT.md` section 5.1
+step 10).
