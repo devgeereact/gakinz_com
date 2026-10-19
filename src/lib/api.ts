@@ -1089,6 +1089,16 @@ export const privacy = {
 export type EnquiryErasePreview = { id: number; other_enquiries: number; blocked: string | null; message: string | null }
 export type EnquiryErasure = { erased: true; id: number; bookings: number; booking_events: number; audit_scrubbed: number }
 
+// Client sign-in by reference and email (client_access.php, spec 6.1). Switched
+// off on the server by default: every route answers 404 and the sign-in page
+// shows nothing. The token goes in the POST body, never in a URL.
+export const clientAccess = {
+  status: () => api.get<{ enabled?: unknown }>("/client_access.php?action=status"),
+  request: (reference: string, email: string) =>
+    api.post<{ ok: boolean; message: string }>("/client_access.php?action=request", { reference, email }),
+  redeem: (token: string) => api.post<LoginResponse>("/client_access.php?action=redeem", { token }),
+}
+
 // Auth (§6.1). Token + user persisted in the auth store; api attaches the bearer.
 export type LoginResponse = { token: string; expires: string; user: AuthUser }
 export const auth = {

@@ -4,7 +4,8 @@ import { ArrowRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { auth, API_BASE } from "@/lib/api"
+import { auth, clientAccess, API_BASE } from "@/lib/api"
+import { isReferenceShape, normaliseReference, readAccessToken, referenceSignInEnabled } from "@/lib/clientAccess"
 import { useAuth } from "@/store/auth.store"
 import { defaultPathForRole } from "@/lib/access"
 import AuthFrame from "@/app/components/AuthFrame"
@@ -28,6 +29,15 @@ export default function Login() {
   const [ssoGoogle, setSsoGoogle] = useState(false)
   const [magicSent, setMagicSent] = useState(false)
   const [showPw, setShowPw] = useState(false)
+  // Sign-in by work reference and email: shown only when the server says it
+  // is switched on (client_access.php answers 404 while off).
+  const [refEnabled, setRefEnabled] = useState(false)
+  const [refOpen, setRefOpen] = useState(false)
+  const [reference, setReference] = useState("")
+  const [refEmail, setRefEmail] = useState("")
+  const [refBusy, setRefBusy] = useState(false)
+  const [refError, setRefError] = useState<string | null>(null)
+  const [refSent, setRefSent] = useState<string | null>(null)
   const setAuth = useAuth((s) => s.setAuth)
   const setUser = useAuth((s) => s.setUser)
   const token = useAuth((s) => s.token)
@@ -48,6 +58,10 @@ export default function Login() {
     auth.ssoStatus().then((r) => r.ok && setSsoGoogle(r.data.google))
   }, [])
 
+  useEffect(() => {
+    clientAccess.status().then((r) => setRefEnabled(referenceSignInEnabled(r)))
+  }, [])
+
   // OAuth bounce-back: the SSO callback redirects to /login#sso_token=… (or
   // #sso_error=…). Consume the hash, establish the session, then clean the URL.
   useEffect(() => {
@@ -57,7 +71,22 @@ export default function Login() {
     const ssoToken = params.get("sso_token")
     const ssoError = params.get("sso_error")
     const magic = params.get("magic")
-    if (magic) {
+    const access = readAccessToken(hash)
+    if (access) {
+      // A reference sign-in link. Clear the address bar before anything else,
+      // so the one-time token is not left in history or a shared screenshot.
+      window.history.replaceState(null, "", window.location.pathname)
+      setBusy(true)
+      clientAccess.redeem(access).then((r) => {
+        setBusy(false)
+        if (r.ok) {
+          setAuth(r.data.token, r.data.user)
+          navigate(defaultPathForRole(r.data.user.role), { replace: true })
+        } else {
+          setError(r.error || "That sign-in link is invalid or expired.")
+        }
+      })
+    } else if (magic) {
       window.history.replaceState(null, "", window.location.pathname)
       setBusy(true)
       auth.magicConsume(magic).then((r) => {
@@ -118,6 +147,25 @@ export default function Login() {
     await auth.magicRequest(email.trim())
     setBusy(false)
     setMagicSent(true)
+  }
+
+  const sendReference = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const ref = normaliseReference(reference)
+    if (!isReferenceShape(ref)) {
+      setRefError("Enter the reference as it appears on your documents, for example GK-P-2026-0001.")
+      return
+    }
+    if (!refEmail.trim()) {
+      setRefError("Enter the email address we have for you.")
+      return
+    }
+    setRefError(null)
+    setRefBusy(true)
+    const r = await clientAccess.request(ref, refEmail.trim())
+    setRefBusy(false)
+    if (r.ok) setRefSent(r.data.message)
+    else setRefError(r.error)
   }
 
   // The approved sign-in screen (D-046) follows the light or dark theme like
@@ -225,6 +273,59 @@ export default function Login() {
             className="mt-4 w-full rounded-[10px] text-center text-sm text-muted-foreground hover:text-foreground"
           >
             Client? Email me a sign-in link instead
+          </button>
+        )
+      )}
+
+      {refEnabled && !needs2fa && (
+        refSent ? (
+          <p role="status" className="mt-4 text-center text-sm text-muted-foreground">{refSent}</p>
+        ) : refOpen ? (
+          <form onSubmit={sendReference} noValidate className="mt-5 grid gap-3.5 border-t border-border pt-5">
+            <p className="text-sm text-muted-foreground">
+              Client? Enter a project or enquiry reference and the email address we have for you. We will email you a
+              link that signs you in once.
+            </p>
+            <div className="grid gap-1.5">
+              <Label htmlFor="reference">Reference</Label>
+              <Input
+                id="reference"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="GK-P-2026-0001"
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                required
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="ref-email">Email</Label>
+              <Input
+                id="ref-email"
+                type="email"
+                autoComplete="email"
+                value={refEmail}
+                onChange={(e) => setRefEmail(e.target.value)}
+                required
+              />
+            </div>
+            {refError && (
+              <div role="alert" className="gk-os-wrap rounded-[10px] border border-bad/30 bg-bad-soft px-3 py-2 text-sm text-foreground">
+                {refError}
+              </div>
+            )}
+            <Button type="submit" variant="outline" className="w-full" disabled={refBusy}>
+              {refBusy && <Loader2 className="h-4 w-4 animate-spin" />}
+              {refBusy ? "Sending…" : "Email me a sign-in link"}
+            </Button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            onClick={() => { setRefOpen(true); setRefEmail((v) => v || email) }}
+            className="mt-2 w-full rounded-[10px] text-center text-sm text-muted-foreground hover:text-foreground"
+          >
+            Use your reference
           </button>
         )
       )}
