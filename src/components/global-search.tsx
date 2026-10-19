@@ -200,6 +200,24 @@ export function GlobalSearch() {
           />
         </div>
 
+        {/* Record search state, outside the listbox (which may hold only
+            options and groups) and always mounted, so a change is announced. */}
+        <div role="status" className="px-4 text-sm text-muted-foreground empty:hidden [&:not(:empty)]:py-3">
+          {showRecords && records.status === "loading" && (
+            <span className="flex items-center">
+              <Loader2 className="mr-3 h-4 w-4 animate-spin" aria-hidden="true" />
+              Searching records…
+            </span>
+          )}
+          {showRecords && records.status === "ok" && records.groups.length === 0 && <span className="block">No matching records.</span>}
+          {showRecords && records.status === "ok" && records.partial && (
+            <span className="block text-xs">Some record types could not be searched just now, so this list may be incomplete.</span>
+          )}
+        </div>
+        <div role="alert" className="px-4 text-sm text-destructive empty:hidden [&:not(:empty)]:py-3">
+          {showRecords && records.status === "failed" && `Record search failed. ${records.error}`}
+        </div>
+
         <CommandList className="max-h-[420px] overflow-y-auto">
           {!showRecords && (
             <CommandEmpty>
@@ -207,53 +225,31 @@ export function GlobalSearch() {
             </CommandEmpty>
           )}
 
-          {showRecords && (
+          {showRecords && records.status === "ok" && records.groups.length > 0 && (
             <CommandGroup heading="Records" forceMount>
-              {records.status === "loading" && (
-                <div role="status" className="flex items-center px-2 py-3 text-sm text-muted-foreground">
-                  <Loader2 className="mr-3 h-4 w-4 animate-spin" aria-hidden="true" />
-                  Searching records…
-                </div>
-              )}
-              {records.status === "failed" && (
-                <div role="alert" className="px-2 py-3 text-sm text-destructive">
-                  Record search failed. {records.error}
-                </div>
-              )}
-              {records.status === "ok" && records.groups.length === 0 && (
-                <div role="status" className="px-2 py-3 text-sm text-muted-foreground">
-                  No matching records.
-                </div>
-              )}
-              {records.status === "ok" &&
-                records.groups.flatMap((g) =>
-                  g.items.map((r) => {
-                    const Icon = RECORD_ICON[r.type]
-                    return (
-                      <CommandItem
-                        key={`${r.type}-${r.id}`}
-                        value={recordItemValue(r)}
-                        forceMount
-                        onSelect={() => go(r.route, true)}
-                        className="group cursor-pointer"
-                      >
-                        <Icon className="mr-3 h-4 w-4 shrink-0 text-primary" />
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate">{r.title}</span>
-                          <span className="block truncate text-xs text-muted-foreground">
-                            {g.label}
-                            {r.secondary ? `, ${r.secondary}` : ""}
-                          </span>
+              {records.groups.flatMap((g) =>
+                g.items.map((r) => {
+                  const Icon = RECORD_ICON[r.type]
+                  return (
+                    <CommandItem
+                      key={`${r.type}-${r.id}`}
+                      value={recordItemValue(r)}
+                      forceMount
+                      onSelect={() => go(r.route, true)}
+                      className="group cursor-pointer"
+                    >
+                      <Icon className="mr-3 h-4 w-4 shrink-0 text-primary" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate">{r.title}</span>
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {g.label}
+                          {r.secondary ? `, ${r.secondary}` : ""}
                         </span>
-                        <ChevronRight className="ml-auto h-4 w-4 shrink-0 opacity-0 transition-opacity group-data-[selected=true]:opacity-100" />
-                      </CommandItem>
-                    )
-                  }),
-                )}
-              {records.status === "ok" && records.partial && (
-                <div className="px-2 py-2 text-xs text-muted-foreground">
-                  Some record types could not be searched just now, so this list may be incomplete.
-                </div>
+                      </span>
+                      <ChevronRight className="ml-auto h-4 w-4 shrink-0 opacity-0 transition-opacity group-data-[selected=true]:opacity-100" />
+                    </CommandItem>
+                  )
+                }),
               )}
             </CommandGroup>
           )}
