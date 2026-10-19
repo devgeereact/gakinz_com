@@ -137,6 +137,13 @@ Measured on branch `feat/redesign-2026` at `d314833` (stacked on `feat/plan-2026
   `npm run test:server` 184 PASS. Not merged, uploaded or deployed. **Upload `_bootstrap.php`
   with `auth.php`, `oauth.php` and `users.php`, together.** Resume from
   `.agent/CURRENT-TASK.md`; owner answers are parked in `docs/STATUS.md` section 5.
+- **2026-10-19, client journeys** on `feat/journeys-2026-10-18`, stacked on PR #20, not
+  pushed: manual payment record, quote acceptance evidence, portal update and call requests,
+  project asset checklist, calendar file, client sign-in link, favicon and manifest, lint
+  ceiling 33 errors and 0 warnings. `npm test` 223 and `npm run test:server` 275 PASS on the
+  Mac (ports 5291 and 5292). Not merged, uploaded or deployed. Needs SQL 13 to 15 and the
+  upload list in `docs/DEPLOYMENT.md` section 5.3; **upload `bookings.php` with `_ics.php`.**
+  Summary in `docs/STATUS.md` section 0.2.
 - A live super-admin credential was published in an earlier revision of this file and is in
   git history. The owner reports it rotated on 2026-10-12; session revocation is unconfirmed.
   See `docs/KNOWN-ISSUES.md` K-001.

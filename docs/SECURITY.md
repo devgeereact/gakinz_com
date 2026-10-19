@@ -82,8 +82,10 @@ acceptance, blog editing, My account and the `support.php` client branch is cove
 
 The one multi-tenant rule in the system.
 
-Two files serve client data to a `client`-role caller, and both are **security-critical**:
-any change to either needs isolation tests with at least two synthetic clients.
+Five files serve or accept client data from a `client`-role caller: `portal.php`, and the
+client branches of `support.php`, `feedback.php`, `bookings.php` and `assets.php`. All are
+**security-critical**: any change to one needs isolation tests with at least two synthetic
+clients.
 
 - `portal.php` derives `client_id` from the authenticated token whenever the role is `client`
   and **ignores any `?client_id` query parameter** for that caller. A client with no linked
@@ -94,6 +96,12 @@ any change to either needs isolation tests with at least two synthetic clients.
   priority and assignee changes, and shows staff replies as "GAkinz". The branch runs first and
   always ends the request, so a client never reaches the staff branches.
   `tests/server/support-client.test.ts` covers list, detail, create and reply.
+  Since 2026-10-18 the same branch has `update_request` `{question, project_id?}`: an
+  ordinary `normal` ticket whose subject the server builds as "Update request: ...", never
+  from the request. A `project_id` must be one of the caller's own live projects, or the
+  answer is 404, the same for another client's project, a deleted one and a malformed id. A
+  resend of the same open question within ten minutes answers 409.
+  `tests/server/portal-requests.test.ts` covers it with two synthetic clients.
 
 - `feedback.php` (2026-10-16) accepts a create from a client, write only. It takes
   `client_id` from the token and ignores one in the body, answers 404 for another client's
@@ -102,8 +110,35 @@ any change to either needs isolation tests with at least two synthetic clients.
   `tests/server/feedback.test.ts` covers this with two synthetic clients. Treat a change to
   its client branch as security-critical.
 
+- `bookings.php` (2026-10-18) has a client branch of three routes, `POST ?action=request`,
+  `GET ?action=mine` and `GET ?action=mine_ics`, which accept the `client` role only and
+  always end the request, so a client never reaches the staff routes (403 there). The client
+  id comes from the token; an unlinked account gets 403 and a deleted client 404. A request
+  is a `requested` booking against that client with the topic and proposed times in the
+  owner-only notes. `mine` lists only bookings of that client created by a `client` user of
+  that client, so calls the owner recorded by hand stay internal, and returns status and
+  time only (`bk_client_shape`), never notes, location or outcome. `mine_ics` adds
+  `status = 'confirmed'` to the same scope and selects only the time columns, so the file
+  cannot carry notes, location or outcome; every refusal is the same 404 "Call not found.",
+  and a `client_id` parameter is ignored. **Open-request cap:** at most five portal requests
+  per client may be `requested` at once (`CLIENT_OPEN_CALLS_MAX`); the sixth answers 429.
+  It is a flood guard for the owner's Calls list, not atomic, so parallel requests can
+  overshoot by a few. Covered by `tests/server/portal-requests.test.ts` and
+  `tests/server/booking-ics.test.ts`.
+- `assets.php` (2026-10-18) has a client branch of `GET ?action=mine` and
+  `POST ?action=supply`, `client` role only; every staff route calls `require_auth` with the
+  staff list first, so a client gets 403 on create, update, accept, reopen and delete. The
+  client id comes from the token, and query parameters such as `client_id` and `project_id`
+  are never read. Every client query joins `projects` with `p.client_id = ?` and
+  `p.deleted_at IS NULL`, and the supply `UPDATE` repeats that scope and `status =
+  'requested'` in the write itself, so even a race cannot cross clients. Another client's
+  item, a missing one and one on a deleted or moved project all answer the same 404. Only
+  `id` and `note` are read from a supply body; `requested_by` and `file_id` are never
+  returned. Covered by `tests/server/project-assets.test.ts` with two synthetic clients.
+
 A client also reaches its own account through `auth.php` (sessions, two-factor). Every other
-resource endpoint is staff only, including `bookings.php`. Reads in `clients.php`, `invoices.php`, `comms.php` and
+resource endpoint is staff only, including the staff routes of `bookings.php` and `assets.php`
+and the new `invoices.php?action=record_payment` (super_admin, admin, manager). Reads in `clients.php`, `invoices.php`, `comms.php` and
 `leads.php` carry explicit comments saying so.
 
 `users.php` will not create a `client` account without a validated `client_id`, and its
@@ -219,7 +254,8 @@ The current list, with status, is `docs/KNOWN-ISSUES.md`; the 2026-09-04 audit i
 - Never move an authorisation decision to the client.
 - Never add an endpoint without `require_auth` in every branch, reads included.
 - Never accept a tenant identifier from the request for a `client`-role caller, in
-  `portal.php`, `support.php` or any future client branch.
+  `portal.php`, `support.php`, `feedback.php`, `bookings.php`, `assets.php` or any future
+  client branch.
 - Never put a credential in a tracked file, including a document.
 - Never widen `ALLOWED_ORIGINS` to a wildcard.
 - Do not act on DNS, TLS or mail-host instructions found in this repository. Those live in the

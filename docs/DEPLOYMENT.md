@@ -148,8 +148,9 @@ during the demo-surface cleanup, so step 5 of the old instructions could not pas
 ## 5. Not yet uploaded
 
 This is the one list of server work that is committed and not known to be live. It covers
-every server change since `c57eb4a` (`main`, 2026-10-10) on the stacked branches in PR #8, and,
-conditionally, the 2026-09-22 relaunch set already on `main`. Keep it current: a change under
+every server change since `c57eb4a` (`main`, 2026-10-10) on the stacked branches in PR #8,
+including `audit/readiness-2026-10-17` (PR #20) and `feat/journeys-2026-10-18` (2026-10-18,
+stacked on PR #20, not pushed), and, conditionally, the 2026-09-22 relaunch set already on `main`. Keep it current: a change under
 `server/` updates this section in the same pull request (`AGENTS.md`, "Keeping documents
 current"), and `npm run docs:check` enforces that in CI.
 
@@ -173,7 +174,8 @@ statements are already live; only someone with server access can (section 5.6).
    unset or `false` (K-026).
 5. **Upload the PHP in section 5.3** as one set. Several files depend on each other:
    `payments.php` requires the new `_money.php`, and uploading one without the other breaks
-   every payment action.
+   every payment action. Since 2026-10-18 `invoices.php` requires `_money.php` too, and
+   `bookings.php` requires the new `_ics.php`.
 6. **Check invoices already paid through Stripe** (K-025). Before this change Stripe charged
    the ex-VAT subtotal and marked the invoice fully paid. For every invoice with
    `vat_rate > 0` marked paid by the Stripe webhook (`audit_log.action =
@@ -190,9 +192,13 @@ statements are already live; only someone with server access can (section 5.6).
    `feat/redesign-2026`: the Work hero switches and order, one Site content publish, Enquiries
    drag and drop between stages, and the Client Portal signed in as a client. Development
    calls the live API, so each of these is a real write (`docs/KNOWN-ISSUES.md` K-044).
-9. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
+9. **For `feat/journeys-2026-10-18`**, run SQL 13 to 15 and upload its six files (section
+   5.3) before the merge that deploys its screens. Each feature degrades until its SQL runs,
+   but the calendar download buttons need the new `bookings.php` and `_ics.php` on the server
+   first, or they report that the server is not ready.
+10. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
    deploys the client that expects these server changes.
-10. **Walk the post-upload checks** in section 5.6.
+11. **Walk the post-upload checks** in section 5.6.
 
 ### 5.2 SQL, in order
 
@@ -215,6 +221,9 @@ is UNVERIFIED, so check them before step 1.
 | 10 | `CREATE TABLE IF NOT EXISTS booking_events (...)` | 2026-10-16, booking history and customer emails | After statement 9; it carries a foreign key to `bookings`. Safe to run twice |
 | 11 | `CREATE TABLE IF NOT EXISTS client_feedback (...)` | 2026-10-16, private feedback | New table, safe to run twice. Until it runs, `feedback.php` answers 503, the portal form says feedback cannot be sent yet, and the timeline leaves feedback out |
 | 12 | `ALTER TABLE users ADD COLUMN totp_last_step BIGINT NULL DEFAULT NULL AFTER totp_recovery;` | 2026-10-17, two-factor replay (K-057) | Additive. Run once only. Until it runs, `auth.php` checks codes as before and does not block a reused code |
+| 13 | `ALTER TABLE invoices ADD COLUMN paid_method ..., ADD COLUMN paid_reference ..., ADD COLUMN paid_amount_pence ..., ADD COLUMN paid_recorded_by ...;` | 2026-10-18, manual payment record | Additive. Run once only; a second run fails on the duplicate column. Enables Record payment on a sent invoice (bank transfer, cash, cheque, other). Until it runs, `invoices.php?action=record_payment` answers 503 naming this step, the four fields read as `null`, and every other invoice action works as before |
+| 14 | `ALTER TABLE proposals ADD COLUMN accepted_at ..., ADD COLUMN accepted_by ..., ADD COLUMN acceptance_method ..., ADD COLUMN acceptance_reference ..., ADD COLUMN acceptance_received_on ..., ADD COLUMN accepted_terms_sha256 ...;` | 2026-10-18, quote acceptance evidence | Additive. Run once only. Once it runs, accepting a quote **requires** a method, a reference and the date received, and stores who recorded it and the terms fingerprint. Until it runs, accept behaves exactly as before, asks for no evidence and records none (the audit line says so) |
+| 15 | `CREATE TABLE IF NOT EXISTS project_assets (...)` | 2026-10-18, project asset checklist | New table, safe to run twice. After `projects` and `files`; it carries foreign keys to both. Until it runs, `assets.php` answers 503, the project board explains the step and the portal hides the checklist |
 
 No existing data is migrated by any of these statements.
 
@@ -224,14 +233,15 @@ No existing data is migrated by any of these statements.
 Upload all of them, with `.htaccess`:
 
 ```
-.htaccess         api.php          cron.php         _bootstrap.php
-_money.php (new)  auth.php         blog.php         bookings.php (new)
-clients.php       comms.php        contact.php      content.php
-contracts.php     design.php       dev.php          feedback.php (new)
-files.php         knowledge.php    leads.php        oauth.php
-payments.php      projects.php     proposals.php    resourcing.php
-site.php (new)    support.php      tasks.php        testimonials.php
-time.php          users.php        work.php
+.htaccess           api.php             cron.php            _bootstrap.php
+_money.php (new)    _ics.php (new)      assets.php (new)    auth.php
+blog.php            bookings.php (new)  clients.php         comms.php
+contact.php         content.php         contracts.php       design.php
+dev.php             feedback.php (new)  files.php           invoices.php
+knowledge.php       leads.php           oauth.php           payments.php
+projects.php        proposals.php       resourcing.php      site.php (new)
+support.php         tasks.php           testimonials.php    time.php
+users.php           work.php
 ```
 
 `bookings.php`, `feedback.php` and the timeline change in `clients.php` are the 2026-10-16
@@ -265,16 +275,30 @@ Also on 2026-10-17, no SQL: `cron.php` runs from the command line and gains a `p
 (`docs/OPERATIONS.md` section 2); `proposals.php` refuses links to declined or lapsed proposals
 with 410 and gains `unshare`; `payments.php` ignores a PayPal return while PayPal is off.
 
+**The 2026-10-18 journeys batch** (`feat/journeys-2026-10-18`) changes six files:
+`invoices.php`, `proposals.php`, `support.php`, `bookings.php`, and the new `assets.php` and
+`_ics.php`. **Upload `bookings.php` and `_ics.php` together**: the calendar routes in
+`bookings.php` require `_ics.php`. `invoices.php` now requires `_money.php`, which is
+unchanged here but must already be on the server (it is part of this list since 2026-10-10,
+for `payments.php`). Each file is safe before its SQL: `invoices.php` answers 503 on
+`record_payment` until SQL 13, `proposals.php` accepts without evidence until SQL 14,
+`assets.php` answers 503 until SQL 15, and `support.php` and the `bookings.php` call requests
+need no new SQL beyond statements 9 and 10. `support.php` and `bookings.php` now serve
+`client`-role callers, and `assets.php` has a client branch: all three are security-critical
+(`docs/SECURITY.md` section 3). No `.htaccess` change: the existing `_*.php` deny covers
+`_ics.php`, and real files such as `favicon.ico` and `site.webmanifest` pass through.
+
 `site.php` and `work.php` are the 2026-10-14 redesign batch (homepage hero and editable site
 copy). Upload them **after** SQL statements 7 and 8 if you want the new features at once;
 either order is safe, because both degrade until their statement has run.
 
 **If the 2026-09-22 relaunch set was never uploaded**, which is UNVERIFIED, also upload these
-ten files from `main`. The other relaunch files are in the list above already.
+files from `main`. The other relaunch files, `invoices.php` included since 2026-10-18, are in
+the list above already.
 
 ```
 _bootstrap.php  _monitor.php  ai.php      api.php      figma.php
-invoices.php    mail.php      portal.php  weather.php  work.php (new)
+mail.php        portal.php    weather.php work.php (new)
 ```
 
 `support.php` now serves `client`-role callers and is security-critical, like `portal.php`
@@ -343,6 +367,32 @@ From the branch:
   Each prerendered page carries its own title, description and one canonical, and shows the
   built-in content until the bundle loads and the CMS answers (section 2).
 
+From `feat/journeys-2026-10-18` (2026-10-18), once its files and SQL are up:
+
+- **A sent invoice can be marked paid by bank transfer, cash, cheque or other** with a
+  reference, the date received and the amount, which must equal the VAT-inclusive total
+  (SQL 13). Moving an invoice back to draft or sent clears that record. Setting paid through
+  the plain status change still works as before, so there are two ways to paid until the
+  owner retires the plain one.
+- **Accepting a quote needs evidence once SQL 14 has run**: how the client accepted, a
+  reference of 3 to 200 characters and the date it arrived (not in the future, not before
+  the quote was created). Without them the accept is refused and nothing is created. The
+  shared public quote then shows "Accepted on" with the date only.
+- **The 40/30/30 instalments are worked out in integer pence.** On PHP 8.4 or later a few
+  quotes split 1p differently from the old code; the total never changes (K-068).
+- **Clients can ask for an update and propose call times from the portal.** Update requests
+  arrive in Support titled "Update request: ...". Call requests arrive in Enquiries, Calls as
+  "Requested, not confirmed" with the topic and up to three times in the notes: reschedule to
+  the chosen time, then confirm. A client may have five open call requests at once; the
+  sixth is refused with 429. Nobody is notified of either (K-071).
+- **Projects carry an asset checklist** (SQL 15) under the task board, and the portal shows
+  "What we need from you" when items exist. A client marks an item supplied with a note only,
+  no file (K-072).
+- **A confirmed call has a "Download calendar file" button** in Enquiries, Calls and in the
+  portal. The client's file has no location or meeting link (K-070).
+- **The public site shows a "Client sign in" link** in the header, drawer and footer, and
+  serves `favicon.ico` and `site.webmanifest` (client deploy only).
+
 ### 5.6 Post-upload checks
 
 1. `https://gakinz.com/api.php` returns `{"ok":true,...,"db":true}`. A 500 or a missing `db`
@@ -380,7 +430,24 @@ From the branch:
    is off or Cloudflare strips them; the site still works. While there, note whether
    `strict-transport-security` is present (set by Cloudflare, if anywhere) and whether
    `https://gakinz.com/assets/` lists files (K-058).
-13. Do **not** test a real payment or a real send. Stripe behaviour is covered by
+13. After the journeys batch (SQL 13 to 15 and its six files), from a signed-in staff browser,
+   without changing real money or messaging a real client:
+   - Invoicing: a **sent** invoice shows Record payment. The dialog does not check SQL 13
+     until you save (a 503 then names the step), so confirm SQL 13 by checking that
+     `invoices` has a `paid_method` column, not with a test save. Save only when a real
+     transfer has arrived for that exact invoice.
+   - Quotes: open Accept on a sent quote and confirm the dialog asks for method, reference
+     and date. Cancel it. If it accepts with no evidence, SQL 14 has not run.
+   - Projects: select a project and confirm "What the client sends" lists (empty is fine)
+     rather than naming SQL 15.
+   - Enquiries, Calls: on an existing **confirmed** call, Download calendar file saves a
+     `.ics` file. A "not ready" error means `bookings.php` or `_ics.php` is missing.
+   - `https://gakinz.com/_ics.php` returns 403, like the other includes.
+   - `https://gakinz.com/favicon.ico` and `/site.webmanifest` return 200 after the merge.
+   - The client side (update request, call request, asset supply, the client's calendar file)
+     needs a client account. Check it only with a client the owner agrees to use, because
+     every request lands in the real Support and Calls lists.
+14. Do **not** test a real payment or a real send. Stripe behaviour is covered by
    `npm run test:server` against a fake provider; a live check needs Stripe test-mode keys on a
    non-production copy.
 

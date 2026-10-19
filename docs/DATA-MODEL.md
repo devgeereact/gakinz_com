@@ -52,7 +52,7 @@ section 4.
 | `clients` | CRM record, created when a lead is won | `tag` is one of retainer, one-off, vip, dormant. `retainer_amount` drives recurring billing and care-plan revenue |
 | `bookings` | Calls recorded by hand inside Enquiries, added 2026-10-16 | Linked to an `enquiry_id`, a `client_id` or both. `starts_at` is UTC and `timezone` the IANA zone the time was agreed in; `bookings.php` converts with PHP's own zone database and refuses a local time inside the spring-forward gap. `status` is requested, confirmed, completed or cancelled; only the owner moves a request to confirmed. `notes` and `outcome` are owner only and never sent |
 | `booking_events` | History of each booking, added 2026-10-16 | One row per create, reschedule and status change, with the old and new time or status. A customer email about a reschedule or cancellation records `notify_status` (sending, sent, failed), `notify_to`, `notify_attempts` and `notify_error` on its event, so the owner sees a failure and can retry it. Cascades with its booking |
-| `proposals`, `proposal_items` | Quotes with line items | `vat_rate`. `share_token` is unique and powers the public `/p/:token` view; `views` and `last_viewed_at` track opens |
+| `proposals`, `proposal_items` | Quotes with line items | `vat_rate`. `share_token` is unique and powers the public `/p/:token` view; `views` and `last_viewed_at` track opens. Acceptance evidence, 2026-10-18 (SQL 14), all null until a quote is accepted with evidence: `accepted_at` (DATETIME, when staff recorded it), `accepted_by` (users.id, no foreign key), `acceptance_method` (VARCHAR 20: email, letter, in_person, phone, other), `acceptance_reference` (VARCHAR 200, staff only), `acceptance_received_on` (DATE the client's acceptance arrived) and `accepted_terms_sha256` (CHAR 64, SHA-256 of the canonical terms JSON built in integer pence by `proposals.php`). The public view reads only the date |
 
 ### Delivery
 
@@ -63,6 +63,7 @@ section 4.
 | `design_reviews` | Figma review rounds | `round` is capped at 2 in `design.php` |
 | `project_dev` | Repository and environment URLs, JSON build checklist | Also holds the monitor results: `last_http_status`, `ssl_days_left`, `last_checked_at` |
 | `deploys` | Deploy log per project | staging or production; success, failed or rolled_back |
+| `project_assets` | What a client must send for a project, added 2026-10-18 (SQL 15) | `project_id` (foreign key, cascades), `label` (VARCHAR 160), `note` (VARCHAR 1000, owner guidance), `status` (requested, supplied, accepted), `client_note` (VARCHAR 1000, the client's note when supplying, kept on reopen), `file_id` (a `files` row on the same project, set by staff only, `ON DELETE SET NULL`), `requested_by` (users.id, no foreign key), `supplied_at`, `accepted_at`, `created_at`, `updated_at`, `deleted_at` (soft delete). A client can only move an item of their own project from requested to supplied; `requested_by` and `file_id` are never returned to a client. At most 100 live items per project, enforced in `assets.php` |
 | `time_entries` | Billable and non-billable minutes | `status` is draft, approved or rejected |
 | `leave_entries` | Holiday, sick and other leave | Capacity itself is derived live from `time_entries`, so there is no committed-hours table |
 
@@ -70,7 +71,7 @@ section 4.
 
 | Table | Purpose | Notes |
 |---|---|---|
-| `invoices`, `invoice_items` | Invoicing | `vat_rate` on the parent. Totals are computed from items at read time in several endpoints |
+| `invoices`, `invoice_items` | Invoicing | `vat_rate` on the parent. Totals are computed from items at read time in several endpoints. Manual payment record, 2026-10-18 (SQL 13): `paid_method` (VARCHAR 20: bank_transfer, cash, cheque, other), `paid_reference` (VARCHAR 100), `paid_amount_pence` (INT, equal to the `_money.php` payable total) and `paid_recorded_by` (users.id, staff only, never returned by `portal.php`); `paid_at` then holds the date the money arrived. All four are cleared when an invoice moves back to draft or sent |
 | `payment_events` | One row per payment-provider event processed, added 2026-10-10 | `provider`, `event_id`, `invoice_id`, `amount_minor` (pence as reported, -1 if absent), `currency`, `outcome` (marked_paid, already_paid, amount_mismatch, unknown_invoice, ignored). Unique on provider and event id, so a redelivery is a no-op (K-025) |
 | `contracts` | Contracts and NDAs with typed-name e-signature | Stores signer name, IP and timestamp. NDA triage is a green, amber or red tag |
 
@@ -147,6 +148,8 @@ users.client_id  ->  clients.id  ->  projects.client_id
                                  ->  invoices.client_id
                                  ->  tickets.client_id
                                  ->  client_feedback.client_id   (write only for a client)
+                                 ->  bookings.client_id          (a client's own portal requests)
+                     projects.id ->  project_assets.project_id   (read, and supply only, for a client)
 ```
 
 `portal.php` derives `client_id` from the authenticated token whenever the role is `client`
@@ -156,7 +159,12 @@ Since 2026-10-10 the client branch of `support.php` does the same for `tickets` 
 client's own account actions in `auth.php`, are the only places a client-role account reaches
 data. Since 2026-10-16 `feedback.php` also accepts a create from a client, taking `client_id`
 from the token and checking that any `project_id` belongs to that client; it never returns
-feedback to a client. Every other resource endpoint is staff only, `bookings.php` included.
+feedback to a client. Since 2026-10-18 three more client branches exist, each taking
+`client_id` from the token only: `support.php?action=update_request` (an ordinary ticket),
+`bookings.php` `request`, `mine` and `mine_ics` (only bookings for that client created by a
+`client` user of that client; a client reads status and time, never notes, location or
+outcome), and `assets.php` `mine` and `supply` (only items on that client's live projects,
+with the client scope repeated in the write). Every other resource endpoint is staff only.
 
 ## 4. Migrations
 
@@ -187,10 +195,13 @@ Outstanding statements, grouped as they appear in the file:
 | Site content, 2026-10-14 | `CREATE TABLE IF NOT EXISTS site_content`. Safe to run twice |
 | Bookings, 2026-10-16 | `CREATE TABLE IF NOT EXISTS bookings`, then `booking_events`. Safe to run twice |
 | Private feedback, 2026-10-16 | `CREATE TABLE IF NOT EXISTS client_feedback`. Safe to run twice |
+| Manual payment record, 2026-10-18 (SQL 13) | `ALTER TABLE invoices ADD COLUMN paid_method`, `paid_reference`, `paid_amount_pence`, `paid_recorded_by`. Run once; a second run fails on the duplicate column |
+| Acceptance evidence, 2026-10-18 (SQL 14) | `ALTER TABLE proposals ADD COLUMN accepted_at`, `accepted_by`, `acceptance_method`, `acceptance_reference`, `acceptance_received_on`, `accepted_terms_sha256`. Run once |
+| Asset checklist, 2026-10-18 (SQL 15) | `CREATE TABLE IF NOT EXISTS project_assets`. Safe to run twice |
 
 Which of the older statements have already been applied to the live database is
 **UNVERIFIED**. The 2026-09-22, 2026-10-10 and 2026-10-14 groups are known **not** to have been applied by
-this work, nor have the 2026-10-16 tables, because no database has been contacted since they were written. Their order is in
+this work, nor have the 2026-10-16 tables or the 2026-10-18 statements, because no database has been contacted since they were written. Their order is in
 `docs/DEPLOYMENT.md` section 5.2.
 
 **The unique key has a precondition.** `files.share_token` currently has no unique
@@ -249,6 +260,16 @@ appear once the update has run. Without `client_feedback`, `feedback.php` answer
 portal form says feedback cannot be sent yet, and the client record says so. `clients.php?id=N`
 leaves calls and feedback out of the timeline and lists them in `unavailable`. Tested with the
 tables dropped (`tests/server/feedback.test.ts`).
+
+**The 2026-10-18 statements degrade as well.** Without the SQL 13 columns, `invoices.php`
+returns the four payment fields as `null` and `record_payment` answers 503. Without the SQL 14
+columns, `proposals.php` returns `evidence_ready: false` with null evidence fields and accepts
+as before, asking for no evidence. Without `project_assets`, `assets.php` answers 503 (MySQL
+error 1146 is caught), the project board explains the step and the portal hides the card.
+The SQL 13 and SQL 14 fallbacks are tested against a real database with the columns dropped
+(`tests/server/manual-payment.test.ts`, `tests/server/acceptance-evidence.test.ts`). The
+`project_assets` 503 is verified by source inspection only, because the test database always
+has the table: **NOT TESTED** at runtime.
 
 ## 7. Files, share tokens and what stays public
 

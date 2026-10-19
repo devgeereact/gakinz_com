@@ -152,9 +152,10 @@ sections 10 and 11.
 
 ## 3. Server
 
-PHP files in `server/`, one per resource. Six are shared includes with no route of their own,
+PHP files in `server/`, one per resource. Seven are shared includes with no route of their own,
 all denied to direct requests by `.htaccess` (K-013). `work.php` was added on 2026-09-22,
-`_money.php` on 2026-10-10 and `site.php` on 2026-10-14.
+`_money.php` on 2026-10-10, `site.php` on 2026-10-14, and `assets.php` and `_ics.php` on
+2026-10-18.
 
 | Include | Role |
 |---|---|
@@ -163,7 +164,8 @@ all denied to direct requests by `.htaccess` (K-013). `work.php` was added on 20
 | `_sms.php` | Twilio REST for SMS and WhatsApp |
 | `_slack.php` | Slack incoming webhook, best effort, never throws |
 | `_monitor.php` | HTTP status and TLS expiry check for the care plan |
-| `_money.php` | The single VAT-inclusive payable-total calculation, used for payment providers (D-034) |
+| `_money.php` | The single VAT-inclusive payable-total calculation, used for payment providers (D-034) and for the manual payment check in `invoices.php` |
+| `_ics.php` | RFC 5545 calendar file for a confirmed call, used by `bookings.php` |
 
 Every routed endpoint follows the same shape: require the bootstrap, read
 `$_SERVER['REQUEST_METHOD']` and `$_GET['action']`, call `require_auth($conn, ROLES)`, use
@@ -275,3 +277,17 @@ need SQL 7 and 8 and the upload in `docs/DEPLOYMENT.md` section 5.
 | Site content | One `site_content` row per section with a draft and a published copy; the public read returns published copy only | `server/site.php`, `src/app/modules/Site.tsx`, `siteContentModel.ts`, `siteContent` in `api.ts` |
 | CMS shell and screens | Graphite sidebar in both themes, new header, `AuthFrame` sign-in pages, a page kit shared by every screen | `src/layouts/AppLayout.tsx`, `src/components/app-sidebar.tsx`, `src/app/components/AuthFrame.tsx`, `src/app/components/page-kit.tsx` |
 | Enquiries | Drag and drop between stages, through the existing `move()` | `src/app/modules/Leads.tsx` |
+
+### Client journeys, 2026-10-18
+
+On `feat/journeys-2026-10-18`, stacked on PR #20; not pushed, merged or deployed. The server
+files need SQL 13 to 15 and the upload in `docs/DEPLOYMENT.md` section 5.
+
+| Area | Shape | Where |
+|---|---|---|
+| Manual payment | A staff action that marks a sent invoice paid only when the amount equals the `_money.php` payable total | `server/invoices.php`, `Invoicing.tsx`, `paymentModel.ts` |
+| Acceptance evidence | Evidence and a SHA-256 terms fingerprint stored in the same atomic accept; money in integer pence | `server/proposals.php`, `Proposals.tsx`, `acceptanceModel.ts`, `ProposalView.tsx` |
+| Portal requests | Update requests are tickets and call requests are `requested` bookings, both from the token's client; no new table | `server/support.php`, `server/bookings.php`, `src/app/components/PortalRequests.tsx`, `portalRequestsModel.ts`, `portalRequests` in `api.ts` |
+| Asset checklist | One `project_assets` row per item, staff and client routes in one file | `server/assets.php`, `src/app/components/AssetChecklist.tsx`, `assetChecklistModel.ts`, `projectAssets` in `api.ts` |
+| Calendar file | A non-JSON response built by a shared include and downloaded through `api.download`, which checks the content type | `server/_ics.php`, `server/bookings.php`, `CallBookings.tsx`, `PortalRequests.tsx` |
+| Component exports | Variants, the sidebar context and SEO constants live in their own modules so component files export components only | `src/components/ui/badge-variants.ts`, `button-variants.ts`, `sidebar-context.ts`, `src/marketing/components/seo-schema.ts` |

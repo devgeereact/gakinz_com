@@ -174,8 +174,8 @@ Grouped by area. Actions are the `?action=` value on POST unless stated.
 |---|---|---|
 | `leads.php` | GET list, `status`, `meta` | STAFF |
 | `clients.php` | GET list, GET `?id=`, `create`, `update`, `convert` | STAFF |
-| `bookings.php` | GET list (`?enquiry_id=` or `?client_id=` to filter), `create`, `update`, `reschedule`, `status`, `notify` | STAFF (as `leads.php`); every branch, reads included |
-| `proposals.php` | GET list, GET `?id=`, `create`, `status`, `accept`, `share` | STAFF |
+| `bookings.php` | Staff: GET list (`?enquiry_id=` or `?client_id=` to filter), GET `?action=ics&id=`, `create`, `update`, `reschedule`, `status`, `notify`. Client: `request`, GET `?action=mine`, GET `?action=mine_ics&id=` | STAFF (as `leads.php`); every branch, reads included. The `client` role on its own three routes only (2026-10-18) |
+| `proposals.php` | GET list, GET `?id=`, `create`, `status`, `accept`, `share`, `unshare` | STAFF |
 | `contracts.php` | GET list, GET `?id=`, `create`, `status`, `sign`, `delete` | STAFF |
 
 `leads.php` follow-ups (2026-10-10):
@@ -230,6 +230,27 @@ missing, and the rest of the record still loads.
   tables every action answers 503.
 - Covered by `tests/server/bookings.test.ts`.
 
+`bookings.php` client routes and calendar file (2026-10-18; the client branch is
+security-critical, `docs/SECURITY.md` section 3):
+
+- `request` (client) takes `{ topic, timezone, slots: [{ date, time }] }` with one to three
+  slots, none in the past. It creates a `requested` booking against the token's client,
+  starting at the first slot, with the topic and every proposed time in the owner-only
+  notes, and returns the client shape with 201. A resend answers 409; a sixth open request
+  answers 429; staff or an unlinked account 403; a deleted client 404; 503 before the
+  2026-10-16 tables.
+- `mine` (client) lists the client's own portal requests as `{ id, status, starts_at,
+  start_local, timezone, duration_min, created_at }`, never notes, location or outcome.
+  Calls the owner recorded by hand are not listed.
+- `ics` (staff) and `mine_ics` (client, own portal call) return `text/calendar` with
+  `Content-Disposition: attachment; filename="gakinz-call-<id>.ics"` and
+  `Cache-Control: private, no-store`, for a **confirmed** call only; anything else answers a
+  JSON 404. UTC times, `UID` `booking-<id>@gakinz.com`, `SEQUENCE` the number of reschedules.
+  The staff file carries `LOCATION` (and `URL` for a single web address); the client's file
+  carries neither. No audit row, as a download is a read. Each route answers 403 to the
+  other side.
+- Covered by `tests/server/portal-requests.test.ts` and `tests/server/booking-ics.test.ts`.
+
 `proposals.php` rules:
 
 - `accept` takes `{ id }` and converts only a quote whose status is `sent` and whose
@@ -241,6 +262,20 @@ missing, and the rest of the record still loads.
   in 30 days and in 60 days.
 - `status` accepts `draft`, `sent` or `declined`. Once a quote is accepted its terms are
   fixed, so any status change returns 409 and a new quote is needed.
+- Acceptance evidence (2026-10-18, SQL 14). Once the columns exist, `accept` takes
+  `{ id, method, reference, received_on }`: `method` is `email`, `letter`, `in_person`,
+  `phone` or `other`; `reference` is 3 to 200 characters; `received_on` is `YYYY-MM-DD`, not
+  after today on the database clock and not before the quote's creation day. Anything
+  missing answers 400 and creates nothing. The reply adds `evidence_recorded` and
+  `accepted_terms_sha256`. Before SQL 14, accept is unchanged and asks for nothing.
+- The 40/30/30 amounts and the fingerprint are computed in integer pence: deposit and stage
+  rounded half away from zero, the final invoice takes the remainder (K-068). A quote too
+  large for integer arithmetic answers 400.
+- GET list and GET `?id=` add `evidence_ready`, `accepted_at`, `accepted_by`,
+  `accepted_by_name`, `acceptance_method`, `acceptance_reference`, `acceptance_received_on`
+  and `accepted_terms_sha256` (nulls before SQL 14). The public `?token=` view adds only
+  `accepted_on`, the date, for an accepted quote.
+- Covered by `tests/server/acceptance-evidence.test.ts`.
 
 ### Delivery
 
@@ -254,12 +289,30 @@ missing, and the rest of the record still loads.
 | `time.php` | GET list, `create`, `delete`, `approve`, `reject` | STAFF; approve and reject are management only |
 | `careplan.php` | GET list, `check` | STAFF |
 | `files.php` | GET list with optional `?client_id=` or `?project_id=`, GET `?download=`, `upload`, `share`, `delete` | STAFF |
+| `assets.php` | Staff: GET `?project_id=`, `create`, `update`, `accept`, `reopen`, `delete`. Client: GET `?action=mine`, `supply` | STAFF (as `projects.php`); the `client` role on its own two routes only (2026-10-18) |
+
+`assets.php` (2026-10-18, SQL 15, `docs/PRODUCT-SPEC.md` sections 6.2 and 7; the client branch
+is security-critical):
+
+- `create` `{ project_id, label, note? }`, `update` `{ id, label?, note?, file_id? }`,
+  `accept` `{ id }`, `reopen` `{ id }`, `delete` `{ id }` (soft). A label is 1 to 160
+  characters and a note at most 1000; longer text answers 400. `file_id` must be a live file
+  on the same project (404 otherwise). At most 100 live items per project (409).
+- Status: a client moves requested to supplied; staff accept from requested or supplied and
+  reopen from supplied or accepted. Reopen clears `supplied_at` and `accepted_at` and keeps
+  `client_note`. An invalid move, or a double supply, answers 409.
+- `mine` (client) lists items on the client's live projects as `{ id, project_id,
+  project_name, label, note, status, client_note, supplied_at, accepted_at, created_at,
+  updated_at }`. `supply` (client) takes `{ id, note? }`; another client's item answers 404.
+- Audit actions: `asset_create`, `asset_update`, `asset_accept`, `asset_reopen`,
+  `asset_delete`, `asset_supply`. Every action answers 503 until SQL 15.
+- Covered by `tests/server/project-assets.test.ts`.
 
 ### Money
 
 | Endpoint | Actions | Roles |
 |---|---|---|
-| `invoices.php` | GET list, GET `?id=`, `create`, `status`, `chase` | STAFF |
+| `invoices.php` | GET list, GET `?id=`, `create`, `status`, `chase`, `record_payment` | STAFF |
 | `payments.php` | `link`, `paypal_link` | PAY_STAFF |
 | `reports.php` | GET `?report=profitability` | STAFF |
 
@@ -283,12 +336,23 @@ missing, and the rest of the record still loads.
   in `config.php`, and `config.php.example` keeps it `false` because there is no PayPal
   webhook yet (K-026). The code behind the switch charges the same VAT-inclusive total.
 
+`invoices.php?action=record_payment` (2026-10-18, SQL 13) takes `{ id, method, reference?,
+paid_on, amount }`. `method` is `bank_transfer`, `cash`, `cheque` or `other`; a reference (up to
+100 characters) is required for a bank transfer or cheque; `paid_on` is `YYYY-MM-DD` and not in
+the future on the PHP clock (K-067); `amount` is pounds with at most two decimals and must
+equal the `_money.php` payable total (a mismatch answers 400 with `expected_pence`). Only a
+sent invoice can be recorded: draft, already paid or a concurrent change answers 409, a
+missing or deleted invoice 404, and 503 before SQL 13. It returns `{ ok, id, status: "paid",
+paid_at, paid_method, paid_reference, paid_amount_pence }` and writes an `invoice_paid_manual`
+audit row. Both GETs add the four fields (null when none is recorded). `status` back to draft
+or sent clears them. Covered by `tests/server/manual-payment.test.ts`.
+
 ### Client-facing
 
 | Endpoint | Actions | Roles |
 |---|---|---|
 | `portal.php` | GET | Any authenticated user. The `client` role is bound to its own `client_id`. The staff preview branch requires super_admin, admin or manager |
-| `support.php` | Staff: GET list, GET `?id=`, `create`, `status`, `priority`, `assign`, `reply`. Client: GET list, GET `?id=`, `create`, `reply` | STAFF, plus the `client` role on its own branch |
+| `support.php` | Staff: GET list, GET `?id=`, `create`, `status`, `priority`, `assign`, `reply`. Client: GET list, GET `?id=`, `create`, `reply`, `update_request` | STAFF, plus the `client` role on its own branch |
 | `feedback.php` | Staff: GET list (`?client_id=` to filter), `create`, `update`. Client: `create` only | STAFF for every read; the `client` role may only create |
 | `comms.php` | GET list, GET `?id=`, `create`, `post`, `send`, `status` | STAFF |
 | `mail.php` | GET `status`, `inbox`, `message`; POST `send`, `seen` | MAIL_ROLES |
@@ -309,6 +373,12 @@ missing, and the rest of the record still loads.
   facing.
 - Any other action from a client is 403. Clients cannot set status, priority or assignee.
 - Covered by `tests/server/support-client.test.ts` with two synthetic clients.
+- `update_request` (2026-10-18) takes `{ question, project_id? }` (question up to 5,000
+  characters). It creates a ticket titled "Update request: " plus the project name or the
+  start of the question, built by the server, and returns `{ id, subject }` with 201. An empty
+  question answers 400, a project that is not one of the caller's own 404, and the same open
+  question again within ten minutes 409. Audit action `ticket_update_request`. Covered by
+  `tests/server/portal-requests.test.ts`.
 
 `feedback.php` (2026-10-16, `docs/PRODUCT-SPEC.md` section 6.3; its client branch is
 security-critical):

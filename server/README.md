@@ -43,7 +43,8 @@ of their own and are denied to direct requests by `.htaccess`. The file count is
 | `_sms.php` | Twilio transport for SMS and WhatsApp |
 | `_slack.php` | Slack incoming webhook, best effort |
 | `_monitor.php` | HTTP status and TLS expiry check for the care plan |
-| `_money.php` | The single VAT-inclusive payable-total calculation used by `payments.php` |
+| `_money.php` | The single VAT-inclusive payable-total calculation used by `payments.php` and, since 2026-10-18, by `invoices.php` to check a manual payment |
+| `_ics.php` | Builds the RFC 5545 calendar file for a confirmed call (escaping, 75-octet folding, UTC times). Required by `bookings.php` on its calendar routes, so upload the two together (2026-10-18) |
 | `api.php` | Unauthenticated read-only health check: confirms PHP runs and the database answers. No writes, no application tables |
 | `contact.php` | Public enquiry form, writes to `enquiries` |
 | `verify.php` | Public certificate verification |
@@ -51,10 +52,10 @@ of their own and are denied to direct requests by `.htaccess`. The file count is
 | `auth.php` | Login, session, reset, two-factor, magic link, sessions and revoke |
 | `oauth.php` | Google SSO. Matches existing active users only |
 | `users.php`, `audit.php`, `integrations.php` | Platform administration. Admins only |
-| `leads.php`, `clients.php`, `proposals.php`, `contracts.php` | Sales |
-| `projects.php`, `tasks.php`, `design.php`, `dev.php`, `resourcing.php`, `time.php`, `careplan.php`, `files.php` | Delivery |
+| `leads.php`, `clients.php`, `bookings.php`, `proposals.php`, `contracts.php` | Sales. `bookings.php` also has a client branch for portal call requests and the client's own calendar file (2026-10-18), security-critical |
+| `projects.php`, `tasks.php`, `design.php`, `dev.php`, `resourcing.php`, `time.php`, `careplan.php`, `files.php`, `assets.php` | Delivery. `assets.php` (2026-10-18) is the project asset checklist, with a client branch to list and supply items, security-critical |
 | `invoices.php`, `payments.php`, `reports.php` | Money |
-| `portal.php`, `support.php`, `comms.php`, `mail.php` | Client-facing. `portal.php` and the client branch of `support.php` serve `client`-role callers and are security-critical |
+| `portal.php`, `support.php`, `feedback.php`, `comms.php`, `mail.php` | Client-facing. `portal.php` and the client branches of `support.php` and `feedback.php` serve `client`-role callers and are security-critical |
 | `blog.php`, `testimonials.php`, `content.php`, `knowledge.php`, `announcements.php`, `work.php`, `site.php` | Content. `work.php` also serves the public work ledger and the homepage hero; `site.php` serves published site copy publicly and drafts to editors |
 | `ai.php` | OpenRouter proxy. Staff roles only, capped per role per day. The key stays server-side |
 | `weather.php` | OpenWeather proxy. Staff roles only, cached 10 minutes. The key stays server-side |
