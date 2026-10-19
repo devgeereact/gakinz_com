@@ -156,8 +156,10 @@ others: (a) enquiries that never became a client, unchanged for `$RETENTION_ENQU
 with no call on them changed or scheduled within that period, and passing every check of the
 manual erasure in section 7 (so never one linked to a client, a user or a contract signer);
 (b) soft-deleted files older than `$RETENTION_DELETED_FILE_DAYS`, whose file in `uploads/`
-is removed through the same path rule as downloads (`stored_path()`, `_uploads.php`) and
-then the row, unless a project asset checklist still points at it. By default it is a dry run
+is removed and then the row, only when it is a plain file directly in `uploads/` under its
+exact stored name (a symlink, even to another upload, or a directory is left alone and never
+followed), and never while a project asset checklist or Work still uses it. Without a usable
+`uploads/` folder the files rule does nothing. By default it is a dry run
 that lists ids only. It deletes only when `--apply` is passed AND `config.php` sets the new
 key `$RETENTION_APPLY = true` (false in `config.php.example`) AND that rule's period is set,
 and then writes one `retention_apply` audit row with counts only (`docs/OPERATIONS.md`
@@ -173,7 +175,7 @@ job (K-061).
 |---|---|---|
 | Access, portability | email hello@gakinz.com, then the owner exports | **export built 2026-10-19, not uploaded**: a super admin or admin downloads a JSON file of every row held about one client (client record, "Export data") or one enquirer email (Settings, Privacy). Secrets and token values are left out; staff notes are included (K-079). Since 2026-10-19 each file row carries `client_visible` and `shared_at`, so the export shows what was shared to the portal and when (before SQL 18 the rows come without them). A written procedure for checking identity and replying is still needed |
 | Correction | staff edit client records; My account says "contact GAkinz" for name and email | none for staff-held data; fine as a manual route |
-| Erasure | email; since 2026-10-19 (not uploaded) a client can also use "Ask to delete my data" in My account | **built 2026-10-19, not uploaded**: a super admin can erase one prospect's enquiry from the Enquiries drawer by typing its email address (`privacy.php?action=erase_enquiry`). It deletes the enquiry, its calls and their history, and replaces the address and name with "[erased]" in the audit rows that name the address; it refuses anything linked to a client, a user or a contract signer. A client's request only opens a "Data deletion request" ticket for the owner. Still no delete for clients, users, tickets or messages, by design, until periods and the procedure are agreed |
+| Erasure | email; since 2026-10-19 (not uploaded) a client can also use "Ask to delete my data" in My account | **built 2026-10-19, not uploaded**: a super admin can erase one prospect's enquiry from the Enquiries drawer by typing its email address (`privacy.php?action=erase_enquiry`). It deletes the enquiry, its calls and their history, and replaces the address and name with "[erased]" in the audit rows that name the address; it refuses anything linked to a client, a user or a contract signer. Not erased, and the dialog says so: Comms threads and messages, the Mailbox, other enquiries from the same address (the dialog counts them; their audit copies and submission IPs are cleared too), backups, and audit rows that name the person without their address (by first name only, say). A client's request only opens a "Data deletion request" ticket for the owner. Still no delete for clients, users, tickets or messages, by design, until periods and the procedure are agreed |
 | Restriction, objection | not mentioned | not offered on the privacy page |
 | Complaint to the ICO | not mentioned | must be stated |
 

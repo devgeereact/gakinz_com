@@ -210,9 +210,12 @@ None of these serves the `client` role, and none is uploaded (`docs/DEPLOYMENT.m
   anything linked to a client, a user or a contract signer is refused with 409 and nothing
   changes. `cron.php job=retention_apply` deletes only old enquiries of the same kind and
   soft-deleted files, only from the command line, and only with `--apply` AND
-  `$RETENTION_APPLY = true` AND the rule's period set. Files are removed through
-  `stored_path()` (`_uploads.php`), so a symlink or directory at a stored name is never
-  followed or removed. No code deletes or anonymises client, project, invoice, proposal,
+  `$RETENTION_APPLY = true` AND the rule's period set. A file is unlinked only by its
+  exact name, only when that name is a plain file directly in `uploads/` (checked with
+  `is_link`, `is_file`, `realpath` and `stored_path()` from `_uploads.php`), so a symlink,
+  even one pointing at another upload, or a directory is never followed or removed. Without
+  a usable `uploads/` folder the files rule does nothing, and files used by Work or a
+  project asset checklist are kept. No code deletes or anonymises client, project, invoice, proposal,
   contract, ticket or user data. A client's "Ask to delete my data" only opens a ticket.
 
 ## 4. Input handling and injection

@@ -95,9 +95,15 @@ php /home/<account>/public_html/cron.php job=retention_apply --apply    # delete
 Kept items are listed by reason: `known_address` (the address is also a client's, a user's or
 a contract signer's), `recent` (the enquiry or a call on it changed within the period),
 `client_call`, `no_email`, `linked_asset` (a project asset checklist points at the file),
-`unsafe_name`, `unsafe_path` (a directory or symlink at that name, left alone),
-`shared_file` and `unlink_failed`. It exits 1 with "Retention apply stopped: SQL error
-<code>" if a query fails; the item in progress is rolled back.
+`linked_work` (a Work cover, hero image or gallery image uses it), `unsafe_name`,
+`unsafe_path` (a symlink, even to another file in `uploads/`, a directory or anything but
+that plain file at that name: left alone and never followed), `shared_file` and
+`unlink_failed`. If `uploads/` is missing or cannot be read and written, the files rule
+reports that and does nothing, so rows are never deleted as "missing". It exits 1 with
+"Retention apply stopped: ..." if anything fails; the item in progress is rolled back, and
+the `retention_apply` audit row still records what was already deleted, with
+`"stopped": true`. If `_erasure.php`, `_retention.php`, `_uploads.php` or `_like.php` is not
+on the server, it exits 1 saying so and deletes nothing.
 
 Whether the cPanel cron entry exists, and whether `$CRON_KEY` is set on the server, is
 **UNVERIFIED**.

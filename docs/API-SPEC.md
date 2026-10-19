@@ -532,7 +532,7 @@ security-critical):
 |---|---|---|
 | `today.php` | GET only, read only, not audited | The union of the roles below; a `client` or `trainer` gets 403. Each section mirrors the endpoint that owns its data and is **omitted** for a role that cannot read it: enquiries, follow-ups and calls as `leads.php` and `bookings.php` (super_admin, admin, manager, editor), tasks and assets as `tasks.php` and `assets.php` (plus employee), invoices as `invoices.php` (super_admin, admin, manager) |
 | `search.php` | GET `?q=`, read only, not audited | The union of the roles below; a `client` or `trainer` gets 403. Clients, enquiries and quotes as `clients.php`, `leads.php` and `proposals.php` (super_admin, admin, manager, editor); projects as `projects.php` (plus employee); invoices as `invoices.php` (super_admin, admin, manager) |
-| `privacy.php` | GET `?action=export&client_id=N` or `&enquiry_email=`, GET `?action=retention_report`, POST `?action=erase_enquiry` | Export: super_admin and admin. Retention report and erase: super_admin |
+| `privacy.php` | GET `?action=export&client_id=N` or `&enquiry_email=`, GET `?action=retention_report`, GET `?action=erase_preview`, POST `?action=erase_enquiry` | Export: super_admin and admin. Retention report and erase: super_admin |
 
 `today.php` returns `{ generated_at, sections }`, where each present section is `{ status:
 "ok", count, items }` or `{ status: "unavailable", count: null, items: [] }`. Sections:
@@ -599,6 +599,12 @@ id, title, secondary, route }` and never carries a note, message, budget or amou
   `known_address`), changing nothing, for an enquiry that was won, that a client was created
   from, that has a call filed against a client, or whose address is also a client's, a
   user's or a contract signer's. Covered by `tests/server/erase-enquiry.test.ts`.
+- `erase_preview` (GET `&id=N`, super_admin, read only) returns `{ id, other_enquiries,
+  blocked, message }`: how many other enquiries use the same address (not erased, but the
+  audit rows naming the address, their submission rows included, are scrubbed too) and the
+  refusal reason, if any, that an erase would give. 400 bad id, 404 unknown enquiry.
+- Both erase routes answer 503 "Not available on this server yet." while `_erasure.php`,
+  `_retention.php`, `_uploads.php` or `_like.php` is missing from the server.
 - Any other GET answers 400 "Unknown action.", any other method 405. Covered by
   `tests/server/privacy.test.ts`.
 
