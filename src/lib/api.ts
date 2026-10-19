@@ -719,6 +719,76 @@ export const projectAssets = {
   supply: (id: number, note: string | null) => api.post<PortalAsset>("/assets.php?action=supply", { id, note }),
 }
 
+// Project brief and agreed measurements (briefs.php, SQL 16; docs/PRODUCT-SPEC.md
+// 6.4 and 6.5). Staff only. Saving sends only the fields that changed: a field
+// left out keeps its value, and null clears it. A measurement is addressed by
+// its id and its project id together. The handoff is a sanitised Markdown file
+// for the GEE OS workflow on the owner's computer. Until SQL 16 runs, every
+// call is 503.
+export const BRIEF_FIELD_MAX = {
+  problem: 2000,
+  intended_users: 1000,
+  agreed_outcome: 2000,
+  deliverables: 4000,
+  exclusions: 2000,
+  quote_reference: 120,
+  milestones_note: 2000,
+  next_action: 500,
+  open_decisions: 2000,
+  handover_checklist: 4000,
+  support_boundaries: 2000,
+  completion_ack_note: 1000,
+} as const
+export type BriefTextField = keyof typeof BRIEF_FIELD_MAX
+export type ProjectBrief = Record<BriefTextField, string | null> & { completion_ack_on: string | null; updated_at: string }
+export type BriefPatch = Partial<Record<BriefTextField | "completion_ack_on", string | null>>
+export const MEASUREMENT_RESULTS = ["PASS", "FAIL", "PARTIAL", "NOT TESTED"] as const
+export type MeasurementResult = (typeof MEASUREMENT_RESULTS)[number]
+export type MeasurementKind = "technical" | "business"
+export const MEASURE_LABEL_MAX = 200
+export const MEASURE_FIELD_MAX = {
+  target: 500,
+  baseline: 500,
+  actual: 500,
+  environment: 200,
+  method: 1000,
+  evidence_location: 500,
+  observation_window: 200,
+} as const
+export type MeasureTextField = keyof typeof MEASURE_FIELD_MAX
+export type Measurement = Record<MeasureTextField, string | null> & {
+  id: number
+  project_id: number
+  label: string
+  result: MeasurementResult
+  measured_on: string | null
+  kind: MeasurementKind
+  created_at: string
+  updated_at: string
+}
+export type MeasurementInput = Partial<Record<MeasureTextField | "measured_on", string | null>> & {
+  label?: string
+  result?: MeasurementResult
+  kind?: MeasurementKind
+}
+export type BriefView = {
+  project: { id: number; name: string; client_id: number | null }
+  brief: ProjectBrief | null
+  measurements: Measurement[]
+}
+export const projectBriefs = {
+  get: (projectId: number) => api.get<BriefView>(`/briefs.php?project_id=${projectId}`),
+  save: (projectId: number, patch: BriefPatch) => api.post<ProjectBrief>("/briefs.php?action=save", { project_id: projectId, ...patch }),
+  createMeasurement: (projectId: number, input: MeasurementInput) =>
+    api.post<Measurement>("/briefs.php?action=measure_create", { ...input, project_id: projectId }),
+  updateMeasurement: (projectId: number, id: number, input: MeasurementInput) =>
+    api.post<Measurement>("/briefs.php?action=measure_update", { ...input, id, project_id: projectId }),
+  removeMeasurement: (projectId: number, id: number) =>
+    api.post<{ ok: boolean }>("/briefs.php?action=measure_delete", { id, project_id: projectId }),
+  // The sanitised GEE OS handoff (Markdown). See server/briefs.php for what it leaves out.
+  handoff: (projectId: number) => api.download(`/briefs.php?action=handoff&project_id=${projectId}`, "text/markdown"),
+}
+
 // Today attention list (server/today.php). Staff only. A section the caller's
 // role cannot read is absent from `sections`; a section whose source failed is
 // `unavailable` with a null count, never an empty zero.
