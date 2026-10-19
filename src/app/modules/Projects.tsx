@@ -38,8 +38,13 @@ import {
   type Task,
   type TaskStatus,
   type Client,
+  type ProjectTemplate,
 } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { createOutcome, createPayload, parseTemplates, templatePreview } from "@/app/modules/projectTemplateModel"
+
+// The Select needs a value for "no template"; createPayload() never sends it.
+const NO_TEMPLATE = "none"
 
 const PROJECT_STATUS: { key: ProjectStatus; label: string }[] = [
   { key: "planning", label: "Planning" },
@@ -82,8 +87,12 @@ export default function Projects() {
   const boardRef = useRef<HTMLDivElement>(null)
 
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ name: "", client_id: "", due_date: "" })
+  const [form, setForm] = useState({ name: "", client_id: "", due_date: "", template: NO_TEMPLATE })
   const [saving, setSaving] = useState(false)
+  // null until loaded, and for good when the server has no templates yet: the picker stays hidden.
+  const [templates, setTemplates] = useState<ProjectTemplate[] | null>(null)
+  const chosenTemplate = templates?.find((t) => t.key === form.template) ?? null
+  const preview = useMemo(() => (chosenTemplate ? templatePreview(chosenTemplate, new Date()) : null), [chosenTemplate])
   // ?project=<id>[&task=<id>|&asset=<id>] opens that project once the list has
   // loaded, and again whenever the link changes or the search re-sends it
   // (useApplyLink). An id that is not in the list leaves the plain screen.
@@ -127,6 +136,7 @@ export default function Projects() {
   useEffect(() => {
     loadProjects()
     clientsApi.list().then((r) => r.ok && setClientList(r.data))
+    projects.templates().then((r) => setTemplates(r.ok ? parseTemplates(r.data) : null))
   }, [])
 
   const createProject = async () => {
@@ -135,15 +145,13 @@ export default function Projects() {
       return
     }
     setSaving(true)
-    const res = await projects.create({
-      name: form.name,
-      client_id: form.client_id ? Number(form.client_id) : null,
-      due_date: form.due_date || undefined,
-    })
+    const res = await projects.create(createPayload(form))
     setSaving(false)
     if (res.ok) {
-      toast.success("Project created.")
-      setForm({ name: "", client_id: "", due_date: "" })
+      const outcome = createOutcome(chosenTemplate, res.data)
+      toast.success(outcome.message)
+      outcome.warnings.forEach((w) => toast.warning(w))
+      setForm({ name: "", client_id: "", due_date: "", template: NO_TEMPLATE })
       setOpen(false)
       loadProjects()
     } else {
@@ -190,7 +198,7 @@ export default function Projects() {
                   <Plus /> New project
                 </Button>
               </DialogTrigger>
-              <DialogContent>
+              <DialogContent className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>New project</DialogTitle>
                 </DialogHeader>
@@ -218,6 +226,58 @@ export default function Projects() {
                     <Label htmlFor="pdue">Due date</Label>
                     <Input id="pdue" type="date" value={form.due_date} onChange={(e) => setForm((f) => ({ ...f, due_date: e.target.value }))} className="mt-1.5" />
                   </div>
+                  {templates && (
+                    <div>
+                      <Label htmlFor="ptemplate">Start from template</Label>
+                      <Select value={form.template} onValueChange={(v) => setForm((f) => ({ ...f, template: v }))}>
+                        <SelectTrigger id="ptemplate" className="mt-1.5">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={NO_TEMPLATE}>No template</SelectItem>
+                          {templates.map((t) => (
+                            <SelectItem key={t.key} value={t.key}>
+                              {t.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {chosenTemplate && preview && (
+                        <section aria-label={`What ${chosenTemplate.name} creates`} className="mt-3 space-y-3 rounded-md border p-3 text-sm">
+                          <p>
+                            {chosenTemplate.summary} <span className="text-muted-foreground">Creates {preview.counts}.</span>
+                          </p>
+                          <div>
+                            <p className="font-medium">Tasks</p>
+                            <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
+                              {preview.tasks.map((t) => (
+                                <li key={t.title}>
+                                  {t.title} <span className="whitespace-nowrap">({t.day}, due {fmt(t.due)})</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div>
+                            <p className="font-medium">Asset checklist</p>
+                            <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
+                              {preview.assets.map((a) => (
+                                <li key={a}>{a}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          <div>
+                            <p className="font-medium">Measurements</p>
+                            <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
+                              {preview.measurements.map((m) => (
+                                <li key={m}>{m}</li>
+                              ))}
+                            </ul>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{preview.note}</p>
+                        </section>
+                      )}
+                    </div>
+                  )}
                 </div>
                 <DialogFooter>
                   <Button onClick={createProject} disabled={saving}>
