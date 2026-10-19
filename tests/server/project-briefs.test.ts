@@ -194,6 +194,19 @@ describe("project brief and measurements", () => {
       expect(tech.json).toMatchObject({ kind: "technical", observation_window: null })
     })
 
+    it("stops at 50 live measurements on a project with 409, and counts only live ones", async () => {
+      const rows = Array.from({ length: 50 }, (_, i) => `(${projectA}, 'Check ${i + 1}')`).join(", ")
+      sql(`INSERT INTO project_measurements (project_id, label) VALUES ${rows}`)
+      const full = await measure("measure_create", { project_id: projectA, label: "One too many" })
+      expect(full.status).toBe(409)
+      expect(full.json.error).toBe("A project can hold up to 50 measurements.")
+      expect(Number(one(`SELECT COUNT(*) FROM project_measurements WHERE project_id = ${projectA}`))).toBe(50)
+      // Other projects are not affected, and a removed measurement frees a place.
+      expect((await measure("measure_create", { project_id: projectB, label: "Elsewhere" })).status).toBe(201)
+      sql(`UPDATE project_measurements SET deleted_at = NOW() WHERE project_id = ${projectA} ORDER BY id LIMIT 1`)
+      expect((await measure("measure_create", { project_id: projectA, label: "Now it fits" })).status).toBe(201)
+    })
+
     it("refuses to edit or delete a measurement through another project's id", async () => {
       const m = await measure("measure_create", { project_id: projectA, label: "Pages agreed", target: "Five pages" })
       const id = m.json.id
@@ -244,6 +257,23 @@ describe("project brief and measurements", () => {
       } finally {
         sql(`RENAME TABLE project_briefs_parked TO project_briefs`)
       }
+    })
+
+    it("answers 503 on the measurement routes when only project_measurements is missing", async () => {
+      const m = await measure("measure_create", { project_id: projectA, label: "Pages agreed" })
+      sql(`RENAME TABLE project_measurements TO project_measurements_parked`)
+      try {
+        expect((await measure("measure_create", { project_id: projectA, label: "Form sends" })).status).toBe(503)
+        expect((await measure("measure_update", { id: m.json.id, project_id: projectA, result: "PASS" })).status).toBe(503)
+        const del = await measure("measure_delete", { id: m.json.id, project_id: projectA })
+        expect(del.status).toBe(503)
+        expect(del.json.error).toContain("SQL 16")
+        expect((await view(projectA)).status).toBe(503)
+        expect((await handoff(projectA)).status).toBe(503)
+      } finally {
+        sql(`RENAME TABLE project_measurements_parked TO project_measurements`)
+      }
+      expect(one(`SELECT result FROM project_measurements WHERE id = ${m.json.id}`)).toBe("NOT TESTED")
     })
   })
 
@@ -327,13 +357,33 @@ describe("project brief and measurements", () => {
         deliverables: `Homepage for ${CLIENT.contact.toUpperCase()}, call ${CLIENT.phone}`,
         open_decisions: "Ask someone@else.example.test about hosting",
       })
-      await measure("measure_create", { project_id: projectA, label: "Staging reachable", evidence_location: "https://deploy:hunter2@staging.example.test/report" })
+      await measure("measure_create", { project_id: projectA, label: "Staging reachable", evidence_location: "https://deploy:hunter2@staging.example.test/report?token=abc123&u=7#row-4" })
       const md = raw(await handoff(projectA))
       expect(md).toContain("- Project name: \\[client detail removed\\] relaunch")
       expect(md).toContain("Homepage for \\[client detail removed\\], call \\[client detail removed\\]")
       expect(md).toContain("Ask \\[email removed\\] about hosting")
-      expect(md).toContain("https://\\[credentials removed\\]@staging.example.test/report")
-      for (const gone of ["Pemberton", "PEMBERTON", CLIENT.phone, "someone@else", "hunter2"]) expect(md).not.toContain(gone)
+      expect(md).toContain("- Staging reachable: https://staging.example.test/report\n")
+      for (const gone of ["Pemberton", "PEMBERTON", CLIENT.phone, "someone@else", "hunter2", "deploy", "token", "abc123", "row-4"]) expect(md).not.toContain(gone)
+    })
+
+    it("removes the client's phone in any common format", async () => {
+      const formats = ["07700900123", "07700-900-123", "(07700) 900 123", "+44 7700 900123", "+44 (0)7700 900 123", "0044 7700 900123", "+447700900123", "07700.900.123"]
+      await save({ project_id: projectA, open_decisions: formats.map((f) => `Call ${f} today`).join("\n") })
+      const md = raw(await handoff(projectA))
+      for (const f of formats) expect(md).not.toContain(f)
+      expect(md).not.toMatch(/7700/)
+      expect(md.match(/Call \\\[client detail removed\\\] today/g)).toHaveLength(formats.length)
+      // Another number that only shares some digits is left as typed.
+      await save({ project_id: projectA, open_decisions: "Call 07700 900124 today" })
+      expect(raw(await handoff(projectA))).toContain("Call 07700 900124 today")
+    })
+
+    it("matches client names as whole words only, so a short name inside a longer word survives", async () => {
+      sql(`UPDATE clients SET company = 'Ann', contact_name = 'Bo', email = 'ann@example.test' WHERE id = ${clientId}`)
+      await save({ project_id: projectA, deliverables: "Annual planning for Ann, and a page for ANN's banner with Bo and Bob" })
+      const md = raw(await handoff(projectA))
+      // "Ann" goes as a word in any case; "Annual", "planning" and "banner" stay. "Bo" is under 3 characters, so it is kept.
+      expect(md).toContain("Annual planning for \\[client detail removed\\], and a page for \\[client detail removed\\]'s banner with Bo and Bob")
     })
 
     it("escapes Markdown and HTML in staff text so it cannot add headings, links, tags or tables", async () => {
