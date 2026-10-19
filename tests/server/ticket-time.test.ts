@@ -142,11 +142,11 @@ describe("log_time", () => {
     expect(count("time_entries")).toBe(0)
   })
 
-  it("refuses a ticket whose client has been removed, like a missing ticket", async () => {
+  it("refuses a ticket whose client has been removed with a 409 that says so", async () => {
     sql(`UPDATE clients SET deleted_at = NOW() WHERE id = ${clientId}`)
     const r = await logTime({ id: ticketId, minutes: 30 })
-    expect(r.status).toBe(404)
-    expect(r.json.error).toBe("Ticket not found.")
+    expect(r.status).toBe(409)
+    expect(r.json.error).toBe("This ticket's client was removed.")
     expect(count("projects")).toBe(0)
     expect(count("time_entries")).toBe(0)
   })

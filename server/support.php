@@ -419,13 +419,14 @@ if ($method === 'POST' && $action === 'log_time') {
   $created = false;
   $conn->begin_transaction();
   try {
-    // A removed client cannot be billed: its tickets answer like a missing one.
+    // A removed client cannot be billed. The ticket itself is real (staff
+    // just opened it), so say what is wrong rather than calling it missing.
     $lock = $conn->prepare('SELECT id FROM clients WHERE id = ? AND deleted_at IS NULL FOR UPDATE');
     $lock->bind_param('i', $clientId);
     $found = $run($lock)->get_result()->fetch_assoc();
     if (!$found) {
       $conn->rollback();
-      fail('Ticket not found.', 404);
+      fail('This ticket\'s client was removed.', 409);
     }
     $kind = IT_SUPPORT_KIND;
     $p = $conn->prepare('SELECT id FROM projects WHERE client_id = ? AND kind = ? AND deleted_at IS NULL ORDER BY id ASC LIMIT 1 FOR UPDATE');
