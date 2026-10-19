@@ -6,6 +6,7 @@
  *   GET  /support.php?id=N          → ticket with its replies
  *   POST /support.php?action=create   {subject, body?, client_id?, priority?}
  *   POST /support.php?action=update_request {question, project_id?}   (client only)
+ *   POST /support.php?action=deletion_request {}       (client only)
  *   POST /support.php?action=status   {id, status}
  *   POST /support.php?action=priority {id, priority}
  *   POST /support.php?action=assign   {id, assignee_id}
@@ -25,6 +26,13 @@
  * in Support like any other. tickets has no project link, so a chosen project
  * is named in the body, and only after it is proven to belong to the caller's
  * client; any other project answers 404 exactly like a missing one.
+ *
+ * A client asks for their data to be deleted with action=deletion_request
+ * (docs/PRIVACY-READINESS.md section 7). It takes no input: the subject and
+ * body are fixed here, and it creates an ordinary ticket "Data deletion
+ * request" that the owner handles by hand in Support. Nothing is deleted.
+ * A client has at most one such ticket that is not resolved; another request
+ * while one is open answers 409.
  *
  * IT support time (SQL 17, docs/PRODUCT-SPEC.md sections 6.4 and 7). Staff log
  * time from a ticket with action=log_time. The entry goes onto the client's
@@ -47,6 +55,10 @@ const STAFF_OR_CLIENT = ['super_admin', 'admin', 'manager', 'editor', 'employee'
 const STATUSES = ['open', 'in_progress', 'resolved'];
 const PRIORITIES = ['urgent', 'high', 'normal', 'low'];
 const UPDATE_PREFIX = 'Update request: ';
+const DELETION_SUBJECT = 'Data deletion request';
+const DELETION_BODY = "Please delete the personal data GAkinz holds about me and my account.\n\n"
+  . "Sent from My account in the client portal. Nothing has been deleted yet: GAkinz will reply to the email "
+  . "address on this account to confirm who is asking, what will be deleted, and what may need to be kept, and why.";
 const IT_SUPPORT_KIND = 'it_support';
 const IT_SUPPORT_NAME = 'IT support';
 
@@ -133,7 +145,7 @@ $action = $_GET['action'] ?? '';
 // ── Client branch ─────────────────────────────────────────────────────────────
 // Handled first and always ends the request, so no client request can reach
 // the staff branches below.
-if (in_array($method, ['GET', 'POST'], true) && ($action === '' || in_array($action, ['create', 'reply', 'update_request'], true))) {
+if (in_array($method, ['GET', 'POST'], true) && ($action === '' || in_array($action, ['create', 'reply', 'update_request', 'deletion_request'], true))) {
   $user = require_auth($conn, STAFF_OR_CLIENT);
 } else {
   $user = require_auth($conn, STAFF);
@@ -228,6 +240,39 @@ if ($user['role'] === 'client') {
     $newId = $conn->insert_id; // read before audit(), which inserts its own row
     audit($conn, $user['id'], 'ticket_update_request', "#$newId (client)" . ($project ? ' project #' . (int)$project['id'] : ''));
     ok(['id' => $newId, 'subject' => $subject], 201);
+  }
+
+  if ($method === 'POST' && $action === 'deletion_request') {
+    // Fixed text, so nothing from the request reaches the ticket. The client
+    // row is locked for the check and the insert, so two requests at once
+    // still make one ticket.
+    $conn->begin_transaction();
+    try {
+      $lock = $conn->prepare('SELECT id FROM clients WHERE id = ? FOR UPDATE');
+      $lock->bind_param('i', $clientId);
+      $lock->execute();
+      if (!$lock->get_result()->fetch_assoc()) { $conn->rollback(); fail('Your account is not linked to a client.', 403); }
+      $open = $conn->prepare("SELECT id FROM tickets WHERE client_id = ? AND subject = ? AND status <> 'resolved' AND deleted_at IS NULL LIMIT 1");
+      $subject = DELETION_SUBJECT;
+      $open->bind_param('is', $clientId, $subject);
+      $open->execute();
+      if ($open->get_result()->fetch_assoc()) {
+        $conn->rollback();
+        fail('You already have a data deletion request open. GAkinz will reply to it.', 409);
+      }
+      $bodyText = DELETION_BODY;
+      $stmt = $conn->prepare("INSERT INTO tickets (client_id, subject, body, priority) VALUES (?, ?, ?, 'normal')");
+      $stmt->bind_param('iss', $clientId, $subject, $bodyText);
+      $stmt->execute();
+      $newId = $conn->insert_id; // read before audit(), which inserts its own row
+      audit($conn, $user['id'], 'ticket_deletion_request', "#$newId (client)");
+      $conn->commit();
+    } catch (mysqli_sql_exception $e) {
+      $conn->rollback();
+      error_log('support.php deletion_request: SQL error ' . $e->getCode());
+      fail('Could not send your request.', 500);
+    }
+    ok(['id' => $newId, 'subject' => DELETION_SUBJECT], 201);
   }
 
   if ($method === 'POST' && $action === 'reply') {
