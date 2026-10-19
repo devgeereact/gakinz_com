@@ -6,10 +6,22 @@
  * admin only and audited. The report must count, and never change, anything.
  */
 import { spawnSync } from "node:child_process"
+import fs from "node:fs"
 import path from "node:path"
-import { beforeEach, describe, expect, it } from "vitest"
+import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { WORK_DIR } from "./env"
 import { api, createClient, createUser, login, one, q, resetDb, sql, tokenHash } from "./helpers"
+
+/** Config overrides read by the synthetic config.php (tests/server/global-setup.ts). */
+const OVERRIDES = path.join(WORK_DIR, "overrides.json")
+function setOverrides(values: Record<string, unknown>): void {
+  fs.writeFileSync(OVERRIDES, JSON.stringify(values))
+}
+const PERIOD_KEYS = [
+  "RETENTION_ENQUIRY_MONTHS", "RETENTION_CLIENT_MONTHS", "RETENTION_INVOICE_MONTHS", "RETENTION_AUDIT_MONTHS",
+  "RETENTION_SUPPORT_MONTHS", "RETENTION_COMMS_MONTHS", "RETENTION_STAFF_MONTHS", "RETENTION_CERTIFICATE_MONTHS",
+  "RETENTION_DELETED_FILE_DAYS",
+]
 
 type Export = {
   about: { subject: Record<string, unknown>; excluded: string[]; unavailable: string[] }
@@ -154,11 +166,14 @@ describe("privacy export", () => {
   it("refuses every role but super_admin and admin, and an unknown or invalid subject", async () => {
     createUser({ email: "manager@example.test", role: "manager" })
     createUser({ email: "editor@example.test", role: "editor" })
+    createUser({ email: "employee@example.test", role: "employee" })
+    createUser({ email: "trainer@example.test", role: "trainer" })
     createUser({ email: "owner@example.test", role: "super_admin" })
     const path = `privacy.php?action=export&client_id=${a.clientId}`
     expect((await api(path)).status).toBe(401)
-    expect((await api(path, { token: await login("manager@example.test") })).status).toBe(403)
-    expect((await api(path, { token: await login("editor@example.test") })).status).toBe(403)
+    for (const who of ["manager", "editor", "employee", "trainer"]) {
+      expect((await api(path, { token: await login(`${who}@example.test`) })).status).toBe(403)
+    }
     expect((await api(path, { token: portalToken })).status).toBe(403)
     expect((await api(path, { token: await login("owner@example.test") })).status).toBe(200)
 
@@ -170,6 +185,47 @@ describe("privacy export", () => {
     expect((await api("privacy.php?action=export&enquiry_email=nobody@example.test", { token: admin })).status).toBe(404)
     expect((await api("privacy.php?action=export", { token: admin, body: {} })).status).toBe(405)
     expect(one("SELECT COUNT(*) FROM audit_log WHERE action = 'privacy_export'")).toBe("1")
+  })
+
+  it("includes audit rows that name the client, its logins or its enquiry by id or company, and no near miss", async () => {
+    const C = a.clientId, U = a.userId, E = a.enquiryId
+    const mine: Array<[string, string]> = [
+      ["client_update", `#${C}`],
+      ["lead_convert", `lead #${E} → client #${C}`],
+      ["client_create", "Alpha Ltd"],
+      ["user_status", `#${U} → suspended`],
+      ["user_role", `#${U} → client`],
+      ["lead_status", `#${E} → won`],
+    ]
+    const notMine: Array<[string, string]> = [
+      ["client_update", `#${C}7`],
+      ["lead_convert", `lead #9999 → client #${C}3`],
+      ["client_create", "Alpha Ltd Two"],
+      ["user_status", `#${U}8 → suspended`],
+      ["lead_status", `#${E}6 → lost`],
+      ["client_update", `#${b.clientId}`],
+      ["session_revoke", `#${U}`],
+    ]
+    sql(`INSERT INTO audit_log (action, detail) VALUES ${[...mine, ...notMine].map(([act, d]) => `(${q(act)}, ${q(d)})`).join(", ")}`)
+
+    const r = await api<Export>(`privacy.php?action=export&client_id=${C}`, { token: admin })
+    const got = rows(r.json, "audit_log").map((x) => `${x.action} ${x.detail}`)
+    for (const [act, d] of mine) expect(got).toContain(`${act} ${d}`)
+    for (const [act, d] of notMine) expect(got).not.toContain(`${act} ${d}`)
+  })
+
+  it("matches a client_create row by company only when no other client has that name", async () => {
+    createClient("alpha ltd", "twin@example.test")
+    sql("INSERT INTO audit_log (action, detail) VALUES ('client_create', 'Alpha Ltd')")
+    const r = await api<Export>(`privacy.php?action=export&client_id=${a.clientId}`, { token: admin })
+    expect(rows(r.json, "audit_log").map((x) => x.action)).not.toContain("client_create")
+  })
+
+  it("includes a conversation filed against one of the client's projects", async () => {
+    sql(`INSERT INTO comm_threads (subject, project_id) VALUES ('Alpha project thread', ${a.projectId})`)
+    sql(`INSERT INTO comm_threads (subject, project_id) VALUES ('Other project thread', (SELECT id FROM projects WHERE client_id = ${b.clientId}))`)
+    const r = await api<Export>(`privacy.php?action=export&client_id=${a.clientId}`, { token: admin })
+    expect(rows(r.json, "comm_threads").map((x) => x.subject)).toEqual(["Alpha thread", "Alpha project thread"])
   })
 
   it("audits who exported whom without copying the exported content", async () => {
@@ -209,6 +265,7 @@ describe("privacy export", () => {
 
 describe("retention dry run", () => {
   let owner: string
+  afterEach(() => fs.rmSync(OVERRIDES, { force: true }))
 
   beforeEach(async () => {
     resetDb()
@@ -240,6 +297,55 @@ describe("retention dry run", () => {
       expect(rule(k)).toMatchObject({ status: "period_not_set", period: null, counts: null })
     }
     expect(rule("audit").config_key).toBe("$RETENTION_AUDIT_MONTHS")
+    expect(snapshot()).toBe(before)
+  })
+
+  it("counts every rule once every period is set, including a client's projects and contracts", async () => {
+    sql(`INSERT INTO clients (company, created_at, updated_at) VALUES ('Idle Ltd', NOW() - INTERVAL 3 YEAR, NOW() - INTERVAL 3 YEAR)`)
+    const idle = one("SELECT id FROM clients WHERE company = 'Idle Ltd'")
+    sql(`INSERT INTO projects (client_id, name, updated_at) VALUES (${idle}, 'Old site', NOW() - INTERVAL 3 YEAR)`)
+    sql(`INSERT INTO contracts (client_id, title) VALUES (${idle}, 'Old agreement')`)
+    // A busy client: its own row is old, but a project changed this month.
+    sql(`INSERT INTO clients (company, updated_at) VALUES ('Busy Ltd', NOW() - INTERVAL 3 YEAR)`)
+    sql(`INSERT INTO projects (client_id, name) VALUES ((SELECT id FROM clients WHERE company = 'Busy Ltd'), 'Live site')`)
+    setOverrides(Object.fromEntries(PERIOD_KEYS.map((k) => [k, k === "RETENTION_DELETED_FILE_DAYS" ? 30 : 12])))
+
+    const before = snapshot()
+    const r = await api<Report>("privacy.php?action=retention_report", { token: owner })
+    expect(r.status).toBe(200)
+    expect(r.json.rules).toHaveLength(PERIOD_KEYS.length)
+    for (const rule of r.json.rules) {
+      expect(rule.status).toBe("counted")
+      expect(Object.keys(rule.counts!).length).toBeGreaterThan(0)
+      for (const n of Object.values(rule.counts!)) expect(typeof n).toBe("number")
+    }
+    const clients = r.json.rules.find((x) => x.key === "clients")!
+    expect(clients.counts).toEqual({ clients: 1, projects: 1, contracts: 1 })
+    expect(r.json.rules.find((x) => x.key === "audit")!.counts).toEqual({ audit_log: 1 })
+
+    const cli = spawnSync("php", [path.join(WORK_DIR, "cron.php"), "job=retention_report"], { encoding: "utf8" })
+    expect(cli.status).toBe(0)
+    expect(cli.stdout).not.toContain("period not set")
+    expect(cli.stdout).toContain("Client, project and contract records: older than 12 months from last change to the client, its projects, invoices or portal messages: clients 1, projects 1, contracts 1.")
+    expect(snapshot()).toBe(before)
+  })
+
+  it("reports an invalid period and counts nothing for it", async () => {
+    setOverrides({ RETENTION_AUDIT_MONTHS: "twelve", RETENTION_CERTIFICATE_MONTHS: 0 })
+    const r = await api<Report>("privacy.php?action=retention_report", { token: owner })
+    for (const k of ["audit", "certificates"]) {
+      expect(r.json.rules.find((x) => x.key === k)).toMatchObject({ status: "invalid_period", period: null, counts: null })
+    }
+    const cli = spawnSync("php", [path.join(WORK_DIR, "cron.php"), "job=retention_report"], { encoding: "utf8" })
+    expect(cli.stdout).toContain("Audit log: invalid period in $RETENTION_AUDIT_MONTHS. Use a whole number or null. Nothing counted.")
+  })
+
+  it("refuses retention_report over the web even with the cron key", async () => {
+    setOverrides({ CRON_KEY: "synthetic-cron-key-only" })
+    const before = snapshot()
+    const r = await api<{ error?: string }>("cron.php?key=synthetic-cron-key-only&job=retention_report")
+    expect(r.status).toBe(400)
+    expect(r.json.error).toBe("retention_report runs from the command line only.")
     expect(snapshot()).toBe(before)
   })
 

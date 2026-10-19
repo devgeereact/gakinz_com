@@ -61,6 +61,11 @@ $RETENTION_ENQUIRY_MONTHS = 12; $RETENTION_DELETED_FILE_DAYS = 30;
 $RETENTION_CLIENT_MONTHS = null; $RETENTION_INVOICE_MONTHS = null; $RETENTION_AUDIT_MONTHS = null;
 $RETENTION_SUPPORT_MONTHS = null; $RETENTION_COMMS_MONTHS = null; $RETENTION_STAFF_MONTHS = null;
 $RETENTION_CERTIFICATE_MONTHS = null;
+// Test only: a test may write overrides.json beside this file to change config
+// globals for its own requests (privacy.test.ts sets every retention period,
+// an invalid one and a cron key), and removes it afterwards.
+$__gk_over = @json_decode((string)@file_get_contents(__DIR__ . '/overrides.json'), true);
+if (is_array($__gk_over)) foreach ($__gk_over as $__k => $__v) $GLOBALS[$__k] = $__v;
 $conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 if ($conn->connect_errno) { http_response_code(500); echo json_encode(['error' => 'Test database connection failed']); exit; }
 $conn->set_charset('utf8mb4');
