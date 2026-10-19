@@ -187,6 +187,93 @@ describe("service pages", () => {
   })
 })
 
+describe("business and social links", () => {
+  const BUSINESS = {
+    email: "  hello@example.test ",
+    phone: "+44 20 7946 0000",
+    address: ["1 Example Street", "London"],
+    hours: "Monday to Friday, 9am to 5pm",
+    social: [
+      { platform: "linkedin", url: "https://www.linkedin.com/in/example", label: "LinkedIn" },
+      { platform: "github", url: "https://github.com/example" },
+    ],
+  }
+  const bad = async (data: unknown, pattern: RegExp) => {
+    const r = await save("business", data)
+    expect(r.status, JSON.stringify(data)).toBe(400)
+    expect(String(r.json.error)).toMatch(pattern)
+  }
+
+  it("stores a full record trimmed, and a record with every field left out", async () => {
+    const r = await save("business", BUSINESS)
+    expect(r.status).toBe(200)
+    expect(r.json.draft).toEqual({ ...BUSINESS, email: "hello@example.test" })
+    expect((await save("business", {})).status).toBe(200)
+    expect(one("SELECT COUNT(*) FROM audit_log WHERE action = 'site_save'")).toBe("2")
+  })
+
+  it("accepts only https profile addresses on a listed platform", async () => {
+    const profile = (p: object) => ({ social: [{ platform: "x", url: "https://x.com/example", ...p }] })
+    await bad(profile({ url: "http://x.com/example" }), /https/)
+    await bad(profile({ url: "javascript:alert(1)" }), /https/)
+    await bad(profile({ url: "//x.com/example" }), /https/)
+    await bad(profile({ url: "https://user:pw@x.com/example" }), /https/)
+    await bad(profile({ url: "https://x.com/exa mple" }), /https/)
+    await bad(profile({ url: "https://localhost/example" }), /https/)
+    await bad(profile({ platform: "myspace" }), /one of: linkedin/)
+    await bad(profile({ url: "https://x.com/" + "a".repeat(300) }), /300 characters/)
+    await bad(profile({ label: "x".repeat(61) }), /60 characters/)
+    await bad(profile({ extra: 1 }), /unknown field/)
+    await bad({ social: [] }, /at least one profile/)
+    await bad({ social: { platform: "x" } }, /list of profiles/)
+    await bad({ social: Array.from({ length: 11 }, (_, i) => ({ platform: "x", url: `https://x.com/u${i}` })) }, /at most 10/)
+    await bad({ social: [{ platform: "x", url: "https://x.com/a" }, { platform: "x", url: "https://X.com/a" }] }, /already listed/)
+    expect(one("SELECT COUNT(*) FROM site_content")).toBe("0")
+  })
+
+  it("refuses a bad email, phone, address and over-long note", async () => {
+    await bad({ email: "nope" }, /valid email/)
+    await bad({ phone: "call me" }, /phone number/)
+    await bad({ phone: "12345" }, /phone number/)
+    await bad({ phone: "+" + "1".repeat(30) }, /phone number/)
+    await bad({ address: [] }, /at least one line/)
+    await bad({ address: ["a", "b", "c", "d", "e"] }, /at most 4/)
+    await bad({ address: ["ok", ""] }, /cannot be empty/)
+    await bad({ hours: "x".repeat(301) }, /300 characters/)
+    await bad({ twitter: "x" }, /unknown field/)
+    await bad([BUSINESS], /must be an object/)
+  })
+
+  it("is private until published, then public, and a later draft stays private", async () => {
+    await save("business", BUSINESS)
+    expect((await api("site.php?action=get")).json).toEqual({})
+    expect((await publish(["business"])).status).toBe(200)
+    const pub = await api<{ business: { phone: string; social: unknown[] } }>("site.php?action=get")
+    expect(pub.json.business.phone).toBe("+44 20 7946 0000")
+    expect(pub.json.business.social).toHaveLength(2)
+
+    await save("business", { phone: "020 7946 0001" })
+    expect((await api<{ business: { phone: string } }>("site.php?action=get")).json.business.phone).toBe("+44 20 7946 0000")
+    const staff = await api<{ business: { draft: { phone: string }; published: { phone: string } } }>("site.php?action=draft", { token: editor })
+    expect(staff.json.business.draft.phone).toBe("020 7946 0001")
+  })
+
+  it("will not publish a stored draft that no longer passes (a hand-edited http profile)", async () => {
+    await save("business", BUSINESS)
+    sql(`UPDATE site_content SET draft = '{"social":[{"platform":"x","url":"http://x.com/a"}]}' WHERE section = 'business'`)
+    const r = await publish(["business"])
+    expect(r.status).toBe(400)
+    expect(one("SELECT published IS NULL FROM site_content WHERE section = 'business'")).toBe("1")
+  })
+
+  it("refuses a client login and a signed-out caller", async () => {
+    createUser({ email: "client@example.test", role: "client" })
+    const client = await login("client@example.test")
+    expect((await save("business", BUSINESS, client)).status).toBe(403)
+    expect((await api("site.php?action=save", { body: { section: "business", data: BUSINESS } })).status).toBe(401)
+  })
+})
+
 describe("roles", () => {
   it("refuses client and employee roles, and signed-out callers, on every staff action", async () => {
     createUser({ email: "staff@example.test", role: "employee" })

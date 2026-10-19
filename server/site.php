@@ -27,6 +27,11 @@
  * or not at all (detail stays optional), so a published service is either a
  * whole page or, as every row saved before this change, a title and summary
  * that edit a built-in service. Slugs are unique within the list.
+ *
+ * Business (2026-10-19): the `business` section holds the public email, phone,
+ * address lines, opening note and social profiles. Every field is optional. A
+ * profile is a platform from a fixed list and an https address, so structured
+ * data can trust what it reads.
  */
 require __DIR__ . '/_bootstrap.php';
 
@@ -38,13 +43,20 @@ const SHORT = 300;
 const LONG = 1200;
 const SERVICE_LIST_MAX = 10;
 const SERVICE_GROUPS = ['websites', 'it'];
+const SOCIAL_PLATFORMS = ['linkedin', 'instagram', 'facebook', 'x', 'youtube', 'tiktok', 'github'];
+const SOCIAL_MAX = 10;
+const ADDRESS_MAX_LINES = 4;
+const URL_MAX = 300;
 
 /**
  * The allow-list of sections and their shapes.
  * `type` is 'object' (one record) or 'list' (1..MAX_ROWS records). Each field is
  * [kind, max-or-range, required]: kind is 'str', 'email', 'int', 'bool',
  * 'slug' (lower-case words joined by single hyphens), 'enum' (one of a list) or
- * 'strlist' (1..SERVICE_LIST_MAX non-empty lines of at most SHORT characters).
+ * 'strlist' (1..limit non-empty lines of at most SHORT characters),
+ * 'phone' (digits with an optional leading +, spaces, brackets and hyphens),
+ * 'url' (an https address with a host, no credentials, no spaces) and
+ * 'sociallist' (1..SOCIAL_MAX profiles of platform, https url and optional label).
  * `together` names optional fields that must all be present once any one is.
  * `unique` names a field no two rows may share.
  */
@@ -95,6 +107,23 @@ const SECTIONS = [
     'reply' => ['str', SHORT, true],
     'footer' => ['str', LONG, true],
   ]],
+  // Business and social links (2026-10-19, spec 4.4): the public details shown
+  // in the header, footer, About, legal pages and structured data. Every field
+  // is optional; one left out falls back to the site's built-in value.
+  'business' => ['type' => 'object', 'fields' => [
+    'email' => ['email', 200, false],
+    'phone' => ['phone', 30, false],
+    'address' => ['strlist', ADDRESS_MAX_LINES, false],
+    'hours' => ['str', SHORT, false],
+    'social' => ['sociallist', SOCIAL_MAX, false],
+  ]],
+];
+
+/** Fields of one social profile. */
+const SOCIAL_FIELDS = [
+  'platform' => ['enum', SOCIAL_PLATFORMS, true],
+  'url' => ['url', URL_MAX, true],
+  'label' => ['str', 60, false],
 ];
 
 /** True for a PHP array that came from a JSON array rather than a JSON object. */
@@ -150,6 +179,43 @@ function clean_record($rec, array $fields, string $where): array {
         break;
       case 'enum':
         if (!is_string($v) || !in_array($v, $limit, true)) fail("$label must be one of: " . implode(', ', $limit) . '.');
+        break;
+      case 'phone':
+        if (!is_string($v)) fail("$label must be text.");
+        $v = trim($v);
+        if ($v === '') continue 2;
+        if (strlen($v) > $limit || !preg_match('/^\+?[0-9][0-9 ()\-]*$/', $v) || preg_match_all('/[0-9]/', $v) < 7) {
+          fail("$label must be a phone number of 7 or more digits, using only digits, spaces, brackets and hyphens, with an optional leading +.");
+        }
+        break;
+      case 'url':
+        if (!is_string($v)) fail("$label must be text.");
+        $v = trim($v);
+        if ($v === '') {
+          if ($required) fail("$label cannot be empty.");
+          continue 2;
+        }
+        if (strlen($v) > $limit) fail("$label must be $limit characters or fewer.");
+        $parts = preg_match('/\s/', $v) ? false : parse_url($v);
+        if (!$parts || strtolower($parts['scheme'] ?? '') !== 'https' || empty($parts['host']) || isset($parts['user']) || isset($parts['pass'])
+            || !filter_var($v, FILTER_VALIDATE_URL) || !str_contains($parts['host'], '.')) {
+          fail("$label must be a full https:// address, with no sign-in details.");
+        }
+        break;
+      case 'sociallist':
+        if (!is_array($v) || !is_list_array($v)) fail("$label must be a list of profiles.");
+        if (count($v) < 1) fail("$label needs at least one profile, or leave it out.");
+        if (count($v) > $limit) fail("$label can hold at most $limit profiles.");
+        $profiles = [];
+        $urls = [];
+        foreach ($v as $j => $profile) {
+          $p = clean_record($profile, SOCIAL_FIELDS, $label . '[' . ($j + 1) . ']');
+          $key = strtolower($p['url']);
+          if (isset($urls[$key])) fail($label . '[' . ($j + 1) . '].url is already listed.');
+          $urls[$key] = true;
+          $profiles[] = $p;
+        }
+        $v = $profiles;
         break;
       case 'strlist':
         if (!is_array($v) || !is_list_array($v)) fail("$label must be a list of lines.");
