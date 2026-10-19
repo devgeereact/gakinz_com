@@ -93,23 +93,58 @@ export const site = {
 
 // ── What I do ───────────────────────────────────────────────────────────────
 
+/** The two groups the six services sit in (D-038). */
+export type ServiceGroup = "websites" | "it"
+
+export const SERVICE_GROUPS: { key: ServiceGroup; label: string }[] = [
+  { key: "websites", label: "Websites" },
+  { key: "it", label: "IT support" },
+]
+
+/**
+ * One service (docs/PRODUCT-SPEC.md 4.2 and 4.3). Every field is shown on the
+ * service's own page, so none may be invented: the hook is the spec's draft
+ * hook, needs reuse the sector needs below or the spec's typical jobs, and a
+ * price appears only where the spec ties one of the existing package prices
+ * to the service. The two IT services have no approved price, so they say
+ * "Priced per job, ask for a quote". Coverage, area and response times are
+ * left out until the owner confirms them.
+ */
 export type ServiceCategory = {
   slug: string
+  group: ServiceGroup
   title: string
-  /** One line. Appears in the index and the navigation. */
+  /** The buyer hook, spec 4.3. Leads the service's own page. */
+  hook: string
+  /** One line. Appears in the index, the home page and as the page description. */
   summary: string
   /** Two or three sentences on the page itself. */
   detail: string
+  /** Typical business needs the service answers. */
+  needs: string[]
   deliverables: string[]
+  /** What the service does not cover. */
+  exclusions: string[]
+  /** How the service is priced. */
+  price_basis: string
 }
+
+/** Said by every service without an approved price (spec 4.3). */
+export const QUOTE_ONLY = "Priced per job, ask for a quote."
+
+/** Networking and hardware repair are never offered (D-038). This line is the only place they appear. */
+export const IT_EXCLUSION = "Networking installation and hardware repair are not offered."
 
 export const services: ServiceCategory[] = [
   {
     slug: "web-design",
+    group: "websites",
     title: "Web design",
+    hook: "Help customers understand what you do and how to enquire.",
     summary: "Layout, type and the order of the argument, decided against your content.",
     detail:
       "I design against your actual content, not a template that happens to be free. You see real screens in a browser rather than a mood board, and you sign off on the look before I write a line of code. The reasoning behind a layout matters as much as the layout, so I tell you why a page is ordered the way it is.",
+    needs: ["Plain-language service pages", "An obvious way to enquire", "A first impression that holds up", "Right on a phone, first"],
     deliverables: [
       "A short discovery conversation and a written brief",
       "Wireframes for the pages that carry the work",
@@ -117,13 +152,18 @@ export const services: ServiceCategory[] = [
       "A design system you can extend later",
       "Layouts that hold from a phone to a wide screen",
     ],
+    exclusions: ["Copywriting, unless you add it at £350 a page", "A brand mark and basic identity, unless you add it at £600"],
+    price_basis: "Part of every website package, from £1,500 for Starter.",
   },
   {
     slug: "web-development",
+    group: "websites",
     title: "Web development",
+    hook: "A website you can keep using and updating after launch.",
     summary: "I build what I drew. Hand-written, standards-based, and yours to edit.",
     detail:
       "The same person carries the work from design into code, so nothing is lost in a handover. No page builder, no bought theme, nothing you cannot read six months later. I test on real devices and hand over a site you can actually run.",
+    needs: ["Content the team updates itself", "Room to grow the site later", "Accessible to people using assistive technology"],
     deliverables: [
       "A hand-built, standards-based front end",
       "Content management you can operate without me",
@@ -131,13 +171,18 @@ export const services: ServiceCategory[] = [
       "Testing across browsers and on real devices",
       "Documentation and a handover session",
     ],
+    exclusions: ["Pages beyond your package, at £180 per page", "A system rather than a website, which is quoted separately as Bespoke"],
+    price_basis: "Part of every website package, from £1,500 for Starter. A system rather than a website is quoted.",
   },
   {
     slug: "ecommerce",
+    group: "websites",
     title: "Ecommerce",
+    hook: "Make products easier to find and the buying process easier to follow.",
     summary: "Catalogue, checkout and the unglamorous parts: stock, tax, delivery, refunds.",
     detail:
       "A shop is mostly the parts nobody demonstrates. Checkout is built to be finished rather than admired, and the platform is chosen to fit your catalogue instead of your catalogue being reshaped to fit a platform.",
+    needs: ["Fast, legible product pages", "A short, secure checkout", "Stock managed without a developer"],
     deliverables: [
       "Product and catalogue design",
       "A checkout built for completion",
@@ -145,13 +190,20 @@ export const services: ServiceCategory[] = [
       "Order and stock management you control",
       "Launch, and support through the first weeks",
     ],
+    exclusions: ["Copywriting, unless you add it at £350 a page", "Integrations with systems you already run, which are quoted separately as Bespoke"],
+    price_basis: "From £6,000 for the Ecommerce package.",
   },
   {
+    // The slug predates the "Website care" name (D-038). It is kept so the
+    // published URL /services/care-and-support goes on working.
     slug: "care-and-support",
-    title: "Care and support",
+    group: "websites",
+    title: "Website care",
+    hook: "A named person to contact when your website needs attention.",
     summary: "Updates, small changes, and a person who answers when something breaks.",
     detail:
       "Launch is the start. A care plan covers updates, backups, monitoring and the small changes a live site always needs. There is no ticket queue and no account manager: you email me, and I answer. Month to month, and you can stop whenever you like.",
+    needs: ["Someone to email when something breaks", "The small changes a live site always needs", "Updates, backups and monitoring handled"],
     deliverables: [
       "A monthly arrangement, cancellable at any time",
       "Security and software updates",
@@ -159,6 +211,45 @@ export const services: ServiceCategory[] = [
       "Small changes and fixes included",
       "Direct email to the person who built it",
     ],
+    exclusions: ["New pages, at £180 per page", "Larger work, which gets its own written scope and price"],
+    price_basis: "Care plans from £90 per month, or £450 per month with monthly changes.",
+  },
+  {
+    slug: "it-support",
+    group: "it",
+    title: "General IT support",
+    hook: "Everyday IT problems sorted by someone who explains what went wrong.",
+    summary: "Email and accounts, devices and software, backups, and Microsoft 365 or Google Workspace help, explained plainly.",
+    detail:
+      "I sort the everyday IT jobs a small business runs into: email and account set-up, device and software set-up, backups, and help with Microsoft 365 or Google Workspace. When something has gone wrong, I explain what it was and what I changed.",
+    needs: [
+      "Email and accounts to set up",
+      "A new device or new software to set up",
+      "Backups to put in place",
+      "Help with Microsoft 365 or Google Workspace",
+    ],
+    deliverables: [
+      "Email and account set-up",
+      "Device and software set-up",
+      "Backups",
+      "Microsoft 365 or Google Workspace help",
+      "A plain explanation of what went wrong",
+    ],
+    exclusions: [IT_EXCLUSION],
+    price_basis: QUOTE_ONLY,
+  },
+  {
+    slug: "it-consultancy",
+    group: "it",
+    title: "IT consultancy",
+    hook: "Straight answers before you spend money on technology.",
+    summary: "A fixed-scope session or a short written review that ends in a written recommendation on your tools, accounts and files.",
+    detail:
+      "Before you buy or replace anything, I look at the question with you in a fixed-scope session or a short written review. You come away with a written recommendation.",
+    needs: ["Which tools to use", "What to replace", "How to organise accounts and files"],
+    deliverables: ["A fixed-scope session or a short written review", "A written recommendation"],
+    exclusions: [IT_EXCLUSION],
+    price_basis: QUOTE_ONLY,
   },
 ]
 
