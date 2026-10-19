@@ -458,3 +458,23 @@ h1.gk-app-grad,
   font-variant-numeric: tabular-nums;
   font-feature-settings: "tnum" 1;
 }
+
+/* Toasts (sonner, richColors). The library's own greens, reds and ambers measure
+   4.25:1 to 4.34:1 at 13px, under the AA 4.5:1 line, so the four rich types are
+   redrawn from the CMS tokens: token text on a faint tint of the same token over
+   the card colour. The selectors repeat sonner's own theme attribute and add
+   :root so they win over the stylesheet it injects at runtime. */
+:root [data-sonner-toaster][data-sonner-theme] {
+  --success-text: color-mix(in srgb, hsl(var(--chart-2)) 82%, hsl(var(--foreground)));
+  --success-bg: color-mix(in srgb, hsl(var(--chart-2)) 7%, hsl(var(--card)));
+  --success-border: color-mix(in srgb, hsl(var(--chart-2)) 28%, hsl(var(--card)));
+  --error-text: hsl(var(--destructive));
+  --error-bg: color-mix(in srgb, hsl(var(--destructive)) 7%, hsl(var(--card)));
+  --error-border: color-mix(in srgb, hsl(var(--destructive)) 28%, hsl(var(--card)));
+  --warning-text: hsl(var(--os-warn));
+  --warning-bg: color-mix(in srgb, hsl(var(--os-warn)) 7%, hsl(var(--card)));
+  --warning-border: color-mix(in srgb, hsl(var(--os-warn)) 28%, hsl(var(--card)));
+  --info-text: color-mix(in srgb, hsl(var(--ring)) 85%, hsl(var(--foreground)));
+  --info-bg: color-mix(in srgb, hsl(var(--ring)) 7%, hsl(var(--card)));
+  --info-border: color-mix(in srgb, hsl(var(--ring)) 28%, hsl(var(--card)));
+}

@@ -1,5 +1,5 @@
 import { StrictMode, useEffect, type ReactNode } from "react"
-import { ThemeProvider } from "next-themes"
+import { ThemeProvider, useTheme } from "next-themes"
 import { Toaster } from "sonner"
 
 import UIThemeProvider from "@/providers/ui-theme-provider"
@@ -9,6 +9,17 @@ import { endSeeding } from "@/marketing/data/seed"
 function Boot({ children }: { children: ReactNode }) {
   useEffect(() => endSeeding(), [])
   return children
+}
+
+/**
+ * Toasts follow the CMS theme. next-themes only knows the resolved theme below
+ * its provider, so the Toaster sits inside it. Only the CMS raises toasts; the
+ * public site never does, so nothing visible changes there.
+ */
+function ThemedToaster() {
+  const { resolvedTheme } = useTheme()
+  const theme = resolvedTheme === "dark" ? "dark" : "light"
+  return <Toaster position="top-right" richColors closeButton theme={theme} />
 }
 
 /**
@@ -23,8 +34,8 @@ export default function AppRoot({ children }: { children: ReactNode }) {
       <Boot>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <UIThemeProvider>{children}</UIThemeProvider>
+          <ThemedToaster />
         </ThemeProvider>
-        <Toaster position="top-right" richColors closeButton />
       </Boot>
     </StrictMode>
   )
