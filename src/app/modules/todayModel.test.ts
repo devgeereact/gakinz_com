@@ -6,6 +6,7 @@ import {
   initialTodayView,
   itemRoute,
   itemWhen,
+  todayPanel,
   todayRows,
   updatedLabel,
   type TodayView,
@@ -133,5 +134,22 @@ describe("itemWhen and updatedLabel", () => {
   it("shows the last successful refresh as a time, or nothing before the first", () => {
     expect(updatedLabel({ data: null, updatedAt: "2026-10-19T08:05:00Z", error: "x" }, "UTC")).toBe("08:05")
     expect(updatedLabel(initialTodayView)).toBeNull()
+  })
+})
+
+describe("todayPanel", () => {
+  it("shows the failure itself when the load failed before the role is known", () => {
+    expect(todayPanel({ data: null, updatedAt: null, error: NETWORK_ERROR }, undefined)).toEqual({ kind: "failed", error: NETWORK_ERROR })
+  })
+
+  it("shows unavailable rows when the role is known", () => {
+    const p = todayPanel({ data: null, updatedAt: null, error: NETWORK_ERROR }, "editor")
+    expect(p.kind).toBe("rows")
+    if (p.kind === "rows") expect(p.rows.every((r) => r.state === "unavailable")).toBe(true)
+  })
+
+  it("shows nothing before the first load, or when the server sent no section for this role", () => {
+    expect(todayPanel(initialTodayView, undefined)).toEqual({ kind: "none" })
+    expect(todayPanel({ data: data({}), updatedAt: "x", error: null }, "admin")).toEqual({ kind: "none" })
   })
 })

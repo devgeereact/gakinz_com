@@ -127,3 +127,20 @@ export function updatedLabel(view: TodayView, timeZone?: string): string | null 
   if (Number.isNaN(t)) return null
   return new Date(t).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone })
 }
+
+export type TodayPanel =
+  | { kind: "none" }
+  | { kind: "failed"; error: string }
+  | { kind: "rows"; rows: TodayRow[] }
+
+/**
+ * What the attention list shows as a whole. A failed load always shows: as
+ * unavailable sections when the role is known, or, before the role is known,
+ * as a single "could not be loaded" alert with Retry, never an empty space.
+ */
+export function todayPanel(view: TodayView, role: Role | null | undefined): TodayPanel {
+  const rows = todayRows(view, role)
+  if (rows.length > 0) return { kind: "rows", rows }
+  if (!view.data && view.error) return { kind: "failed", error: view.error }
+  return { kind: "none" }
+}

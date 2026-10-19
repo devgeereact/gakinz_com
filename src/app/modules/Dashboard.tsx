@@ -42,8 +42,9 @@ import {
   initialTodayView,
   itemRoute,
   itemWhen,
-  todayRows,
+  todayPanel,
   updatedLabel,
+  type TodayPanel,
   type TodayRow,
   type TodayView,
 } from "./todayModel"
@@ -307,7 +308,7 @@ export default function Dashboard() {
 
   // The last successful refresh of the attention list, on the server's clock.
   const updated = updatedLabel(todayView)
-  const attention = todayRows(todayView, role)
+  const attention = todayPanel(todayView, role)
 
   const header = (
     <PageHeader
@@ -406,7 +407,7 @@ export default function Dashboard() {
     <div>
       {header}
 
-      <AttentionList rows={attention} error={todayView.error} retrying={todayLoading} onRetry={loadToday} />
+      <AttentionList panel={attention} error={todayView.error} retrying={todayLoading} onRetry={loadToday} />
 
       {errors.length > 0 && (
         <div role="alert" className="mb-4 flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
@@ -640,17 +641,32 @@ function Snapshot({ label, value, to, bad }: { label: string; value: string; to:
 // failed load, per section this role should get), each in one of three states:
 // items that link to their screen, "Nothing due", or "Unavailable" with Retry.
 function AttentionList({
-  rows,
+  panel,
   error,
   retrying,
   onRetry,
 }: {
-  rows: TodayRow[]
+  panel: TodayPanel
   error: string | null
   retrying: boolean
   onRetry: () => void
 }) {
-  if (rows.length === 0) return null
+  if (panel.kind === "none") return null
+  if (panel.kind === "failed") {
+    return (
+      <div role="alert" className="mb-4 flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
+        <AlertTriangle aria-hidden className="mt-0.5 size-[18px] shrink-0 text-bad" />
+        <div className="min-w-[min(100%,200px)] flex-1">
+          <p className="font-semibold">The attention list could not be loaded.</p>
+          <p className="mt-1 text-muted-foreground [overflow-wrap:anywhere]">{panel.error}</p>
+        </div>
+        <Button variant="outline" onClick={onRetry} disabled={retrying}>
+          <RefreshCw className={cn(retrying && "animate-spin")} /> Retry
+        </Button>
+      </div>
+    )
+  }
+  const { rows } = panel
   return (
     <section aria-labelledby="today-attention" className="mb-4 rounded-2xl border bg-card p-[18px]">
       <h2 id="today-attention" className="text-base font-semibold">
