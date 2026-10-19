@@ -5,6 +5,7 @@
  *   GET /privacy.php?action=export&client_id=N          super_admin, admin
  *   GET /privacy.php?action=export&enquiry_email=a@b.c  super_admin, admin
  *   GET /privacy.php?action=retention_report            super_admin
+ *   POST /privacy.php?action=erase_enquiry {id, confirm}  super_admin
  *
  * ── Subject access export ──────────────────────────────────────────────────
  * Answers a JSON file as an attachment (application/json, Cache-Control:
@@ -52,7 +53,19 @@
  *
  * ── Retention dry run ──────────────────────────────────────────────────────
  * Counts what each proposed retention rule would affect (_retention.php). It
- * reads only. Nothing in this file deletes, updates or anonymises a row.
+ * reads only.
+ *
+ * ── Erasing a prospect's enquiry ───────────────────────────────────────────
+ * The only deleting route here. A super admin erases ONE enquiry that never
+ * became a client, typing its email address as `confirm` (case and outer
+ * spaces aside). _erasure.php does the work in one transaction: the enquiry,
+ * its calls and their history go, and the audit rows naming the enquirer's
+ * address have that address and name replaced with "[erased]". One audit row
+ * "enquiry_erase #id" records it, with no personal data. Answers 404 for an
+ * unknown enquiry, 400 when `confirm` does not match, and 409, changing
+ * nothing, for an enquiry that was won, converted, has a call filed against a
+ * client, or whose address is also a client's, a user's or a contract
+ * signer's. Nothing else in this file deletes, updates or anonymises a row.
  */
 require __DIR__ . '/_bootstrap.php';
 // pv_rows() tells a missing table or column apart by its exception, so every
@@ -62,6 +75,7 @@ mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 const EXPORT_ROLES = ['super_admin', 'admin'];
 const RETENTION_ROLES = ['super_admin'];
+const ERASE_ROLES = ['super_admin'];
 
 const PV_EXCLUDED = [
   'Password hashes',
@@ -402,6 +416,30 @@ if ($method === 'GET' && $action === 'retention_report') {
     fail('Could not build the retention report.', 500);
   }
   ok($report);
+}
+
+if ($method === 'POST' && $action === 'erase_enquiry') {
+  $me = require_auth($conn, ERASE_ROLES);
+  $in = body();
+  $rawId = $in['id'] ?? null;
+  $id = is_int($rawId) && $rawId > 0 ? $rawId : (is_string($rawId) ? pv_id($rawId) : 0);
+  if ($id <= 0) fail('Invalid enquiry id.');
+  $confirm = $in['confirm'] ?? null;
+  if (!is_string($confirm) || trim($confirm) === '' || strlen($confirm) > 300) {
+    fail('Type the enquiry\'s email address to confirm.');
+  }
+  require_once __DIR__ . '/_erasure.php';
+  try {
+    // The audit row is written inside the same transaction, by record id only.
+    $r = er_erase_enquiry($conn, $id, $confirm, null, [(int)$me['id'], 'enquiry_erase', "#$id"]);
+  } catch (mysqli_sql_exception $e) {
+    error_log('privacy.php erase_enquiry: SQL error ' . $e->getCode() . ': ' . $e->getMessage());
+    fail('Could not erase the enquiry. Nothing was changed.', 500);
+  }
+  if ($r['status'] === 'not_found') fail('Enquiry not found.', 404);
+  if ($r['status'] === 'mismatch') fail('That does not match this enquiry\'s email address. Nothing was erased.');
+  if ($r['status'] === 'blocked') fail($r['message'], 409, ['reason' => $r['problem']]);
+  ok(['erased' => true, 'id' => $id, 'bookings' => $r['bookings'], 'booking_events' => $r['booking_events'], 'audit_scrubbed' => $r['audit_scrubbed']]);
 }
 
 if ($method === 'GET') fail('Unknown action.');
