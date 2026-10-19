@@ -168,16 +168,38 @@ export default async function setup(): Promise<() => Promise<void>> {
     // detached: its own process group, so teardown can stop the workers too.
     { stdio: "ignore", detached: true, env: { ...process.env, PHP_CLI_SERVER_WORKERS: "6" } },
   )
+  // Ctrl-C, a kill or a crash skips the teardown below, so stop the whole
+  // php -S group synchronously on the way out, or its workers keep the port.
+  const killGroup = () => {
+    try { if (php.pid) process.kill(-php.pid, "SIGKILL") } catch { /* group already gone */ }
+  }
+  const onSignal = (sig: NodeJS.Signals) => {
+    killGroup()
+    // A listener stops Node's default exit, so re-raise the signal when no one
+    // else (vitest included) is left to handle it.
+    if (process.listenerCount(sig) === 0) process.kill(process.pid, sig)
+  }
+  process.once("SIGINT", onSignal)
+  process.once("SIGTERM", onSignal)
+  process.once("exit", killGroup)
+  const removeExitHandlers = () => {
+    process.off("SIGINT", onSignal)
+    process.off("SIGTERM", onSignal)
+    process.off("exit", killGroup)
+  }
+
   try {
     await waitFor(`${BASE}/book.php`)
   } catch (e) {
     await stopPhp(php)
+    removeExitHandlers()
     provider.close()
     throw e
   }
 
   return async () => {
     await stopPhp(php)
+    removeExitHandlers()
     provider.close()
     spawnSync("mysql", [...mysqlArgs(), "-e", `DROP DATABASE IF EXISTS ${DB_NAME};`])
   }
