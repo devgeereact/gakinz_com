@@ -9,7 +9,7 @@ const pad = (n: number) => String(n).padStart(2, "0")
 
 /**
  * What I do, from the editable copy (D-046): six services in two groups (D-038).
- * Numbers come from the list, not the copy, and run on across the groups.
+ * Numbers come from the list, not the copy, and start again in each group.
  */
 export default function Services() {
   const copy = useSiteCopy()
@@ -32,16 +32,16 @@ export default function Services() {
         <section key={g.key} className="sec wrap" aria-labelledby={`grp-${g.key}`}>
           <div className="sec__head">
             <div>
-              <p className="eyebrow mono">Group</p>
+              <p className="eyebrow mono">What I do</p>
               <h2 className="h-l" id={`grp-${g.key}`}>
                 {g.label}
               </h2>
             </div>
           </div>
           <div className="svc-list">
-            {g.items.map((s) => (
+            {g.items.map((s, i) => (
               <article key={s.slug}>
-                <span className="n">{pad(copy.services.indexOf(s) + 1)}</span>
+                <span className="n">{pad(i + 1)}</span>
                 <div>
                   <h3>{s.title}</h3>
                   <p>{s.hook}</p>
