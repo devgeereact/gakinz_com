@@ -5,9 +5,14 @@
  * rows on the new project, all in one transaction (a failure part way leaves
  * nothing behind), a table whose SQL step has not run is skipped and reported,
  * an unknown template creates nothing, and only staff can use any of it.
+ * The client checklist is added only on include_client_checklist: true, and a
+ * projects.php uploaded without _templates.php keeps its other routes.
  */
 import { spawnSync } from "node:child_process"
+import fs from "node:fs"
+import path from "node:path"
 import { beforeEach, describe, expect, it } from "vitest"
+import { WORK_DIR } from "./env"
 import { api, createClient, createUser, login, one, q, resetDb, sql } from "./helpers"
 
 type Template = {
@@ -113,7 +118,7 @@ describe("project templates", () => {
     for (const key of KEYS) {
       it(`creates exactly the ${key} tasks, asset items and measurement rows`, async () => {
         const t = templates.find((x) => x.key === key)!
-        const r = await create({ name: `Synthetic ${key}`, client_id: clientId, template: key })
+        const r = await create({ name: `Synthetic ${key}`, client_id: clientId, template: key, include_client_checklist: true })
         expect(r.status).toBe(201)
         expect(r.json.template).toBe(key)
         expect(r.json.created).toEqual({ tasks: t.tasks.length, assets: t.assets.length, measurements: t.brief.measurements.length })
@@ -140,7 +145,7 @@ describe("project templates", () => {
     }
 
     it("creates rows the asset and brief endpoints then serve, and the client sees only their own items", async () => {
-      const r = await create({ name: "Bakery site", client_id: clientId, template: "business_website" })
+      const r = await create({ name: "Bakery site", client_id: clientId, template: "business_website", include_client_checklist: true })
       const pid = r.json.id
       const assets = await api<{ label: string }[]>(`assets.php?project_id=${pid}`, { token: employee })
       expect(assets.status).toBe(200)
@@ -150,7 +155,7 @@ describe("project templates", () => {
       expect(brief.json.measurements.map((m) => m.result)).toEqual(["NOT TESTED", "NOT TESTED", "NOT TESTED"])
 
       const otherClient = createClient("Thistle Garage")
-      await create({ name: "Garage site", client_id: otherClient, template: "website_care" })
+      await create({ name: "Garage site", client_id: otherClient, template: "website_care", include_client_checklist: true })
       const mine = await api<{ project_id: number }[]>("assets.php?action=mine", { token: client })
       expect(mine.status).toBe(200)
       expect(mine.json.length).toBe(templates[0].assets.length)
@@ -220,7 +225,7 @@ describe("project templates", () => {
           `SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'synthetic failure'`,
       )
       try {
-        const r = await create({ name: "Doomed", client_id: clientId, template: "ecommerce" })
+        const r = await create({ name: "Doomed", client_id: clientId, template: "ecommerce", include_client_checklist: true })
         expect(r.status).toBe(500)
         expect(r.json.error).toBe("Could not create the project from the template. Nothing was saved.")
       } finally {
@@ -246,6 +251,95 @@ describe("project templates", () => {
       }
       expect(projectCount()).toBe(0)
     })
+
+    it("writes the audit row inside the transaction: a failed audit leaves no project, tasks or rows", async () => {
+      sql(
+        `CREATE TRIGGER gk_test_fail_audit BEFORE INSERT ON audit_log FOR EACH ROW ` +
+          `SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'synthetic failure'`,
+      )
+      try {
+        const r = await create({ name: "Unaudited", template: "business_website", include_client_checklist: true })
+        expect(r.status).toBe(500)
+      } finally {
+        sql(`DROP TRIGGER IF EXISTS gk_test_fail_audit`)
+      }
+      expect(projectCount()).toBe(0)
+      expect(Number(one(`SELECT COUNT(*) FROM tasks`))).toBe(0)
+      expect(Number(one(`SELECT COUNT(*) FROM project_assets`))).toBe(0)
+      expect(Number(one(`SELECT COUNT(*) FROM project_measurements`))).toBe(0)
+    })
+  })
+
+  describe("the client checklist is opt-in", () => {
+    it("adds no checklist items by default, but still adds the tasks and measurements", async () => {
+      const t = templates[0]
+      const r = await create({ name: "Quiet start", client_id: clientId, template: "business_website" })
+      expect(r.status).toBe(201)
+      expect(r.json.include_client_checklist).toBe(false)
+      expect(r.json.created).toEqual({ tasks: t.tasks.length, assets: 0, measurements: t.brief.measurements.length })
+      expect(r.json.skipped).toEqual([])
+      expect(count("project_assets", r.json.id)).toBe(0)
+      // So the client's portal shows nothing new.
+      const mine = await api<unknown[]>("assets.php?action=mine", { token: client })
+      expect(mine.status).toBe(200)
+      expect(mine.json).toEqual([])
+    })
+
+    it("only takes a real true: a string, a number or false adds no items", async () => {
+      for (const flag of ["true", 1, false, null]) {
+        const r = await create({ name: `Flag ${String(flag)}`, template: "ecommerce", include_client_checklist: flag })
+        expect(r.status).toBe(201)
+        expect(r.json.created?.assets).toBe(0)
+      }
+      expect(Number(one(`SELECT COUNT(*) FROM project_assets`))).toBe(0)
+    })
+
+    it("adds the items when asked, and the client sees them in the portal", async () => {
+      const r = await create({ name: "Loud start", client_id: clientId, template: "it_consultancy", include_client_checklist: true })
+      expect(r.json.include_client_checklist).toBe(true)
+      const mine = await api<{ project_id: number }[]>("assets.php?action=mine", { token: client })
+      expect(mine.json.length).toBe(templates.find((x) => x.key === "it_consultancy")!.assets.length)
+    })
+
+    it("does not report SQL 15 as skipped when the checklist was not asked for", async () => {
+      sql(`RENAME TABLE project_assets TO project_assets_parked`)
+      let r: Awaited<ReturnType<typeof create>>
+      try {
+        r = await create({ name: "No checklist wanted", template: "website_care" })
+      } finally {
+        sql(`RENAME TABLE project_assets_parked TO project_assets`)
+      }
+      expect(r.status).toBe(201)
+      expect(r.json.skipped).toEqual([])
+    })
+  })
+
+  describe("projects.php uploaded without _templates.php", () => {
+    it("keeps list, create and status working, and answers 503 on the template routes", async () => {
+      const file = path.join(WORK_DIR, "_templates.php")
+      const parked = path.join(WORK_DIR, "_templates.php.parked")
+      fs.renameSync(file, parked)
+      try {
+        const bare = await create({ name: "Bare while missing" })
+        expect(bare.status).toBe(201)
+        const list = await api<{ id: number }[]>("projects.php", { token: owner })
+        expect(list.status).toBe(200)
+        expect(list.json.map((p) => p.id)).toEqual([bare.json.id])
+        const status = await api("projects.php?action=status", { token: owner, body: { id: bare.json.id, status: "in_progress" } })
+        expect(status.status).toBe(200)
+
+        const tpl = await api<{ error?: string }>("projects.php?action=templates", { token: owner })
+        expect(tpl.status).toBe(503)
+        expect(tpl.json.error).toBe("Project templates are not available yet.")
+        const fromTemplate = await create({ name: "Templated while missing", template: "ecommerce" })
+        expect(fromTemplate.status).toBe(503)
+        expect(fromTemplate.json.error).toBe("Project templates are not available yet.")
+      } finally {
+        fs.renameSync(parked, file)
+      }
+      expect(projectCount()).toBe(1)
+      expect((await api("projects.php?action=templates", { token: owner })).status).toBe(200)
+    })
   })
 
   describe("before SQL 15 or SQL 16 has run", () => {
@@ -253,7 +347,7 @@ describe("project templates", () => {
       sql(`RENAME TABLE project_assets TO project_assets_parked`)
       let r: Awaited<ReturnType<typeof create>>
       try {
-        r = await create({ name: "No checklist yet", template: "business_website" })
+        r = await create({ name: "No checklist yet", template: "business_website", include_client_checklist: true })
       } finally {
         sql(`RENAME TABLE project_assets_parked TO project_assets`)
       }
@@ -270,7 +364,7 @@ describe("project templates", () => {
       sql(`RENAME TABLE project_measurements TO project_measurements_parked`)
       let r: Awaited<ReturnType<typeof create>>
       try {
-        r = await create({ name: "No brief yet", template: "it_support" })
+        r = await create({ name: "No brief yet", template: "it_support", include_client_checklist: true })
       } finally {
         sql(`RENAME TABLE project_measurements_parked TO project_measurements`)
       }
@@ -286,7 +380,7 @@ describe("project templates", () => {
       sql(`RENAME TABLE project_assets TO project_assets_parked, project_measurements TO project_measurements_parked`)
       let r: Awaited<ReturnType<typeof create>>
       try {
-        r = await create({ name: "Tasks only", template: "it_consultancy" })
+        r = await create({ name: "Tasks only", template: "it_consultancy", include_client_checklist: true })
       } finally {
         sql(`RENAME TABLE project_assets_parked TO project_assets, project_measurements_parked TO project_measurements`)
       }
