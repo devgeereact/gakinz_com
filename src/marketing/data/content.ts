@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
-import { siteContent } from "@/lib/api"
+import { siteContent, SOCIAL_PLATFORMS, type SiteSocialPlatform } from "@/lib/api"
+import { isHttpsUrl } from "@/marketing/components/seo-schema"
 import { services as baseServices, packages as basePackages, addOns, paymentTerms, faqs as baseFaqs, processStages, site, SERVICE_GROUPS, type ServiceGroup } from "./site"
 
 /**
@@ -30,6 +31,25 @@ export type TermCopy = { stage: string; share: string }
 export type FaqCopy = { q: string; a: string }
 export type ContactCopy = { email: string; reply: string; footer: string }
 
+/** How each profile platform is named when its label is left blank. */
+export const PLATFORM_LABELS: Record<SiteSocialPlatform, string> = {
+  linkedin: "LinkedIn",
+  instagram: "Instagram",
+  facebook: "Facebook",
+  x: "X",
+  youtube: "YouTube",
+  tiktok: "TikTok",
+  github: "GitHub",
+}
+export type SocialLink = { platform: string; url: string; label: string }
+
+/**
+ * The public business details (D-039, spec 4.4). Nothing is invented: a phone,
+ * address, opening note or profile is `null` or empty until the owner has
+ * published a real one, and the interface prints nothing for it.
+ */
+export type BusinessCopy = { email: string; phone: string | null; address: string[]; hours: string | null; social: SocialLink[] }
+
 export type SiteCopy = {
   hero: HeroCopy
   services: ServiceCopy[]
@@ -39,6 +59,7 @@ export type SiteCopy = {
   terms: TermCopy[]
   faqs: FaqCopy[]
   contact: ContactCopy
+  business: BusinessCopy
 }
 
 export const DEFAULT_COPY: SiteCopy = {
@@ -61,6 +82,13 @@ export const DEFAULT_COPY: SiteCopy = {
   terms: paymentTerms.map((t) => ({ stage: t.stage, share: t.share })),
   faqs: baseFaqs.map((f) => ({ q: f.q, a: f.a })),
   contact: { email: site.contact.email, reply: site.contact.replyIntent, footer: "Websites and the systems behind them, for UK small businesses." },
+  business: {
+    email: site.contact.email,
+    phone: site.contact.phone,
+    address: [],
+    hours: null,
+    social: site.social.filter((l) => isHttpsUrl(l.url)).map((l) => ({ platform: "other", url: l.url, label: l.label })),
+  },
 }
 
 const slugify = (s: string) => s.toLowerCase().replace(/&/g, "and").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "")
@@ -92,6 +120,7 @@ export type PublishedSections = Partial<{
   terms: { stage?: string; share?: string }[]
   faqs: { q?: string; a?: string }[]
   contact: Partial<ContactCopy>
+  business: { email?: unknown; phone?: unknown; address?: unknown; hours?: unknown; social?: unknown }
 }>
 
 const str = (v: unknown, d = "") => (typeof v === "string" && v.trim() ? v.trim() : d)
@@ -185,6 +214,41 @@ export function enquiryServiceOptions(list: ServiceCopy[]): string[] {
   return [...new Set([...list.map((s) => s.title), OTHER_SERVICE])]
 }
 
+const PHONE = /^\+?[0-9][0-9 ()-]*$/
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+const isPlatform = (v: unknown): v is SiteSocialPlatform => (SOCIAL_PLATFORMS as readonly string[]).includes(v as string)
+
+/**
+ * The published business record over the built-in details. Every field is
+ * checked again here, so a profile that is not an https address on a listed
+ * platform never reaches a link or structured data. A field left out keeps the
+ * built-in value; the enquiry email stands in when no public email is set.
+ */
+export function mergeBusiness(p: PublishedSections["business"] | null | undefined, contactEmail: string): BusinessCopy {
+  const d = DEFAULT_COPY.business
+  const b = p && typeof p === "object" ? p : {}
+  const email = str(b.email)
+  const phone = str(b.phone)
+  const address = list(b.address)
+  const hours = str(b.hours)
+  const seen = new Set<string>()
+  const social: SocialLink[] = []
+  if (Array.isArray(b.social)) {
+    for (const r of b.social as { platform?: unknown; url?: unknown; label?: unknown }[]) {
+      if (!r || typeof r !== "object" || !isPlatform(r.platform) || !isHttpsUrl(r.url) || seen.has(r.url)) continue
+      seen.add(r.url)
+      social.push({ platform: r.platform, url: r.url, label: str(r.label, PLATFORM_LABELS[r.platform]) })
+    }
+  }
+  return {
+    email: EMAIL.test(email) ? email : contactEmail,
+    phone: PHONE.test(phone) && phone.replace(/\D/g, "").length >= 7 ? phone : d.phone,
+    address: address.length ? address : d.address,
+    hours: hours || d.hours,
+    social: social.length ? social : d.social,
+  }
+}
+
 /** Merge published sections over the defaults. Pure, so it is easy to test. */
 export function mergeCopy(p: PublishedSections | null | undefined): SiteCopy {
   const d = DEFAULT_COPY
@@ -192,6 +256,7 @@ export function mergeCopy(p: PublishedSections | null | undefined): SiteCopy {
   const h = p.hero ?? {}
   const secs = typeof h.secs === "number" && h.secs >= 4 && h.secs <= 10 ? h.secs : d.hero.secs
   const pkg = rows<{ name?: string; price?: string; best?: string; featured?: boolean }>(p.packages)
+  const contact = { email: str(p.contact?.email, d.contact.email), reply: str(p.contact?.reply, d.contact.reply), footer: str(p.contact?.footer, d.contact.footer) }
   return {
     hero: { status: str(h.status, d.hero.status), lead: str(h.lead, d.hero.lead), cta1: str(h.cta1, d.hero.cta1), cta2: str(h.cta2, d.hero.cta2), secs },
     services: mergeServices(p.services),
@@ -205,7 +270,8 @@ export function mergeCopy(p: PublishedSections | null | undefined): SiteCopy {
     addons: rows<{ name?: string; price?: string }>(p.addons)?.filter((x) => str(x.name)).map((x) => ({ name: str(x.name), price: str(x.price) })) ?? d.addons,
     terms: rows<{ stage?: string; share?: string }>(p.terms)?.filter((x) => str(x.stage)).map((x) => ({ stage: str(x.stage), share: str(x.share) })) ?? d.terms,
     faqs: rows<{ q?: string; a?: string }>(p.faqs)?.filter((x) => str(x.q)).map((x) => ({ q: str(x.q), a: str(x.a) })) ?? d.faqs,
-    contact: { email: str(p.contact?.email, d.contact.email), reply: str(p.contact?.reply, d.contact.reply), footer: str(p.contact?.footer, d.contact.footer) },
+    contact,
+    business: mergeBusiness(p.business, contact.email),
   }
 }
 

@@ -8,14 +8,16 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { siteContent, work, type SiteContent, type SiteDrafts, type SiteSection } from "@/lib/api"
+import { SOCIAL_PLATFORMS, siteContent, work, type SiteBusiness, type SiteContent, type SiteDrafts, type SiteSection, type SiteSocial, type SiteSocialPlatform } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { PageHeader } from "@/app/components/page-kit"
+import { PLATFORM_LABELS } from "@/marketing/data/content"
 import { useUnsavedGuard } from "@/hooks/use-unsaved-guard"
 import { UnsavedGuardDialog } from "@/components/unsaved-guard-dialog"
 import {
   HERO_MAX,
   SECTION_TAB,
+  BUSINESS_LIMITS,
   SITE_MAX_ROWS,
   addRow,
   dirtySections,
@@ -49,6 +51,7 @@ const TABS: [SiteTab, string][] = [
   ["pricing", "Pricing"],
   ["faqs", "FAQs"],
   ["contact", "Contact and footer"],
+  ["business", "Business details"],
 ]
 
 type HeroSlot = { id: number; title: string; colour: string | null; word: string | null }
@@ -294,6 +297,93 @@ function MiniHero({ hero, slots }: { hero: SiteContent["hero"]; slots: HeroSlot[
         <span className="rounded-full border border-current px-2.5 py-1">{hero.cta2}</span>
       </span>
     </div>
+  )
+}
+
+// ── Business details ────────────────────────────────────────────────────────
+function BusinessEditor({ value, error, onChange }: { value: SiteBusiness; error?: string; onChange: (b: SiteBusiness) => void }) {
+  const social = value.social ?? []
+  const set = <K extends keyof SiteBusiness>(k: K, v: SiteBusiness[K]) => onChange({ ...value, [k]: v })
+  const setProfile = (i: number, patch: Partial<SiteSocial>) => set("social", social.map((r, j) => (j === i ? { ...r, ...patch } : r)))
+  return (
+    <>
+      <SectionError message={error} />
+      <p className="mb-3 text-sm text-muted-foreground">
+        The details shown in the website header and footer, on the legal pages and in the site's structured data for search engines. Leave a
+        field empty and the website shows nothing for it (or, for the email, the enquiry email). A profile appears only when it is a full
+        https:// address, and no link is shown until you publish one.
+      </p>
+      <section className="grid gap-4 rounded-xl border border-border bg-card p-5">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label htmlFor="sb-email">Public email</Label>
+            <Input id="sb-email" type="email" className="mt-1.5" value={value.email ?? ""} onChange={(e) => set("email", e.target.value)} aria-describedby="sb-email-help" />
+            <Help id="sb-email-help">Optional. Empty uses the enquiry email from Contact and footer.</Help>
+          </div>
+          <div>
+            <Label htmlFor="sb-phone">Phone</Label>
+            <Input id="sb-phone" type="tel" className="mt-1.5" value={value.phone ?? ""} onChange={(e) => set("phone", e.target.value)} aria-describedby="sb-phone-help" />
+            <Help id="sb-phone-help">Optional. Only a real number, such as +44 20 7946 0000.</Help>
+          </div>
+        </div>
+        <div>
+          <Label htmlFor="sb-address">Address</Label>
+          <Textarea
+            id="sb-address"
+            rows={3}
+            className="mt-1.5"
+            value={(value.address ?? []).join("\n")}
+            onChange={(e) => set("address", e.target.value.split("\n"))}
+            aria-describedby="sb-address-help"
+          />
+          <Help id="sb-address-help">Optional. One line per row, up to {BUSINESS_LIMITS.addressLines}. Only publish an address you want the public to see.</Help>
+        </div>
+        <div>
+          <Label htmlFor="sb-hours">Opening note</Label>
+          <Input id="sb-hours" className="mt-1.5" value={value.hours ?? ""} onChange={(e) => set("hours", e.target.value)} aria-describedby="sb-hours-help" />
+          <Help id="sb-hours-help">Optional. For example the days you answer messages.</Help>
+        </div>
+      </section>
+      <h3 className="mb-2 mt-6 text-sm font-semibold">Social profiles</h3>
+      {social.length === 0 && <p className="mb-3 text-sm text-muted-foreground">No profiles yet, so none are shown on the website.</p>}
+      <div className="space-y-3">
+        {social.map((r, i) => (
+          <div key={i} className="grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-[10rem_1fr_10rem_auto] sm:items-end">
+            <div>
+              <Label htmlFor={`sb-p-${i}-platform`}>Platform</Label>
+              <select id={`sb-p-${i}-platform`} className={cn(selectClass, "mt-1.5")} value={r.platform} onChange={(e) => setProfile(i, { platform: e.target.value as SiteSocialPlatform })}>
+                {SOCIAL_PLATFORMS.map((p) => (
+                  <option key={p} value={p}>
+                    {PLATFORM_LABELS[p]}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label htmlFor={`sb-p-${i}-url`}>Profile address</Label>
+              <Input id={`sb-p-${i}-url`} type="url" className="mt-1.5" placeholder="https://" value={r.url} onChange={(e) => setProfile(i, { url: e.target.value })} />
+            </div>
+            <div>
+              <Label htmlFor={`sb-p-${i}-label`}>Label</Label>
+              <Input id={`sb-p-${i}-label`} className="mt-1.5" placeholder={PLATFORM_LABELS[r.platform]} value={r.label ?? ""} onChange={(e) => setProfile(i, { label: e.target.value })} />
+            </div>
+            <Button type="button" variant="outline" size="sm" aria-label={`Remove profile ${i + 1}`} onClick={() => set("social", social.filter((_, j) => j !== i))}>
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
+        ))}
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="mt-3"
+        disabled={social.length >= BUSINESS_LIMITS.social}
+        onClick={() => set("social", [...social, { platform: "linkedin", url: "" }])}
+      >
+        <Plus className="mr-2 h-4 w-4" /> Add a profile
+      </Button>
+    </>
   )
 }
 
@@ -805,6 +895,11 @@ export default function Site() {
                   <Textarea id="sc-footer" rows={2} className="mt-1.5" value={C.footer} onChange={(e) => setContactField("footer", e.target.value)} />
                 </div>
               </section>
+            </TabsContent>
+
+            {/* ── Business details ────────────────────────────────────── */}
+            <TabsContent value="business" className="mt-4">
+              <BusinessEditor value={values.business} error={errors.business} onChange={(b) => setSection("business", b)} />
             </TabsContent>
           </Tabs>
 

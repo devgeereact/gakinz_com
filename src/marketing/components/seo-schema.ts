@@ -5,6 +5,22 @@ export const SITE_URL = "https://gakinz.com"
 export const SITE_NAME = "Gideon Akinlotan"
 export const OG_IMAGE = `${SITE_URL}/og.png`
 
+/** True for a full https address with a host and no sign-in details. Anything else never becomes a link or a sameAs entry. */
+export function isHttpsUrl(v: unknown): v is string {
+  if (typeof v !== "string" || /\s/.test(v)) return false
+  try {
+    const u = new URL(v)
+    return u.protocol === "https:" && u.hostname.includes(".") && !u.username && !u.password
+  } catch {
+    return false
+  }
+}
+
+/** The sameAs list for a set of profiles: https addresses only, each once, in order. */
+export function sameAsFrom(links: { url: string }[] | null | undefined): string[] {
+  return [...new Set((links ?? []).map((l) => l.url).filter(isHttpsUrl))]
+}
+
 /**
  * The Person record for the site owner.
  *

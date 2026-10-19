@@ -1812,6 +1812,13 @@ export type SiteAddon = { name: string; price: string }
 export type SiteTerm = { stage: string; share: string }
 export type SiteFaq = { q: string; a: string }
 export type SiteContact = { email: string; reply: string; footer: string }
+// Business and social links: every field optional; a left-out field falls back
+// to the website's built-in value. A profile is a listed platform and an https
+// address (server/site.php 'business').
+export const SOCIAL_PLATFORMS = ["linkedin", "instagram", "facebook", "x", "youtube", "tiktok", "github"] as const
+export type SiteSocialPlatform = (typeof SOCIAL_PLATFORMS)[number]
+export type SiteSocial = { platform: SiteSocialPlatform; url: string; label?: string }
+export type SiteBusiness = { email?: string; phone?: string; address?: string[]; hours?: string; social?: SiteSocial[] }
 
 export type SiteContent = {
   hero: SiteHero
@@ -1822,9 +1829,10 @@ export type SiteContent = {
   terms: SiteTerm[]
   faqs: SiteFaq[]
   contact: SiteContact
+  business: SiteBusiness
 }
 export type SiteSection = keyof SiteContent
-export const SITE_SECTIONS: SiteSection[] = ["hero", "services", "process", "packages", "addons", "terms", "faqs", "contact"]
+export const SITE_SECTIONS: SiteSection[] = ["hero", "services", "process", "packages", "addons", "terms", "faqs", "contact", "business"]
 
 // One section as the CMS sees it. `draft` equal to `published` means no
 // unpublished changes. Names are null when the user has since been removed.

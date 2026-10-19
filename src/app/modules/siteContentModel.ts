@@ -1,5 +1,6 @@
-import type { SiteContent, SiteDrafts, SiteSection, SiteService, WorkAdminRow, WorkInput } from "@/lib/api"
-import { SITE_SECTIONS } from "@/lib/api"
+import type { SiteBusiness, SiteContent, SiteDrafts, SiteSection, SiteService, SiteSocial, WorkAdminRow, WorkInput } from "@/lib/api"
+import { SITE_SECTIONS, SOCIAL_PLATFORMS } from "@/lib/api"
+import { isHttpsUrl } from "@/marketing/components/seo-schema"
 import { DEFAULT_COPY, builtInFor, type ServiceCopy } from "@/marketing/data/content"
 
 // Pure helpers behind the Site content module and the hero controls in Work.
@@ -47,6 +48,8 @@ export function defaultSiteContent(): SiteContent {
     terms: d.terms.map((t) => ({ stage: t.stage, share: t.share })),
     faqs: d.faqs.map((f) => ({ q: f.q, a: f.a })),
     contact: { email: d.contact.email, reply: d.contact.reply, footer: d.contact.footer },
+    // Empty on purpose: every field left blank falls back to the built-in value.
+    business: {},
   }
 }
 
@@ -107,7 +110,10 @@ export const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.s
 
 /** Sections whose edited value differs from the baseline loaded from the server. */
 export function dirtySections(values: SiteContent, baseline: SiteContent): SiteSection[] {
-  return SITE_SECTIONS.filter((s) => !sameJson(values[s], baseline[s]))
+  // The business record is compared as it would be saved, so typing and then
+  // clearing a field does not count as an edit.
+  const as = <S extends SiteSection>(s: S, c: SiteContent) => (s === "business" ? prepareSection(s, c[s]) : c[s])
+  return SITE_SECTIONS.filter((s) => !sameJson(as(s, values), as(s, baseline)))
 }
 
 /** Sections with a saved draft that the website does not show yet. */
@@ -171,7 +177,7 @@ export function focusAfterMove(len: number, index: number, delta: number): { ind
 // ── Client-side checks, mirroring site.php so obvious slips never round-trip ─
 
 type FieldRule = { key: string; label: string; max: number; email?: boolean }
-const RULES: Record<Exclude<SiteSection, "hero">, FieldRule[]> = {
+const RULES: Record<Exclude<SiteSection, "hero" | "business">, FieldRule[]> = {
   services: [
     { key: "title", label: "Service name", max: SHORT },
     { key: "summary", label: "Summary", max: LONG },
@@ -301,8 +307,67 @@ function checkServices(rows: SiteService[]): string | null {
   return null
 }
 
-/** Ready-to-save data for a section: service rows tidied, everything else as edited. */
+// ── Business and social links ───────────────────────────────────────────────
+
+export const BUSINESS_LIMITS = { phone: 30, addressLines: 4, social: 10, url: 300, label: 60 } as const
+const PHONE = /^\+?[0-9][0-9 ()-]*$/
+
+/**
+ * A business record as it should be saved: text trimmed, blank fields and blank
+ * address lines dropped, and a profile row with no address left out, so an
+ * unused row never blocks saving.
+ */
+export function tidyBusiness(b: SiteBusiness | null | undefined): SiteBusiness {
+  const out: SiteBusiness = {}
+  const t = (v: unknown) => (typeof v === "string" ? v.trim() : "")
+  if (t(b?.email)) out.email = t(b?.email)
+  if (t(b?.phone)) out.phone = t(b?.phone)
+  const address = (Array.isArray(b?.address) ? b.address : []).map(t).filter(Boolean)
+  if (address.length) out.address = address
+  if (t(b?.hours)) out.hours = t(b?.hours)
+  const social: SiteSocial[] = []
+  for (const r of Array.isArray(b?.social) ? b.social : []) {
+    if (!t(r?.url)) continue
+    social.push({ platform: r.platform, url: t(r.url), ...(t(r.label) ? { label: t(r.label) } : {}) })
+  }
+  if (social.length) out.social = social
+  return out
+}
+
+/** The first problem in a business record, worded for the editor, or null. Mirrors server/site.php. */
+export function checkBusiness(raw: SiteBusiness | null | undefined): string | null {
+  const b = tidyBusiness(raw)
+  if (b.email) {
+    if (b.email.length > 200) return "Public email must be 200 characters or fewer."
+    if (!EMAIL.test(b.email)) return "Public email must be a valid email address."
+  }
+  if (b.phone && (b.phone.length > BUSINESS_LIMITS.phone || !PHONE.test(b.phone) || b.phone.replace(/\D/g, "").length < 7)) {
+    return "Phone must be a number of 7 or more digits, using only digits, spaces, brackets and hyphens, with an optional leading +."
+  }
+  if (b.address) {
+    if (b.address.length > BUSINESS_LIMITS.addressLines) return `Address can have up to ${BUSINESS_LIMITS.addressLines} lines.`
+    if (b.address.some((x) => x.length > SHORT)) return `Each address line must be ${SHORT} characters or fewer.`
+  }
+  if (b.hours && b.hours.length > SHORT) return `Opening note must be ${SHORT} characters or fewer.`
+  const seen = new Set<string>()
+  const social = b.social ?? []
+  if (social.length > BUSINESS_LIMITS.social) return `Up to ${BUSINESS_LIMITS.social} social profiles.`
+  for (let i = 0; i < social.length; i++) {
+    const r = social[i]
+    const where = `Profile ${i + 1}: `
+    if (!(SOCIAL_PLATFORMS as readonly string[]).includes(r.platform)) return `${where}Choose a platform.`
+    if (r.url.length > BUSINESS_LIMITS.url) return `${where}Address must be ${BUSINESS_LIMITS.url} characters or fewer.`
+    if (!isHttpsUrl(r.url)) return `${where}Address must be a full https:// address, with no sign-in details.`
+    if (seen.has(r.url.toLowerCase())) return `${where}That address is already listed.`
+    seen.add(r.url.toLowerCase())
+    if ((r.label ?? "").length > BUSINESS_LIMITS.label) return `${where}Label must be ${BUSINESS_LIMITS.label} characters or fewer.`
+  }
+  return null
+}
+
+/** Ready-to-save data for a section: service rows and the business record tidied, everything else as edited. */
 export function prepareSection<S extends SiteSection>(section: S, data: SiteContent[S]): SiteContent[S] {
+  if (section === "business") return tidyBusiness(data as SiteBusiness) as SiteContent[S]
   if (section !== "services") return data
   return (data as SiteService[]).map(tidyService) as SiteContent[S]
 }
@@ -316,11 +381,12 @@ export function validateSection<S extends SiteSection>(section: S, data: SiteCon
     if (!Number.isInteger(h.secs) || h.secs < 4 || h.secs > 10) return "Seconds per project must be a whole number from 4 to 10."
     return null
   }
+  if (section === "business") return checkBusiness(data as SiteBusiness)
   if (section === "contact") return checkRecord(data as unknown as Record<string, unknown>, RULES.contact, "")
   const rows = data as unknown as Record<string, unknown>[]
   if (rows.length < 1) return "Keep at least one row."
   if (rows.length > SITE_MAX_ROWS) return `Up to ${SITE_MAX_ROWS} rows.`
-  const rules = RULES[section as Exclude<SiteSection, "hero" | "contact">]
+  const rules = RULES[section as Exclude<SiteSection, "hero" | "contact" | "business">]
   for (let i = 0; i < rows.length; i++) {
     const bad = checkRecord(rows[i], rules, `Row ${i + 1}: `)
     if (bad) return bad
@@ -330,7 +396,7 @@ export function validateSection<S extends SiteSection>(section: S, data: SiteCon
 }
 
 /** The Site content tab each section is edited on. */
-export type SiteTab = "hero" | "services" | "process" | "pricing" | "faqs" | "contact"
+export type SiteTab = "hero" | "services" | "process" | "pricing" | "faqs" | "contact" | "business"
 export const SECTION_TAB: Record<SiteSection, SiteTab> = {
   hero: "hero",
   services: "services",
@@ -340,6 +406,7 @@ export const SECTION_TAB: Record<SiteSection, SiteTab> = {
   terms: "pricing",
   faqs: "faqs",
   contact: "contact",
+  business: "business",
 }
 
 // ── Work hero helpers ───────────────────────────────────────────────────────
