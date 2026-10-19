@@ -221,7 +221,7 @@ export const services: ServiceCategory[] = [
     hook: "Everyday IT problems sorted by someone who explains what went wrong.",
     summary: "Email and accounts, devices and software, backups, and Microsoft 365 or Google Workspace help, explained plainly.",
     detail:
-      "I sort the everyday IT jobs a small business runs into: email and account set-up, device and software set-up, backups, and help with Microsoft 365 or Google Workspace. When something has gone wrong, I explain what it was and what I changed.",
+      "I sort the everyday IT jobs a small business runs into: email and account set-up, device and software set-up, backups, and help with Microsoft 365 or Google Workspace. When something has gone wrong, I explain what it was.",
     needs: [
       "Email and accounts to set up",
       "A new device or new software to set up",
