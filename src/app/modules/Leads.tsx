@@ -693,9 +693,9 @@ export default function Leads() {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label>Score</Label>
+              <Label htmlFor="leads-sel1">Score</Label>
               <Select value={editScore} onValueChange={setEditScore}>
-                <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="leads-sel1" className="mt-1.5"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">Unscored</SelectItem>
                   <SelectItem value="1">Cold</SelectItem>

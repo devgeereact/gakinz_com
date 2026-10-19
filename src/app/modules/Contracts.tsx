@@ -224,9 +224,9 @@ export default function Contracts() {
         <div className="grid gap-[14px]">
           <div className="grid gap-[14px] sm:grid-cols-2">
             <div className="grid gap-1.5">
-              <Label>Template</Label>
+              <Label htmlFor="contracts-sel1">Template</Label>
               <Select value={template} onValueChange={setTemplate}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger id="contracts-sel1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="service">Service Agreement</SelectItem>
                   <SelectItem value="nda">Mutual NDA</SelectItem>
@@ -234,9 +234,9 @@ export default function Contracts() {
               </Select>
             </div>
             <div className="grid gap-1.5">
-              <Label>Client</Label>
+              <Label htmlFor="contracts-sel2">Client</Label>
               <Select value={clientId} onValueChange={setClientId}>
-                <SelectTrigger><SelectValue placeholder="No client" /></SelectTrigger>
+                <SelectTrigger id="contracts-sel2"><SelectValue placeholder="No client" /></SelectTrigger>
                 <SelectContent>
                   {clientList.map((c) => (
                     <SelectItem key={c.id} value={String(c.id)}>{c.company}</SelectItem>
@@ -245,9 +245,9 @@ export default function Contracts() {
               </Select>
             </div>
             <div className="grid gap-1.5">
-              <Label>Project</Label>
+              <Label htmlFor="contracts-sel3">Project</Label>
               <Select value={projectId} onValueChange={setProjectId}>
-                <SelectTrigger><SelectValue placeholder="No project" /></SelectTrigger>
+                <SelectTrigger id="contracts-sel3"><SelectValue placeholder="No project" /></SelectTrigger>
                 <SelectContent>
                   {projectList.map((p) => (
                     <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
@@ -257,9 +257,9 @@ export default function Contracts() {
             </div>
             {template === "nda" && (
               <div className="grid gap-1.5">
-                <Label>NDA triage</Label>
+                <Label htmlFor="contracts-sel4">NDA triage</Label>
                 <Select value={triage} onValueChange={setTriage}>
-                  <SelectTrigger><SelectValue placeholder="Risk flag" /></SelectTrigger>
+                  <SelectTrigger id="contracts-sel4"><SelectValue placeholder="Risk flag" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="green">Green: standard</SelectItem>
                     <SelectItem value="yellow">Yellow: review</SelectItem>

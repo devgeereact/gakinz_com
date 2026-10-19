@@ -267,9 +267,9 @@ function TeamTab({ open, setOpen }: { open: boolean; setOpen: (open: boolean) =>
               <Input id="upass" type="text" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} className="mt-1.5" placeholder="8+ characters" />
             </div>
             <div>
-              <Label>Role</Label>
+              <Label htmlFor="platform-sel1">Role</Label>
               <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v as Role }))}>
-                <SelectTrigger className="mt-1.5">
+                <SelectTrigger id="platform-sel1" className="mt-1.5">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -283,9 +283,9 @@ function TeamTab({ open, setOpen }: { open: boolean; setOpen: (open: boolean) =>
             </div>
             {form.role === "client" && (
               <div>
-                <Label>Client</Label>
+                <Label htmlFor="platform-sel2">Client</Label>
                 <Select value={form.client_id} onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}>
-                  <SelectTrigger className="mt-1.5">
+                  <SelectTrigger id="platform-sel2" className="mt-1.5">
                     <SelectValue placeholder="Which client?" />
                   </SelectTrigger>
                   <SelectContent>

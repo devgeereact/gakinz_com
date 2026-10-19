@@ -217,9 +217,9 @@ export default function Projects() {
                     <Input id="pname" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="mt-1.5" />
                   </div>
                   <div>
-                    <Label>Client</Label>
+                    <Label htmlFor="projects-sel1">Client</Label>
                     <Select value={form.client_id} onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}>
-                      <SelectTrigger className="mt-1.5">
+                      <SelectTrigger id="projects-sel1" className="mt-1.5">
                         <SelectValue placeholder="No client / internal" />
                       </SelectTrigger>
                       <SelectContent>

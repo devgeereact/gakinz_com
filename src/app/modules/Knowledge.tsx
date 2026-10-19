@@ -246,9 +246,9 @@ export default function Knowledge() {
               </div>
             </div>
             <div>
-              <Label>Audience</Label>
+              <Label htmlFor="knowledge-sel1">Audience</Label>
               <Select value={form.audience} onValueChange={(v) => setForm((f) => ({ ...f, audience: v }))}>
-                <SelectTrigger className="mt-1.5 w-48"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="knowledge-sel1" className="mt-1.5 w-48"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="internal">Internal</SelectItem>
                   <SelectItem value="client">Client-facing</SelectItem>

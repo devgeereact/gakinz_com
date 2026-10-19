@@ -288,9 +288,9 @@ export default function Invoicing() {
         <div className="grid gap-[14px]">
           <div className="grid gap-[14px] sm:grid-cols-2">
             <div className="grid gap-1.5">
-              <Label>Client</Label>
+              <Label htmlFor="invoicing-sel1">Client</Label>
               <Select value={clientId} onValueChange={setClientId}>
-                <SelectTrigger>
+                <SelectTrigger id="invoicing-sel1">
                   <SelectValue placeholder="No client" />
                 </SelectTrigger>
                 <SelectContent>

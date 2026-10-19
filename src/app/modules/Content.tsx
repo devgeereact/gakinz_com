@@ -190,9 +190,9 @@ export default function Content() {
             </div>
             <div className="grid gap-[14px] sm:grid-cols-2">
               <div className="grid gap-1.5">
-                <Label>Tone</Label>
+                <Label htmlFor="content-sel1">Tone</Label>
                 <Select value={tone} onValueChange={setTone}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="content-sel1"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {["Professional", "Friendly", "Bold", "Plain"].map((t) => (
                       <SelectItem key={t} value={t}>{t}</SelectItem>
@@ -201,9 +201,9 @@ export default function Content() {
                 </Select>
               </div>
               <div className="grid gap-1.5">
-                <Label>Goal</Label>
+                <Label htmlFor="content-sel2">Goal</Label>
                 <Select value={goal} onValueChange={setGoal}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="content-sel2"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {["Awareness", "Leads", "Engagement", "Educate"].map((g) => (
                       <SelectItem key={g} value={g}>{g}</SelectItem>

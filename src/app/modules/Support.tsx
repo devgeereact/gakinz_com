@@ -150,9 +150,9 @@ export default function Support() {
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <Label>Client</Label>
+                    <Label htmlFor="support-sel1">Client</Label>
                     <Select value={form.client_id} onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}>
-                      <SelectTrigger className="mt-1.5">
+                      <SelectTrigger id="support-sel1" className="mt-1.5">
                         <SelectValue placeholder="No client" />
                       </SelectTrigger>
                       <SelectContent>
@@ -165,9 +165,9 @@ export default function Support() {
                     </Select>
                   </div>
                   <div>
-                    <Label>Priority</Label>
+                    <Label htmlFor="support-sel2">Priority</Label>
                     <Select value={form.priority} onValueChange={(v) => setForm((f) => ({ ...f, priority: v as TicketPriority }))}>
-                      <SelectTrigger className="mt-1.5">
+                      <SelectTrigger id="support-sel2" className="mt-1.5">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>

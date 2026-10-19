@@ -151,9 +151,9 @@ export default function Design() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label>Project</Label>
+                  <Label htmlFor="design-sel1">Project</Label>
                   <Select value={projectId} onValueChange={setProjectId}>
-                    <SelectTrigger className="mt-1.5">
+                    <SelectTrigger id="design-sel1" className="mt-1.5">
                       <SelectValue placeholder="Pick a project" />
                     </SelectTrigger>
                     <SelectContent>

@@ -275,9 +275,9 @@ export default function Blog() {
                 <Input id="bcat" value={form.category} onChange={(e) => set("category", e.target.value)} className="mt-1.5" />
               </div>
               <div>
-                <Label>Cover</Label>
+                <Label htmlFor="blog-sel1">Cover</Label>
                 <Select value={form.cover} onValueChange={(v) => set("cover", v)}>
-                  <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="blog-sel1" className="mt-1.5"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {COVERS.map((c) => (
                       <SelectItem key={c} value={c}>{c}</SelectItem>
@@ -301,9 +301,9 @@ export default function Blog() {
               <pre className="mt-1 overflow-x-auto rounded-md bg-muted p-2 text-xs">{":::recommend\ntitle: Product or service name\nurl: https://example.com/item\nnote: One or two sentences on why.\naffiliate: yes\n:::"}</pre>
             </div>
             <div>
-              <Label>Status</Label>
+              <Label htmlFor="blog-sel2">Status</Label>
               <Select value={form.status} onValueChange={(v) => set("status", v)}>
-                <SelectTrigger className="mt-1.5 w-48"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="blog-sel2" className="mt-1.5 w-48"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="published">Published</SelectItem>

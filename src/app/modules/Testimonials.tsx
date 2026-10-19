@@ -224,9 +224,9 @@ export default function Testimonials() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <Label>Rating</Label>
+                <Label htmlFor="testimonials-sel1">Rating</Label>
                 <Select value={String(form.rating)} onValueChange={(v) => set("rating", Number(v))}>
-                  <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                  <SelectTrigger id="testimonials-sel1" className="mt-1.5"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {[5, 4, 3, 2, 1].map((n) => (
                       <SelectItem key={n} value={String(n)}>{n} star{n > 1 ? "s" : ""}</SelectItem>

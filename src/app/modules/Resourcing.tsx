@@ -117,9 +117,9 @@ export default function Resourcing() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label>Team member</Label>
+                  <Label htmlFor="resourcing-sel1">Team member</Label>
                   <Select value={userId} onValueChange={setUserId}>
-                    <SelectTrigger className="mt-1.5"><SelectValue placeholder="Who?" /></SelectTrigger>
+                    <SelectTrigger id="resourcing-sel1" className="mt-1.5"><SelectValue placeholder="Who?" /></SelectTrigger>
                     <SelectContent>
                       {team.map((m) => (
                         <SelectItem key={m.id} value={String(m.id)}>{m.name}</SelectItem>
@@ -138,9 +138,9 @@ export default function Resourcing() {
                   </div>
                 </div>
                 <div>
-                  <Label>Type</Label>
+                  <Label htmlFor="resourcing-sel2">Type</Label>
                   <Select value={type} onValueChange={setType}>
-                    <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                    <SelectTrigger id="resourcing-sel2" className="mt-1.5"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="holiday">Holiday</SelectItem>
                       <SelectItem value="sick">Sick</SelectItem>

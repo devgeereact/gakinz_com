@@ -276,9 +276,9 @@ export default function Proposals() {
               <Input id="ptitle" value={title} onChange={(e) => setTitle(e.target.value)} />
             </div>
             <div className="grid gap-1.5">
-              <Label>Client</Label>
+              <Label htmlFor="proposals-sel1">Client</Label>
               <Select value={clientId} onValueChange={setClientId}>
-                <SelectTrigger>
+                <SelectTrigger id="proposals-sel1">
                   <SelectValue placeholder="No client" />
                 </SelectTrigger>
                 <SelectContent>

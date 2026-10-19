@@ -224,9 +224,9 @@ export default function Clients() {
               <Input id="phone" value={form.phone} onChange={(e) => set("phone", e.target.value)} className="mt-1.5" />
             </div>
             <div>
-              <Label>Tag</Label>
+              <Label htmlFor="clients-sel1">Tag</Label>
               <Select value={form.tag} onValueChange={(v) => set("tag", v)}>
-                <SelectTrigger className="mt-1.5">
+                <SelectTrigger id="clients-sel1" className="mt-1.5">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
