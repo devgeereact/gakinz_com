@@ -6,7 +6,7 @@
 import fs from "node:fs"
 import path from "node:path"
 import { beforeEach, describe, expect, it } from "vitest"
-import { api, createUser, login, one, resetDb, sql } from "./helpers"
+import { api, createUser, login, one, q, resetDb, sql } from "./helpers"
 
 let editor: string
 
@@ -114,6 +114,76 @@ describe("publish and the public read", () => {
     await save("hero", HERO)
     expect((await publish(["faqs"])).status).toBe(409)
     expect((await publish(["nonsense"])).status).toBe(400)
+  })
+})
+
+describe("service pages", () => {
+  const PAGE = {
+    slug: "it-support",
+    title: "General IT support",
+    summary: "Email, devices, software and backups.",
+    group: "it",
+    hook: "Everyday IT problems sorted.",
+    detail: "A longer paragraph.",
+    needs: ["Email to set up"],
+    deliverables: ["Email set up"],
+    exclusions: ["Networking installation and hardware repair are not offered."],
+    price_basis: "Priced per job, ask for a quote.",
+  }
+  const LEGACY = { title: "Web design", summary: "Layout and type." }
+
+  it("stores a whole service page beside an older title-and-summary row, trimming each line", async () => {
+    const r = await save("services", [{ ...PAGE, needs: ["  Email to set up  "] }, LEGACY])
+    expect(r.status, JSON.stringify(r.json)).toBe(200)
+    expect(r.json.draft).toEqual([PAGE, LEGACY])
+    expect((await publish(["services"])).status).toBe(200)
+    expect((await api("site.php?action=get")).json).toEqual({ services: [PAGE, LEGACY] })
+  })
+
+  it("leaves detail optional but takes the other page fields all together or not at all", async () => {
+    const noDetail: Record<string, unknown> = { ...PAGE }
+    delete noDetail.detail
+    expect((await save("services", [noDetail])).status).toBe(200)
+    for (const key of ["slug", "group", "hook", "needs", "deliverables", "exclusions", "price_basis"]) {
+      const part: Record<string, unknown> = { ...PAGE }
+      delete part[key]
+      const r = await save("services", [part])
+      expect(r.status, key).toBe(400)
+      expect(r.json.error).toContain(`missing ${key}`)
+    }
+    expect((await save("services", [{ ...LEGACY, hook: "Only a hook." }])).status).toBe(400)
+  })
+
+  it("refuses a bad slug, a repeated slug, an unknown group and bad lists", async () => {
+    const bad = [
+      { ...PAGE, slug: "IT Support" },
+      { ...PAGE, slug: "it--support" },
+      { ...PAGE, slug: "x".repeat(81) },
+      { ...PAGE, group: "networking" },
+      { ...PAGE, needs: [] },
+      { ...PAGE, needs: "Email" },
+      { ...PAGE, needs: ["Email", "  "] },
+      { ...PAGE, needs: [42] },
+      { ...PAGE, needs: { a: "Email" } },
+      { ...PAGE, exclusions: Array.from({ length: 11 }, (_, i) => `Line ${i}`) },
+      { ...PAGE, deliverables: ["x".repeat(301)] },
+      { ...PAGE, hook: "x".repeat(301) },
+    ]
+    for (const row of bad) {
+      expect((await save("services", [row])).status, JSON.stringify(row).slice(0, 80)).toBe(400)
+    }
+    const twice = await save("services", [PAGE, { ...PAGE, title: "Again" }])
+    expect(twice.status).toBe(400)
+    expect(twice.json.error).toMatch(/already used/)
+    expect(one("SELECT COUNT(*) FROM site_content")).toBe("0")
+  })
+
+  it("will not publish a stored draft that a newer rule refuses", async () => {
+    sql(
+      `INSERT INTO site_content (section, draft) VALUES ('services', ${q(JSON.stringify([{ title: "Printers", summary: "Help.", hook: "Half a page." }]))})`,
+    )
+    expect((await publish(["services"])).status).toBe(400)
+    expect((await api("site.php?action=get")).json).toEqual({})
   })
 })
 

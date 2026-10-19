@@ -21,6 +21,12 @@
  * Every section has a fixed shape (SECTIONS below). Unknown sections, unknown
  * keys, wrong types, over-long text and over-long lists are refused, never
  * trimmed to fit, so the CMS shows the editor exactly what was wrong.
+ *
+ * Services (2026-10-19, D-038): a row may carry its whole service page. slug,
+ * group, hook, needs, deliverables, exclusions and price_basis come all together
+ * or not at all (detail stays optional), so a published service is either a
+ * whole page or, as every row saved before this change, a title and summary
+ * that edit a built-in service. Slugs are unique within the list.
  */
 require __DIR__ . '/_bootstrap.php';
 
@@ -30,11 +36,17 @@ const SITE_MIGRATION =
 const MAX_ROWS = 12;
 const SHORT = 300;
 const LONG = 1200;
+const SERVICE_LIST_MAX = 10;
+const SERVICE_GROUPS = ['websites', 'it'];
 
 /**
  * The allow-list of sections and their shapes.
  * `type` is 'object' (one record) or 'list' (1..MAX_ROWS records). Each field is
- * [kind, max-or-range, required]: kind is 'str', 'email', 'int' or 'bool'.
+ * [kind, max-or-range, required]: kind is 'str', 'email', 'int', 'bool',
+ * 'slug' (lower-case words joined by single hyphens), 'enum' (one of a list) or
+ * 'strlist' (1..SERVICE_LIST_MAX non-empty lines of at most SHORT characters).
+ * `together` names optional fields that must all be present once any one is.
+ * `unique` names a field no two rows may share.
  */
 const SECTIONS = [
   'hero' => ['type' => 'object', 'fields' => [
@@ -47,7 +59,15 @@ const SECTIONS = [
   'services' => ['type' => 'list', 'fields' => [
     'title' => ['str', SHORT, true],
     'summary' => ['str', LONG, true],
-  ]],
+    'slug' => ['slug', 80, false],
+    'group' => ['enum', SERVICE_GROUPS, false],
+    'hook' => ['str', SHORT, false],
+    'detail' => ['str', LONG, false],
+    'needs' => ['strlist', SERVICE_LIST_MAX, false],
+    'deliverables' => ['strlist', SERVICE_LIST_MAX, false],
+    'exclusions' => ['strlist', SERVICE_LIST_MAX, false],
+    'price_basis' => ['str', SHORT, false],
+  ], 'together' => ['slug', 'group', 'hook', 'needs', 'deliverables', 'exclusions', 'price_basis'], 'unique' => 'slug'],
   'process' => ['type' => 'list', 'fields' => [
     'title' => ['str', SHORT, true],
     'detail' => ['str', LONG, true],
@@ -117,10 +137,47 @@ function clean_record($rec, array $fields, string $where): array {
       case 'bool':
         if (!is_bool($v)) fail("$label must be true or false.");
         break;
+      case 'slug':
+        if (!is_string($v)) fail("$label must be text.");
+        $v = trim($v);
+        if ($v === '') {
+          if ($required) fail("$label cannot be empty.");
+          continue 2;
+        }
+        if (strlen($v) > $limit || !preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/', $v)) {
+          fail("$label must be lower-case letters, numbers and single hyphens, $limit characters or fewer.");
+        }
+        break;
+      case 'enum':
+        if (!is_string($v) || !in_array($v, $limit, true)) fail("$label must be one of: " . implode(', ', $limit) . '.');
+        break;
+      case 'strlist':
+        if (!is_array($v) || !is_list_array($v)) fail("$label must be a list of lines.");
+        if (count($v) < 1) fail("$label needs at least one line.");
+        if (count($v) > $limit) fail("$label can hold at most $limit lines.");
+        $lines = [];
+        foreach ($v as $j => $line) {
+          if (!is_string($line)) fail("$label line " . ($j + 1) . ' must be text.');
+          $line = trim($line);
+          if ($line === '') fail("$label line " . ($j + 1) . ' cannot be empty.');
+          if (mb_strlen($line) > SHORT) fail("$label line " . ($j + 1) . ' must be ' . SHORT . ' characters or fewer.');
+          $lines[] = $line;
+        }
+        $v = $lines;
+        break;
     }
     $out[$name] = $v;
   }
   return $out;
+}
+
+/** Fields that come all together or not at all: refuse a record holding only some. */
+function check_together(array $rec, array $together, string $where): void {
+  $present = array_values(array_filter($together, fn($f) => array_key_exists($f, $rec)));
+  if ($present && count($present) < count($together)) {
+    $missing = array_values(array_diff($together, $present));
+    fail("$where is missing " . implode(', ', $missing) . '. A service page needs all of ' . implode(', ', $together) . ', or none of them.');
+  }
 }
 
 /** Validate a whole section's data. Returns the cleaned data, ready to store. */
@@ -132,8 +189,17 @@ function clean_section(string $section, $data): array {
   if (count($data) < 1) fail("$section needs at least one entry.");
   if (count($data) > MAX_ROWS) fail("$section can hold at most " . MAX_ROWS . ' entries.');
   $out = [];
+  $seen = [];
   foreach ($data as $i => $rec) {
-    $out[] = clean_record($rec, $shape['fields'], $section . '[' . ($i + 1) . ']');
+    $where = $section . '[' . ($i + 1) . ']';
+    $clean = clean_record($rec, $shape['fields'], $where);
+    if (isset($shape['together'])) check_together($clean, $shape['together'], $where);
+    if (isset($shape['unique']) && array_key_exists($shape['unique'], $clean)) {
+      $key = $clean[$shape['unique']];
+      if (isset($seen[$key])) fail("$where.{$shape['unique']} \"$key\" is already used by another entry.");
+      $seen[$key] = true;
+    }
+    $out[] = $clean;
   }
   return $out;
 }

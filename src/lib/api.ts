@@ -1780,7 +1780,23 @@ export const work = {
 // strictly: unknown keys, empty required text, over-long text (300 for short
 // fields, 1200 for long ones) and lists over 12 rows are refused, not trimmed.
 export type SiteHero = { status: string; lead: string; cta1: string; cta2: string; secs: number } // secs 4..10
-export type SiteService = { title: string; summary: string }
+// A service row. Rows saved before 2026-10-19 hold only title and summary; the
+// other fields are optional, but site.php takes them all or none of slug,
+// group, hook, needs, deliverables, exclusions and price_basis, so a published
+// service is either a whole page or an edit of a built-in one.
+export type SiteServiceGroup = "websites" | "it"
+export type SiteService = {
+  title: string
+  summary: string
+  slug?: string
+  group?: SiteServiceGroup
+  hook?: string
+  detail?: string
+  needs?: string[]
+  deliverables?: string[]
+  exclusions?: string[]
+  price_basis?: string
+}
 export type SiteProcessStep = { title: string; detail: string }
 export type SitePackage = { name: string; price: string; best: string; featured?: boolean }
 export type SiteAddon = { name: string; price: string }
