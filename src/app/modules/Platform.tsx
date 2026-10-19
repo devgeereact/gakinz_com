@@ -804,7 +804,13 @@ function RetentionCard() {
       {loading ? (
         <TableSkeleton rows={4} cols={3} />
       ) : report ? (
-        <div className="overflow-x-auto">
+        <div
+          role="region"
+          aria-label="Retention report, scrolls sideways"
+          tabIndex={0}
+          className="overflow-x-auto rounded-xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 [&>div]:overflow-visible"
+        >
+          {/* The Table's own wrapper is made not to scroll, so this focusable region is the one scroll container. */}
           <Table>
             <TableHeader>
               <TableRow>
