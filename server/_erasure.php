@@ -188,3 +188,189 @@ function er_erase_enquiry(mysqli $conn, int $id, string $confirmEmail, ?int $mon
     throw $t;
   }
 }
+
+// ── Retention executor ──────────────────────────────────────────────────────
+
+/** True only when config.php sets $RETENTION_APPLY = true; exactly. */
+function retention_apply_enabled(): bool {
+  return ($GLOBALS['RETENTION_APPLY'] ?? false) === true;
+}
+
+/** Why a soft-deleted file row may not be removed, or null when it may. Read only. */
+function er_file_problem(mysqli $conn, array $f): ?string {
+  $stored = (string)$f['stored'];
+  if (!stored_name_ok($stored)) return 'unsafe_name';
+  // A project's asset checklist still points at it: deleting the row would
+  // change that project record, so the file stays.
+  if (er_table_exists($conn, 'project_assets') && er_rows($conn, 'SELECT 1 FROM project_assets WHERE file_id = ? LIMIT 1', 'i', [(int)$f['id']])) {
+    return 'linked_asset';
+  }
+  // Another row uses the same file on disk.
+  if (er_rows($conn, 'SELECT 1 FROM files WHERE `stored` = ? AND id <> ? LIMIT 1', 'si', [$stored, (int)$f['id']])) return 'shared_file';
+  return null;
+}
+
+const ER_FILE_PROBLEMS = [
+  'unsafe_name' => 'stored name fails the upload path rule',
+  'linked_asset' => 'still linked from a project asset checklist',
+  'shared_file' => 'another file row uses the same file on disk',
+  'unsafe_path' => 'something other than a plain file is at that path',
+  'unlink_failed' => 'the file could not be removed from disk',
+];
+
+/**
+ * Removes one soft-deleted file: the file in uploads/ first, through
+ * stored_path(), then its row, under a row lock that checks the age again.
+ * Returns removed | missing (row removed, nothing was on disk) | gone (the row
+ * no longer qualifies) | a key of ER_FILE_PROBLEMS.
+ */
+function er_remove_deleted_file(mysqli $conn, int $id, int $days): string {
+  $conn->begin_transaction();
+  try {
+    $f = er_rows($conn, 'SELECT id, `stored` FROM files WHERE id = ? AND deleted_at IS NOT NULL
+      AND deleted_at < (NOW() - INTERVAL ? DAY) FOR UPDATE', 'ii', [$id, $days])[0] ?? null;
+    if (!$f) { $conn->rollback(); return 'gone'; }
+    $problem = er_file_problem($conn, $f);
+    if ($problem !== null) { $conn->rollback(); return $problem; }
+    $stored = (string)$f['stored'];
+    $path = stored_path($stored);
+    $outcome = 'removed';
+    if ($path !== null) {
+      if (!@unlink($path)) { $conn->rollback(); return 'unlink_failed'; }
+    } else {
+      // Nothing usable at that name. Only a name with nothing at all behind
+      // it counts as missing; a directory or a symlink is left alone.
+      $raw = UPLOAD_DIR . '/' . $stored;
+      if (file_exists($raw) || is_link($raw)) { $conn->rollback(); return 'unsafe_path'; }
+      $outcome = 'missing';
+    }
+    er_exec($conn, 'DELETE FROM files WHERE id = ? AND deleted_at IS NOT NULL', 'i', [$id]);
+    $conn->commit();
+    return $outcome;
+  } catch (Throwable $t) {
+    $conn->rollback();
+    throw $t;
+  }
+}
+
+/**
+ * The executor. Lists, for the two rules it may act on, what is eligible and
+ * what is kept and why. Deletes only when `$wantApply` (the --apply flag) and
+ * retention_apply_enabled() are both true, and then only for a rule whose
+ * period is set. An applying run writes one audit row with counts only.
+ */
+function retention_apply_run(mysqli $conn, bool $wantApply): array {
+  $enabled = retention_apply_enabled();
+  $apply = $wantApply && $enabled;
+  $out = [
+    'mode' => $apply ? 'apply' : 'dry_run',
+    'apply_requested' => $wantApply,
+    'apply_enabled' => $enabled,
+    'generated_at' => gmdate('Y-m-d\TH:i:s\Z'),
+    'rules' => [],
+  ];
+
+  // (a) Enquiries that never became a client.
+  $months = retention_period('RETENTION_ENQUIRY_MONTHS');
+  $rule = ['key' => 'enquiries', 'label' => 'Enquiries that did not become a client', 'config_key' => '$RETENTION_ENQUIRY_MONTHS',
+    'unit' => 'month', 'period' => is_int($months) ? $months : null];
+  if (!is_int($months)) {
+    $rule['status'] = $months === null ? 'period_not_set' : 'invalid_period';
+  } else {
+    $rule['status'] = 'checked';
+    $rule += ['eligible' => [], 'kept' => [], 'deleted' => [], 'bookings' => 0, 'booking_events' => 0, 'audit_scrubbed' => 0];
+    $candidates = er_rows($conn, "SELECT e.id, e.email, e.status FROM enquiries e
+      WHERE COALESCE(e.status, '') <> 'won'
+        AND NOT EXISTS (SELECT 1 FROM clients c WHERE c.source_lead_id = e.id)
+        AND e.updated_at < (NOW() - INTERVAL ? MONTH)
+      ORDER BY e.id", 'i', [$months]);
+    foreach ($candidates as $e) {
+      $id = (int)$e['id'];
+      $problem = trim((string)$e['email']) === '' ? 'no_email' : er_enquiry_problem($conn, $e, $months);
+      if ($problem !== null) { $rule['kept'][$problem] = ($rule['kept'][$problem] ?? 0) + 1; continue; }
+      $rule['eligible'][] = $id;
+      if (!$apply) continue;
+      $r = er_erase_enquiry($conn, $id, (string)$e['email'], $months);
+      if ($r['status'] === 'erased') {
+        $rule['deleted'][] = $id;
+        $rule['bookings'] += $r['bookings'];
+        $rule['booking_events'] += $r['booking_events'];
+        $rule['audit_scrubbed'] += $r['audit_scrubbed'];
+      } else {
+        $key = $r['problem'] ?? $r['status'];
+        $rule['kept'][$key] = ($rule['kept'][$key] ?? 0) + 1;
+      }
+    }
+  }
+  $out['rules'][] = $rule;
+
+  // (b) Soft-deleted files.
+  $days = retention_period('RETENTION_DELETED_FILE_DAYS');
+  $rule = ['key' => 'deleted_files', 'label' => 'Soft-deleted files', 'config_key' => '$RETENTION_DELETED_FILE_DAYS',
+    'unit' => 'day', 'period' => is_int($days) ? $days : null];
+  if (!is_int($days)) {
+    $rule['status'] = $days === null ? 'period_not_set' : 'invalid_period';
+  } else {
+    $rule['status'] = 'checked';
+    $rule += ['eligible' => [], 'kept' => [], 'deleted' => [], 'missing_on_disk' => 0];
+    $candidates = er_rows($conn, 'SELECT id, `stored` FROM files
+      WHERE deleted_at IS NOT NULL AND deleted_at < (NOW() - INTERVAL ? DAY) ORDER BY id', 'i', [$days]);
+    foreach ($candidates as $f) {
+      $id = (int)$f['id'];
+      $problem = er_file_problem($conn, $f);
+      if ($problem !== null) { $rule['kept'][$problem] = ($rule['kept'][$problem] ?? 0) + 1; continue; }
+      $rule['eligible'][] = $id;
+      if (!$apply) continue;
+      $r = er_remove_deleted_file($conn, $id, $days);
+      if ($r === 'removed' || $r === 'missing') {
+        $rule['deleted'][] = $id;
+        if ($r === 'missing') $rule['missing_on_disk']++;
+      } else {
+        $rule['kept'][$r] = ($rule['kept'][$r] ?? 0) + 1;
+      }
+    }
+  }
+  $out['rules'][] = $rule;
+
+  if ($apply) {
+    $counts = [];
+    foreach ($out['rules'] as $r) {
+      $counts[$r['key']] = $r['status'] === 'checked'
+        ? ['deleted' => count($r['deleted']), 'kept' => array_sum($r['kept'])]
+        : $r['status'];
+    }
+    audit($conn, null, 'retention_apply', (string)json_encode($counts));
+  }
+  return $out;
+}
+
+/** Plain text for the command line. Ids only: no name, email or file name is printed. */
+function retention_apply_text(array $run): string {
+  if ($run['mode'] === 'apply') {
+    $lines = ['Retention apply: APPLIED. Rows and files listed as deleted are gone.'];
+  } elseif ($run['apply_requested']) {
+    $lines = ['Retention apply: DRY RUN. --apply was passed, but $RETENTION_APPLY is not true in config.php, so nothing was deleted.'];
+  } else {
+    $lines = ['Retention apply: DRY RUN. Nothing was deleted. Deleting needs --apply and $RETENTION_APPLY = true in config.php.'];
+  }
+  $lines[] = 'Generated ' . $run['generated_at'] . '.';
+  $lines[] = '';
+  $ids = fn(array $xs) => $xs ? ' (#' . implode(', #', $xs) . ')' : '';
+  foreach ($run['rules'] as $r) {
+    if ($r['status'] === 'period_not_set') { $lines[] = "{$r['label']}: period not set ({$r['config_key']}). Nothing happens."; continue; }
+    if ($r['status'] === 'invalid_period') { $lines[] = "{$r['label']}: invalid period in {$r['config_key']}. Nothing happens."; continue; }
+    $unit = $r['unit'] . ($r['period'] === 1 ? '' : 's');
+    $line = "{$r['label']}, older than {$r['period']} $unit: ";
+    $line .= $run['mode'] === 'apply'
+      ? 'deleted ' . count($r['deleted']) . $ids($r['deleted'])
+      : 'would delete ' . count($r['eligible']) . $ids($r['eligible']);
+    if (!empty($r['missing_on_disk']) && $run['mode'] === 'apply') $line .= ', of which ' . $r['missing_on_disk'] . ' had no file on disk';
+    $kept = [];
+    foreach ($r['kept'] as $why => $n) $kept[] = "$n $why";
+    $line .= '; kept ' . array_sum($r['kept']) . ($kept ? ' (' . implode(', ', $kept) . ')' : '') . '.';
+    $lines[] = $line;
+  }
+  $lines[] = '';
+  $lines[] = 'Every other retention rule is report only (job=retention_report). This job never deletes anything else.';
+  return implode("\n", $lines) . "\n";
+}

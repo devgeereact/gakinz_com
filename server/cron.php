@@ -21,6 +21,13 @@
  *                plain summary of the rows each proposed retention rule would
  *                affect (_retention.php). It counts and never changes a row.
  *
+ *   job=retention_apply [--dry-run | --apply]   command line only, and not
+ *                part of `all`: the retention executor (_erasure.php). It acts
+ *                on two rules only, enquiries that never became a client and
+ *                soft-deleted files, and lists what would go. It deletes only
+ *                when --apply is passed AND $RETENTION_APPLY = true AND that
+ *                rule's period is set. --dry-run is the default.
+ *
  * Config (config.php): $CRON_KEY (required), $REPORT_RECIPIENTS (comma list).
  * Every job degrades quietly if its dependency (SMTP, columns) is absent.
  */
@@ -47,6 +54,28 @@ if ($job === 'retention_report') {
     echo retention_report_text(retention_report($conn));
   } catch (mysqli_sql_exception $e) {
     fwrite(STDERR, 'Retention report failed: SQL error ' . $e->getCode() . "\n");
+    exit(1);
+  }
+  exit(0);
+}
+// Retention executor (_erasure.php): command line only, never part of `all`,
+// and refused over the web even with the key. A dry run unless --apply is
+// passed AND config.php sets $RETENTION_APPLY = true; it acts only on rules
+// whose period is set, and only on enquiries and soft-deleted files.
+if ($job === 'retention_apply') {
+  if (PHP_SAPI !== 'cli') fail('retention_apply runs from the command line only.', 400);
+  header_remove('Content-Type');
+  $flags = array_values(array_filter(array_slice($argv ?? [], 1), fn($a) => strncmp((string)$a, '--', 2) === 0));
+  $unknown = array_diff($flags, ['--apply', '--dry-run']);
+  if ($unknown || (in_array('--apply', $flags, true) && in_array('--dry-run', $flags, true))) {
+    fwrite(STDERR, "Usage: php cron.php job=retention_apply [--dry-run | --apply]. Nothing was deleted.\n");
+    exit(2);
+  }
+  require_once __DIR__ . '/_erasure.php';
+  try {
+    echo retention_apply_text(retention_apply_run($conn, in_array('--apply', $flags, true)));
+  } catch (mysqli_sql_exception $e) {
+    fwrite(STDERR, 'Retention apply stopped: SQL error ' . $e->getCode() . ". The current item was rolled back.\n");
     exit(1);
   }
   exit(0);

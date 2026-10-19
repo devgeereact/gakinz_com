@@ -62,6 +62,9 @@ $RETENTION_ENQUIRY_MONTHS = 12; $RETENTION_DELETED_FILE_DAYS = 30;
 $RETENTION_CLIENT_MONTHS = null; $RETENTION_INVOICE_MONTHS = null; $RETENTION_AUDIT_MONTHS = null;
 $RETENTION_SUPPORT_MONTHS = null; $RETENTION_COMMS_MONTHS = null; $RETENTION_STAFF_MONTHS = null;
 $RETENTION_CERTIFICATE_MONTHS = null;
+// The retention executor (cron.php job=retention_apply) never deletes unless a
+// test turns this on through overrides.json, as in config.php.example.
+$RETENTION_APPLY = false;
 // Test only: a test may write overrides.json beside this file to change config
 // globals for its own requests (privacy.test.ts sets every retention period,
 // an invalid one and a cron key), and removes it afterwards.

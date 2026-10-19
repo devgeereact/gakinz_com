@@ -4,9 +4,11 @@
  *
  * Counts the rows each proposed retention rule WOULD affect if a period were
  * set. It only ever runs SELECT COUNT(*): nothing here deletes, updates or
- * anonymises anything, and no other file acts on these periods. Periods and
- * erasure rules are owner and legal decisions, so the deleting job is not
- * built until they are agreed.
+ * anonymises anything. Periods and erasure rules are owner and legal
+ * decisions. The only file that acts on a period is _erasure.php (cron.php
+ * job=retention_apply), for two rules only: enquiries that never became a
+ * client and soft-deleted files, and only when $RETENTION_APPLY is true and
+ * --apply is passed. Every other rule here is report only.
  *
  * Each period comes from a config.php variable (see config.php.example). null,
  * or a missing variable, means "not decided, nothing happens", and the rule
