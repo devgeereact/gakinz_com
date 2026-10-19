@@ -112,7 +112,8 @@ Measured on branch `feat/redesign-2026` at `d314833` (stacked on `feat/plan-2026
 - `npx tsc -b`, `npm run build`, `npm run docs:check` and `php -l` over 47 PHP files PASS;
   `npm test` 128 unit tests PASS (143 on `perf/prerender-public`, 2026-10-16). `npm run test:server` 140 server integration tests PASS,
   measured the same day against a throwaway local `*_test` database on MariaDB 10.11.
-- **`npm run lint` fails: 41 errors, 1 warning.** `npm run lint:ratchet` holds that ceiling in
+- **`npm run lint` fails: 33 errors, 0 warnings** (on `feat/journeys-2026-10-18`, the
+  ceiling in `scripts/lint-ratchet.mjs`). `npm run lint:ratchet` holds that ceiling in
   CI, so the count must not grow. See `docs/KNOWN-ISSUES.md` K-002.
 - The 2026-10-10 work (batch 1, navigation, My account, enquiry follow-ups, portal messages,
   public publishing and article format) is on `feat/plan-2026-batch-1`, PR #8. The D-046
