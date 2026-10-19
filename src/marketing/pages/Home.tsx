@@ -5,7 +5,7 @@ import { personSchema, websiteSchema } from "@/marketing/components/seo-schema"
 import { CtaBand, Devices, IArrow, INext, IPause, IPlay, IPrev, LondonClock, ProjectCard } from "@/marketing/components/site-ui"
 import { useNavTone } from "@/marketing/components/site-helpers"
 import { kindName, onColour, useProjects, type Project } from "@/marketing/data/showcase"
-import { useSiteCopy } from "@/marketing/data/content"
+import { groupServices, useSiteCopy } from "@/marketing/data/content"
 import { howIWork, site } from "@/marketing/data/site"
 import { useMarketingBlog } from "@/marketing/data/blog"
 import Testimonials from "@/marketing/components/Testimonials"
@@ -248,22 +248,28 @@ export default function Home() {
         <div className="sec__head">
           <div>
             <p className="eyebrow mono">What I do</p>
-            <h2 className="h-l">Design, build, and the care afterwards.</h2>
+            <h2 className="h-l">Websites, and everyday IT support.</h2>
           </div>
           <p className="lede">One person does all of it. If a job needs something outside this list I will say so and point you at someone who does it for a living.</p>
         </div>
-        <div className="svc">
-          {copy.services.map((s) => (
-            <Link key={s.slug} to={`/services/${s.slug}`}>
-              <span className="mono mute">Service</span>
-              <h3>{s.title}</h3>
-              <p>{s.summary}</p>
-              <span className="link">
-                Read more <IArrow />
-              </span>
-            </Link>
-          ))}
-        </div>
+        {groupServices(copy.services).map((g) => (
+          <div key={g.key} className="svc-group" role="group" aria-labelledby={`home-grp-${g.key}`}>
+            <p className="eyebrow mono" id={`home-grp-${g.key}`}>
+              {g.label}
+            </p>
+            <div className={g.items.length === 2 ? "svc svc--2" : "svc"}>
+              {g.items.map((s) => (
+                <Link key={s.slug} to={`/services/${s.slug}`}>
+                  <h3>{s.title}</h3>
+                  <p>{s.summary}</p>
+                  <span className="link">
+                    Read more <IArrow />
+                  </span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        ))}
       </section>
 
       <section className="sec wrap">

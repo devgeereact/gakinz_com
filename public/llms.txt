@@ -10,14 +10,25 @@ of the site's actual content, kept in step with it.
 
 ## What I do
 
+Websites:
+
 - Web design. Layout, type and the order of the argument, decided against your
   content rather than a template.
 - Web development. Hand-written and standards-based. No page builder, no bought
   theme, and yours to edit afterwards.
 - Ecommerce. Catalogue, checkout, and the unglamorous parts: stock, tax,
   delivery and refunds.
-- Care and support. Updates, small changes, and a person who answers when
+- Website care. Updates, small changes, and a person who answers when
   something breaks. Month to month, cancellable at any time.
+
+IT support:
+
+- General IT support. Email and account set-up, device and software set-up,
+  backups, and Microsoft 365 or Google Workspace help, with a plain explanation
+  of what went wrong. Priced per job. Networking installation and hardware
+  repair are not offered.
+- IT consultancy. A fixed-scope session or a short written review that ends in
+  a written recommendation. Priced per job.
 
 ## How I work
 
@@ -31,7 +42,7 @@ take a small number of projects at once rather than a large number badly.
 - [Selected work](https://gakinz.com/work): records of client work, products I
   own and experiments. Fields with no true value are marked as missing rather
   than filled in.
-- [What I do](https://gakinz.com/services): the four capabilities above, in full.
+- [What I do](https://gakinz.com/services): the six services above, in full.
 - [Pricing](https://gakinz.com/pricing): indicative starting points in GBP,
   excluding VAT. A fixed price follows a discovery call.
 - [Who I work with](https://gakinz.com/sectors): the kinds of business I build for.

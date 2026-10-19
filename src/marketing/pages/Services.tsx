@@ -1,19 +1,22 @@
 import { Link } from "react-router-dom"
 import Seo from "@/marketing/components/Seo"
 import { CtaBand, IArrow, PageHead, Ticks } from "@/marketing/components/site-ui"
-import { useSiteCopy } from "@/marketing/data/content"
+import { groupServices, useSiteCopy } from "@/marketing/data/content"
 import { useProjects } from "@/marketing/data/showcase"
 import { alwaysIncluded } from "@/marketing/data/site"
 
 const pad = (n: number) => String(n).padStart(2, "0")
 
-/** What I do, from the editable copy (D-046). Numbers come from the list, not the copy. */
+/**
+ * What I do, from the editable copy (D-046): six services in two groups (D-038).
+ * Numbers come from the list, not the copy, and run on across the groups.
+ */
 export default function Services() {
   const copy = useSiteCopy()
   const { projects } = useProjects()
   return (
     <>
-      <Seo title="Services" description="Design, build, shops and the care afterwards, from one person." path="/services" />
+      <Seo title="Services" description="Websites and everyday IT support for small businesses: design, build, shops, care afterwards, IT help and straight IT advice." path="/services" />
       <PageHead
         crumbs={[[null, "Services"]]}
         title={
@@ -23,25 +26,38 @@ export default function Services() {
             start to finish.
           </>
         }
-        lede="Design, build, shops and the care afterwards. The same person carries each job from the first call to the last fix."
+        lede="Websites, from the design to the care afterwards, and everyday IT support. The same person carries each job from the first call to the last fix."
       />
-      <section className="wrap svc-list">
-        {copy.services.map((s, i) => (
-          <article key={s.slug}>
-            <span className="n">{pad(i + 1)}</span>
+      {groupServices(copy.services).map((g) => (
+        <section key={g.key} className="sec wrap" aria-labelledby={`grp-${g.key}`}>
+          <div className="sec__head">
             <div>
-              <h2>{s.title}</h2>
-              <p>{s.detail}</p>
-              <p style={{ marginTop: 16 }}>
-                <Link className="link" to={`/services/${s.slug}`}>
-                  More on {s.title.toLowerCase()} <IArrow />
-                </Link>
-              </p>
+              <p className="eyebrow mono">Group</p>
+              <h2 className="h-l" id={`grp-${g.key}`}>
+                {g.label}
+              </h2>
             </div>
-            {s.deliverables.length > 0 ? <Ticks items={s.deliverables} /> : <p>{s.summary}</p>}
-          </article>
-        ))}
-      </section>
+          </div>
+          <div className="svc-list">
+            {g.items.map((s) => (
+              <article key={s.slug}>
+                <span className="n">{pad(copy.services.indexOf(s) + 1)}</span>
+                <div>
+                  <h3>{s.title}</h3>
+                  <p>{s.hook}</p>
+                  <p style={{ marginTop: 12 }}>{s.summary}</p>
+                  <p style={{ marginTop: 16 }}>
+                    <Link className="link" to={`/services/${s.slug}`}>
+                      More on {s.title.toLowerCase()} <IArrow />
+                    </Link>
+                  </p>
+                </div>
+                <Ticks items={s.deliverables} />
+              </article>
+            ))}
+          </div>
+        </section>
+      ))}
       <section className="sec wrap">
         <div className="sec__head">
           <div>
@@ -62,7 +78,7 @@ export default function Services() {
         <div className="two">
           <div>
             <p className="eyebrow mono">Always included</p>
-            <h2 className="h-l">Whatever the size of the job.</h2>
+            <h2 className="h-l">With every website, whatever its size.</h2>
           </div>
           <Ticks items={alwaysIncluded} />
         </div>
