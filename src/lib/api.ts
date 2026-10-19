@@ -399,13 +399,21 @@ export type ProjectTemplate = {
 export type ProjectCreated = {
   id: number
   template?: ProjectTemplateKey
+  include_client_checklist?: boolean
   created?: { tasks: number; assets: number; measurements: number }
   skipped?: { table: string; note: string }[]
 }
 export const projects = {
   list: () => api.get<Project[]>("/projects.php"),
   templates: () => api.get<unknown>("/projects.php?action=templates"),
-  create: (payload: { name: string; client_id?: number | null; due_date?: string; template?: ProjectTemplateKey }) =>
+  create: (payload: {
+    name: string
+    client_id?: number | null
+    due_date?: string
+    template?: ProjectTemplateKey
+    // Template asset items show in the client's portal at once, so they are opt-in (default false).
+    include_client_checklist?: boolean
+  }) =>
     api.post<ProjectCreated>("/projects.php?action=create", payload),
   setStatus: (id: number, status: ProjectStatus) =>
     api.post<{ ok: boolean }>("/projects.php?action=status", { id, status }),

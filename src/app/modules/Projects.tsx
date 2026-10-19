@@ -41,10 +41,12 @@ import {
   type ProjectTemplate,
 } from "@/lib/api"
 import { cn } from "@/lib/utils"
-import { createOutcome, createPayload, parseTemplates, templatePreview } from "@/app/modules/projectTemplateModel"
+import { CHECKLIST_OPTION, createOutcome, createPayload, parseTemplates, templatePreview } from "@/app/modules/projectTemplateModel"
 
 // The Select needs a value for "no template"; createPayload() never sends it.
 const NO_TEMPLATE = "none"
+// The client checklist is unticked by default: the client sees it in their portal at once.
+const EMPTY_FORM = { name: "", client_id: "", due_date: "", template: NO_TEMPLATE, include_checklist: false }
 
 const PROJECT_STATUS: { key: ProjectStatus; label: string }[] = [
   { key: "planning", label: "Planning" },
@@ -87,12 +89,15 @@ export default function Projects() {
   const boardRef = useRef<HTMLDivElement>(null)
 
   const [open, setOpen] = useState(false)
-  const [form, setForm] = useState({ name: "", client_id: "", due_date: "", template: NO_TEMPLATE })
+  const [form, setForm] = useState(EMPTY_FORM)
   const [saving, setSaving] = useState(false)
   // null until loaded, and for good when the server has no templates yet: the picker stays hidden.
   const [templates, setTemplates] = useState<ProjectTemplate[] | null>(null)
   const chosenTemplate = templates?.find((t) => t.key === form.template) ?? null
-  const preview = useMemo(() => (chosenTemplate ? templatePreview(chosenTemplate, new Date()) : null), [chosenTemplate])
+  const preview = useMemo(
+    () => (chosenTemplate ? templatePreview(chosenTemplate, new Date(), form.include_checklist) : null),
+    [chosenTemplate, form.include_checklist],
+  )
   // ?project=<id>[&task=<id>|&asset=<id>] opens that project once the list has
   // loaded, and again whenever the link changes or the search re-sends it
   // (useApplyLink). An id that is not in the list leaves the plain screen.
@@ -151,7 +156,7 @@ export default function Projects() {
       const outcome = createOutcome(chosenTemplate, res.data)
       toast.success(outcome.message)
       outcome.warnings.forEach((w) => toast.warning(w))
-      setForm({ name: "", client_id: "", due_date: "", template: NO_TEMPLATE })
+      setForm(EMPTY_FORM)
       setOpen(false)
       loadProjects()
     } else {
@@ -242,6 +247,17 @@ export default function Projects() {
                           ))}
                         </SelectContent>
                       </Select>
+                      {chosenTemplate && (
+                        <label className="mt-3 flex items-start gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            className="mt-0.5 h-4 w-4"
+                            checked={form.include_checklist}
+                            onChange={(e) => setForm((f) => ({ ...f, include_checklist: e.target.checked }))}
+                          />
+                          <span>{CHECKLIST_OPTION}</span>
+                        </label>
+                      )}
                       {chosenTemplate && preview && (
                         <section aria-label={`What ${chosenTemplate.name} creates`} className="mt-3 space-y-3 rounded-md border p-3 text-sm">
                           <p>
@@ -257,14 +273,16 @@ export default function Projects() {
                               ))}
                             </ul>
                           </div>
-                          <div>
-                            <p className="font-medium">Asset checklist</p>
-                            <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
-                              {preview.assets.map((a) => (
-                                <li key={a}>{a}</li>
-                              ))}
-                            </ul>
-                          </div>
+                          {preview.assets.length > 0 && (
+                            <div>
+                              <p className="font-medium">Client checklist</p>
+                              <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">
+                                {preview.assets.map((a) => (
+                                  <li key={a}>{a}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
                           <div>
                             <p className="font-medium">Measurements</p>
                             <ul className="mt-1 list-disc space-y-0.5 pl-5 text-muted-foreground">

@@ -49,25 +49,39 @@ export type TemplatePreview = {
   note: string
 }
 
-/** What the dialog lists before Create, with task dates worked out from `today`. */
-export function templatePreview(t: ProjectTemplate, today: Date): TemplatePreview {
+/** The checkbox label: checklist items show in the client's portal as soon as they exist. */
+export const CHECKLIST_OPTION = "Add the client checklist (the client sees it in their portal straight away)"
+
+/**
+ * What the dialog lists before Create. Task dates are worked out from `today`
+ * in the browser's time zone; the server stores them from its own date, so
+ * near midnight the two can differ by a day. `assets` is empty unless the
+ * client checklist is ticked, because without it none is created.
+ */
+export function templatePreview(t: ProjectTemplate, today: Date, withChecklist: boolean): TemplatePreview {
+  const parts = [plural(t.tasks.length, "task")]
+  if (withChecklist) parts.push(plural(t.assets.length, "checklist item"))
+  parts.push(plural(t.brief.measurements.length, "measurement"))
   return {
-    counts: `${plural(t.tasks.length, "task")}, ${plural(t.assets.length, "asset item")}, ${plural(t.brief.measurements.length, "measurement")}`,
+    counts: parts.join(", "),
     tasks: t.tasks.map((x) => ({ title: x.title, due: dueOn(today, x.offset_days), day: x.offset_days === 0 ? "Today" : `Day ${x.offset_days}` })),
-    assets: t.assets.map((a) => a.label),
+    assets: withChecklist ? t.assets.map((a) => a.label) : [],
     measurements: t.brief.measurements.map((m) => m.label),
     note: "Measurements start as NOT TESTED. Deliverables and exclusions stay empty for you to agree with the client.",
   }
 }
 
-/** The create body: the template key only when one is chosen, so a bare project is sent exactly as before. */
-export function createPayload(form: { name: string; client_id: string; due_date: string; template: string }) {
+/**
+ * The create body: the template key, and the checklist choice, only when a
+ * template is chosen, so a bare project is sent exactly as before.
+ */
+export function createPayload(form: { name: string; client_id: string; due_date: string; template: string; include_checklist: boolean }) {
   const template = KEYS.find((k) => k === form.template)
   return {
     name: form.name,
     client_id: form.client_id ? Number(form.client_id) : null,
     due_date: form.due_date || undefined,
-    ...(template ? { template } : {}),
+    ...(template ? { template, include_client_checklist: form.include_checklist === true } : {}),
   }
 }
 
@@ -89,7 +103,10 @@ export function createOutcome(chosen: ProjectTemplate | null, reply: ProjectCrea
   }
   const c = reply.created
   return {
-    message: `Project created from ${chosen.name}: ${plural(c.tasks, "task")}, ${plural(c.assets, "asset item")}, ${plural(c.measurements, "measurement")}.`,
+    message:
+      `Project created from ${chosen.name}: ${plural(c.tasks, "task")}, ` +
+      (reply.include_client_checklist ? `${plural(c.assets, "checklist item")}, ` : "") +
+      `${plural(c.measurements, "measurement")}.`,
     warnings: (reply.skipped ?? []).map((s) => s.note),
   }
 }
