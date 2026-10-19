@@ -111,19 +111,45 @@ function pv_ids(array $rows, string $col = 'id'): array {
 }
 
 /**
- * Audit rows that name one of `$emails`, plus rows by `$userIds`. LIKE finds
- * candidates; the regex then keeps only a whole-address match, so a@x.test
- * never pulls in ba@x.test or a@x.test.uk, which belong to someone else.
+ * Audit rows about the subject:
+ *   - rows written by `$userIds` (the client's own logins);
+ *   - rows whose text names one of `$emails`;
+ *   - rows that name the subject by record id, in the formats the endpoints
+ *     write: client_update "#C", lead_convert "lead #E → client #C",
+ *     client_create "<company>", user_role/user_rate/user_status "#U", and
+ *     lead_status/lead_meta "#E".
+ * LIKE or an exact action finds candidates; a regex then keeps only a whole
+ * match, so a@x.test never pulls in ba@x.test or a@x.test.uk, and #1 never
+ * pulls in #12, all of which belong to someone else.
  */
-function pv_audit(mysqli $conn, array &$unavailable, array $emails, array $userIds): array {
+function pv_audit(mysqli $conn, array &$unavailable, array $emails, array $userIds, ?int $clientId = null, ?string $company = null, array $enquiryIds = []): array {
+  $cols = 'SELECT id, user_id, action, detail, ip, created_at FROM audit_log';
   $byId = [];
-  foreach (pv_rows_in($conn, $unavailable, 'audit_log', 'SELECT id, user_id, action, detail, ip, created_at FROM audit_log WHERE user_id IN ', $userIds) as $r) {
+  foreach (pv_rows_in($conn, $unavailable, 'audit_log', "$cols WHERE user_id IN ", $userIds) as $r) {
     $byId[(int)$r['id']] = $r;
   }
+  // [WHERE clause, types, params, regex the detail must match]
+  $checks = [];
   foreach ($emails as $email) {
-    $like = '%' . addcslashes($email, '%_\\') . '%';
-    $re = '/(?<![A-Za-z0-9._%+\-])' . preg_quote($email, '/') . '(?![A-Za-z0-9_\-]|\.[A-Za-z0-9])/i';
-    foreach (pv_rows($conn, $unavailable, 'audit_log', 'SELECT id, user_id, action, detail, ip, created_at FROM audit_log WHERE detail LIKE ? ORDER BY id', 's', [$like]) as $r) {
+    $checks[] = ['detail LIKE ?', 's', ['%' . addcslashes($email, '%_\\') . '%'],
+      '/(?<![A-Za-z0-9._%+\-])' . preg_quote($email, '/') . '(?![A-Za-z0-9_\-]|\.[A-Za-z0-9])/i'];
+  }
+  if ($clientId !== null) {
+    $checks[] = ["action = 'client_update' AND detail LIKE ?", 's', ["#$clientId%"], "/^#$clientId(?!\\d)/"];
+    $checks[] = ["action = 'lead_convert' AND detail LIKE ?", 's', ["%client #$clientId%"], "/\\bclient #$clientId(?!\\d)/"];
+  }
+  if ($company !== null && trim($company) !== '') {
+    $checks[] = ["action = 'client_create' AND detail = ?", 's', [trim($company)], '/^' . preg_quote(trim($company), '/') . '$/iu'];
+  }
+  foreach ($userIds as $uid) {
+    $checks[] = ["action IN ('user_role', 'user_rate', 'user_status') AND detail LIKE ?", 's', ["#$uid%"], "/^#$uid(?!\\d)/"];
+  }
+  foreach ($enquiryIds as $eid) {
+    $checks[] = ["action IN ('lead_status', 'lead_meta') AND detail LIKE ?", 's', ["#$eid%"], "/^#$eid(?!\\d)/"];
+    $checks[] = ["action = 'lead_convert' AND detail LIKE ?", 's', ["lead #$eid%"], "/^lead #$eid(?!\\d)/"];
+  }
+  foreach ($checks as [$where, $types, $params, $re]) {
+    foreach (pv_rows($conn, $unavailable, 'audit_log', "$cols WHERE $where ORDER BY id", $types, $params) as $r) {
       if (preg_match($re, (string)$r['detail'])) $byId[(int)$r['id']] = $r;
     }
   }
@@ -198,8 +224,17 @@ function pv_client_export(mysqli $conn, int $cid, array &$unavailable): array {
   $fileWhere = 'client_id = ?'; $fileTypes = 'i'; $fileParams = [$cid];
   if ($projectIds) { $fileWhere .= ' OR project_id IN ' . pv_in($projectIds); $fileTypes .= str_repeat('i', count($projectIds)); array_push($fileParams, ...$projectIds); }
 
+  // Conversations filed against the client, or against one of its projects.
+  $threadWhere = 'client_id = ?'; $threadTypes = 'i'; $threadParams = [$cid];
+  if ($projectIds) { $threadWhere .= ' OR project_id IN ' . pv_in($projectIds); $threadTypes .= str_repeat('i', count($projectIds)); array_push($threadParams, ...$projectIds); }
   $threads = pv_rows($conn, $unavailable, 'comm_threads',
-    'SELECT id, subject, project_id, channel, status, last_message_at, created_at, updated_at, deleted_at FROM comm_threads WHERE client_id = ? ORDER BY id', 'i', [$cid]);
+    "SELECT id, subject, project_id, channel, status, last_message_at, created_at, updated_at, deleted_at FROM comm_threads WHERE $threadWhere ORDER BY id",
+    $threadTypes, $threadParams);
+
+  // client_create audit rows carry only the company name, so they are matched
+  // only when no other client has the same name: they could be either's.
+  $sameName = pv_rows($conn, $unavailable, 'clients', 'SELECT COUNT(*) AS n FROM clients WHERE LOWER(TRIM(company)) = LOWER(TRIM(?))', 's', [(string)$client['company']]);
+  $company = ((int)($sameName[0]['n'] ?? 0)) === 1 ? (string)$client['company'] : null;
 
   return [
     'client' => $client,
@@ -234,7 +269,7 @@ function pv_client_export(mysqli $conn, int $cid, array &$unavailable): array {
       "SELECT id, project_id, name, mime, size, expires_at, created_at, deleted_at FROM files WHERE $fileWhere ORDER BY id", $fileTypes, $fileParams),
     'comm_threads' => $threads,
     'comm_messages' => pv_rows_in($conn, $unavailable, 'comm_messages', 'SELECT id, thread_id, direction, body, created_at FROM comm_messages WHERE thread_id IN ', pv_ids($threads)),
-    'audit_log' => pv_audit($conn, $unavailable, $emails, $userIds),
+    'audit_log' => pv_audit($conn, $unavailable, $emails, $userIds, $cid, $company, pv_ids($enquiries)),
   ];
 }
 
@@ -255,21 +290,35 @@ function pv_enquiry_export(mysqli $conn, string $email, array &$unavailable): ar
     'enquiries' => $enquiries,
     'bookings' => $bookings,
     'booking_events' => $bookingEvents,
-    'audit_log' => pv_audit($conn, $unavailable, [$email], []),
+    'audit_log' => pv_audit($conn, $unavailable, [$email], [], null, null, pv_ids($enquiries)),
     'matching_client_ids' => $clientIds,
   ];
 }
 
-/** Streams the export as an attachment and ends the request. */
-function pv_send(array $doc, string $filename): void {
+/**
+ * The export as JSON text, or a 500. Pretty-printed so the person who asked
+ * can read it; the whole document is built in memory, which suits this
+ * business's volumes (a client's rows run to hundreds, not millions).
+ */
+function pv_encode(array $doc): string {
   $body = json_encode($doc, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE);
-  if ($body === false) fail('Could not build the export.', 500);
+  if ($body === false) {
+    error_log('privacy.php export: json_encode failed: ' . json_last_error_msg());
+    fail('Could not build the export.', 500);
+  }
+  return $body;
+}
+
+/** Streams the encoded export as an attachment and ends the request. */
+function pv_send(string $body, string $filename): void {
   http_response_code(200);
   header('Content-Type: application/json; charset=utf-8');
   header('Content-Disposition: attachment; filename="' . $filename . '"');
   header('Content-Length: ' . strlen($body));
   header('Cache-Control: private, no-store');
   header('X-Content-Type-Options: nosniff');
+  // Lets the CMS read the file name when the API is on another origin.
+  header('Access-Control-Expose-Headers: Content-Disposition');
   echo $body;
   exit;
 }
@@ -284,40 +333,53 @@ if ($method === 'GET' && $action === 'export') {
   if ($hasClient === $hasEmail) fail('Give either client_id or enquiry_email.');
   $unavailable = [];
 
-  if ($hasClient) {
-    $cid = pv_id($_GET['client_id']);
-    if ($cid <= 0) fail('Invalid client id.');
-    $data = pv_client_export($conn, $cid, $unavailable);
-    $subject = ['type' => 'client', 'client_id' => $cid];
-    $auditDetail = "client #$cid";
-    $filename = "gakinz-data-export-client-$cid-" . gmdate('Y-m-d') . '.json';
-  } else {
-    $email = strtolower(trim((string)$_GET['enquiry_email']));
-    if ($email === '' || strlen($email) > 200 || !filter_var($email, FILTER_VALIDATE_EMAIL)) fail('Invalid email address.');
-    $data = pv_enquiry_export($conn, $email, $unavailable);
-    $subject = ['type' => 'enquiry_email', 'email' => $email];
-    // Who was exported, by record id: the address itself stays out of the audit.
-    $auditDetail = mb_substr('enquiry email: enquiries #' . implode(', #', pv_ids($data['enquiries'])), 0, 480);
-    $filename = 'gakinz-data-export-enquiry-' . gmdate('Y-m-d') . '.json';
-  }
+  try {
+    if ($hasClient) {
+      $cid = pv_id($_GET['client_id']);
+      if ($cid <= 0) fail('Invalid client id.');
+      $data = pv_client_export($conn, $cid, $unavailable);
+      $subject = ['type' => 'client', 'client_id' => $cid];
+      $auditDetail = "client #$cid";
+      $filename = "gakinz-data-export-client-$cid-" . gmdate('Y-m-d') . '.json';
+    } else {
+      $email = strtolower(trim((string)$_GET['enquiry_email']));
+      if ($email === '' || strlen($email) > 200 || !filter_var($email, FILTER_VALIDATE_EMAIL)) fail('Invalid email address.');
+      $data = pv_enquiry_export($conn, $email, $unavailable);
+      $subject = ['type' => 'enquiry_email', 'email' => $email];
+      // Who was exported, by record id: the address itself stays out of the audit.
+      $auditDetail = mb_substr('enquiry email: enquiries #' . implode(', #', pv_ids($data['enquiries'])), 0, 480);
+      $filename = 'gakinz-data-export-enquiry-' . gmdate('Y-m-d') . '.json';
+    }
 
-  audit($conn, $me['id'], 'privacy_export', $auditDetail);
-  pv_send([
-    'about' => [
-      'generated_at' => gmdate('Y-m-d\TH:i:s\Z'),
-      'subject' => $subject,
-      'note' => 'Every row GAkinz holds about this subject, soft-deleted rows included. File contents are not included.',
-      'excluded' => PV_EXCLUDED,
-      'unavailable' => array_values(array_unique($unavailable)),
-    ],
-    'data' => $data,
-  ], $filename);
+    $body = pv_encode([
+      'about' => [
+        'generated_at' => gmdate('Y-m-d\TH:i:s\Z'),
+        'subject' => $subject,
+        'note' => 'Every row GAkinz holds about this subject, soft-deleted rows included. File contents are not included.',
+        'excluded' => PV_EXCLUDED,
+        'unavailable' => array_values(array_unique($unavailable)),
+      ],
+      'data' => $data,
+    ]);
+    // Audited only once the file exists, just before it is sent.
+    audit($conn, $me['id'], 'privacy_export', $auditDetail);
+  } catch (mysqli_sql_exception $e) {
+    error_log('privacy.php export: SQL error ' . $e->getCode() . ': ' . $e->getMessage());
+    fail('Could not build the export.', 500);
+  }
+  pv_send($body, $filename);
 }
 
 if ($method === 'GET' && $action === 'retention_report') {
   require_auth($conn, RETENTION_ROLES);
   require_once __DIR__ . '/_retention.php';
-  ok(retention_report($conn));
+  try {
+    $report = retention_report($conn);
+  } catch (mysqli_sql_exception $e) {
+    error_log('privacy.php retention_report: SQL error ' . $e->getCode() . ': ' . $e->getMessage());
+    fail('Could not build the retention report.', 500);
+  }
+  ok($report);
 }
 
 if ($method === 'GET') fail('Unknown action.');

@@ -22,6 +22,13 @@
  * to a COUNT query whose single `?` is the period, in `unit`s.
  */
 function retention_rules(): array {
+  // A client counts when neither it nor any of its projects, invoices or
+  // portal messages (tickets) changed within the period.
+  $idleClient = "SELECT c.id FROM clients c
+    WHERE c.updated_at < (NOW() - INTERVAL ? MONTH)
+      AND NOT EXISTS (SELECT 1 FROM projects p WHERE p.client_id = c.id AND p.updated_at >= (NOW() - INTERVAL @p MONTH))
+      AND NOT EXISTS (SELECT 1 FROM invoices i WHERE i.client_id = c.id AND i.updated_at >= (NOW() - INTERVAL @p MONTH))
+      AND NOT EXISTS (SELECT 1 FROM tickets t WHERE t.client_id = c.id AND t.updated_at >= (NOW() - INTERVAL @p MONTH))";
   return [
     [
       'key' => 'enquiries', 'label' => 'Enquiries that did not become a client',
@@ -36,13 +43,11 @@ function retention_rules(): array {
     [
       'key' => 'clients', 'label' => 'Client, project and contract records',
       'config' => 'RETENTION_CLIENT_MONTHS', 'unit' => 'month',
-      'starts_from' => 'last change to the client, its projects, invoices or messages',
+      'starts_from' => 'last change to the client, its projects, invoices or portal messages',
       'queries' => [
-        'clients' => "SELECT COUNT(*) FROM clients c
-          WHERE c.updated_at < (NOW() - INTERVAL ? MONTH)
-            AND NOT EXISTS (SELECT 1 FROM projects p WHERE p.client_id = c.id AND p.updated_at >= (NOW() - INTERVAL @p MONTH))
-            AND NOT EXISTS (SELECT 1 FROM invoices i WHERE i.client_id = c.id AND i.updated_at >= (NOW() - INTERVAL @p MONTH))
-            AND NOT EXISTS (SELECT 1 FROM tickets t WHERE t.client_id = c.id AND t.updated_at >= (NOW() - INTERVAL @p MONTH))",
+        'clients' => "SELECT COUNT(*) FROM ($idleClient) x",
+        'projects' => "SELECT COUNT(*) FROM projects WHERE client_id IN ($idleClient)",
+        'contracts' => "SELECT COUNT(*) FROM contracts WHERE client_id IN ($idleClient)",
       ],
     ],
     [
@@ -115,22 +120,25 @@ function retention_period(string $var) {
 
 /**
  * One COUNT for a rule. `@p` in a query stands for the same period again, so
- * every placeholder is a bound parameter. Returns null when the table is not
- * there yet (an SQL step that has not run), so one missing table does not stop
- * the rest of the report.
+ * every placeholder is a bound parameter. Returns null only when a table is not
+ * there yet (1146, an SQL step that has not run), so one missing table does not
+ * stop the rest of the report. Every column used is in the original CREATE
+ * TABLE, so an unknown column (1054) is a bug, and like any other SQL error it
+ * is logged and thrown rather than reported as a quiet gap.
  */
 function retention_count(mysqli $conn, string $sql, int $period): ?int {
   $n = substr_count($sql, '?') + substr_count($sql, '@p');
   $sql = str_replace('@p', '?', $sql);
   try {
     $s = $conn->prepare($sql);
-    if ($s === false) return null;
     $s->bind_param(str_repeat('i', $n), ...array_fill(0, $n, $period));
-    if (!$s->execute()) return null;
+    $s->execute();
     $row = $s->get_result()->fetch_row();
     return $row ? (int)$row[0] : 0;
   } catch (mysqli_sql_exception $e) {
-    return null;
+    if ($e->getCode() === 1146) return null;
+    error_log('_retention.php: SQL error ' . $e->getCode() . ': ' . $e->getMessage());
+    throw $e;
   }
 }
 

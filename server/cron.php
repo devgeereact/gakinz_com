@@ -43,7 +43,12 @@ if ($job === 'retention_report') {
   if (PHP_SAPI !== 'cli') fail('retention_report runs from the command line only.', 400);
   require_once __DIR__ . '/_retention.php';
   header_remove('Content-Type');
-  echo retention_report_text(retention_report($conn));
+  try {
+    echo retention_report_text(retention_report($conn));
+  } catch (mysqli_sql_exception $e) {
+    fwrite(STDERR, 'Retention report failed: SQL error ' . $e->getCode() . "\n");
+    exit(1);
+  }
   exit(0);
 }
 
