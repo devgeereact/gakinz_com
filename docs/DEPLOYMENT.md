@@ -150,7 +150,8 @@ during the demo-surface cleanup, so step 5 of the old instructions could not pas
 This is the one list of server work that is committed and not known to be live. It covers
 every server change since `c57eb4a` (`main`, 2026-10-10) on the stacked branches in PR #8,
 including `audit/readiness-2026-10-17` (PR #20) and `feat/journeys-2026-10-18` (2026-10-18,
-stacked on PR #20, pushed to origin, not merged, deployed or uploaded), and, conditionally, the 2026-09-22 relaunch set already on `main`. Keep it current: a change under
+stacked on PR #20, pushed to origin, not merged, deployed or uploaded; its second batch of
+2026-10-19 is in PR #21), and, conditionally, the 2026-09-22 relaunch set already on `main`. Keep it current: a change under
 `server/` updates this section in the same pull request (`AGENTS.md`, "Keeping documents
 current"), and `npm run docs:check` enforces that in CI.
 
@@ -211,9 +212,18 @@ statements are already live; only someone with server access can (section 5.6).
    - **The merge before the new `proposals.php`**: the Accept dialog and its toast say that
      SQL 14 has not run, even when it has, because the old file never reports that the
      evidence columns are ready. Nothing is stored as evidence until the file is uploaded.
-10. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
+10. **For the second journeys batch (2026-10-19, PR #21)**: upload its PHP and the new
+   `.htaccess` (section 5.3), run SQL 16, then merge. Nothing in this batch breaks if the order
+   slips, because every new screen degrades quietly (section 5.5), but this order means staff
+   never see a "not available yet" line once the merge has deployed. Before uploading, **check
+   the live PHP version** in cPanel (Select PHP Version, or MultiPHP Manager) and record it in
+   `docs/STATUS.md` section 3. The code expects PHP 8.1 or later. `briefs.php`, `privacy.php`
+   and `_retention.php` set strict SQL error reporting themselves so an older PHP should behave
+   the same, but that path is NOT TESTED (`docs/KNOWN-ISSUES.md` K-082). The live version is
+   UNVERIFIED: `api.php` stopped reporting it on 2026-10-17.
+11. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
    deploys the client that expects these server changes.
-11. **Walk the post-upload checks** in section 5.6.
+12. **Walk the post-upload checks** in section 5.6.
 
 ### 5.2 SQL, in order
 
@@ -239,6 +249,7 @@ is UNVERIFIED, so check them before step 1.
 | 13 | `ALTER TABLE invoices ADD COLUMN paid_method ..., ADD COLUMN paid_reference ..., ADD COLUMN paid_amount_pence ..., ADD COLUMN paid_recorded_by ...;` | 2026-10-18, manual payment record | Additive. Run once only; a second run fails on the duplicate column. Enables Record payment on a sent invoice (bank transfer, cash, cheque, other). Until it runs, `invoices.php?action=record_payment` answers 503 naming this step, the four fields read as `null`, and every other invoice action works as before |
 | 14 | `ALTER TABLE proposals ADD COLUMN accepted_at ..., ADD COLUMN accepted_by ..., ADD COLUMN acceptance_method ..., ADD COLUMN acceptance_reference ..., ADD COLUMN acceptance_received_on ..., ADD COLUMN accepted_terms_sha256 ...;` | 2026-10-18, quote acceptance evidence | Additive. Run once only. Once it runs, accepting a quote **requires** a method, a reference and the date received, and stores who recorded it and the terms fingerprint. Until it runs, accept behaves exactly as before, asks for no evidence and records none (the audit line says so) |
 | 15 | `CREATE TABLE IF NOT EXISTS project_assets (...)` | 2026-10-18, project asset checklist | New table, safe to run twice. After `projects` and `files`; it carries foreign keys to both. Until it runs, `assets.php` answers 503, the project board explains the step and the portal hides the checklist |
+| 16 | `CREATE TABLE IF NOT EXISTS project_briefs (...)` and `CREATE TABLE IF NOT EXISTS project_measurements (...)` | 2026-10-19, project brief and agreed measurements | Two new tables, safe to run twice. After `projects`; both carry a foreign key to it. Until it runs, every `briefs.php` route answers 503 and the project board says "The project brief needs a database update first (SQL 16 in docs/DEPLOYMENT.md)." Staff only: no client screen reads either table |
 
 No existing data is migrated by any of these statements.
 
@@ -249,14 +260,15 @@ Upload all of them, with `.htaccess`:
 
 ```
 .htaccess           api.php             cron.php            _bootstrap.php
-_money.php (new)    _ics.php (new)      assets.php (new)    auth.php
-blog.php            bookings.php (new)  clients.php         comms.php
-contact.php         content.php         contracts.php       design.php
-dev.php             feedback.php (new)  files.php           invoices.php
-knowledge.php       leads.php           oauth.php           payments.php
-projects.php        proposals.php       resourcing.php      site.php (new)
-support.php         tasks.php           testimonials.php    time.php
-users.php           work.php
+_money.php (new)    _ics.php (new)      _like.php (new)     _retention.php (new)
+assets.php (new)    auth.php            blog.php            bookings.php (new)
+briefs.php (new)    clients.php         comms.php           contact.php
+content.php         contracts.php       design.php          dev.php
+feedback.php (new)  files.php           invoices.php        knowledge.php
+leads.php           oauth.php           payments.php        privacy.php (new)
+projects.php        proposals.php       resourcing.php      search.php (new)
+site.php (new)      support.php         tasks.php           testimonials.php
+time.php            today.php (new)     users.php           work.php
 ```
 
 `bookings.php`, `feedback.php` and the timeline change in `clients.php` are the 2026-10-16
@@ -303,6 +315,32 @@ need no new SQL beyond statements 9 and 10. `support.php` and `bookings.php` now
 (`docs/SECURITY.md` section 3). No `.htaccess` change: the existing `_*.php` deny covers
 `_ics.php`, and real files such as `favicon.ico` and `site.webmanifest` pass through.
 
+**The 2026-10-19 second journeys batch** (PR #21, from `git diff --name-only 6789b47..HEAD --
+server`) adds `today.php`, `search.php` with `_like.php`, `briefs.php`, and `privacy.php` with
+`_retention.php`, and changes `cron.php` and `.htaccess`. No existing endpoint changed, so
+`bookings.php` and the rest are as listed for the first batch. Upload as sets:
+
+- **`search.php` with `_like.php`**: `search.php` requires `_like.php` at the top, so without it
+  every search is a 500.
+- **`privacy.php`, `_retention.php` and `cron.php` together**: `privacy.php?action=retention_report`
+  and `cron.php job=retention_report` both load `_retention.php`. Without it the export still
+  works and only the retention report fails.
+- **`today.php`** and **`briefs.php`** stand alone. `today.php` needs no new SQL: each section
+  whose table or column is missing (SQL 6, 9, 15) answers `unavailable` on its own. `briefs.php`
+  answers 503 until SQL 16.
+- **`.htaccess`**: one new rule, before the SPA fallback, answers 404 for a request to a `.php`
+  file that does not exist, instead of the `app-shell.html` page with status 200. Existing
+  files, the `_*.php` and `config.php` deny (still 403) and every other rule are unchanged.
+  Checked on a local Apache on 2026-10-19 (macOS `httpd`): a missing endpoint 404, an existing
+  one 200, `_bootstrap.php` 403, `/app/leads` the shell, `robots.txt` 200. The live host runs
+  LiteSpeed (the note at the top of `.htaccess`), not Apache, so whether LiteSpeed honours
+  `[R=404,L]` here is NOT TESTED, and so is the rule behind Cloudflare. The worst case is the
+  old behaviour, the shell page with status 200, which the CMS also treats as "not available
+  yet". It is safe to upload before or after the merge.
+
+All the new endpoints are staff or admin only, and none serves the `client` role
+(`docs/SECURITY.md`). The existing `_*.php` deny covers `_like.php` and `_retention.php`.
+
 `site.php` and `work.php` are the 2026-10-14 redesign batch (homepage hero and editable site
 copy). Upload them **after** SQL statements 7 and 8 if you want the new features at once;
 either order is safe, because both degrade until their statement has run.
@@ -328,6 +366,7 @@ of the document root.
 | `$PAYPAL_ENABLED` | Leave unset or `false`. PayPal checkout refuses to start unless it is `true`, because there is no PayPal webhook yet (K-026) |
 | `$SEED_ADMIN_EMAIL` | `auth.php` no longer falls back to a hard-coded address. With this unset, a first run against an empty `users` table creates **no account at all** |
 | PHP `fileinfo` extension | `files.php` sniffs the real type of an upload with `finfo_file()`. Without it, uploads return 503 rather than accepting anything |
+| `$RETENTION_*` (nine keys, 2026-10-19) | Leave them `null`, or leave them out: a missing key behaves exactly as `null`. Each is a retention period that only changes what the read-only retention report **counts**; nothing deletes or anonymises a row by them. The periods are owner and legal decisions (`docs/PRIVACY-READINESS.md` section 6). A value other than a positive whole number is reported as an invalid period and counts nothing |
 
 The full key list is in section 5.7.
 
@@ -408,6 +447,43 @@ From `feat/journeys-2026-10-18` (2026-10-18), once its files and SQL are up:
 - **The public site shows a "Client sign in" link** in the header, drawer and footer, and
   serves `favicon.ico` and `site.webmanifest` (client deploy only).
 
+From the second journeys batch (2026-10-19), once its files and SQL 16 are up:
+
+- **The dashboard leads with "Needs attention"** (`today.php`): new enquiries, follow-ups
+  due, calls, overdue tasks, material waiting from the client and unpaid invoices, each
+  linking to its record. The old "Follow-ups due" card is gone, the tiles read "Cash received"
+  and "Invoiced, unpaid", and "Updated" is the last refresh of the attention list.
+- **Cmd or Ctrl+K finds records** (`search.php`): clients, projects, enquiries, invoices and
+  quotes, each limited to the roles that can open that screen.
+- **Projects carry a brief and agreed measurements** (`briefs.php`, SQL 16), and staff can
+  download a sanitised Markdown handoff for GEE OS.
+- **A super admin or admin can export everything held about a client or an enquirer** as
+  JSON (client record, "Export data"; Settings, Privacy tab), and a super admin sees a read-only
+  retention report there. Every export writes a `privacy_export` audit row.
+- **Record links open the record**: `?project=` (with `&task=` or `&asset=`), `?invoice=`,
+  `?enquiry=`, `?view=calls&call=` and `?client=` (client deploy only).
+- **Articles can hold recommendation blocks** (client deploy only). An affiliate block shows
+  the labelled gap "[Affiliate disclosure: owner to supply]" until the owner supplies the
+  wording (`docs/STATUS.md` section 5).
+
+**What staff see in each gap**, if the merge goes first. The rule is `src/lib/notAvailable.ts`:
+a bare 404, the `app-shell.html` page with status 200, a 405, a 503, or the role gate's "Not
+allowed." from an older file all mean "not on the server yet", and the screen says so quietly
+or hides the feature, with no error toast. Checked in a production build with every endpoint
+stubbed (`docs/STATUS.md` section 0.3); not seen on the live host.
+
+| Missing | What staff see |
+|---|---|
+| `today.php` | The old client-side "Follow-ups due" card, for roles that see enquiries. Other roles see no attention block. Totals and the chart work |
+| `search.php` (or `_like.php`) | No Records group in the search; module search works. Without `_like.php` the 500 shows as "Record search failed." |
+| `briefs.php` | "The project brief is not available yet." on the project board, no Retry |
+| SQL 16 only | "The project brief needs a database update first (SQL 16 in docs/DEPLOYMENT.md)." |
+| `privacy.php` | "The retention report is not available on the server yet." and "Data exports are not available on the server yet.", as a status line or a neutral toast |
+| The new `.htaccess` | No difference to staff: the CMS treats the shell page and the 404 the same way |
+
+Uploading first and merging later is invisible to staff: the deployed client calls none of
+the new files.
+
 ### 5.6 Post-upload checks
 
 1. `https://gakinz.com/api.php` returns `{"ok":true,...,"db":true}`. A 500 or a missing `db`
@@ -465,7 +541,29 @@ From `feat/journeys-2026-10-18` (2026-10-18), once its files and SQL are up:
    - The client side (update request, call request, asset supply, the client's calendar file)
      needs a client account. Check it only with a client the owner agrees to use, because
      every request lands in the real Support and Calls lists.
-14. Do **not** test a real payment or a real send. Stripe behaviour is covered by
+14. After the second journeys batch (its PHP, `.htaccess` and SQL 16), from a signed-in staff
+   browser. Nothing here sends a message or moves money. Download handoff writes a
+   `brief_handoff_export` audit row.
+   - `curl -sI https://gakinz.com/nothing-here.php` (any `.php` name that does not exist)
+     returns 404, not 200 with the sign-in shell. A 200 means LiteSpeed did not apply the new
+     rule: harmless, because the CMS handles both, but record it in `docs/KNOWN-ISSUES.md`.
+     `https://gakinz.com/_like.php` and `/_retention.php` return 403.
+   - Today: the dashboard shows "Needs attention" with six sections (or fewer for a role that
+     cannot read a source). A section reading "Unavailable" usually means its table or
+     column is missing: SQL 6 for follow-ups, 9 for calls, 15 for waiting material.
+   - Search: Cmd or Ctrl+K and type two letters of a real client: a Records group appears and
+     Enter opens that client's sheet. Try a `%`: it matches only a literal percent sign.
+   - Brief: open a project. The Brief panel shows "Not started" or the saved brief, not the
+     SQL 16 line. Download handoff saves `gakinz-handoff-project-<id>.md`; read it before
+     sharing and confirm no client name, email or phone is in it.
+   - Privacy (super admin): Settings, Privacy shows the retention report with every rule
+     "Period not set" while the keys are `null`. Do not export a real client's data only to test
+     it: an export is real personal data on your computer, and it is audited.
+   - On the server, `php /home/<account>/public_html/cron.php job=retention_report` prints the
+     same report and exits 0 (`docs/OPERATIONS.md` section 2). Over the web, `cron.php?job=retention_report`
+     answers 400 even with the key.
+   - Record the live PHP version in `docs/STATUS.md` section 3 (section 5.1 step 10).
+15. Do **not** test a real payment or a real send. Stripe behaviour is covered by
    `npm run test:server` against a fake provider; a live check needs Stripe test-mode keys on a
    non-production copy.
 
@@ -498,6 +596,7 @@ breaking the application.
 | `$GOOGLE_CLIENT_ID`, `$GOOGLE_CLIENT_SECRET`, `$GOOGLE_REDIRECT`, `$APP_URL` | Google SSO |
 | `$CRON_KEY`, `$REPORT_RECIPIENTS` | Scheduled jobs and the digest |
 | `$GITHUB_TOKEN`, `$FIGMA_TOKEN`, `$SLACK_WEBHOOK_URL`, `$CALENDLY_URL` | The four external connectors |
+| `$RETENTION_ENQUIRY_MONTHS`, `$RETENTION_CLIENT_MONTHS`, `$RETENTION_INVOICE_MONTHS`, `$RETENTION_AUDIT_MONTHS`, `$RETENTION_SUPPORT_MONTHS`, `$RETENTION_COMMS_MONTHS`, `$RETENTION_STAFF_MONTHS`, `$RETENTION_CERTIFICATE_MONTHS`, `$RETENTION_DELETED_FILE_DAYS` | What the read-only retention report counts. All `null` in the template; a missing key is the same as `null`. Nothing deletes by them (section 5.4) |
 
 **The tracked template carries placeholders, not values.** `DB_NAME`, `DB_USER`,
 `$SEED_ADMIN_EMAIL`, `$SMTP_HOST` and `$IMAP_HOST` are `REPLACE_` placeholders. The mail host

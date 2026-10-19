@@ -144,6 +144,46 @@ and the new `invoices.php?action=record_payment` (super_admin, admin, manager). 
 `users.php` will not create a `client` account without a validated `client_id`, and its
 role-change action cannot promote an account into `client`.
 
+### Staff and admin tools added 2026-10-19
+
+None of these serves the `client` role, and none is uploaded (`docs/DEPLOYMENT.md` section 5).
+
+- **`today.php` and `search.php`** read across several resources, so each admits the union of
+  the roles of the endpoints it reads and then gates every section or record type by the
+  owning endpoint's own constant, copied exactly: invoices and unpaid invoices only for
+  super_admin, admin and manager; projects, tasks and assets also for employee; clients,
+  enquiries, calls and quotes for super_admin, admin, manager and editor. A section or type
+  the role cannot read is omitted, not returned empty. A `client` or `trainer` gets 403. Search
+  results carry only an id, a title, a short secondary line and a route, never a note,
+  message, budget or amount. On the client side `searchableTypes(role)` derives the same lists
+  from `src/lib/access.ts` and drops any result of a type the role should not see, which hides
+  but does not protect. Covered by `tests/server/today.test.ts` and
+  `tests/server/search.test.ts`, including a test per role.
+- **`briefs.php`** uses the roles of `projects.php`, and a client gets 403 on reads as well
+  as writes. A measurement is addressed by its id and its project id together, and a mismatch
+  answers the same 404 as a missing row.
+- **The GEE OS handoff** (`briefs.php?action=handoff`) never selects the client record,
+  portal users, the brief's other fields, user ids, files, messages, invoices, tasks, tokens
+  or configuration. The fields it does export are typed by staff, so one redaction pass then
+  removes this client's exact company, contact name and email (whole words), this client's
+  phone by its digits, any email address, and every link's query string, fragment and login.
+  **This is a safety net, not a guarantee** (K-080): it cannot recognise any other personal
+  data or a secret, which go out as typed. Staff must not type personal data or secrets into
+  a brief; the panel and the file's header say so. Markdown structure is escaped so typed text
+  cannot add a link, image, heading or HTML.
+- **`privacy.php` export** is super_admin and admin only, checked by `require_auth` before any
+  read; the CMS shows "Export data" to those two roles only. It names every column it selects,
+  so password hashes, token values and hashes, 2FA secrets, share tokens, file contents and
+  configuration never leave, and only the subject's own rows are read. On audit rows the
+  subject did not write, the author's user id and IP are removed. The response is
+  `Cache-Control: private, no-store`. Each export writes a `privacy_export` audit row naming
+  who exported whom, not the content. The file itself is personal data on the downloading
+  computer, and it includes staff notes about the client (K-079).
+- **`privacy.php` retention report** is super_admin only and counts rows; nothing in the
+  repository deletes or anonymises by retention period. `cron.php job=retention_report` runs
+  from the command line only and answers 400 over the web even with the cron key, so the
+  report never lands in an access log.
+
 ## 4. Input handling and injection
 
 - **Prepared statements** throughout, with one exception. `files.php` builds its list query
@@ -154,6 +194,9 @@ role-change action cannot promote an account into `client`.
 - Email is validated with `FILTER_VALIDATE_EMAIL` before use in `contact.php` and
   `comms.php`.
 - Share tokens are filtered to `[a-f0-9]` before the lookup.
+- Record search (`search.php`, 2026-10-19) escapes `!`, `%` and `_` and uses `LIKE ? ESCAPE
+  '!'` from `_like.php`, so a typed wildcard matches literally under any `sql_mode`, and it
+  refuses a query that is not valid UTF-8.
 - Uploaded filenames have newlines stripped, are truncated to 255 characters, and the
   extension is reduced to `[A-Za-z0-9]`.
 
@@ -224,7 +267,9 @@ CORS failure rather than an error message.
 `server/.htaccess` denies direct access to `config.php`, every `_*.php` include (K-013,
 2026-10-10), any `.md`, `.sql` or `.log` file, every `.txt` except `robots.txt` and `llms.txt` (2026-09-22),
 and `error_log`, `.ftp-deploy-sync-state.json` and `.ftpquota`. Neither change is known to be
-uploaded. `_bootstrap.php` sends `X-Content-Type-Options: nosniff`, `Referrer-Policy` and
+uploaded. Since 2026-10-19 a request for a `.php` file that does not exist answers 404 rather
+than the SPA shell; the deny on existing includes still answers 403. Checked on a local Apache
+only; the host's LiteSpeed is NOT TESTED. `_bootstrap.php` sends `X-Content-Type-Options: nosniff`, `Referrer-Policy` and
 `X-Frame-Options: DENY`.
 
 ## 10. Audit trail

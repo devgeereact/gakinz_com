@@ -1,6 +1,6 @@
 # Data model
 
-**Status:** current for the tracked schema as at 2026-10-14. Whether the live database
+**Status:** current for the tracked schema as at 2026-10-19 (SQL 16). Whether the live database
 matches it is **UNVERIFIED**, because no live database was contacted.
 
 Authority: `server/schema.sql`. MySQL or MariaDB, InnoDB, `utf8mb4`; the table count is in
@@ -8,7 +8,8 @@ Authority: `server/schema.sql`. MySQL or MariaDB, InnoDB, `utf8mb4`; the table c
 
 Not applied to any live database, because they were written into the file and never run:
 `work` and `work_images` (2026-09-22), `payment_events` and the three enquiry follow-up
-columns (2026-10-10), the seven work hero columns and `site_content` (2026-10-14). That is not an inference from a failed check; nothing was checked. See
+columns (2026-10-10), the seven work hero columns and `site_content` (2026-10-14), and every later statement up to
+SQL 16 (2026-10-19). That is not an inference from a failed check; nothing was checked. See
 section 4.
 
 ---
@@ -64,6 +65,8 @@ section 4.
 | `project_dev` | Repository and environment URLs, JSON build checklist | Also holds the monitor results: `last_http_status`, `ssl_days_left`, `last_checked_at` |
 | `deploys` | Deploy log per project | staging or production; success, failed or rolled_back |
 | `project_assets` | What a client must send for a project, added 2026-10-18 (SQL 15) | `project_id` (foreign key, cascades), `label` (VARCHAR 160), `note` (VARCHAR 1000, owner guidance), `status` (requested, supplied, accepted), `client_note` (VARCHAR 1000, the client's note when supplying, kept on reopen), `file_id` (a `files` row on the same project, set by staff only, `ON DELETE SET NULL`), `requested_by` (users.id, no foreign key), `supplied_at`, `accepted_at`, `created_at`, `updated_at`, `deleted_at` (soft delete). A client can only move an item of their own project from requested to supplied; `requested_by` and `file_id` are never returned to a client. At most 100 live items per project, enforced in `assets.php` |
+| `project_briefs` | The small brief inside a project, added 2026-10-19 (SQL 16) | One row per project (`uq_brief_project`; foreign key to `projects`, cascades). Every field optional: `problem`, `intended_users`, `agreed_outcome`, `deliverables`, `exclusions`, `milestones_note`, `open_decisions`, `handover_checklist`, `support_boundaries` (TEXT, caps of 1000 to 4000 characters enforced in `briefs.php`), `quote_reference` (VARCHAR 120), `next_action` (VARCHAR 500), `completion_ack_on` (DATE), `completion_ack_note` (VARCHAR 1000), `updated_by` (users.id, no foreign key), `created_at`, `updated_at`. Staff only; no client route reads it |
+| `project_measurements` | Agreed measurements with dated evidence, added 2026-10-19 (SQL 16) | `project_id` (foreign key, cascades), `label` (VARCHAR 200, required), `target`, `baseline`, `actual` (VARCHAR 500), `result` (`PASS`, `FAIL`, `PARTIAL`, `NOT TESTED`, the default), `measured_on` (DATE), `environment` (VARCHAR 200), `method` (VARCHAR 1000), `evidence_location` (VARCHAR 500, a non-sensitive link or file name), `kind` (`technical`, the default, or `business`), `observation_window` (VARCHAR 200, business only), `created_by`, `created_at`, `updated_at`, `deleted_at` (soft delete). At most 50 live rows per project, enforced in `briefs.php`. Staff only |
 | `time_entries` | Billable and non-billable minutes | `status` is draft, approved or rejected |
 | `leave_entries` | Holiday, sick and other leave | Capacity itself is derived live from `time_entries`, so there is no committed-hours table |
 
@@ -198,10 +201,11 @@ Outstanding statements, grouped as they appear in the file:
 | Manual payment record, 2026-10-18 (SQL 13) | `ALTER TABLE invoices ADD COLUMN paid_method`, `paid_reference`, `paid_amount_pence`, `paid_recorded_by`. Run once; a second run fails on the duplicate column |
 | Acceptance evidence, 2026-10-18 (SQL 14) | `ALTER TABLE proposals ADD COLUMN accepted_at`, `accepted_by`, `acceptance_method`, `acceptance_reference`, `acceptance_received_on`, `accepted_terms_sha256`. Run once |
 | Asset checklist, 2026-10-18 (SQL 15) | `CREATE TABLE IF NOT EXISTS project_assets`. Safe to run twice |
+| Project brief and measurements, 2026-10-19 (SQL 16) | `CREATE TABLE IF NOT EXISTS project_briefs`, then `project_measurements`. New tables only, safe to run twice |
 
 Which of the older statements have already been applied to the live database is
 **UNVERIFIED**. The 2026-09-22, 2026-10-10 and 2026-10-14 groups are known **not** to have been applied by
-this work, nor have the 2026-10-16 tables or the 2026-10-18 statements, because no database has been contacted since they were written. Their order is in
+this work, nor have the 2026-10-16 tables, the 2026-10-18 statements or SQL 16, because no database has been contacted since they were written. Their order is in
 `docs/DEPLOYMENT.md` section 5.2.
 
 **The unique key has a precondition.** `files.share_token` currently has no unique
@@ -270,6 +274,15 @@ The SQL 13 and SQL 14 fallbacks are tested against a real database with the colu
 (`tests/server/manual-payment.test.ts`, `tests/server/acceptance-evidence.test.ts`). The
 `project_assets` 503 is verified by source inspection only, because the test database always
 has the table: **NOT TESTED** at runtime.
+
+**SQL 16 degrades the same way.** Without `project_briefs`, every `briefs.php` route answers
+503 naming the step, and the project board says "The project brief needs a database update
+first (SQL 16 in docs/DEPLOYMENT.md)."; without only `project_measurements`, the measurement
+routes do. Both are tested with the table renamed away (`tests/server/project-briefs.test.ts`).
+The 2026-10-19 read-only endpoints need no new SQL and degrade per part: `today.php` marks a
+section `unavailable` when its table or column is missing (tested with `project_assets`
+dropped, `tests/server/today.test.ts`), `search.php` marks a type `unavailable` (tested with
+`proposals` renamed), and the privacy export lists missing tables under `unavailable`.
 
 ## 7. Files, share tokens and what stays public
 

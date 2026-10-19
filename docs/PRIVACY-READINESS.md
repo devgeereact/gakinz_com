@@ -117,7 +117,7 @@ that point a consent tool that blocks the script until the visitor chooses is re
 ## 6. Proposed retention schedule
 
 **Every period below is a proposal for the owner to decide and an adviser to confirm. None is
-implemented.** The proposals follow data minimisation; tax-record periods depend on whether the
+implemented: nothing deletes or anonymises by any of them.** The proposals follow data minimisation; tax-record periods depend on whether the
 business is a sole trader or a company, so they are left blank on purpose.
 
 | Data | Purpose | System of record | Proposed period | Starts from | Then | Backups | Needs |
@@ -133,8 +133,23 @@ business is a sole trader or a company, so they are left blank on purpose.
 | Certificates | verification | `certificates` | owner to set | issue date | delete or unpublish | as above | OWNER DECISION, recipient consent |
 | Soft-deleted files | none once deleted | `uploads/` | 30 days | deletion | remove the file | as above | OWNER DECISION |
 
-Implementation, once periods are agreed: a `cron.php` job that deletes or anonymises by these
-rules, with a dry-run mode, tests against the local `*_test` database, and an entry in
+**Dry run, built 2026-10-19, not uploaded.** `server/_retention.php` counts, with `SELECT
+COUNT(*)` only, the rows each rule above (other than the token row, which `prune` already
+handles) would affect if a period were set. Each period is a `config.php` key, all `null` in
+`config.php.example`: `$RETENTION_ENQUIRY_MONTHS`, `$RETENTION_CLIENT_MONTHS`,
+`$RETENTION_INVOICE_MONTHS`, `$RETENTION_AUDIT_MONTHS`, `$RETENTION_SUPPORT_MONTHS`,
+`$RETENTION_COMMS_MONTHS`, `$RETENTION_STAFF_MONTHS`, `$RETENTION_CERTIFICATE_MONTHS` and
+`$RETENTION_DELETED_FILE_DAYS`. `null` or a missing key means "period not set, nothing
+happens"; anything but a positive whole number is reported as invalid and counts nothing. The
+super admin sees the report in Settings, Privacy (`privacy.php?action=retention_report`), and
+`php cron.php job=retention_report` prints it on the command line (`docs/OPERATIONS.md`
+section 2). The client rule counts a client only when neither it nor any of its projects,
+invoices or portal messages changed within the period, a reading of "end of engagement" for
+the owner to confirm. Tested against a local database (`tests/server/privacy.test.ts`); NOT
+TESTED on the live host.
+
+Still to build, once periods are agreed: the job that deletes or anonymises by these rules,
+reusing the dry run's counts, with tests against the local `*_test` database and an entry in
 `docs/DEPLOYMENT.md`. Expired-token pruning, which carries no business judgement, is already
 built as the `prune` job, together with running `cron.php` from the command line (K-061).
 
@@ -142,9 +157,9 @@ built as the `prune` job, together with running `cron.php` from the command line
 
 | Right | Pathway today | Gap |
 |---|---|---|
-| Access, portability | email hello@gakinz.com | no export; a manual gathering from about 15 tables |
+| Access, portability | email hello@gakinz.com, then the owner exports | **export built 2026-10-19, not uploaded**: a super admin or admin downloads a JSON file of every row held about one client (client record, "Export data") or one enquirer email (Settings, Privacy). Secrets and token values are left out; staff notes are included (K-079). A written procedure for checking identity and replying is still needed |
 | Correction | staff edit client records; My account says "contact GAkinz" for name and email | none for staff-held data; fine as a manual route |
-| Erasure | email | no delete for enquiries, clients, users, tickets or messages; audit log keeps emails |
+| Erasure | email | no delete for enquiries, clients, users, tickets or messages; audit log keeps emails. **Not built**, by design, until periods and the procedure are agreed |
 | Restriction, objection | not mentioned | not offered on the privacy page |
 | Complaint to the ICO | not mentioned | must be stated |
 

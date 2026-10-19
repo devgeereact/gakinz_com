@@ -152,10 +152,11 @@ sections 10 and 11.
 
 ## 3. Server
 
-PHP files in `server/`, one per resource. Seven are shared includes with no route of their own,
+PHP files in `server/`, one per resource. Nine are shared includes with no route of their own,
 all denied to direct requests by `.htaccess` (K-013). `work.php` was added on 2026-09-22,
-`_money.php` on 2026-10-10, `site.php` on 2026-10-14, and `assets.php` and `_ics.php` on
-2026-10-18.
+`_money.php` on 2026-10-10, `site.php` on 2026-10-14, `assets.php` and `_ics.php` on
+2026-10-18, and `today.php`, `search.php`, `briefs.php`, `privacy.php`, `_like.php` and
+`_retention.php` on 2026-10-19.
 
 | Include | Role |
 |---|---|
@@ -166,6 +167,8 @@ all denied to direct requests by `.htaccess` (K-013). `work.php` was added on 20
 | `_monitor.php` | HTTP status and TLS expiry check for the care plan |
 | `_money.php` | The single VAT-inclusive payable-total calculation, used for payment providers (D-034) and for the manual payment check in `invoices.php` |
 | `_ics.php` | RFC 5545 calendar file for a confirmed call, used by `bookings.php` |
+| `_like.php` | Literal substring matching for `LIKE` with `!` as the escape, used by `search.php` |
+| `_retention.php` | The read-only retention dry run, used by `privacy.php` and `cron.php job=retention_report` |
 
 Every routed endpoint follows the same shape: require the bootstrap, read
 `$_SERVER['REQUEST_METHOD']` and `$_GET['action']`, call `require_auth($conn, ROLES)`, use
@@ -277,6 +280,21 @@ need SQL 7 and 8 and the upload in `docs/DEPLOYMENT.md` section 5.
 | Site content | One `site_content` row per section with a draft and a published copy; the public read returns published copy only | `server/site.php`, `src/app/modules/Site.tsx`, `siteContentModel.ts`, `siteContent` in `api.ts` |
 | CMS shell and screens | Graphite sidebar in both themes, new header, `AuthFrame` sign-in pages, a page kit shared by every screen | `src/layouts/AppLayout.tsx`, `src/components/app-sidebar.tsx`, `src/app/components/AuthFrame.tsx`, `src/app/components/page-kit.tsx` |
 | Enquiries | Drag and drop between stages, through the existing `move()` | `src/app/modules/Leads.tsx` |
+
+### Client journeys, second batch, 2026-10-19
+
+On the same branch (PR #21); not merged, deployed or uploaded. The server files need SQL 16
+and the upload in `docs/DEPLOYMENT.md` section 5.
+
+| Area | Shape | Where |
+|---|---|---|
+| Today | One read across six sources, each section run on its own and gated by the role constant of the endpoint that owns its data; items carry deep-link routes | `server/today.php`, `Dashboard.tsx`, `todayModel.ts`, `today` in `api.ts` |
+| Record search | One read across five tables, gated per type the same way; debounced and aborted on the client, merged in type order | `server/search.php`, `server/_like.php`, `src/components/global-search.tsx`, `src/lib/recordSearchModel.ts`, `recordSearch` in `api.ts` |
+| Brief and handoff | Two tables under the project in one staff endpoint; the handoff is a Markdown download built and redacted on the server | `server/briefs.php`, `src/app/components/ProjectBrief.tsx`, `projectBriefModel.ts`, `projectBriefs` in `api.ts` |
+| Privacy tools | A JSON download and a read-only report; the report logic is a shared include so the command line can run it too | `server/privacy.php`, `server/_retention.php`, `server/cron.php`, `Platform.tsx`, `Clients.tsx`, `privacyToolsModel.ts`, `privacy` in `api.ts` |
+| Deep links | Pure parsing and a nonce in the history state, so a link applies when it changes or is picked again, never on a re-render | `src/lib/deepLink.ts`, `src/hooks/use-reveal.ts`, Projects, Invoicing, Leads and Clients |
+| Not on the server yet | One rule for telling a missing or un-migrated route from a real failure; `.htaccess` answers 404 for a missing `.php` | `src/lib/notAvailable.ts`, `server/.htaccess` |
+| Recommendation blocks | Parsed in the article format and rendered as cards with no raw HTML | `src/marketing/lib/articleFormat.ts`, `src/marketing/components/ArticleBody.tsx` |
 
 ### Client journeys, 2026-10-18
 

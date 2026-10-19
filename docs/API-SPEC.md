@@ -290,6 +290,7 @@ security-critical, `docs/SECURITY.md` section 3):
 | `careplan.php` | GET list, `check` | STAFF |
 | `files.php` | GET list with optional `?client_id=` or `?project_id=`, GET `?download=`, `upload`, `share`, `delete` | STAFF |
 | `assets.php` | Staff: GET `?project_id=`, `create`, `update`, `accept`, `reopen`, `delete`. Client: GET `?action=mine`, `supply` | STAFF (as `projects.php`); the `client` role on its own two routes only (2026-10-18) |
+| `briefs.php` | GET `?project_id=`, `save`, `measure_create`, `measure_update`, `measure_delete`, GET `?action=handoff&project_id=` | STAFF (as `projects.php`); a `client` gets 403 on every route, reads included (2026-10-19) |
 
 `assets.php` (2026-10-18, SQL 15, `docs/PRODUCT-SPEC.md` sections 6.2 and 7; the client branch
 is security-critical):
@@ -307,6 +308,31 @@ is security-critical):
 - Audit actions: `asset_create`, `asset_update`, `asset_accept`, `asset_reopen`,
   `asset_delete`, `asset_supply`. Every action answers 503 until SQL 15.
 - Covered by `tests/server/project-assets.test.ts`.
+
+`briefs.php` (2026-10-19, SQL 16, `docs/PRODUCT-SPEC.md` sections 6.4 and 6.5):
+
+- GET `?project_id=N` returns `{ project, brief, measurements }`; `brief` is `null` until
+  something is saved. A deleted or unknown project answers 404.
+- `save` `{ project_id, ...fields }` upserts the brief. No field is required; a field left out
+  keeps its value, `null` or a blank string clears it, unknown keys are ignored. Each text field
+  has a cap (2000 for most, 4000 for deliverables and the handover checklist, 120 for the quote
+  reference, 500 for the next action); a longer value answers 400, never cut.
+  `completion_ack_on` is a `YYYY-MM-DD` date.
+- `measure_create` `{ project_id, label, ... }` (label 1 to 200 characters; at most 50 live
+  measurements per project, 409 after). `measure_update` and `measure_delete` take `{ id,
+  project_id }`, and both must match one live row on a live project, otherwise 404.
+  `result` is `PASS`, `FAIL`, `PARTIAL` or `NOT TESTED` (default); `kind` is `technical`
+  (default) or `business`, and `observation_window` is refused for a technical measurement.
+  Delete is soft.
+- `?action=handoff` answers a `text/markdown` attachment, `gakinz-handoff-project-<id>.md`:
+  project id and name, the client's ID number only, deliverables, exclusions, quote
+  reference, each measurement's label, target, method and result, open decisions, next
+  action and evidence locations, after a redaction pass. The include and exclude lists are
+  in the file's docblock; `docs/SECURITY.md` section 3 describes the limits.
+- Audit actions: `brief_save`, `measure_create`, `measure_update`, `measure_delete`,
+  `brief_handoff_export`. Every route answers 503 until SQL 16. Every SQL failure is a 500 or
+  that 503, never `ok` (K-082).
+- Covered by `tests/server/project-briefs.test.ts`.
 
 ### Money
 
@@ -422,6 +448,67 @@ security-critical):
 | `github.php` | GET `?url=` returns commits, pull requests and the latest Actions run | STAFF |
 | `figma.php` | GET `?url=` returns name, last modified and thumbnail | STAFF |
 | `slack.php` | POST `?action=test` | ADMINS |
+
+### Daily work and privacy (2026-10-19)
+
+| Endpoint | Contract | Roles |
+|---|---|---|
+| `today.php` | GET only, read only, not audited | The union of the roles below; a `client` or `trainer` gets 403. Each section mirrors the endpoint that owns its data and is **omitted** for a role that cannot read it: enquiries, follow-ups and calls as `leads.php` and `bookings.php` (super_admin, admin, manager, editor), tasks and assets as `tasks.php` and `assets.php` (plus employee), invoices as `invoices.php` (super_admin, admin, manager) |
+| `search.php` | GET `?q=`, read only, not audited | The union of the roles below; a `client` or `trainer` gets 403. Clients, enquiries and quotes as `clients.php`, `leads.php` and `proposals.php` (super_admin, admin, manager, editor); projects as `projects.php` (plus employee); invoices as `invoices.php` (super_admin, admin, manager) |
+| `privacy.php` | GET `?action=export&client_id=N` or `&enquiry_email=`, GET `?action=retention_report` | Export: super_admin and admin. Retention report: super_admin |
+
+`today.php` returns `{ generated_at, sections }`, where each present section is `{ status:
+"ok", count, items }` or `{ status: "unavailable", count: null, items: [] }`. Sections:
+`new_enquiries` (status `new`), `follow_ups_due` (open, next action today or earlier),
+`calls` (every `requested` call and `confirmed` calls in the next 7 days), `overdue_tasks`
+(not done, due before today, live project), `waiting_material` (assets `requested` for more
+than 3 days, or `supplied` and awaiting acceptance) and `unpaid_invoices` (`sent` and past
+`due_at`, the `overdue` rule of `invoices.php`). At most 20 items each, oldest or most urgent
+first; `count` is the full number. Each item is `{ type, id, title, reason, at, route }`,
+where `at` is a UTC time ending `Z` or a plain due date, and `route` a CMS deep link
+(`/app/leads?enquiry=`, `/app/leads?due=1&enquiry=`, `/app/leads?view=calls&call=`,
+`/app/projects?project=&task=`, `/app/projects?project=&asset=`, `/app/invoicing?invoice=`).
+A missing table or failed query marks only its section `unavailable`, never an empty `ok`.
+Dates use the database clock (K-075). 405 for anything but GET. Covered by
+`tests/server/today.test.ts`.
+
+`search.php` trims `q`, which must be valid UTF-8 and 2 to 80 characters (400 otherwise),
+and matches it as a literal substring: `!`, `%` and `_` are escaped and the clause is
+`LIKE ? ESCAPE '!'` from `_like.php`, which holds under any `sql_mode`. Only rows with
+`deleted_at IS NULL`, at most 8 per type, newest first. Returns `{ query, types, results }`:
+`types` maps each type the caller may read to `ok` or `unavailable`; each result is `{ type,
+id, title, secondary, route }` and never carries a note, message, budget or amount.
+
+| Type | Fields matched | Route |
+|---|---|---|
+| `client` | company, contact name, email | `/app/clients?client=<id>` |
+| `project` | name | `/app/projects?project=<id>` |
+| `enquiry` | name, company, email | `/app/leads?enquiry=<id>` |
+| `invoice` | number | `/app/invoicing?invoice=<id>` |
+| `quote` | title (proposals have no number) | `/app/proposals` (no detail view, K-077) |
+
+405 for anything but GET. Covered by `tests/server/search.test.ts`.
+
+`privacy.php` (`docs/PRIVACY-READINESS.md` sections 6 and 7):
+
+- `export` takes exactly one of `client_id` or `enquiry_email` (400 for neither, both, an
+  invalid id or an invalid address; 404 for an unknown client or an email no enquiry uses). It
+  answers a JSON attachment with `Cache-Control: private, no-store`, `nosniff` and
+  `Access-Control-Expose-Headers: Content-Disposition`, holding `{ about: { generated_at,
+  subject, note, excluded, unavailable }, data }`. `data` has every row held about the subject
+  across about 15 tables, soft-deleted rows included; `excluded` lists what is always left
+  out (password hashes, token values and hashes, 2FA secrets, share tokens, file contents,
+  configuration, other clients' rows, and the author and IP of audit rows the subject did not
+  write); `unavailable` names any table that is missing. An enquirer export lists the ids of
+  client records using the same address without including them. Each export writes one
+  `privacy_export` audit row naming who exported whom, never the content.
+- `retention_report` returns `{ dry_run: true, generated_at, rules }`; each rule is `{ key,
+  label, config_key, unit, starts_from, period, status, counts }`, where `status` is
+  `period_not_set`, `invalid_period` or `counted`, and `counts` maps a table to the rows the
+  rule would affect. It runs `SELECT COUNT(*)` only. The same report prints from
+  `php cron.php job=retention_report` (command line only; the web answers 400).
+- Any other GET answers 400 "Unknown action.", any other method 405. Covered by
+  `tests/server/privacy.test.ts`.
 
 ## 6. AI daily caps
 

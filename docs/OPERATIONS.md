@@ -67,9 +67,20 @@ wget -qO- "https://gakinz.com/cron.php?key=<CRON_KEY>&job=all"
 | `digest` | Emails a KPI digest to `$REPORT_RECIPIENTS` | No SMTP or no recipients |
 | `prune` | Deletes sessions, magic links and reset links more than a day past expiry (2026-10-17, K-062). No business record is touched | Never |
 | `all` | Runs all five. This is the default | |
+| `retention_report` | Prints, as plain text, how many rows each proposed retention rule would affect (2026-10-19, `_retention.php`, K-062). Counts only: it never changes a row. Not part of `all` | Command line only: over the web it answers 400, even with the key |
 
 The response is JSON: `{"ran": {...}}` with a per-job result, so the cron output is readable
-in a mail log.
+in a mail log. The retention report is the exception: run it by hand when the owner wants the
+figures, not from the cron entry, and it exits 1 with "Retention report failed: SQL error
+<code>" if a query fails:
+
+```
+php /home/<account>/public_html/cron.php job=retention_report
+```
+
+Each rule prints "period not set (...). Nothing happens." while its `$RETENTION_*` key is
+`null` or absent (`docs/PRIVACY-READINESS.md` section 6). Uploaded or run on the host:
+UNVERIFIED.
 
 Whether the cPanel cron entry exists, and whether `$CRON_KEY` is set on the server, is
 **UNVERIFIED**.

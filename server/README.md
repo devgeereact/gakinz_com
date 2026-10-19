@@ -45,6 +45,8 @@ of their own and are denied to direct requests by `.htaccess`. The file count is
 | `_monitor.php` | HTTP status and TLS expiry check for the care plan |
 | `_money.php` | The single VAT-inclusive payable-total calculation used by `payments.php` and, since 2026-10-18, by `invoices.php` to check a manual payment |
 | `_ics.php` | Builds the RFC 5545 calendar file for a confirmed call (escaping, 75-octet folding, UTC times). Required by `bookings.php` on its calendar routes, so upload the two together (2026-10-18) |
+| `_like.php` | Literal substring matching for `LIKE`, with `!` as the escape so it reads the same under any `sql_mode`. Required by `search.php`; upload the two together (2026-10-19) |
+| `_retention.php` | The read-only retention dry run: counts what each proposed rule would affect, never deletes. Used by `privacy.php` and `cron.php job=retention_report`; upload the three together (2026-10-19) |
 | `api.php` | Unauthenticated read-only health check: confirms PHP runs and the database answers. No writes, no application tables |
 | `contact.php` | Public enquiry form, writes to `enquiries` |
 | `verify.php` | Public certificate verification |
@@ -53,16 +55,18 @@ of their own and are denied to direct requests by `.htaccess`. The file count is
 | `oauth.php` | Google SSO. Matches existing active users only |
 | `users.php`, `audit.php`, `integrations.php` | Platform administration. Admins only |
 | `leads.php`, `clients.php`, `bookings.php`, `proposals.php`, `contracts.php` | Sales. `bookings.php` also has a client branch for portal call requests and the client's own calendar file (2026-10-18), security-critical |
-| `projects.php`, `tasks.php`, `design.php`, `dev.php`, `resourcing.php`, `time.php`, `careplan.php`, `files.php`, `assets.php` | Delivery. `assets.php` (2026-10-18) is the project asset checklist, with a client branch to list and supply items, security-critical |
+| `projects.php`, `tasks.php`, `design.php`, `dev.php`, `resourcing.php`, `time.php`, `careplan.php`, `files.php`, `assets.php`, `briefs.php` | Delivery. `assets.php` (2026-10-18) is the project asset checklist, with a client branch to list and supply items, security-critical. `briefs.php` (2026-10-19, SQL 16) is the project brief, measurements and the sanitised GEE OS handoff, staff only |
+| `today.php`, `search.php` | Daily work (2026-10-19), read only, staff only: the Today attention list and record search. Each gates every section or record type by the role constant of the endpoint that owns the data |
+| `privacy.php` | Subject access export (super_admin, admin) and the retention report (super_admin), 2026-10-19. Reads only |
 | `invoices.php`, `payments.php`, `reports.php` | Money |
 | `portal.php`, `support.php`, `feedback.php`, `comms.php`, `mail.php` | Client-facing. `portal.php` and the client branches of `support.php` and `feedback.php` serve `client`-role callers and are security-critical |
 | `blog.php`, `testimonials.php`, `content.php`, `knowledge.php`, `announcements.php`, `work.php`, `site.php` | Content. `work.php` also serves the public work ledger and the homepage hero; `site.php` serves published site copy publicly and drafts to editors |
 | `ai.php` | OpenRouter proxy. Staff roles only, capped per role per day. The key stays server-side |
 | `weather.php` | OpenWeather proxy. Staff roles only, cached 10 minutes. The key stays server-side |
 | `github.php`, `figma.php`, `slack.php` | External connectors |
-| `cron.php` | Scheduled jobs. Gated by `$CRON_KEY`, not by a user session |
+| `cron.php` | Scheduled jobs. Gated by `$CRON_KEY`, not by a user session. `job=retention_report` runs from the command line only (2026-10-19) |
 | `schema.sql` | Every table, plus the migration statements as comments in the `MIGRATIONS` block and dated blocks at the foot |
-| `.htaccess` | SPA routing, the `Authorization` header pass-through, and hardening: denies `config.php`, every `_*.php` include, and `.md`, `.sql`, `.log` and `.txt` files other than `robots.txt` and `llms.txt` |
+| `.htaccess` | SPA routing, the `Authorization` header pass-through, and hardening: denies `config.php`, every `_*.php` include, and `.md`, `.sql`, `.log` and `.txt` files other than `robots.txt` and `llms.txt`. Since 2026-10-19 a request for a `.php` file that does not exist answers 404 instead of the SPA shell |
 
 ## Adding endpoints
 
