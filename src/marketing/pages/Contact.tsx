@@ -39,6 +39,8 @@ export default function Contact() {
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState("")
   const [sentTo, setSentTo] = useState("")
+  // The enquiry's work reference (SQL 19), shown once so the visitor can quote it.
+  const [sentRef, setSentRef] = useState("")
   const [bookUrl, setBookUrl] = useState("")
   const [copied, setCopied] = useState("Copy")
   const nameRef = useRef<HTMLInputElement>(null)
@@ -92,6 +94,7 @@ export default function Contact() {
     setSending(false)
     if (res.ok) {
       setSentTo(form.name.trim().split(/\s+/)[0])
+      setSentRef(res.data.reference ?? "")
       setForm(EMPTY)
       setFromPackage("")
     } else {
@@ -150,6 +153,11 @@ export default function Contact() {
                 <p className="mute" style={{ marginTop: 10 }}>
                   Your message is with me. {copy.contact.reply}
                 </p>
+                {sentRef && (
+                  <p className="mute" style={{ marginTop: 10 }}>
+                    Your reference is <b className="mono">{sentRef}</b>. Mention it if you write to me about this.
+                  </p>
+                )}
               </div>
             ) : (
               <form className="form" onSubmit={submit} noValidate>

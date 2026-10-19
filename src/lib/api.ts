@@ -196,7 +196,8 @@ export type EnquiryPayload = {
   message: string
 }
 export const contact = {
-  send: (payload: EnquiryPayload) => api.post<{ id: number }>("/contact.php", payload),
+  // `reference` is the enquiry's GK-E-YYYY-NNNN (SQL 19); null before that step has run.
+  send: (payload: EnquiryPayload) => api.post<{ id: number; reference?: string | null }>("/contact.php", payload),
 }
 
 // Leads (§6 Leads). Enquiries captured by the public form, managed in the CMS.
@@ -215,6 +216,8 @@ export type Lead = {
   score: number // 0 unscored | 1 cold | 2 warm | 3 hot
   lost_reason: string | null
   created_at: string
+  // Work reference GK-E-YYYY-NNNN (SQL 19). Null before that step has run.
+  reference?: string | null
   // Owner's follow-up (2026-10-10 schema step). Absent until that ALTER has run.
   next_action_at?: string | null // YYYY-MM-DD
   next_action_note?: string | null
@@ -417,6 +420,7 @@ export type Project = {
   task_count: number
   done_count: number
   created_at: string
+  reference?: string | null // GK-P-YYYY-NNNN (SQL 19); null before that step has run
 }
 // Project templates (server/_templates.php): code, not a table, one per work
 // type in docs/PRODUCT-SPEC.md 6.4. Read with projects.templates(); an older
@@ -503,6 +507,7 @@ export type Proposal = {
   acceptance_reference: string | null
   acceptance_received_on: string | null
   accepted_terms_sha256: string | null
+  project_reference?: string | null // the accepted project's GK-P-YYYY-NNNN (SQL 19)
 }
 // How the client's acceptance reached us.
 export type AcceptanceMethod = "email" | "letter" | "in_person" | "phone" | "other"
@@ -518,6 +523,7 @@ export type PublicProposal = {
   valid_until: string | null
   client_company: string | null
   accepted_on: string | null // the day the client's acceptance was received; nothing else of the evidence
+  project_reference?: string | null // once accepted: the project's GK-P-YYYY-NNNN (SQL 19)
   items: { description: string; qty: number; unit_price: number }[]
 }
 // One leg of the 40/30/30 schedule auto-created when a proposal is accepted.
@@ -543,6 +549,7 @@ export const proposals = {
       invoices?: ScheduledInvoice[]
       evidence_recorded?: boolean
       accepted_terms_sha256?: string | null
+      project_reference?: string | null
     }>("/proposals.php?action=accept", { id, ...evidence }),
   share: (id: number) => api.post<{ token: string }>("/proposals.php?action=share", { id }),
   unshare: (id: number) => api.post<{ ok: boolean }>("/proposals.php?action=unshare", { id }),
@@ -587,6 +594,7 @@ export type InvoiceDetail = Invoice & {
   notes: string | null
   client_email: string | null
   project_id: number | null
+  project_reference?: string | null // the project's GK-P-YYYY-NNNN (SQL 19), for the PDF
   items: InvoiceLine[]
 }
 export const invoices = {
@@ -930,8 +938,9 @@ export const recordSearch = {
 export type PortalData = {
   client: { id: number; company: string; contact_name: string | null; email: string | null }
   /** kind "it_support" is the standing IT support project (SQL 17): no task progress to show. */
-  projects: { id: number; name: string; status: string; due_date: string | null; task_count: number; done_count: number; kind?: "it_support" | null }[]
-  invoices: { id: number; number: string | null; status: string; issued_at: string; due_at: string | null; subtotal: number; vat_rate: number; vat_amount: number; total: number }[]
+  /** `reference` is the project's GK-P-YYYY-NNNN (SQL 19), null before that step has run. */
+  projects: { id: number; name: string; status: string; due_date: string | null; task_count: number; done_count: number; kind?: "it_support" | null; reference?: string | null }[]
+  invoices: { id: number; number: string | null; status: string; issued_at: string; due_at: string | null; subtotal: number; vat_rate: number; vat_amount: number; total: number; project_reference?: string | null }[]
   tickets: { id: number; subject: string; status: string; priority: string; created_at: string }[]
 }
 export const portal = {
