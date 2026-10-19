@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useReducer } from "react"
 import { useBlocker } from "react-router-dom"
+import { closeReducer, idleClose } from "@/lib/unsaved-guard-model"
 
 /**
  * Unsaved-changes protection for a form.
@@ -14,10 +15,14 @@ import { useBlocker } from "react-router-dom"
  * Both of the last two show the same in-app dialog, `UnsavedGuardDialog`,
  * driven by `prompt`. Pass `dirty` as "differs from the last saved values"
  * (see src/lib/dirty-model.ts); it must turn false as soon as a save succeeds.
+ *
+ * Use ONE guard per mounted page: react-router keeps only the last registered
+ * blocker, so two guards on a page would fight. A page with several editors
+ * combines their dirty flags into one guard.
  */
 export function useUnsavedGuard(dirty: boolean) {
   const blocker = useBlocker(dirty)
-  const [pendingClose, setPendingClose] = useState<(() => void) | null>(null)
+  const [{ pending }, dispatch] = useReducer(closeReducer, idleClose)
 
   useEffect(() => {
     if (!dirty) return
@@ -29,27 +34,30 @@ export function useUnsavedGuard(dirty: boolean) {
     return () => window.removeEventListener("beforeunload", warn)
   }, [dirty])
 
+  // Forget a waiting close request once there is nothing left to protect.
+  useEffect(() => {
+    dispatch({ type: "dirty", dirty })
+  }, [dirty])
+
   /** Run `leave` now if the form is clean, otherwise ask first. */
   const requestLeave = useCallback(
     (leave: () => void) => {
-      if (dirty) setPendingClose(() => leave)
+      if (dirty) dispatch({ type: "request", dirty, leave })
       else leave()
     },
     [dirty],
   )
 
   const prompt = {
-    // A prompt can only be waiting while there is still something unsaved.
-    open: blocker.state === "blocked" || (dirty && pendingClose !== null),
+    open: blocker.state === "blocked" || (dirty && pending !== null),
     onStay: () => {
-      setPendingClose(null)
+      dispatch({ type: "stay" })
       if (blocker.state === "blocked") blocker.reset()
     },
     onLeave: () => {
-      const run = pendingClose
-      setPendingClose(null)
+      dispatch({ type: "leave" })
       if (blocker.state === "blocked") blocker.proceed()
-      else run?.()
+      else pending?.()
     },
   }
 
