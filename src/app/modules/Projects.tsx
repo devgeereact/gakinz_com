@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { useSearchParams } from "react-router-dom"
 import { AlertCircle, FolderKanban, Loader2, Plus, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -22,6 +23,8 @@ import {
 } from "@/components/ui/select"
 import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/page-kit"
 import { ProjectAssetsPanel } from "@/app/components/AssetChecklist"
+import { LINKED_RECORD, projectsLink, recordElementId } from "@/lib/deepLink"
+import { useReveal } from "@/hooks/use-reveal"
 import {
   projects,
   tasks as tasksApi,
@@ -78,6 +81,17 @@ export default function Projects() {
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState({ name: "", client_id: "", due_date: "" })
   const [saving, setSaving] = useState(false)
+  // ?project=<id>[&task=<id>|&asset=<id>] opens that project once, after the
+  // first load. An id that is not in the list leaves the plain screen.
+  const [searchParams] = useSearchParams()
+  const link = projectsLink(searchParams)
+  const linkApplied = useRef(false)
+
+  const select = (p: Project) => {
+    setSelected(p)
+    // The prototype brings the selected project's board into view.
+    requestAnimationFrame(() => boardRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" }))
+  }
 
   const loadProjects = async () => {
     setLoading(true)
@@ -85,6 +99,11 @@ export default function Projects() {
     if (res.ok) {
       setList(res.data)
       setError(null)
+      if (!linkApplied.current) {
+        linkApplied.current = true
+        const linked = link.project !== null ? res.data.find((p) => p.id === link.project) : undefined
+        if (linked) select(linked)
+      }
     } else {
       setError(res.error)
     }
@@ -94,6 +113,7 @@ export default function Projects() {
   useEffect(() => {
     loadProjects()
     clientsApi.list().then((r) => r.ok && setClientList(r.data))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const createProject = async () => {
@@ -137,11 +157,6 @@ export default function Projects() {
     }
   }
 
-  const select = (p: Project) => {
-    setSelected(p)
-    // The prototype brings the selected project's board into view.
-    requestAnimationFrame(() => boardRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" }))
-  }
 
   // Count projects sitting in each delivery stage (the dashboard tally).
   const stageTally = PROJECT_STAGES.map((s) => ({
@@ -298,8 +313,14 @@ export default function Projects() {
             onStatusChange={(s) => setProjectStatus(selected, s)}
             onStageChange={(s) => setProjectStage(selected, s)}
             onTasksChanged={loadProjects}
+            linkedTask={link.project === selected.id ? link.task : null}
           />
-          <ProjectAssetsPanel key={selected.id} projectId={selected.id} projectName={selected.name} />
+          <ProjectAssetsPanel
+            key={selected.id}
+            projectId={selected.id}
+            projectName={selected.name}
+            linkedAsset={link.project === selected.id ? link.asset : null}
+          />
         </div>
       )}
     </div>
@@ -329,6 +350,7 @@ function ProjectBoard({
   onStatusChange,
   onStageChange,
   onTasksChanged,
+  linkedTask = null,
 }: {
   project: Project
   statusOptions: { key: ProjectStatus; label: string }[]
@@ -336,6 +358,7 @@ function ProjectBoard({
   onStatusChange: (s: ProjectStatus) => void
   onStageChange: (s: ProjectStage) => void
   onTasksChanged: () => void
+  linkedTask?: number | null
 }) {
   const [items, setItems] = useState<Task[]>([])
   const [loading, setLoading] = useState(true)
@@ -353,6 +376,7 @@ function ProjectBoard({
     load()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id])
+  useReveal(linkedTask !== null && items.some((t) => t.id === linkedTask) ? recordElementId("task", linkedTask) : null, !loading)
 
   const byStatus = useMemo(() => {
     const map: Record<TaskStatus, Task[]> = { todo: [], doing: [], review: [], done: [] }
@@ -450,7 +474,14 @@ function ProjectBoard({
                 <span className="ml-auto font-mono text-xs tabular-nums text-muted-foreground">{byStatus[col.key].length}</span>
               </div>
               {byStatus[col.key].map((task) => (
-                <div key={task.id} className="grid gap-1.5 rounded-xl border bg-card p-3 transition-[border-color,box-shadow] hover:border-line-strong hover:shadow-sm">
+                <div
+                  key={task.id}
+                  id={recordElementId("task", task.id)}
+                  className={cn(
+                    "grid scroll-m-4 gap-1.5 rounded-xl border bg-card p-3 transition-[border-color,box-shadow] hover:border-line-strong hover:shadow-sm",
+                    task.id === linkedTask && LINKED_RECORD,
+                  )}
+                >
                   <b className="min-w-0 font-semibold [overflow-wrap:anywhere]">{task.title}</b>
                   <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[12.5px] text-muted-foreground">
                     <span className="min-w-0 [overflow-wrap:anywhere]">{task.assignee || "Unassigned"}</span>

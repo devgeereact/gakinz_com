@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import { leadsLink, recordElementId } from "@/lib/deepLink"
+import { useReveal } from "@/hooks/use-reveal"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { Loader2, Download, RefreshCw, Mail, UserPlus, Tag, CalendarClock, Inbox, Phone, Plus } from "lucide-react"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
@@ -98,12 +100,23 @@ export default function Leads() {
   const [editNextNote, setEditNextNote] = useState("")
   const [savingMeta, setSavingMeta] = useState(false)
 
+  // ?enquiry=<id> opens that enquiry once, after the first load; ?view=calls&call=<id>
+  // outlines that call. An id that is not listed leaves the plain screen.
+  const link = leadsLink(searchParams)
+  const linkApplied = useRef(false)
+  // Declared here because load() opens a linked enquiry. The drawer reads it below.
+  const [openId, setOpenId] = useState<number | null>(null)
+
   const load = async () => {
     setLoading(true)
     const res = await leads.list()
     if (res.ok) {
       setItems(res.data)
       setError(null)
+      if (!linkApplied.current) {
+        linkApplied.current = true
+        if (link.enquiry !== null && res.data.some((l) => l.id === link.enquiry)) setOpenId(link.enquiry)
+      }
     } else {
       setError(res.error)
     }
@@ -112,6 +125,7 @@ export default function Leads() {
 
   useEffect(() => {
     load()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // The server omits the follow-up fields until the 2026-10-10 schema step runs.
@@ -221,7 +235,6 @@ export default function Leads() {
 
   // Drawer, drag and drop. The drawer reads the lead from `items`, so a stage
   // change made while it is open shows straight away.
-  const [openId, setOpenId] = useState<number | null>(null)
   const openLead = openId != null ? (items.find((l) => l.id === openId) ?? null) : null
   const [dragId, setDragId] = useState<number | null>(null)
   const [overStage, setOverStage] = useState<LeadStage | null>(null)
@@ -290,6 +303,7 @@ export default function Leads() {
   }, [openId])
   // Loading until the answer for the enquiry now open has arrived.
   const openLeadCalls = leadCalls && leadCalls.id === openId ? leadCalls : null
+  useReveal(link.call !== null && calls?.some((c) => c.id === link.call) ? recordElementId("call", link.call) : null, callsView && calls !== null)
   const setView = (on: boolean) =>
     setSearchParams(
       (p) => {
@@ -388,7 +402,7 @@ export default function Leads() {
           />
         ) : (
           <div className="max-w-[760px]">
-            <CallList calls={sortCalls(calls)} onChange={upsertCall} showWith empty="" />
+            <CallList calls={sortCalls(calls)} onChange={upsertCall} showWith empty="" linked={link.call} />
           </div>
         )
       ) : (

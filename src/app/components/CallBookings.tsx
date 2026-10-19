@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { LINKED_RECORD, recordElementId } from "@/lib/deepLink"
 import { CalendarClock, Check, Download, ExternalLink, Loader2, MapPin, Pencil, RotateCw, X } from "lucide-react"
 import { saveAs } from "file-saver"
 import { toast } from "sonner"
@@ -44,7 +45,20 @@ function reportNotice(res: BookingChange) {
   else toast.error(`The change is saved, but the email failed${res.notice.error ? `: ${res.notice.error}` : "."} Retry it from the call.`)
 }
 
-export function CallList({ calls, onChange, showWith = false, empty }: { calls: Booking[]; onChange: Change; showWith?: boolean; empty: string }) {
+export function CallList({
+  calls,
+  onChange,
+  showWith = false,
+  empty,
+  linked = null,
+}: {
+  calls: Booking[]
+  onChange: Change
+  showWith?: boolean
+  empty: string
+  /** A call a deep link points at (src/lib/deepLink.ts): outlined. */
+  linked?: number | null
+}) {
   const [moving, setMoving] = useState<Booking | null>(null)
   const [ending, setEnding] = useState<{ call: Booking; to: "completed" | "cancelled" } | null>(null)
   const [editing, setEditing] = useState<Booking | null>(null)
@@ -94,7 +108,11 @@ export function CallList({ calls, onChange, showWith = false, empty }: { calls: 
           const failed = failedNotice(c)
           const overdue = isOverdueCall(c)
           return (
-            <li key={c.id} className="grid min-w-0 gap-2 rounded-xl border bg-card p-3">
+            <li
+              key={c.id}
+              id={recordElementId("call", c.id)}
+              className={cn("grid min-w-0 scroll-m-4 gap-2 rounded-xl border bg-card p-3", c.id === linked && LINKED_RECORD)}
+            >
               <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
                 <div className="min-w-0">
                   {showWith && <b className="block font-semibold [overflow-wrap:anywhere]">{callWith(c)}</b>}

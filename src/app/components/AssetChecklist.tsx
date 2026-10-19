@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { cn } from "@/lib/utils"
+import { LINKED_RECORD, recordElementId } from "@/lib/deepLink"
+import { useReveal } from "@/hooks/use-reveal"
 import { Check, ClipboardList, Loader2, Pencil, Plus, RotateCcw, Send, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -28,7 +31,16 @@ const NO_SECRETS = "Never put a password here. Describe the login (which service
  * (docs/PRODUCT-SPEC.md 6.2 and 7). Add, edit, accept, reopen and remove items.
  * Until SQL 15 runs, assets.php answers 503 and this panel says so.
  */
-export function ProjectAssetsPanel({ projectId, projectName }: { projectId: number; projectName: string }) {
+export function ProjectAssetsPanel({
+  projectId,
+  projectName,
+  linkedAsset = null,
+}: {
+  projectId: number
+  projectName: string
+  /** An item a deep link points at (src/lib/deepLink.ts): scrolled to and outlined. */
+  linkedAsset?: number | null
+}) {
   const [items, setItems] = useState<ProjectAsset[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [unavailable, setUnavailable] = useState(false)
@@ -78,6 +90,7 @@ export function ProjectAssetsPanel({ projectId, projectName }: { projectId: numb
   }
 
   const view = assetsLoadState(items, loadError, unavailable)
+  useReveal(linkedAsset !== null && items?.some((x) => x.id === linkedAsset) ? recordElementId("asset", linkedAsset) : null, items !== null)
 
   return (
     <section className="mt-4 min-w-0 rounded-2xl border bg-card p-[18px]" aria-labelledby={`assets-${projectId}-heading`}>
@@ -120,7 +133,14 @@ export function ProjectAssetsPanel({ projectId, projectName }: { projectId: numb
                     />
                   </li>
                 ) : (
-                  <li key={item.id} className="grid gap-2 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
+                  <li
+                    key={item.id}
+                    id={recordElementId("asset", item.id)}
+                    className={cn(
+                      "grid scroll-m-4 gap-2 rounded-lg py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start",
+                      item.id === linkedAsset && `${LINKED_RECORD} px-2`,
+                    )}
+                  >
                     <span className="min-w-0">
                       <b className="block font-semibold [overflow-wrap:anywhere]">{item.label}</b>
                       {item.note && <span className="block whitespace-pre-wrap text-[13px] text-muted-foreground [overflow-wrap:anywhere]">{item.note}</span>}

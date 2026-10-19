@@ -1,4 +1,8 @@
 import { useEffect, useState } from "react"
+import { cn } from "@/lib/utils"
+import { useSearchParams } from "react-router-dom"
+import { LINKED_ROW, invoicingLink, recordElementId } from "@/lib/deepLink"
+import { useReveal } from "@/hooks/use-reveal"
 import { Loader2, Plus, RefreshCw, Trash2, Send, BadgePoundSterling, FileDown, Download, CreditCard, AlertTriangle, AlertCircle, BellRing, Receipt, Search, Landmark } from "lucide-react"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { toast } from "sonner"
@@ -108,6 +112,9 @@ export default function Invoicing() {
 
   const [filter, setFilter] = useState<Filter>("all")
   const [query, setQuery] = useState("")
+  // ?invoice=<id> scrolls to and outlines that invoice. An id not on the list is ignored.
+  const [searchParams] = useSearchParams()
+  const linkedInvoice = invoicingLink(searchParams).invoice
 
   // Figures for the tiles, all from the loaded list. Outstanding is what has
   // been sent and not paid; drafts are counted on their own tile.
@@ -127,6 +134,7 @@ export default function Invoicing() {
       (filter === "all" || bucket(i) === filter) &&
       (!q || `${i.number ?? ""} ${i.client_company ?? ""}`.toLowerCase().includes(q)),
   )
+  useReveal(linkedInvoice !== null && shown.some((i) => i.id === linkedInvoice) ? recordElementId("invoice", linkedInvoice) : null, !loading)
   // Clients with at least one overdue invoice → studio "work-pause" flag.
   const overdueClients = Array.from(
     new Set(items.filter((i) => i.overdue && i.client_company).map((i) => i.client_company as string)),
@@ -545,7 +553,12 @@ export default function Invoicing() {
                     </TableRow>
                   )}
                   {shown.map((inv) => (
-                    <TableRow key={inv.id}>
+                    <TableRow
+                      key={inv.id}
+                      id={recordElementId("invoice", inv.id)}
+                      className={cn("scroll-m-4", inv.id === linkedInvoice && LINKED_ROW)}
+                      aria-current={inv.id === linkedInvoice ? "true" : undefined}
+                    >
                       <TableCell className="whitespace-nowrap font-mono font-semibold">{inv.number || `#${inv.id}`}</TableCell>
                       <TableCell className="min-w-[10rem] max-w-[16rem] [overflow-wrap:anywhere]">{inv.client_company || <span className="text-muted-foreground">No client</span>}</TableCell>
                       <TableCell>
