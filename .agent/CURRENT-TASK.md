@@ -8,8 +8,10 @@ on `feat/journeys-2026-10-18`, in two batches: 43 commits on `audit/readiness-20
 then a third batch of 39 commits from `029f867` to `bdca4aa` on the same branch, then a fourth
 batch of nine commits from `8193555` to `ebcb002` (the six service pages), then a fifth batch
 of 31 commits from `3636373` to `b0bbf8b` (work references, deletion tooling, business
-details and a final fix wave), each with its documentation commits. **Not merged, deployed or
-uploaded.** SQL 13 to 19 have run only on the throwaway test database.
+details and a final fix wave), then a sixth batch of 15 commits from `54d593a` to `fa88266`
+(client sign-in by reference and email, and consent and ad slots, both switched off), each
+with its documentation commits. **Not merged, deployed or uploaded.** SQL 13 to 19 have run
+only on the throwaway test database; the sixth batch has no SQL.
 
 The branch stack is now: `main` <- `feat/plan-2026-batch-1` (PR #8) <- `feat/redesign-2026` <-
 `audit/readiness-2026-10-17` (PR #20) <- `feat/journeys-2026-10-18`. Merge in that order, and
@@ -125,6 +127,49 @@ section 7a, `docs/ARCHITECTURE.md`, `docs/PRODUCT-SPEC.md` sections 4.1, 4.3 and
 Owner inputs this batch leaves open (`docs/STATUS.md` section 5): IT coverage, area and
 response time (K-090); IT prices; confirmation of the package prices with a VAT basis; the three
 inferred website exclusions (K-092); whether the budget bands should add a smaller band (K-091).
+
+### Done in the sixth batch (2026-10-19, `54d593a..fa88266`): gated features
+
+Both features ship switched off, with tests proving nothing changes while off (D-050).
+
+- **Task 24, client sign-in by reference and email** (spec 6.1 phase 2): new
+  `server/client_access.php` (`status`, `request`, `redeem`), off unless the live `config.php`
+  sets `$REFERENCE_SIGNIN_ENABLED = true`; 404 on every route while off. Links reuse
+  `magic_links` (no SQL). The sign-in page form and `#access` redemption show only when the
+  server says it is on. J02 and J03 pass locally. Upload `client_access.php` with or after the
+  K-059 `_bootstrap.php` and `_smtp.php` (`docs/DEPLOYMENT.md` section 5.1 step 14). **Do not
+  switch it on** before the four gates in `docs/DEPLOYMENT.md` section 5.4: early finish or
+  fast SMTP (K-101), a `purpose` column on `magic_links` (K-100), the real client IP behind
+  Cloudflare (K-102), and the owner's sign-in policy.
+- **Task 25, consent and ad slots**: tracked settings in `src/marketing/lib/monetisation.ts`,
+  all off; a TCF consent loader on public routes only; up to two labelled article ad slots
+  that render only after Purpose 1 consent; a prerender gate that fails the build on any
+  third-party markup. Ships in `dist/` with the merge; switching it on is a code change and a
+  deploy, not an upload.
+- **Task 26, client anonymisation: not built.** The dispatch was refused by the session's
+  safety check and not worked around. Owner and adviser decision (K-108).
+
+Documents: `docs/STATUS.md` (sections 0, 0.7, 3, 4, 5), `docs/KNOWN-ISSUES.md` (K-100 to
+K-108), `docs/DEPLOYMENT.md` section 5 (step 14, the 5.4 gates, check 17),
+`docs/SECURITY.md` section 2, `docs/API-SPEC.md`, `docs/DECISIONS.md` D-050 (and a note on
+D-049), `docs/PRODUCT-SPEC.md` sections 6.1 and 7, `docs/PRIVACY-READINESS.md` section 4,
+`docs/CONTENT-AND-GROWTH.md` section 3, `qa/TEST-PLAN.md` J02 and J03, `server/README.md`,
+`CLAUDE.md`, and the comment text in `server/_reference.php` and the SQL 19 block of
+`server/schema.sql`.
+
+### Verification status, sixth batch, 2026-10-19 (Mac, `fa88266`)
+
+- `npx tsc -b`, `npm run build` (32 public pages and `app-shell.html`, 32 sitemap URLs, with
+  the third-party gate): PASS.
+- `npm test`: PASS, 499 tests in 41 files.
+- `GK_TEST_DB=gakinz_docs6_test GK_TEST_PHP_PORT=5423 GK_TEST_PROVIDER_PORT=5424 npm run test:server`:
+  PASS, 496 tests in 35 files (459 s).
+- `npm run lint:ratchet`: PASS at 33 errors, 0 warnings. `npm run lint`: FAIL (K-002).
+- `php -l` over 63 server files: PASS. `npm run docs:check -- --base audit/readiness-2026-10-17`:
+  PASS.
+- NOT TESTED: a browser run of the sign-in form, the `#access` redemption or the ad slots; a
+  real CMP or AdSense script; real SMTP; the early-finish timing path; the live server
+  (UNVERIFIED).
 
 ### Done in the fifth batch (2026-10-19, `3636373..b0bbf8b`)
 
@@ -254,14 +299,16 @@ retention periods, with `$RETENTION_APPLY` kept `false` until then (K-062).
 
 ## Next actions, in order
 
-1. **Owner review of PR #21** (the second to fifth batches on `feat/journeys-2026-10-18`).
+1. **Owner review of PR #21** (the second to sixth batches on `feat/journeys-2026-10-18`).
    An agent does not merge. **For the upload, use the one ordered list in
    `docs/DEPLOYMENT.md` section 5.1 step 13**, which supersedes the per-batch orders below:
    `.htaccess`; includes before the files that load them (`_uploads.php` before `files.php`,
    `_erasure.php` after `_retention.php`, `_uploads.php` and `_like.php`); `site.php` before
    the merge; the readiness set together; SQL 13 to 18, then SQL 19 step 1 and step 2 (one
-   paste, one SQL tab) with the `reference IS NULL` check; then merge. Keep
-   `$RETENTION_APPLY = false` and never pass `--apply`. Walk section 5.6 check 16.
+   paste, one SQL tab) with the `reference IS NULL` check; `client_access.php` (step 14,
+   switched off); then merge. Keep `$RETENTION_APPLY = false` and
+   `$REFERENCE_SIGNIN_ENABLED = false`, and never pass `--apply`. Walk section 5.6 checks 16
+   and 17.
 2. **Operator order for the second batch** (`docs/DEPLOYMENT.md` section 5.1 step 10): read and
    record the live PHP version (8.1 or later expected; K-082, K-068), upload `today.php`,
    `search.php` with `_like.php`, `briefs.php`, `privacy.php` with `_retention.php` and
@@ -284,7 +331,11 @@ retention periods, with `$RETENTION_APPLY` kept `false` until then (K-062).
    confirmation and VAT basis, and the inferred exclusions wait on the owner (K-038, K-090 to
    K-092). **The fifth batch** (section 5): a random yearly offset for references (K-094),
    how deletion requests are prioritised or notified (K-095), and the retention periods
-   before `$RETENTION_APPLY` is ever switched on (K-062).
+   before `$RETENTION_APPLY` is ever switched on (K-062). **The sixth batch** (section 5):
+   whether and when to switch on reference sign-in, after the sign-in policy and the gates
+   (D-050); the ad pilot decisions (CMP, AdSense IDs, Purpose 1 only, cookie notices, a
+   privacy choices link; K-104 to K-107); and the client anonymisation rules with an adviser
+   (K-108, not built).
 4. **Housekeeping for the owner**: the stash `int-wave-lintcheck-x1` (made by an agent for a
    lint comparison and already applied back; a hook blocked dropping it) and four agent
    worktrees under `.claude/worktrees/` can be removed. The git-ignored `.playwright-mcp`

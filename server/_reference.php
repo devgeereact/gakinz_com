@@ -7,7 +7,10 @@
  * A reference identifies work for people reading a document. It is never a
  * password: nothing here, and no endpoint, finds, reveals or authorises
  * anything because a caller knows one. Staff screens and the client's own
- * portal show it; that is all.
+ * portal show it. The one exception is client_access.php, and only when
+ * config.php sets $REFERENCE_SIGNIN_ENABLED = true (off by default): there a
+ * reference together with the client's registered email narrows who may be
+ * emailed a single-use sign-in link. The reference alone still opens nothing.
  *
  * Sequence: reference_counters holds one row per type and year, plus one
  * anchor row per type (ref_year 0). Each assignment runs in a transaction

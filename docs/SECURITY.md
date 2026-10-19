@@ -34,7 +34,7 @@ That is the main thing to check in review.
 | Validation | Joins `auth_tokens` to `users`, requires an unexpired token, `deleted_at IS NULL` and `status = 'active'` |
 | Reset tokens | 60 minutes (`RESET_TTL_MINUTES`) |
 | Two-factor codes | One use each: the accepted 30-second step is stored in `users.totp_last_step` and an equal or earlier step is refused, once SQL 12 has run (K-057) |
-| Magic links | 15 minutes (`MAGIC_TTL_MINUTES`), single use, claimed by a guarded `UPDATE`. `client` role only (`MAGIC_ROLES`), never for an account with two-factor on (K-027) |
+| Magic links | 15 minutes (`MAGIC_TTL_MINUTES`), single use, claimed by a guarded `UPDATE`. `client` role only (`MAGIC_ROLES`), never for an account with two-factor on (K-027). Since 2026-10-19 the reference sign-in links of `client_access.php` share the `magic_links` table and its cap of 3 links per user in 15 minutes, so a reference link can also be redeemed at `auth.php?action=magic_consume`, under the same rules and still once only (K-100) |
 
 The token lives in browser storage and is read by `getStoredToken()` in `src/lib/api.ts`.
 It is not an `HttpOnly` cookie, so it is reachable by any script that runs on the origin.
@@ -44,6 +44,49 @@ highest-value attack on this system (K-033).
 The idle lock screen is a `sessionStorage` flag, not a sign-out. Since 2026-10-10 a successful
 unlock revokes the previous token through `auth.php?action=logout`, and a wrong password on the
 lock screen no longer clears the session (client change, not deployed).
+
+### Client sign-in by reference and email (2026-10-19, switched off)
+
+`server/client_access.php` (spec 6.1 phase 2, `qa/TEST-PLAN.md` J02 and J03) lets a client ask
+for a sign-in link by typing a work reference and their registered email. **It is off unless
+the live `config.php` sets `$REFERENCE_SIGNIN_ENABLED = true`**; only the boolean `true` counts,
+and `1`, `"true"` or a missing key leave it off. While off, every route answers 404 and the
+sign-in page shows nothing new. Built and tested locally, not uploaded, not switched on.
+
+- **The reference is never the credential.** It only narrows who may be sent a link: an
+  active `client`-role user whose client owns that live project, or the client converted from
+  that enquiry. The reference alone, the email alone, or another client's reference with this
+  email sends nothing. The person proves themselves by opening the mailbox.
+- **Neutral answers.** Every outcome of `request` (match, unknown reference, another
+  client's reference, unknown or staff address, suspended or two-factor account) returns the
+  same 200 body. Where the host finishes the response early (`fastcgi_finish_request` or
+  `litespeed_finish_request`) the answer goes before any lookup; otherwise every answer is
+  held to a 1000 ms floor. The early-finish path and timing on the live host are NOT TESTED
+  (K-101).
+- **Throttles**, counted on requests and never on matches, so a 429 reveals nothing: 5 per
+  address and IP, 15 per address from anywhere, 20 per IP, all over 15 minutes; 20 failed
+  redemptions per IP. A well-formed, unused, unexpired link is claimed before any throttle,
+  so a valid link is never blocked. The per-IP counts read `REMOTE_ADDR` (K-102).
+- **Links.** 256 random bits, stored only as `token_hash()` in `magic_links`, 15 minutes on
+  the database clock, single use through a guarded `UPDATE` that must change exactly one row.
+  The link is `$APP_URL/login#access=<token>`: the fragment never reaches a server, the page
+  clears the address bar and posts the token in the body, and the URL never comes from the
+  `Host` header. Redemption gives a normal 30-day session, only for role `client` with a
+  client id and two-factor off; a staff account or a two-factor account gets 403 and the
+  link is burned. It changes no password and is not account recovery.
+- **No leaks.** Responses carry `Cache-Control: no-store`, `Referrer-Policy: no-referrer` and
+  `X-Robots-Tag: noindex, nofollow`. The audit rows (`client_access_request`,
+  `client_access_link`, `login_client_access`, `client_access_refused`,
+  `client_access_redeem_failed`) hold no token, link or reference; the address is a truncated
+  SHA-256 fingerprint, not keyed, because there is no server secret to key it with.
+- **No SMTP, or no SQL 19**: no link is sent (there is no `mail()` fallback) and the answer
+  stays neutral.
+
+**Before switching it on**, all four gates in `docs/DEPLOYMENT.md` section 5.4 must hold:
+early finish or SMTP faster than the floor, a `purpose` column on `magic_links` (K-100), the
+real client IP behind Cloudflare (K-102), and the owner's client sign-in policy (spec 6.1).
+Covered by `tests/server/client-access.test.ts` and `src/lib/clientAccess.test.ts`; the Login
+form and the `#access` redemption have not been run in a browser.
 
 ### Brute-force throttle
 
@@ -159,12 +202,15 @@ clients.
   invoices only when the invoice's project belongs to the same client (`pj.client_id =
   i.client_id`), and `portal.php` keeps depending on `_bootstrap.php` only (its own probe, not
   `_reference.php`). Quotes, invoices and contracts show a project reference only for a live
-  project of the same client. No endpoint reads a reference from a request, so nothing can be
-  found or opened by guessing one, and nothing signs in by reference: spec 6.1 phase 2 stays
-  unbuilt until J03 passes and the owner sets the policy. A static test in the server suite fails if any
+  project of the same client. No endpoint looks a record up by a reference from a request, so
+  nothing can be found or opened by guessing one. Nothing signs in by reference **unless the
+  switch is on**: spec 6.1 phase 2 is built in `client_access.php` but answers 404 until
+  `$REFERENCE_SIGNIN_ENABLED = true` (section 2), and even then the reference only narrows who
+  may be emailed a link. A static test in the server suite fails if any
   `server/*.php` reads `reference`, `ref` or `project_reference` from request input outside
-  the two allowed branches (`invoices.php` `record_payment`, where it is the payment
-  reference, and `proposals.php` `accept`, where it is the acceptance evidence). The numbers
+  the three allowed branches (`invoices.php` `record_payment`, where it is the payment
+  reference, `proposals.php` `accept`, where it is the acceptance evidence, and
+  `client_access.php` `request`, switched off by default). The numbers
   are sequential, so one reveals roughly how many enquiries or projects came before it that
   year (K-094). Covered by `tests/server/references.test.ts`.
 

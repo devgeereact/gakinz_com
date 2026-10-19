@@ -152,7 +152,7 @@ every server change since `c57eb4a` (`main`, 2026-10-10) on the stacked branches
 including `audit/readiness-2026-10-17` (PR #20) and `feat/journeys-2026-10-18` (2026-10-18,
 stacked on PR #20, pushed to origin, not merged, deployed or uploaded; its second batch of
 2026-10-19 is in PR #21, and its third, fourth and fifth batches of 2026-10-19 follow it on
-the same branch, the fifth being `3636373..b0bbf8b`), and, conditionally, the 2026-09-22 relaunch set already on `main`. Keep it current: a change under
+the same branch, the fifth being `3636373..b0bbf8b` and the sixth `54d593a..fa88266`), and, conditionally, the 2026-09-22 relaunch set already on `main`. Keep it current: a change under
 `server/` updates this section in the same pull request (`AGENTS.md`, "Keeping documents
 current"), and `npm run docs:check` enforces that in CI.
 
@@ -272,12 +272,28 @@ statements are already live; only someone with server access can (section 5.6).
    7. **SQL 13 to 18 as documented, then SQL 19 after all the PHP above** (section 5.2):
       step 1, then step 2 pasted as one piece into one SQL tab, then check that no
       `reference IS NULL` remains in `enquiries` or `projects`; if one does, run step 2 again.
-   8. **Merge** (step 14), which deploys `dist/`.
+   8. **Merge** (step 15), which deploys `dist/`.
    Keep **`$RETENTION_APPLY = false`** in the live `config.php` (section 5.4) and do not run
    `cron.php job=retention_apply --apply`. NOT TESTED against the live host.
-14. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
+14. **For the sixth journeys batch (2026-10-19, client sign-in by reference and email, and the
+   consent and ad slot build, `54d593a..fa88266`)**:
+   - **Upload `server/client_access.php`**, a new stand-alone endpoint. It needs the K-059
+     `_bootstrap.php` (any version with `token_hash()`, so upload the readiness set of step 13.6
+     first or together) and `_smtp.php`; `_reference.php` is optional. It is safe to upload
+     while switched off: every route then answers 404, and the sign-in page shows nothing new.
+   - **Do not add `$REFERENCE_SIGNIN_ENABLED = true`** to the live `config.php`. Keep it `false`
+     or leave it out (section 5.4). Switch it on only after every gate in section 5.4, "Before
+     switching on reference sign-in", holds.
+   - **No SQL.** The links use the existing `magic_links` table, and matching needs SQL 19.
+   - **Consent and ad slots need a deploy, not an upload.** Their settings live in the tracked
+     file `src/marketing/lib/monetisation.ts` (D-050), all off, and ship inert in `dist/` with
+     the merge. Turning the pilot on or off means a reviewed code change and a deploy. Nothing
+     under `server/` changed for them. `npm run build` now fails if a prerendered page or
+     `app-shell.html` carries third-party script or ad markup.
+   NOT TESTED against the live host.
+15. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
    deploys the client that expects these server changes.
-15. **Walk the post-upload checks** in section 5.6.
+16. **Walk the post-upload checks** in section 5.6.
 
 ### 5.2 SQL, in order
 
@@ -320,7 +336,7 @@ Upload all of them, with `.htaccess`:
 .htaccess           api.php             cron.php            _bootstrap.php
 _money.php (new)    _ics.php (new)      _like.php (new)     _retention.php (new)
 _templates.php (new) _time.php (new)    _reference.php (new) _erasure.php (new)
-_uploads.php (new)  assets.php (new)    auth.php
+_uploads.php (new)  assets.php (new)    auth.php            client_access.php (new)
 blog.php            bookings.php (new)  briefs.php (new)    clients.php
 comms.php           contact.php         content.php         contracts.php
 design.php          dev.php             feedback.php (new)  files.php
@@ -426,6 +442,14 @@ sets:
 **Since the fifth batch `files.php` no longer stands alone**: it requires `_uploads.php` at
 the top, so upload `_uploads.php` first (section 5.1 step 13).
 
+**The 2026-10-19 sixth journeys batch** (`54d593a..fa88266`, from `git diff --name-only
+54d593a..HEAD -- server`) adds `client_access.php` and a new key in `config.php.example`
+(`$REFERENCE_SIGNIN_ENABLED = false`). `_reference.php` and `schema.sql` changed in comment
+text only, after the batch, so a host copy of `_reference.php` need not be replaced for it. No
+SQL and no `.htaccess` change. `client_access.php` needs `_bootstrap.php` with `token_hash()`
+(K-059) and `_smtp.php`, and answers 404 on every route while the switch is off (section 5.1
+step 14).
+
 **The 2026-10-19 fifth journeys batch** (`3636373..b0bbf8b`, from `git diff --name-only
 68074f5..HEAD -- server`) adds `_reference.php`, `_erasure.php` and `_uploads.php`, and changes
 again `contact.php`, `contracts.php`, `invoices.php`, `leads.php`, `portal.php`,
@@ -481,6 +505,33 @@ of the document root.
 | PHP `fileinfo` extension | `files.php` sniffs the real type of an upload with `finfo_file()`. Without it, uploads return 503 rather than accepting anything |
 | `$RETENTION_*` (nine keys, 2026-10-19) | Leave them `null`, or leave them out: a missing key behaves exactly as `null`. Each is a retention period. Seven only change what the read-only retention report **counts**. Two, `$RETENTION_ENQUIRY_MONTHS` and `$RETENTION_DELETED_FILE_DAYS`, are also what `cron.php job=retention_apply` would delete by, **but only with `--apply` and `$RETENTION_APPLY = true` as well**. While the periods are `null` nothing deletes by them, whatever the switch says. The periods are owner and legal decisions (`docs/PRIVACY-READINESS.md` section 6). A value other than a positive whole number is reported as an invalid period and counts and deletes nothing |
 | `$RETENTION_APPLY` (2026-10-19) | **Keep it `false`** (the template value), or leave it out: a missing key is `false`, and only the boolean `true` counts (`1`, `"true"` and `"yes"` do not). It is one of three gates on the retention executor. Turn it on only once the owner and an adviser have agreed the two periods (`docs/STATUS.md` section 5). The super admin's single-enquiry erase does not depend on it |
+
+| `$REFERENCE_SIGNIN_ENABLED` (2026-10-19) | **Keep it `false`** (the template value), or leave it out: a missing key is `false`, and only the boolean `true` turns `client_access.php` on (`1` and `"true"` do not). While off, every route of that file answers 404. It also needs `$SMTP_HOST` set and SQL 19 run, or no link is ever sent |
+
+#### Before switching on reference sign-in
+
+Every one of these must hold before `$REFERENCE_SIGNIN_ENABLED = true` goes into the live
+`config.php`. None holds today.
+
+1. **Timing.** The host's PHP provides early finish (`fastcgi_finish_request` on PHP-FPM, or
+   `litespeed_finish_request` on LiteSpeed), or the SMTP send is capped below the 1000 ms floor
+   (a shorter SMTP timeout or a local relay). Otherwise a match is measurably slower than a
+   miss when SMTP is slow (`docs/KNOWN-ISSUES.md` K-101).
+2. **Separate link purposes.** A `purpose` column on `magic_links`, added when the auth upload
+   set (`_bootstrap.php`, `auth.php`, `oauth.php`, `users.php`) is next opened, so
+   `magic_consume` accepts only magic-link rows and `client_access.php` only its own. That
+   closes the window of up to 15 minutes in which a reference link still works through
+   `magic_consume` after the switch goes off (K-100). It will be a future SQL number.
+3. **Real client IP.** `REMOTE_ADDR` is the visitor's address behind Cloudflare (mod_remoteip
+   or an equivalent). Otherwise every per-IP throttle counts Cloudflare's edge addresses and can
+   block many people at once (K-102).
+4. **Owner policy.** The owner confirms the client sign-in policy (`docs/PRODUCT-SPEC.md`
+   section 6.1: "The final owner and client sign-in policy is confirmed before that work
+   starts"), recorded in `docs/STATUS.md` section 5.
+
+Then switch it on, and walk the J02 and J03 rows of `qa/TEST-PLAN.md` on the live host with a
+client account the owner agrees to use. Switching it off again is the same key set back to
+`false`.
 
 The full key list is in section 5.7.
 
@@ -622,7 +673,18 @@ From the fifth journeys batch (2026-10-19), once its files and SQL 19 are up:
   header), Proposals and Contracts lists ("Project GK-P-..."), the contract and invoice PDFs
   and record search. A client sees their own project references on portal cards, the
   accepted shared quote and invoice PDFs. Nothing signs in or looks a record up by reference,
-  and no acknowledgement email is sent (K-097).
+  and no acknowledgement email is sent (K-097). (The sixth batch adds sign-in by reference and
+  email, switched off; see below.)
+
+From the sixth journeys batch (2026-10-19):
+
+- **Nothing visible while the switch is off.** With `client_access.php` uploaded and
+  `$REFERENCE_SIGNIN_ENABLED` off or absent, every route answers 404 and the sign-in page shows
+  only what it shows today. The browser console prints that 404 once per visit to the sign-in
+  page (K-103). A `#access=` link opened while off shows "That sign-in link is invalid or
+  expired."
+- **No consent banner, no ad slot and no third-party request** on the public site: the tracked
+  settings are all off, and the build refuses a page carrying third-party markup.
 - **A super admin can erase one prospect's enquiry** from the Enquiries drawer ("Erase
   enquiry"), after a preview of what stays and typing the enquiry's email address. It
   hard-deletes the enquiry and its calls and scrubs the address from the audit log; it is
@@ -662,6 +724,7 @@ stubbed (`docs/STATUS.md` section 0.3); not seen on the live host.
 | `_reference.php` or SQL 19 | No reference anywhere: the contact thank-you, cards, PDFs and the portal simply omit it |
 | `_erasure.php` or one of its includes, or the new `privacy.php` | "Erase enquiry" shows a quiet "not available yet" toast and closes |
 | The new `support.php` (deletion request) | My account says "Deletion requests open once GAkinz finishes a server update. Until then, email hello@gakinz.com." |
+| `client_access.php` | Nothing: the sign-in page treats the missing file like the switch being off |
 | The new `site.php` | Saving Business details fails with "Business details need the updated site.php on the server."; the public site shows its built-in details |
 
 Uploading first and merging later is invisible to staff: the deployed client calls none of
@@ -789,7 +852,13 @@ the new files.
    - The client side (references in the portal, "Ask to delete my data") needs a client
      account. Check it only with a client the owner agrees to use, because a request opens a
      real ticket.
-17. Do **not** test a real payment or a real send. Stripe behaviour is covered by
+17. After the sixth journeys batch (`client_access.php`), while the switch is off:
+   - `GET https://gakinz.com/client_access.php?action=status` answers 404 `{"error":"Not
+     found."}`, and so does a `POST` to `?action=request`. A 200 means the switch is on by
+     mistake: set `$REFERENCE_SIGNIN_ENABLED = false` at once.
+   - The sign-in page shows no reference form.
+   - Do not switch it on to test it. The gates come first (section 5.4).
+18. Do **not** test a real payment or a real send. Stripe behaviour is covered by
    `npm run test:server` against a fake provider; a live check needs Stripe test-mode keys on a
    non-production copy.
 
@@ -824,6 +893,7 @@ breaking the application.
 | `$GITHUB_TOKEN`, `$FIGMA_TOKEN`, `$SLACK_WEBHOOK_URL`, `$CALENDLY_URL` | The four external connectors |
 | `$RETENTION_ENQUIRY_MONTHS`, `$RETENTION_CLIENT_MONTHS`, `$RETENTION_INVOICE_MONTHS`, `$RETENTION_AUDIT_MONTHS`, `$RETENTION_SUPPORT_MONTHS`, `$RETENTION_COMMS_MONTHS`, `$RETENTION_STAFF_MONTHS`, `$RETENTION_CERTIFICATE_MONTHS`, `$RETENTION_DELETED_FILE_DAYS` | What the read-only retention report counts. All `null` in the template; a missing key is the same as `null`. The enquiry and deleted-file periods are also what the gated executor deletes by, only with `$RETENTION_APPLY` and `--apply` too (section 5.4) |
 | `$RETENTION_APPLY` | The retention executor's switch. `false` in the template; keep it `false` (section 5.4) |
+| `$REFERENCE_SIGNIN_ENABLED` | Client sign-in by reference and email (`client_access.php`). `false` in the template; keep it `false` until the four gates in section 5.4 hold |
 
 **The tracked template carries placeholders, not values.** `DB_NAME`, `DB_USER`,
 `$SEED_ADMIN_EMAIL`, `$SMTP_HOST` and `$IMAP_HOST` are `REPLACE_` placeholders. The mail host

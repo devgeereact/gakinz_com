@@ -126,6 +126,7 @@ Treat these as the internet-facing attack surface.
 | `payments.php` | POST `?action=webhook` | Stripe webhook. HMAC verified, 5 minute replay window. Marks an invoice paid only when the amount and currency Stripe took match the VAT-inclusive payable total. See section 5, Money |
 | `payments.php` | GET `?action=paypal_return` | PayPal capture on return. Marks the invoice paid only on a completed capture whose `custom_id`, amount and currency match. Not gated by `$PAYPAL_ENABLED`, but with checkout switched off no new order is created |
 | `oauth.php` | GET `?action=status`, `start`, `callback` | Google SSO. Matches an existing active user only, never provisions. Refuses an account with two-factor on, redirecting with `#sso_error=two_factor`, so Google never stands in for the second factor. Carries a CSRF `state` parameter in a short-lived HttpOnly cookie, and validates the id_token's `aud` and `iss` |
+| `client_access.php` | GET `?action=status`, POST `?action=request`, POST `?action=redeem` | Client sign-in by work reference and email (2026-10-19, spec 6.1 phase 2). **Switched off by default: while `$REFERENCE_SIGNIN_ENABLED` is not the boolean `true`, every action and method answers 404 `{"error":"Not found."}`.** See "Client sign-in by reference" in section 5. Not uploaded |
 | `cron.php` | GET `?key=&job=` | Scheduled jobs. Gated by a shared secret with `hash_equals`, not by a user session. `retention_report` and `retention_apply` (2026-10-19) answer 400 over the web even with the key; they run from the command line only (`docs/OPERATIONS.md` section 2) |
 | `api.php` | GET | Read-only health check. Returns `{ ok, php, db }`, touches no application table and mutates nothing. Any other method is 405 |
 
@@ -167,6 +168,24 @@ Grouped by area. Actions are the `?action=` value on POST unless stated.
   again at redemption: a non-client or two-factor account gets a 403 and an audit row
   `login_magic_refused`.
 - Google sign-in in `oauth.php` follows the same rule, see section 4.
+
+### Client sign-in by reference (`client_access.php`, 2026-10-19, switched off)
+
+Public, with no `require_auth()`: it runs before sign-in, like `auth.php` login. The rules and
+threat model are in `docs/SECURITY.md` section 2. Every response sends `Cache-Control:
+no-store`, `Referrer-Policy: no-referrer` and `X-Robots-Tag: noindex, nofollow`.
+
+| Action | Request | Answer |
+|---|---|---|
+| Any, while off | anything | 404 `{"error":"Not found."}`. The switch is checked before anything else, so nothing is read, sent or audited |
+| `status` | GET | `{ enabled: true }`. The sign-in page shows the reference form only on a 200 with `enabled === true`; a 404 or an error means off, silently |
+| `request` | POST `{ reference, email }` | Always 200 `{ ok: true, message }` with the same message, whether or not anything matched. A link goes only to an active `client`-role user without two-factor whose client owns the referenced live project, or was converted from the referenced enquiry. 400 when either field is missing, the email is not valid, or the reference does not match `GK-E-` or `GK-P-YYYY-NNNN`; those checks never touch stored data. 429 past 5 requests per address and IP, 15 per address or 20 per IP in 15 minutes, counted on requests only |
+| `redeem` | POST `{ token }` | `{ token, expires, user }`, the same shape as `auth.php` `magic_consume`: a 30-day client session. 400 "This sign-in link is invalid or has expired." for a malformed, unknown, used or expired link. 403 for an inactive account, a non-client role or two-factor on, and the link is burned. 429 after 20 failed redemptions per IP in 15 minutes, but a valid unused link is claimed before that check |
+
+The emailed link is `$APP_URL/login#access=<token>`. `src/lib/api.ts` calls it as
+`clientAccess`; `src/lib/clientAccess.ts` decides from the status answer and turns a 404 on
+redeem into "That sign-in link is invalid or expired.". Links live in `magic_links`, so
+`magic_consume` can also redeem one (K-100).
 
 ### Sales
 
@@ -296,9 +315,12 @@ Work references (2026-10-19, SQL 19, `docs/PRODUCT-SPEC.md` section 6.1, D-049):
   belongs to the same client as the quote, invoice or contract, so a record linked to another
   client's project shows nothing. Every field is `null` before SQL 19, between its two steps,
   or while `_reference.php` is missing, and creation works the same.
-- **A reference is never an input.** No endpoint reads `reference`, `ref` or
-  `project_reference` from a request, nothing looks a record up by it without staff sign-in,
-  and nothing signs anyone in with it. A static test enforces this, and probes with a
+- **A reference is never an input**, with one switched-off exception. No endpoint reads
+  `reference`, `ref` or `project_reference` from a request to look a record up, nothing looks
+  a record up by it without staff sign-in, and nothing signs anyone in with it unless
+  `client_access.php` is switched on (section 5, "Client sign-in by reference"), where a
+  reference plus the registered email only decides whether a link is emailed. A static test
+  enforces this, allowing only that branch and the two payment and acceptance branches, and probes with a
   reference in 13 URL shapes, signed out and as a client, leak nothing. Covered by
   `tests/server/references.test.ts`.
 

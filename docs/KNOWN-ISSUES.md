@@ -110,6 +110,15 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-097 | No acknowledgement email carries the enquiry reference | Low | Open by ruling 2026-10-19 (spam relay risk); the thank-you shows it |
 | K-098 | A retention dry run writes no audit row | Low | Accepted 2026-10-19: a dry run changes nothing |
 | K-099 | SQL 19 step 2 is tested on MariaDB only, not MySQL 5.7 or 8 | Low | Open. Live database engine and version UNVERIFIED |
+| K-100 | Reference sign-in links share `magic_links`, so `magic_consume` also redeems them, for up to 15 minutes after the switch goes off | Low | Open, pre-enable gate: a `purpose` column (future SQL). Built 2026-10-19, switched off, not uploaded |
+| K-101 | The reference sign-in timing floor relies on early finish or fast SMTP | Low | Open, pre-enable gate. Host SAPI UNVERIFIED |
+| K-102 | Reference sign-in per-IP throttles read `REMOTE_ADDR`, which may be Cloudflare's address | Medium if switched on | Open, pre-enable gate. Real-IP setup on the host UNVERIFIED |
+| K-103 | The sign-in page logs a 404 in the browser console while reference sign-in is off | Low | Accepted 2026-10-19: the 404 is the off signal |
+| K-104 | Withdrawing consent hides ad slots but cannot unload a loaded script | Low | Open. Built 2026-10-19, switched off, not deployed |
+| K-105 | An ad slot shifts the article text when it appears after consent | Low | Open, not measured. Switched off |
+| K-106 | The CMP host allow-list is not checked against Google's certified CMP list | Medium if switched on | Open, check before switching on |
+| K-107 | Some CMPs need more than a script URL | Low | Open, check when a CMP is chosen |
+| K-108 | Client anonymisation is not built | Medium | Open, owner and adviser decision. Not built |
 
 
 ---
@@ -1937,3 +1946,98 @@ and the seed's `INSERT ... ON DUPLICATE KEY UPDATE ... VALUES()` is deprecated o
 running step 2 on the host, read its engine and version in cPanel (phpMyAdmin shows it) and
 record it in `docs/STATUS.md` section 3. If step 2 fails part way, it is safe to repeat
 (`docs/DEPLOYMENT.md` section 5.2).
+
+## K-100 · Reference sign-in links share `magic_links`, so `magic_consume` also redeems them
+**Severity:** low · **Status:** open, a gate before switching on. Built 2026-10-19, switched off,
+not uploaded.
+
+`client_access.php` stores its links in the existing `magic_links` table, hashed like every
+other link (K-059), so no new SQL was needed. The consequence is that a reference link can also
+be redeemed at `auth.php?action=magic_consume` (`/login#magic=`). That route applies the same
+rules (client role only, two-factor off, single use, 15 minutes), and use is once only across
+both routes: `tests/server/client-access.test.ts` pins single use, the two-factor rule and the
+client-only rule across the two routes. The real gap is the switch: after
+`$REFERENCE_SIGNIN_ENABLED` is turned off, a link issued while it was on stays usable through
+`magic_consume` for at most 15 minutes. **Fix before switching on:** add a `purpose` column to
+`magic_links` when the auth upload set (`_bootstrap.php`, `auth.php`, `oauth.php`, `users.php`)
+is next opened, so each route accepts only its own rows. That is a future SQL number, not
+written yet.
+
+## K-101 · The reference sign-in timing floor relies on early finish or fast SMTP
+**Severity:** low · **Status:** open, a gate before switching on. Host SAPI UNVERIFIED.
+
+So that a match is not measurably slower than a miss, `client_access.php` either sends the
+neutral answer before any lookup (`fastcgi_finish_request` on PHP-FPM, or
+`litespeed_finish_request` on LiteSpeed) or holds every answer to a 1000 ms floor. The tests run
+on the PHP built-in server, which has neither function, so only the floor path is tested
+(every answer at least 990 ms, spread under 400 ms). The early-finish path is NOT TESTED. On a
+host with neither, an SMTP send slower than 1000 ms makes a match slower than a miss. **Before
+switching on:** confirm the host's SAPI, or cap the SMTP time below the floor (a shorter SMTP
+timeout or a local relay).
+
+## K-102 · Reference sign-in per-IP throttles read `REMOTE_ADDR`
+**Severity:** medium if switched on · **Status:** open, a gate before switching on. Real-IP
+setup UNVERIFIED.
+
+The per-IP request limit, the per-address-and-IP limit and the failed-redemption limit all
+count `REMOTE_ADDR`. Behind Cloudflare, unless the host restores the visitor's address
+(mod_remoteip or an equivalent), that is a Cloudflare edge address, and one busy edge could
+block many people at once. A valid link is still never blocked, and password sign-in is
+unaffected. **Before switching on:** confirm that `REMOTE_ADDR` is the real client IP. A
+related residual: three or more IPs together can hold one address at its overall ceiling (15
+in 15 minutes), which only delays that person's sign-in link.
+
+## K-103 · The sign-in page logs a 404 in the browser console while reference sign-in is off
+**Severity:** low · **Status:** accepted 2026-10-19.
+
+The sign-in page asks `client_access.php?action=status` whether to show the reference form.
+While the switch is off (or the file is absent) the answer is 404, by design: every route
+answers 404 while off. The page treats it as "off" silently and shows nothing, but the browser
+still prints the failed request in its console, and script cannot suppress that. Answering 200
+`{enabled:false}` instead would break the "404 on every route while off" rule, so the line
+stays. Documented in `src/lib/clientAccess.ts`. Not seen in a browser run (none was done).
+
+## K-104 · Withdrawing consent hides ad slots but cannot unload a loaded script
+**Severity:** low · **Status:** open. Built 2026-10-19, switched off, not deployed.
+
+Once a visitor consents, the CMP and AdSense scripts load into the page. If they then withdraw
+consent, the slots stop rendering, but a script already running cannot be unloaded; it goes
+only on the next page load. Moving to a private route (`/app`, `/login`, `/p`, `/verify`,
+`/set-password`) after a third-party script has loaded forces a reload, so no such script runs
+inside the CMS, the portal, a proposal or a certificate. NOT TESTED in a browser, and no
+network check of accept, reject and withdraw was done (`docs/CONTENT-AND-GROWTH.md` section 3).
+
+## K-105 · An ad slot shifts the article text when it appears after consent
+**Severity:** low · **Status:** open, not measured. Switched off.
+
+`.adslot` reserves space only while the slot exists, and the slot exists only after consent.
+So the slot's own arrival pushes the text below it down, which counts towards layout shift
+(CLS). Not measured; no real AdSense unit was loaded. Measure it in the pilot before deciding
+whether to reserve space earlier.
+
+## K-106 · The CMP host allow-list is not checked against Google's certified CMP list
+**Severity:** medium if switched on · **Status:** open, check before switching on.
+
+`CMP_HOSTS` in `src/marketing/lib/monetisation.ts` lists the loader hosts of five consent
+platforms as the implementer knew them. They have NOT been verified against Google's list of
+certified CMPs, which AdSense requires in the EEA, the UK and Switzerland. **Before switching
+on:** confirm the chosen CMP is certified and its loader host is the one listed.
+
+## K-107 · Some CMPs need more than a script URL
+**Severity:** low · **Status:** open, check when a CMP is chosen.
+
+The setting holds one https loader URL. Some platforms need attributes on the script tag
+(OneTrust `data-domain-script`, Cookiebot `data-cbid` and `data-framework`) or an extra signal
+(Google's `signalGooglefcPresent`). For those, a URL alone may not be enough, and the loader
+would need a small change. Recorded in `docs/PRIVACY-READINESS.md` section 4 and
+`docs/CONTENT-AND-GROWTH.md` section 3.
+
+## K-108 · Client anonymisation is not built
+**Severity:** medium · **Status:** open, owner and adviser decision. Not built.
+
+Task 26 of the journeys plan (anonymising a former client's personal data while keeping the
+financial records the law requires) was not built. Its dispatch was refused on 2026-10-19 by
+the session's safety check, because it deletes and rewrites client data, and it was not worked
+around. Code still deletes only a prospect's data, behind explicit gates (D-049). The rules
+(what is kept, for how long, and what is replaced) are an owner and adviser decision
+(`docs/STATUS.md` section 5, `docs/PRIVACY-READINESS.md`); build it only after that.

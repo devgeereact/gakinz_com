@@ -860,8 +860,9 @@ section 0.5. Live behaviour is NOT TESTED.
 ## D-049 · Work references are shown but never used for access; code deletes only a prospect's data, and only behind explicit gates
 **Numbering:** D-047 is reserved by the open pull request #19, so the next free number after
 D-048 is D-049.
-**Date:** 2026-10-19 · **Status:** active. Narrows `docs/PRODUCT-SPEC.md` section 6.1 for now;
-builds on the retention proposals in `docs/PRIVACY-READINESS.md` section 6.
+**Date:** 2026-10-19 · **Status:** active, rule 1 amended by D-050 (phase 2 sign-in is built
+switched off). Narrows `docs/PRODUCT-SPEC.md` section 6.1 for now; builds on the retention
+proposals in `docs/PRIVACY-READINESS.md` section 6.
 
 Two rules from journeys batch 5.
 1. **A work reference identifies work and is never a key.** Every new enquiry gets
@@ -893,3 +894,39 @@ by reference, a static check on request reads), `tests/server/erase-enquiry.test
 `tests/server/retention-apply.test.ts`, `tests/server/deletion-request.test.ts`, and a
 mocked-API browser check recorded in `docs/STATUS.md` section 0.6. Live behaviour is NOT
 TESTED.
+
+---
+
+## D-050 · Gated features ship switched off, and the owner switches them on after the named decisions; ad and consent settings live in tracked code
+**Date:** 2026-10-19 · **Status:** active. Amends D-049 rule 1 and `docs/PRODUCT-SPEC.md`
+section 6.1 (the policy now gates switching on, not the build).
+
+Three rules from journeys batch 6.
+1. **A feature that waits on an owner, legal or hosting decision may be built, but it ships
+   switched off**, with tests proving that nothing changes while it is off, and the owner
+   switches it on only after the named decisions and gates are recorded. Client sign-in by
+   reference and email (`server/client_access.php`) is off unless the live `config.php` sets
+   `$REFERENCE_SIGNIN_ENABLED = true`, only the boolean `true` counts, and every route
+   answers 404 while off. Its gates are the owner's sign-in policy and the three technical
+   gates in `docs/DEPLOYMENT.md` section 5.4 (K-100 to K-102).
+2. **Advertising and consent settings live in a tracked file**, `src/marketing/lib/
+   monetisation.ts`, not in Site content or the CMS. All are off. Switching the pilot on or
+   off is a reviewed code change and a deploy. Ads never load without a certified CMP, and only
+   after Purpose 1 consent; nothing third-party loads on a private route, and the build fails
+   if a prerendered page or the app shell carries third-party markup.
+3. **A feature the session could not build safely is recorded, not worked around.** Client
+   anonymisation (Task 26) was refused by the session's safety check and is left to an owner
+   and adviser decision (K-108).
+
+**Why:** building ahead of a decision keeps the work moving while the decision stays with the
+owner, and an off switch that is proven by tests costs nothing in production. The CMS
+sign-in token sits in browser storage on the same origin (K-033), so turning on a third-party
+script is a security change: the editor role, which can publish site content, must not be able
+to do it, and keeping it in code makes "off" provable at build time and adds no request.
+**Evidence:** `tests/server/client-access.test.ts` (404 on every route for absent, `false`,
+`1`, `"true"` and `"1"`, with no mail, audit row or session), `src/lib/clientAccess.test.ts`,
+`src/marketing/lib/consent.test.ts`, `src/marketing/components/AdSlot.test.tsx`,
+`src/prerender/third-party.test.ts`, and the build gate in `scripts/prerender.mjs`. Live
+behaviour, a browser run of the sign-in form and the ad slots, and a real CMP or AdSense
+script are NOT TESTED.
+

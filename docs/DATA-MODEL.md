@@ -41,7 +41,7 @@ section 4.
 |---|---|---|
 | `users` | Staff and client logins | `role` is one of the seven roles. `client_id` binds a `client` login to one client. `cost_rate` feeds profitability. `totp_secret`, `totp_enabled`, `totp_recovery` carry 2FA |
 | `auth_tokens` | Session tokens, stored hashed | The browser holds 64 hex characters; the row holds `token_hash()` of them (62 characters) since 2026-10-17, or the raw value for an older session (K-059). `user_agent`, `ip`, `last_seen_at` drive the active-sessions list |
-| `magic_links` | Passwordless sign-in | Short lived, single use |
+| `magic_links` | Passwordless sign-in | Short lived, single use. Since 2026-10-19 also holds the reference sign-in links of `client_access.php` (switched off), so `magic_consume` can redeem them too; a `purpose` column is a gate before switching on (K-100) |
 | `password_resets` | Reset and invite tokens | |
 | `audit_log` | Record of sensitive actions | Also doubles as the store for the login throttle and the AI daily cap. See section 5 |
 
@@ -49,7 +49,7 @@ section 4.
 
 | Table | Purpose | Notes |
 |---|---|---|
-| `enquiries` | Public contact form, the top of the leads pipeline | `status` moves through new, contacted, proposal, won, lost. `tags`, `score`, `lost_reason` added later. Follow-ups, 2026-10-10: `next_action_at` (DATE, null), `next_action_note` (VARCHAR 300, null) and `priority` (TINYINT, 0 none to 3 high, the owner's choice and separate from `score`). Work reference, 2026-10-19 (SQL 19): `reference` (VARCHAR 20, null, unique key `uq_enquiry_reference`), `GK-E-YYYY-NNNN`, set by the server when the enquiry is created and never changed. It identifies the enquiry; nothing looks a record up by it or signs anyone in with it (D-049) |
+| `enquiries` | Public contact form, the top of the leads pipeline | `status` moves through new, contacted, proposal, won, lost. `tags`, `score`, `lost_reason` added later. Follow-ups, 2026-10-10: `next_action_at` (DATE, null), `next_action_note` (VARCHAR 300, null) and `priority` (TINYINT, 0 none to 3 high, the owner's choice and separate from `score`). Work reference, 2026-10-19 (SQL 19): `reference` (VARCHAR 20, null, unique key `uq_enquiry_reference`), `GK-E-YYYY-NNNN`, set by the server when the enquiry is created and never changed. It identifies the enquiry; nothing looks a record up by it, and nothing signs anyone in with it unless `client_access.php` is switched on (D-049, D-050) |
 | `clients` | CRM record, created when a lead is won | `tag` is one of retainer, one-off, vip, dormant. `retainer_amount` drives recurring billing and care-plan revenue |
 | `bookings` | Calls recorded by hand inside Enquiries, added 2026-10-16 | Linked to an `enquiry_id`, a `client_id` or both. `starts_at` is UTC and `timezone` the IANA zone the time was agreed in; `bookings.php` converts with PHP's own zone database and refuses a local time inside the spring-forward gap. `status` is requested, confirmed, completed or cancelled; only the owner moves a request to confirmed. `notes` and `outcome` are owner only and never sent |
 | `booking_events` | History of each booking, added 2026-10-16 | One row per create, reschedule and status change, with the old and new time or status. A customer email about a reschedule or cancellation records `notify_status` (sending, sent, failed), `notify_to`, `notify_attempts` and `notify_error` on its event, so the owner sees a failure and can retry it. Cascades with its booking |

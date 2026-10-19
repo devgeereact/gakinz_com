@@ -966,7 +966,10 @@ CREATE TABLE IF NOT EXISTS project_measurements (
 -- Enquiries, Projects, Contracts and search; the client sees their own
 -- project references in the portal, on the shared quote and on invoice PDFs.
 -- A reference identifies work. It is never a password: no endpoint looks a
--- record up by it without staff sign-in, and nothing signs anyone in with it.
+-- record up by it without staff sign-in. Nothing signs anyone in with it,
+-- except client_access.php while $REFERENCE_SIGNIN_ENABLED = true (off by
+-- default), where reference plus registered email only decides whether a
+-- single-use link is emailed to that address.
 -- Numbers come from reference_counters, one row per type and year, raised by
 -- one atomic statement. Each assignment first locks its type's anchor row
 -- (ref_year 0), so assignments take turns: two parallel creates never get

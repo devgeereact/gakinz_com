@@ -1,7 +1,7 @@
 # Status
 
-**As at:** 2026-10-19 (sections 0 and 0.2 to 0.6); 2026-10-17 (section 0.1); otherwise 2026-10-14. `main` is `c57eb4a`. All later work sits on branches stacked into
-PR #8. The newest is `feat/journeys-2026-10-18` (sections 0.2 to 0.6, PR #21), stacked on
+**As at:** 2026-10-19 (sections 0 and 0.2 to 0.7); 2026-10-17 (section 0.1); otherwise 2026-10-14. `main` is `c57eb4a`. All later work sits on branches stacked into
+PR #8. The newest is `feat/journeys-2026-10-18` (sections 0.2 to 0.7, PR #21), stacked on
 `audit/readiness-2026-10-17` (PR #20), not merged, deployed or uploaded. `feat/plan-2026-batch-1` (PR #8) holds batch 1 (the local half of delivery phase 1), the
 seven-destination navigation, My account, enquiry follow-ups, client portal messages, public
 publishing and the article format, the lock-screen token fix, the D-037 public redesign, the
@@ -24,30 +24,31 @@ unless someone with server access has checked it.
 
 ## 0. Current measurements
 
-Re-measured on 2026-10-19 on the Mac on `feat/journeys-2026-10-18` at `b0bbf8b` (the end of
-the fifth batch and its fix wave, section 0.6), except where a row names another date or computer. Re-measure and update this table when a count changes.
+Re-measured on 2026-10-19 on the Mac on `feat/journeys-2026-10-18` at `fa88266` (the end of
+the sixth batch and its fix rounds, section 0.7), except where a row names another date or computer. Re-measure and update this table when a count changes.
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 450 tests in 36 files on 2026-10-19 at `b0bbf8b` (fifth batch: `erasureModel.test.ts` and `BusinessDetails.test.tsx` added, with new cases in `content.test.ts` and `siteContentModel.test.ts`). Before that 415 tests in 34 files at `ebcb002` (fourth batch: new cases in `content.test.ts` and `siteContentModel.test.ts` for the six service pages, the legacy list upgrade and the all-or-none rule). Before that 396 tests in 34 files at `2ba81ae` (one added with the single-prompt fix). Before that 395 at `bdca4aa` (third batch: `projectTemplateModel`, `dirty-model`, `unsaved-guard-model` and `download-type` added, with new cases in `deepLink`, `format` and `download-name`). Before that 355 tests in 30 files on 2026-10-19 at `def1909` (second batch: `todayModel`, `recordSearchModel`, `projectBriefModel`, `privacyToolsModel`, `deepLink`, `notAvailable`, `download-name`, `ArticleBody` and `articleRecommend` added). Before that 239 tests in 21 files on 2026-10-19 (`feat/journeys-2026-10-18`: `paymentModel`, `acceptanceModel`, `portalRequestsModel`, `assetChecklistModel` and `scripts/head-assets.test.mjs` added; the final-review fixes added 16 cases for when a portal route counts as not available yet). Before that 179 tests in 16 files on 2026-10-17 (`audit/readiness-2026-10-17`: `api-errors.test.ts` and `blog-date.test.ts` added). Before that 171 in 14 files (2026-10-16, after merging `feat/generated-sitemap` and `feat/bookings-timeline-feedback`: 15 added for the page metadata checks and the sitemap, 13 in `bookingModel.test.ts`) |
-| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 455 tests in 34 files on 2026-10-19 at `b0bbf8b` on the Mac, run as `GK_TEST_DB=gakinz_docs5_test GK_TEST_PHP_PORT=5411 GK_TEST_PROVIDER_PORT=5412 npm run test:server` in 394 s (fifth batch: `references`, `erase-enquiry`, `retention-apply` and `deletion-request` added, with new cases in `site.test.ts` and `ticket-time.test.ts`). Before that 405 tests in 30 files at `ebcb002` on the Mac, run as `GK_TEST_DB=gakinz_docs4_test GK_TEST_PHP_PORT=5399 GK_TEST_PROVIDER_PORT=5400 npm run test:server` in 336 s (fourth batch: `enquiry-services.test.ts` added, with new cases in `site.test.ts`). Before that 398 tests in 29 files on 2026-10-19 at `bdca4aa` on the Mac, run as `GK_TEST_DB=gakinz_docs3_test GK_TEST_PHP_PORT=5395 GK_TEST_PROVIDER_PORT=5396 npm run test:server` (third batch: `ticket-time`, `portal-files` and `project-templates` added, with new cases in `privacy`). The first full run that day failed 1 of 398: a 60-second `beforeEach` timeout in `blog.test.ts` while the machine's load average was about 25 (949 s run); `blog.test.ts` alone then passed 4 of 4, and the full rerun passed 398 of 398 in 338 s with no PHP listener left on either port. Before that 340 tests in 26 files on 2026-10-19 at `def1909` on the Mac, run as `GK_TEST_DB=gakinz_docs_test GK_TEST_PHP_PORT=5309 GK_TEST_PROVIDER_PORT=5310 npm run test:server` because ports 5191 and 5192 belong to another project there (second batch: `today`, `search`, `project-briefs` and `privacy` added). Before that 275 tests in 22 files the same day on ports 5291 and 5292 (`manual-payment`, `acceptance-evidence`, `portal-requests`, `project-assets` and `booking-ics` added). Before that 184 tests in 17 files on 2026-10-17 on the Mac (20 added: `security-hardening.test.ts`, `cron-prune.test.ts`, `token-hashing.test.ts`, and new cases in `work`, `proposals` and `payments`). Before that 164 tests in 14 files, 2026-10-16 on local MariaDB 10.11, `feat/bookings-timeline-feedback` (24 added in `bookings.test.ts` and `feedback.test.ts`) |
+| Unit tests | `npm test` | **PASS.** 499 tests in 41 files on 2026-10-19 at `fa88266` (sixth batch: `clientAccess.test.ts`, `monetisation.test.ts`, `consent.test.ts`, `AdSlot.test.tsx` and `third-party.test.ts` added). Before that 450 tests in 36 files on 2026-10-19 at `b0bbf8b` (fifth batch: `erasureModel.test.ts` and `BusinessDetails.test.tsx` added, with new cases in `content.test.ts` and `siteContentModel.test.ts`). Before that 415 tests in 34 files at `ebcb002` (fourth batch: new cases in `content.test.ts` and `siteContentModel.test.ts` for the six service pages, the legacy list upgrade and the all-or-none rule). Before that 396 tests in 34 files at `2ba81ae` (one added with the single-prompt fix). Before that 395 at `bdca4aa` (third batch: `projectTemplateModel`, `dirty-model`, `unsaved-guard-model` and `download-type` added, with new cases in `deepLink`, `format` and `download-name`). Before that 355 tests in 30 files on 2026-10-19 at `def1909` (second batch: `todayModel`, `recordSearchModel`, `projectBriefModel`, `privacyToolsModel`, `deepLink`, `notAvailable`, `download-name`, `ArticleBody` and `articleRecommend` added). Before that 239 tests in 21 files on 2026-10-19 (`feat/journeys-2026-10-18`: `paymentModel`, `acceptanceModel`, `portalRequestsModel`, `assetChecklistModel` and `scripts/head-assets.test.mjs` added; the final-review fixes added 16 cases for when a portal route counts as not available yet). Before that 179 tests in 16 files on 2026-10-17 (`audit/readiness-2026-10-17`: `api-errors.test.ts` and `blog-date.test.ts` added). Before that 171 in 14 files (2026-10-16, after merging `feat/generated-sitemap` and `feat/bookings-timeline-feedback`: 15 added for the page metadata checks and the sitemap, 13 in `bookingModel.test.ts`) |
+| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 496 tests in 35 files on 2026-10-19 at `fa88266` on the Mac, run as `GK_TEST_DB=gakinz_docs6_test GK_TEST_PHP_PORT=5423 GK_TEST_PROVIDER_PORT=5424 npm run test:server` in 459 s (sixth batch: `client-access.test.ts` added, 41 tests, and the static check in `references.test.ts` widened). Before that 455 tests in 34 files on 2026-10-19 at `b0bbf8b` on the Mac, run as `GK_TEST_DB=gakinz_docs5_test GK_TEST_PHP_PORT=5411 GK_TEST_PROVIDER_PORT=5412 npm run test:server` in 394 s (fifth batch: `references`, `erase-enquiry`, `retention-apply` and `deletion-request` added, with new cases in `site.test.ts` and `ticket-time.test.ts`). Before that 405 tests in 30 files at `ebcb002` on the Mac, run as `GK_TEST_DB=gakinz_docs4_test GK_TEST_PHP_PORT=5399 GK_TEST_PROVIDER_PORT=5400 npm run test:server` in 336 s (fourth batch: `enquiry-services.test.ts` added, with new cases in `site.test.ts`). Before that 398 tests in 29 files on 2026-10-19 at `bdca4aa` on the Mac, run as `GK_TEST_DB=gakinz_docs3_test GK_TEST_PHP_PORT=5395 GK_TEST_PROVIDER_PORT=5396 npm run test:server` (third batch: `ticket-time`, `portal-files` and `project-templates` added, with new cases in `privacy`). The first full run that day failed 1 of 398: a 60-second `beforeEach` timeout in `blog.test.ts` while the machine's load average was about 25 (949 s run); `blog.test.ts` alone then passed 4 of 4, and the full rerun passed 398 of 398 in 338 s with no PHP listener left on either port. Before that 340 tests in 26 files on 2026-10-19 at `def1909` on the Mac, run as `GK_TEST_DB=gakinz_docs_test GK_TEST_PHP_PORT=5309 GK_TEST_PROVIDER_PORT=5310 npm run test:server` because ports 5191 and 5192 belong to another project there (second batch: `today`, `search`, `project-briefs` and `privacy` added). Before that 275 tests in 22 files the same day on ports 5291 and 5292 (`manual-payment`, `acceptance-evidence`, `portal-requests`, `project-assets` and `booking-ics` added). Before that 184 tests in 17 files on 2026-10-17 on the Mac (20 added: `security-hardening.test.ts`, `cron-prune.test.ts`, `token-hashing.test.ts`, and new cases in `work`, `proposals` and `payments`). Before that 164 tests in 14 files, 2026-10-16 on local MariaDB 10.11, `feat/bookings-timeline-feedback` (24 added in `bookings.test.ts` and `feedback.test.ts`) |
 | Type check | `npx tsc -b` | **PASS** |
-| Build | `npm run build` | **PASS.** 32 public pages and `app-shell.html` prerendered, `sitemap.xml` with 32 URLs (2026-10-19 at `b0bbf8b`, unchanged by the fifth batch; at `ebcb002` the two IT support pages added to the 30 of the third batch; first 2026-10-16, `feat/generated-sitemap`) |
-| Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 33 errors, 0 warnings on 2026-10-19 at `b0bbf8b`, all `react-hooks/set-state-in-effect`; the ceiling in `scripts/lint-ratchet.mjs` was lowered from 41 and 1. **`npm run lint` still fails** (K-002) |
-| Documentation | `npm run docs:check` | **PASS.** 26 documents (re-checked 2026-10-19 on the fifth batch's documents over `b0bbf8b`; `docs/PRIVACY-READINESS.md` added 2026-10-17). With `-- --base audit/readiness-2026-10-17` the sync rule also passes for this branch (177 changed files, server code 27, schema yes) |
-| PHP files | `ls server/*.php \| wc -l`, then `php -l server/*.php` | 62: 48 endpoints and 14 `_`-prefixed includes, all 62 passing `php -l` (PHP 8.5.10) on 2026-10-19 at `b0bbf8b` (`_reference.php`, `_erasure.php` and `_uploads.php` added in the fifth batch; `_time.php` and `_templates.php` added in the third batch; `today.php`, `search.php`, `briefs.php`, `privacy.php`, `_like.php` and `_retention.php` added 2026-10-19; `assets.php` and `_ics.php` 2026-10-18; `bookings.php` and `feedback.php` 2026-10-16) |
+| Build | `npm run build` | **PASS.** 32 public pages and `app-shell.html` prerendered, `sitemap.xml` with 32 URLs (2026-10-19 at `fa88266`; since the sixth batch the prerender also fails on any third-party script or ad markup, and passed; unchanged by the fifth batch; at `ebcb002` the two IT support pages added to the 30 of the third batch; first 2026-10-16, `feat/generated-sitemap`) |
+| Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 33 errors, 0 warnings on 2026-10-19 at `fa88266` (unchanged by the sixth batch), all `react-hooks/set-state-in-effect`; the ceiling in `scripts/lint-ratchet.mjs` was lowered from 41 and 1. **`npm run lint` still fails** (K-002) |
+| Documentation | `npm run docs:check` | **PASS.** 26 documents (re-checked 2026-10-19 on the sixth batch's documents over `fa88266`; `docs/PRIVACY-READINESS.md` added 2026-10-17). With `-- --base audit/readiness-2026-10-17` the sync rule also passes for this branch (196 changed files, server code 28, schema yes) |
+| PHP files | `ls server/*.php \| wc -l`, then `php -l server/*.php` | 63: 49 endpoints and 14 `_`-prefixed includes, all 63 passing `php -l` (PHP 8.5.10) on 2026-10-19 at `fa88266` (`client_access.php` added in the sixth batch; `_reference.php`, `_erasure.php` and `_uploads.php` added in the fifth batch; `_time.php` and `_templates.php` added in the third batch; `today.php`, `search.php`, `briefs.php`, `privacy.php`, `_like.php` and `_retention.php` added 2026-10-19; `assets.php` and `_ics.php` 2026-10-18; `bookings.php` and `feedback.php` 2026-10-16) |
 | Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 42 (`reference_counters` added 2026-10-19, SQL 19; `project_briefs` and `project_measurements` added 2026-10-19, SQL 16; `project_assets` 2026-10-18; `bookings`, `booking_events`, `client_feedback` 2026-10-16) |
 | Public routes | `src/routes/index.tsx`, children of `PublicLayout` | 17: the home page, 15 paths and the 404. Outside the layout: `/login`, `/set-password` and `/p/:token` |
 | CMS screens | `src/routes/index.tsx` under `/app` | 26: Today (the index), 24 module routes and My account, in seven navigation groups (Site content added 2026-10-14) |
-| Client API groups | `grep -cE "^export const [a-zA-Z]+ *= *\{" src/lib/api.ts` | 46 exported groups over one `request()` helper (`portalFiles` added 2026-10-19 in the third batch; `today`, `recordSearch`, `projectBriefs` and `privacy` added 2026-10-19; `portalRequests` and `projectAssets` 2026-10-18; `bookings` and `feedback` 2026-10-16) |
-| Server files changed since `main` | `git diff --name-only c57eb4a -- server` | 45 PHP files, `.htaccess`, `schema.sql`, `README.md` and `config.php.example` (2026-10-19, `b0bbf8b`); the upload list is `docs/DEPLOYMENT.md` section 5 |
+| Client API groups | `grep -cE "^export const [a-zA-Z]+ *= *\{" src/lib/api.ts` | 47 exported groups over one `request()` helper (`clientAccess` added 2026-10-19 in the sixth batch; `portalFiles` added 2026-10-19 in the third batch; `today`, `recordSearch`, `projectBriefs` and `privacy` added 2026-10-19; `portalRequests` and `projectAssets` 2026-10-18; `bookings` and `feedback` 2026-10-16) |
+| Server files changed since `main` | `git diff --name-only c57eb4a -- server` | 46 PHP files, `.htaccess`, `schema.sql`, `README.md` and `config.php.example` (2026-10-19, `fa88266`); the upload list is `docs/DEPLOYMENT.md` section 5 |
 | Server files changed by the journeys batch | `git diff --name-only 8499761..6789b47 -- server` | `_ics.php` (new), `assets.php` (new), `bookings.php`, `invoices.php`, `proposals.php`, `support.php`, `schema.sql` |
 | Server files changed by the second journeys batch | `git diff --name-only 6789b47..def1909 -- server` | `today.php`, `search.php`, `_like.php`, `briefs.php`, `privacy.php`, `_retention.php` (all new), `cron.php`, `.htaccess`, `config.php.example`, `schema.sql` |
 | Server files changed by the third journeys batch | `git diff --name-only 029f867..bdca4aa -- server` | `_time.php`, `_templates.php` (both new), `support.php`, `time.php`, `files.php`, `projects.php`, `portal.php`, `privacy.php`, `schema.sql` |
 | Server files changed by the fourth journeys batch | `git diff --name-only 8d85100..ebcb002 -- server` | `site.php` only (no SQL) |
 | Server files changed by the fifth journeys batch | `git diff --name-only 68074f5..b0bbf8b -- server` | `_reference.php`, `_erasure.php`, `_uploads.php` (all new), `_retention.php`, `config.php.example`, `contact.php`, `contracts.php`, `cron.php`, `files.php`, `invoices.php`, `leads.php`, `portal.php`, `privacy.php`, `projects.php`, `proposals.php`, `schema.sql` (SQL 19), `search.php`, `site.php`, `support.php` |
+| Server files changed by the sixth journeys batch | `git diff --name-only 54d593a..fa88266 -- server` | `client_access.php` (new) and `config.php.example` (no SQL). The documentation commit after it changes comment text only in `_reference.php` and `schema.sql` |
 | Server files changed by the redesign | `git diff --stat origin/feat/plan-2026-batch-1...origin/feat/redesign-2026 -- server` | `site.php` (new), `work.php`, `schema.sql`, `README.md` |
-| `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 43 of 62 files, 162 call sites (2026-10-19, `b0bbf8b`); the three new includes call none |
+| `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 43 of 63 files, 162 call sites (2026-10-19, `fa88266`); `client_access.php` calls none, because it runs before sign-in, like `auth.php` login, and the fifth batch's three includes call none |
 
 Not measured on this run: `npm audit` (last figure in K-041) and anything on the live system.
 Accessibility and performance were re-measured on the D-046 build on 2026-10-16, locally; see
@@ -264,6 +265,57 @@ Built:
 
 Open items: K-094 to K-099, and K-062 updated.
 
+## 0.7 Client journeys, sixth batch: gated features, 2026-10-19
+
+On `feat/journeys-2026-10-18`, from `54d593a` to `fa88266` on the Mac (Tasks 24 and 25 of the
+journeys plan). Pushed to origin, not merged, deployed or uploaded. No SQL. Both features ship
+**switched off**, with tests proving nothing changes while off; the owner switches them on
+after the named decisions (D-050). Method as before: test-first builds (Task 25 in a worktree,
+then cherry-picked), a review and a fix round for each.
+
+Built:
+- **Client sign-in by reference and email (Task 24, spec 6.1 phase 2).** New
+  `server/client_access.php` with `status`, `request` and `redeem`, off unless the live
+  `config.php` sets `$REFERENCE_SIGNIN_ENABLED = true` (only the boolean); while off every route
+  answers 404. When on, a reference plus the registered email sends a single-use, 15-minute
+  link (`/login#access=`) to an active client without two-factor whose client owns that work,
+  with one neutral answer for every outcome, a 1000 ms floor or early finish, and throttles per
+  address and IP, per address, per IP and on failed redemptions. Links reuse `magic_links`
+  (no SQL 20). The sign-in page shows the form only when `status` says it is on, and a
+  switched-off `#access` link reads "That sign-in link is invalid or expired.". J02 and J03
+  in `qa/TEST-PLAN.md` pass locally. Four gates stand before switching on
+  (`docs/DEPLOYMENT.md` section 5.4).
+- **Consent and ad slots (Task 25).** Tracked settings in `src/marketing/lib/monetisation.ts`,
+  all off; a TCF consent loader for a certified CMP on public routes only, with a reload when a
+  visitor moves to a private route after a third-party script loaded; up to two labelled
+  "Advertisement" slots in articles that render only when configured and after Purpose 1
+  consent, never without a CMP; and a build gate in `scripts/prerender.mjs` that fails on any
+  third-party script, iframe or ad markup in a prerendered page or the app shell. Notes in
+  `docs/PRIVACY-READINESS.md` section 4 and `docs/CONTENT-AND-GROWTH.md` section 3.
+- **Not built: client anonymisation (Task 26).** The dispatch was refused by the session's
+  safety check, and it was not worked around. It is an owner and adviser decision (K-108,
+  section 5).
+
+| Check | Result |
+|---|---|
+| `npx tsc -b`, `npm run build` (32 public pages, 32 sitemap URLs, third-party gate active), `php -l` over 63 files | **PASS** at `fa88266` |
+| `npm test` 499 (41 files), `npm run lint:ratchet` 33 and 0 | **PASS** at `fa88266` |
+| `npm run test:server` 496 (35 files, ports 5423 and 5424, 459 s) | **PASS** at `fa88266` |
+| Switch: 404 on every route for an absent key, `false`, `1`, `"true"` and `"1"`, with no mail, audit row or session; neutral answers and timing; reference or email alone; another client's reference; six staff roles never sent a link nor given a session; two-factor; expiry, single use across both routes, concurrent and lock-held redemption; not a password reset; nothing secret in the audit log; throttles | **PASS** locally (`tests/server/client-access.test.ts`, 41 tests, with a fake SMTP server through the real `_smtp.php`) |
+| Consent and ads off: no script, listener or storage write with the shipped settings; no slot without consent; byte-identical prerendered pages with and without configured ads; the 33 HTML files in `dist/` carry no third-party marker | **PASS** locally (unit tests and the build) |
+
+**NOT TESTED:**
+- No browser run of the sign-in form, the `#access` redemption or the ad slots; the consent and
+  slot runtime tests use a stand-in document.
+- No real CMP or AdSense script loaded, and no network check of accept, reject and withdraw.
+- The early-finish path of the timing floor, real SMTP delivery, and the live host's SAPI and
+  client IP (K-101, K-102).
+- Layout shift when a slot appears (K-105); accessibility of the new form and the slot label
+  with assistive technology.
+- The live server and what is uploaded there (UNVERIFIED).
+
+Open items: K-100 to K-108.
+
 ## 1. Audit and readiness, 2026-10-10
 
 A broad planning audit of `main` at `c57eb4a`, re-verified the same day by three independent
@@ -341,7 +393,7 @@ live-state discovery and owner inputs first; no launch is promised in a fixed nu
 |---|---|---|---|
 | 0. Agree scope | Design system and six services; motion contract, core workflows and navigation, positioning and feature dispositions; actual business and pricing facts | Dated decisions with clear exclusions and remaining questions | Plan approved (D-037 to D-044). Business facts outstanding (section 5) |
 | 1. Establish safety | Owner credential actions; reconcile host PHP and SQL; backup and restore; a safe local synthetic backend and mail sink; payment defects and alternative sign-in reviewed | Rotation and revocation confirmed, restoration demonstrated, release manifest and rollback recorded, no accidental production calls in tests | Local fixes built (section 4), not deployed. Owner-side actions open |
-| 2. Complete business journeys | Enquiry follow-up, simple bookings, client conversion, quote acceptance and version, projects and tasks, invoices and reconciliation, verified reference access, scoped messages, updates and feedback, client-linked brief, portal and support isolation | Synthetic end-to-end journey, failure, retry and concurrency tests, and record ownership tests pass | Started. Enquiry follow-ups, client messages, call bookings, the client timeline and private feedback built with server tests (bookings, timeline and feedback 2026-10-16, not deployed). On 2026-10-18 (section 0.2, not deployed or uploaded): manual payment record, acceptance evidence with a terms fingerprint, portal update and call requests, the asset checklist and a calendar file for a confirmed call, each with server tests and a mocked-API browser check. On 2026-10-19 (section 0.3, not deployed or uploaded): the client-linked brief with agreed measurements (SQL 16), the Today attention list and record search. Later on 2026-10-19 (section 0.4, not deployed or uploaded): IT support time from tickets (SQL 17), files shared to the client portal (SQL 18), project templates and draft protection. Last on 2026-10-19 (section 0.6, not deployed or uploaded): work references on enquiries, projects and their documents (SQL 19), shown but never used for access, so verified reference access is still open (D-049). The full journey with these steps not yet run against real data |
+| 2. Complete business journeys | Enquiry follow-up, simple bookings, client conversion, quote acceptance and version, projects and tasks, invoices and reconciliation, verified reference access, scoped messages, updates and feedback, client-linked brief, portal and support isolation | Synthetic end-to-end journey, failure, retry and concurrency tests, and record ownership tests pass | Started. Enquiry follow-ups, client messages, call bookings, the client timeline and private feedback built with server tests (bookings, timeline and feedback 2026-10-16, not deployed). On 2026-10-18 (section 0.2, not deployed or uploaded): manual payment record, acceptance evidence with a terms fingerprint, portal update and call requests, the asset checklist and a calendar file for a confirmed call, each with server tests and a mocked-API browser check. On 2026-10-19 (section 0.3, not deployed or uploaded): the client-linked brief with agreed measurements (SQL 16), the Today attention list and record search. Later on 2026-10-19 (section 0.4, not deployed or uploaded): IT support time from tickets (SQL 17), files shared to the client portal (SQL 18), project templates and draft protection. Last on 2026-10-19 (section 0.6, not deployed or uploaded): work references on enquiries, projects and their documents (SQL 19), shown but never used for access (D-049). Then (section 0.7) verified reference access built switched off, so it stays open until the owner switches it on after the gates (D-050). The full journey with these steps not yet run against real data |
 | 3. Polish the CMS | Target design foundation, smaller navigation, My account, consistent page and form states, unavailable metrics, quiet optional modules | Owner usability task passes; keyboard, phone, zoom and theme checks on affected screens | Navigation grouped and My account built (K-032, K-023, K-024). Every CMS screen restyled to D-046 on `feat/redesign-2026`, checked against mocked API responses only. Owner usability task, keyboard and zoom checks NOT TESTED |
 | 4. Polish the public site | Hero and section design and motion, company and owner positioning, service copy, complete case studies, consent and legal content, safe publishing, metadata and sitemap | Buyer journey, publish and unpublish, share preview, responsive and accessibility evidence | Rebuilt again on D-046 (2026-10-14): brand-colour hero fed by Work, the owner's real projects with screenshots, copy editable in Site content. Publishing, article format and engineering copy fixed (K-036, K-037, K-038 in part). Six-service copy, client consent records, portrait and legal review dates wait for owner inputs. Accessibility and performance re-measured 2026-10-16 (K-045 closed); the two brand-colour contrast failures fixed (K-050, K-051), home CLS fixed and LCP measured (K-052, LCP still open), `/work` LCP measured (K-053), the heading-size regression fixed (K-054), all 2026-10-16. Public pages prerendered with checked per-page metadata and a generated sitemap (K-018, K-019, K-043), not deployed. The six service pages are built from spec 4.3 (2026-10-19, section 0.5, not deployed); coverage and area for IT support, IT prices, package price confirmation and the VAT basis remain owner inputs (K-038, K-090) A quiet client sign-in link (header, drawer and footer), `favicon.ico` and a web manifest added 2026-10-18, not deployed |
 | 5. Social and affiliate pilot | Owned profile set-up, approved copy and media, first resources, disclosed links | Exact profile URLs, disclosure and link checks, a repeatable small publishing routine | Not started |
@@ -371,7 +423,9 @@ reference access cannot ship until the authentication and ownership gates pass.
    `_templates.php`, `files.php`, `portal.php` and `privacy.php` (section 0.4). The fifth batch
    adds SQL 19, `_reference.php`, `_erasure.php` and `_uploads.php`, and changes fourteen
    files again (section 0.6); from here the whole branch follows the one upload order in
-   `docs/DEPLOYMENT.md` section 5.1 step 13, with `_uploads.php` before `files.php`. **Live PHP
+   `docs/DEPLOYMENT.md` section 5.1 step 13, with `_uploads.php` before `files.php`. The sixth
+   batch adds `client_access.php`, uploaded switched off (step 14); keep
+   `$REFERENCE_SIGNIN_ENABLED` false. **Live PHP
    version: UNVERIFIED, not yet recorded.** Read it in cPanel and write it here; 8.1 or later
    is expected (K-068, K-082).
 4. Restore a backup somewhere isolated and agree the recovery targets (K-010,
@@ -426,8 +480,11 @@ reference access cannot ship until the authentication and ownership gates pass.
    **Done locally last on 2026-10-19** on the same branch (section 0.6), not merged or
    uploaded: work references (SQL 19) on enquiries, projects and their documents, a client's
    deletion request, a super admin's erase of one prospect's enquiry, and a gated retention
-   executor. Reference sign-in stays unbuilt until J03 passes (D-049). Open points are K-094
-   to K-099.
+   executor. Open points are K-094 to K-099.
+   **Built switched off on 2026-10-19** (section 0.7), not merged or uploaded: client sign-in
+   by reference and email (`client_access.php`). J02 and J03 pass locally. Switch it on only
+   after the owner's sign-in policy and the gates in `docs/DEPLOYMENT.md` section 5.4 (D-050,
+   K-100 to K-103).
 9. The remaining token work: `localStorage` exposure, token lifetime and a CSP review (K-033);
    honest contract labelling (K-034).
 
@@ -465,7 +522,9 @@ reference access cannot ship until the authentication and ownership gates pass.
 16. Social profiles, then the affiliate pilot, then the AdSense pilot
     (`docs/CONTENT-AND-GROWTH.md`). The record that holds the public business details and
     profile links is built (Site content > Business details, section 0.6, not uploaded); the
-    owner fills and publishes it once the profiles exist.
+    owner fills and publishes it once the profiles exist. The consent loader and article ad
+    slots are built and switched off in tracked code (section 0.7, D-050); the AdSense pilot
+    needs the owner decisions in section 5 and K-104 to K-107 checked first.
 
 **Ongoing:** hold the lint ratchet and bring it down (K-002; cut from 41 errors and 1 warning
 to 33 and 0 on 2026-10-19, locally); decide dependency exposure
@@ -476,6 +535,20 @@ to 33 and 0 on 2026-10-19, locally); decide dependency exposure
 Contract: `.agent/CURRENT-TASK.md`. Every row is in the repository only: client changes deploy
 when PR #8 (and, for the redesign, `feat/redesign-2026`) merges, and server changes need the
 manual upload in `docs/DEPLOYMENT.md` section 5.
+
+### Client journeys, sixth batch: gated features, 2026-10-19
+
+On `feat/journeys-2026-10-18` from `54d593a` to `fa88266`. Not merged, deployed or uploaded. No
+SQL. Both features are switched off. Summary, checks and NOT TESTED in section 0.7.
+
+| Area | Change | Evidence |
+|---|---|---|
+| Reference sign-in | `server/client_access.php` (`status`, `request`, `redeem`), `$REFERENCE_SIGNIN_ENABLED = false` in `config.php.example`; `src/lib/clientAccess.ts`, `clientAccess` in `src/lib/api.ts`, the form and `#access` redemption in `src/app/Login.tsx`; J02 and J03 rows in `qa/TEST-PLAN.md` | `tests/server/client-access.test.ts`, `src/lib/clientAccess.test.ts`; the static request check in `tests/server/references.test.ts` now allows `client_access.php` `request` |
+| Consent and ads | `src/marketing/lib/monetisation.ts`, `consent.ts`, `adSlots.ts`; `AdSlot.tsx` and `ConsentLoader.tsx`; an optional `slot` in `ArticleBody.tsx`; `.adslot` in `site.css` | `monetisation.test.ts`, `consent.test.ts`, `AdSlot.test.tsx` |
+| Build gate | `thirdPartyProblems()` in `src/prerender/html.ts`; `scripts/prerender.mjs` fails on third-party markup | `src/prerender/third-party.test.ts`, the build |
+
+Verification at `fa88266`, 2026-10-19 on the Mac: section 0. **NOT TESTED:** a browser run of
+either feature, a real CMP or AdSense script, real SMTP, and the live server.
 
 ### Client journeys, fifth batch: references, deletion tools, business details, 2026-10-19
 
@@ -685,6 +758,15 @@ On 2026-10-14 the owner approved the redesign that replaces D-037's visual direc
 - [ ] Deletion requests from clients (K-095): should "Data deletion request" tickets be
       created at high priority, carry a due date, show in Today, or email the owner? A request
       has a legal response deadline, generally one month, to be confirmed with an adviser.
+- [ ] **Switch on client sign-in by reference and email?** (spec 6.1, D-050). Built switched
+      off on 2026-10-19. First confirm the client sign-in policy (who may sign in this way,
+      for which work, and whether password sign-in stays the default), then the three
+      technical gates in `docs/DEPLOYMENT.md` section 5.4 (early finish or fast SMTP, a
+      `purpose` column on `magic_links`, the real client IP behind Cloudflare). Decided:
+- [ ] **Client anonymisation rules, with an adviser** (K-108). Not built: the session's
+      safety check refused the task on 2026-10-19. Decide what is kept for a former client
+      (invoices and the records the law requires), for how long, and what is replaced or
+      removed, then commission the build. Decided:
 - [ ] Work references (K-094): keep counting from 0001 each year, which lets a visitor or
       client infer roughly how many enquiries or projects came before theirs, or start each
       year at a random offset.
@@ -752,6 +834,13 @@ On 2026-10-14 the owner approved the redesign that replaces D-037's visual direc
       affiliate block before then: a visible "to supply" gap on a public page goes against the
       D-039 narrowing of D-027.
 - [ ] AdSense account status, and agreement to use a certified consent platform first.
+- [ ] **Ad pilot decisions** (D-050), before the tracked settings are switched on: which
+      certified CMP (checked against Google's list, K-106, and whether it needs more than a
+      URL, K-107); the AdSense publisher and in-article slot IDs; whether showing ads only
+      with Purpose 1 consent is right, given that it suppresses limited ads for visitors who
+      refuse; Auto ads kept off in the account; the CMP's and AdSense's cookies added to the
+      cookie table and notices; and a "Privacy choices" link, or reliance on the CMP's own,
+      so consent can be withdrawn. Decided:
 - [ ] Weekly time available for content. Proposed: two to three hours.
 
 **Outside this repository**

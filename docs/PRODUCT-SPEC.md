@@ -724,6 +724,12 @@ match or not, and send a verified email link into the existing client-role porta
 account platform. The final owner and client sign-in policy is confirmed before that work
 starts.
 
+On 2026-10-19, at the owner's instruction, the flow was built ahead of that policy, in
+`server/client_access.php` and the sign-in page, **switched off** (`$REFERENCE_SIGNIN_ENABLED`,
+D-050). J02 and J03 pass locally. While off, every route answers 404 and the sign-in page is
+unchanged. The policy confirmation and the pre-enable gates in `docs/DEPLOYMENT.md` section
+5.4 now gate **switching it on**, not the build. Phase 1 access is still password sign-in.
+
 Owner access honours two-factor on every route, and customer-only links never become owner
 sign-in or account recovery. The magic-link and Google sign-in bypass is fixed in source
 (K-027, D-033). Existing sign-in availability is not evidence that a new flow is safe.
@@ -874,7 +880,7 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 | Client messages through support tickets | Two-way conversation without a new chat system | Built 2026-10-10 (K-039) | 2 | M | Client branch in `support.php` |
 | Request an update, request a call, supply assets | Fewer chasing emails | Built 2026-10-18 (`support.php`, `bookings.php`, `assets.php`); calls need SQL 9 and 10, assets need SQL 15. Supply is a note, not an upload (K-072) | 2 | M | Client messages |
 | Private delivery feedback, with separate permission to publish | Honest feedback and lawful testimonials | Built 2026-10-16 (`feedback.php`); needs SQL 11. The excerpt-approval request is not built | 2 | S | Client messages |
-| Project reference on documents; reference plus email link sign-in | Access without another password | Reference on documents built 2026-10-19, not uploaded: `GK-E` and `GK-P` references on the contact thank-you, Enquiries, Projects, quotes, invoices, contracts, the portal and staff search; needs SQL 19 (D-049). Never used for lookup or access. Reference plus email link sign-in still Missing, gated by J03 and the owner's sign-in policy. No acknowledgement email (K-097) | After J03 | M | K-027 fixed and J03 passing |
+| Project reference on documents; reference plus email link sign-in | Access without another password | Reference on documents built 2026-10-19, not uploaded: `GK-E` and `GK-P` references on the contact thank-you, Enquiries, Projects, quotes, invoices, contracts, the portal and staff search; needs SQL 19 (D-049). Never used for lookup. Reference plus email link sign-in built 2026-10-19 **switched off** (`client_access.php`, D-050), not uploaded: J03 and J02 pass locally; switching it on is gated by the owner's sign-in policy and the four pre-enable gates (`docs/DEPLOYMENT.md` section 5.4, K-100 to K-102). Not run in a browser. No acknowledgement email (K-097) | After J03 | M | K-027 fixed and J03 passing |
 
 ### Quotes and money
 
@@ -921,8 +927,8 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 | Feature | Why it helps | Today | Phase | Size | Depends on |
 |---|---|---|---|---|---|
 | Amazon disclosure statement and labelled recommendation blocks | Compliant affiliate income | Labelled recommendation blocks with `rel="sponsored"` built 2026-10-19, not deployed; the disclosure wording is an owner input and shows as a labelled gap until supplied | 5 | S | Safe article format |
-| Certified consent platform (CMP) | Required before AdSense in the UK | None | 6 | M | AdSense approval |
-| One or two reserved ad slots on articles only | Secondary income without hurting enquiries | None | 6 | S | CMP |
+| Certified consent platform (CMP) | Required before AdSense in the UK | Consent loader for a certified TCF CMP built 2026-10-19, **switched off** in the tracked settings (`src/marketing/lib/monetisation.ts`, D-050), not deployed. Loads only on public routes; the build fails on any third-party markup. No real CMP chosen or loaded (K-104, K-106, K-107) | 6 | M | AdSense approval |
+| One or two reserved ad slots on articles only | Secondary income without hurting enquiries | Up to two labelled "Advertisement" slots in articles built 2026-10-19, **switched off**; they render only when configured and after Purpose 1 consent, never without a CMP. No real AdSense unit loaded; layout shift not measured (K-105) | 6 | S | CMP |
 | Five profiles from the profile kit | A consistent company presence | Not created | 5 | S | Owner checks handles |
 
 Policies for the last group are in `docs/CONTENT-AND-GROWTH.md`.

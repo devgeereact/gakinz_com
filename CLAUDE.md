@@ -189,6 +189,17 @@ Measured on branch `feat/redesign-2026` at `d314833` (stacked on `feat/plan-2026
   section 5.1 step 13: `_uploads.php` before `files.php` (or every Files route, public Work
   images included, fails), `site.php` before the merge, SQL 19 after the PHP; keep
   `$RETENTION_APPLY = false`.** Browser check on mocked API only. Open items K-094 to K-099.
+  **Sixth batch, 2026-10-19** (`54d593a..fa88266`, same branch, pushed): gated features, both
+  **switched off** (D-050). Client sign-in by reference and email (`client_access.php`, 404 on
+  every route unless `$REFERENCE_SIGNIN_ENABLED = true`; links in `magic_links`, no SQL; J02 and
+  J03 pass locally); consent loader and article ad slots in tracked settings
+  (`src/marketing/lib/monetisation.ts`), with a prerender gate that fails on third-party
+  markup. Client anonymisation (Task 26) was **not built**: an owner and adviser decision
+  (K-108). Measured on the Mac at `fa88266`: `npm test` 499, `npm run test:server` 496
+  (ports 5423 and 5424), lint ratchet 33 and 0, 32 pages prerendered, `php -l` over 63 files,
+  `tsc -b` and docs check PASS. **Upload `client_access.php` switched off (DEPLOYMENT section
+  5.1 step 14) and do not switch it on before the four gates in section 5.4.** No browser run
+  of either feature. Open items K-100 to K-108.
 - A live super-admin credential was published in an earlier revision of this file and is in
   git history. The owner reports it rotated on 2026-10-12; session revocation is unconfirmed.
   See `docs/KNOWN-ISSUES.md` K-001.
