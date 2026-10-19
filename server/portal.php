@@ -14,7 +14,6 @@
  * for now staff pass the client_id to preview the portal.
  */
 require __DIR__ . '/_bootstrap.php';
-require __DIR__ . '/_time.php'; // gk_ticket_time_ready() for the SQL 17 project kind
 
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') fail('Method not allowed.', 405);
 $user = require_auth($conn);
@@ -44,11 +43,25 @@ $client = $stmt->get_result()->fetch_assoc();
 if (!$client) fail('Client not found.', 404);
 $client['id'] = (int)$client['id'];
 
+/**
+ * True once SQL 17 has added projects.kind. Kept here rather than shared, so
+ * this security-critical file depends on nothing but _bootstrap.php.
+ */
+function portal_kind_ready(mysqli $conn): bool {
+  try {
+    // LIMIT 0 reads no rows; it only proves the column is there.
+    return $conn->query('SELECT kind FROM projects LIMIT 0') !== false;
+  } catch (mysqli_sql_exception $e) {
+    if ($e->getCode() !== 1054) throw $e; // ER_BAD_FIELD_ERROR only
+    return false;
+  }
+}
+
 // Projects with task progress. The standing IT support project (SQL 17,
 // projects.kind = 'it_support') is listed as "IT support" with no task
 // counts: it holds ticket time, which a client never sees, not delivery work.
 // Before SQL 17 there is no kind column, so every project reads as kind NULL.
-$kindCol = gk_ticket_time_ready($conn) ? 'p.kind' : 'NULL AS kind';
+$kindCol = portal_kind_ready($conn) ? 'p.kind' : 'NULL AS kind';
 $projects = [];
 $stmt = $conn->prepare(
   "SELECT p.id, p.name, p.status, p.due_date, $kindCol,

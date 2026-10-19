@@ -163,11 +163,15 @@ if ($user['role'] === 'client') {
     if ($rawProject !== null && $rawProject !== '') {
       $pid = (is_int($rawProject) || (is_string($rawProject) && preg_match('/^[1-9]\d{0,9}$/', $rawProject))) ? (int)$rawProject : 0;
       if ($pid <= 0) fail('Project not found.', 404);
-      $p = $conn->prepare('SELECT id, name FROM projects WHERE id = ? AND client_id = ? AND deleted_at IS NULL LIMIT 1');
+      $kindCol = gk_ticket_time_ready($conn) ? 'kind' : 'NULL AS kind';
+      $p = $conn->prepare("SELECT id, name, $kindCol FROM projects WHERE id = ? AND client_id = ? AND deleted_at IS NULL LIMIT 1");
       $p->bind_param('ii', $pid, $clientId);
       $p->execute();
       $project = $p->get_result()->fetch_assoc();
       if (!$project) fail('Project not found.', 404);
+      // The standing IT support project is named to a client exactly as the
+      // portal names it, whatever staff have called it internally (SQL 17).
+      if ($project['kind'] === IT_SUPPORT_KIND) $project['name'] = IT_SUPPORT_NAME;
     }
 
     // The subject is built here, never taken from the request.
@@ -402,37 +406,43 @@ if ($method === 'POST' && $action === 'log_time') {
   // row makes two first logs for the same client take turns, and the project
   // read is a locking read too, so the second sees the project the first
   // committed instead of an older snapshot.
+  // Any statement that fails, by exception or by returning false, rolls the
+  // whole log back.
+  $run = function ($stmt) {
+    if ($stmt === false || !$stmt->execute()) throw new mysqli_sql_exception('log_time statement failed');
+    return $stmt;
+  };
   $created = false;
   $conn->begin_transaction();
   try {
-    $lock = $conn->prepare('SELECT id FROM clients WHERE id = ? FOR UPDATE');
+    // A removed client cannot be billed: its tickets answer like a missing one.
+    $lock = $conn->prepare('SELECT id FROM clients WHERE id = ? AND deleted_at IS NULL FOR UPDATE');
     $lock->bind_param('i', $clientId);
-    $lock->execute();
-    if (!$lock->get_result()->fetch_assoc()) {
+    $found = $run($lock)->get_result()->fetch_assoc();
+    if (!$found) {
       $conn->rollback();
       fail('Ticket not found.', 404);
     }
     $kind = IT_SUPPORT_KIND;
     $p = $conn->prepare('SELECT id FROM projects WHERE client_id = ? AND kind = ? AND deleted_at IS NULL ORDER BY id ASC LIMIT 1 FOR UPDATE');
     $p->bind_param('is', $clientId, $kind);
-    $p->execute();
-    $row = $p->get_result()->fetch_assoc();
+    $row = $run($p)->get_result()->fetch_assoc();
     if ($row) {
       $projectId = (int)$row['id'];
     } else {
       $name = IT_SUPPORT_NAME;
       $ins = $conn->prepare("INSERT INTO projects (client_id, name, status, stage, kind) VALUES (?, ?, 'in_progress', 'support', ?)");
       $ins->bind_param('iss', $clientId, $name, $kind);
-      $ins->execute();
+      $run($ins);
       $projectId = (int)$conn->insert_id;
       $created = true;
     }
     // New entries start as 'draft', pending timesheet approval, as in time.php.
     $te = $conn->prepare("INSERT INTO time_entries (project_id, ticket_id, user_id, description, minutes, billable, status, entry_date) VALUES (?, ?, ?, ?, ?, ?, 'draft', ?)");
     $te->bind_param('iiisiis', $projectId, $id, $uid, $e['description'], $e['minutes'], $e['billable'], $e['entry_date']);
-    $te->execute();
+    $run($te);
     $entryId = (int)$conn->insert_id; // read before audit(), which inserts its own row
-    $conn->commit();
+    if (!$conn->commit()) throw new mysqli_sql_exception('log_time commit failed');
   } catch (mysqli_sql_exception $ex) {
     $conn->rollback();
     fail('Could not log the time.', 500);
