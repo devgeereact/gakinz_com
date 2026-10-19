@@ -39,6 +39,9 @@ import {
   type Client,
   type Project,
 } from "@/lib/api"
+import { isDirty } from "@/lib/dirty-model"
+import { useUnsavedGuard } from "@/hooks/use-unsaved-guard"
+import { UnsavedGuardDialog } from "@/components/unsaved-guard-dialog"
 import { PageHeader, StatusBadge } from "@/app/components/page-kit"
 import { EmptyState } from "@/app/components/EmptyState"
 import { TableSkeleton } from "@/app/components/TableSkeleton"
@@ -109,16 +112,38 @@ export default function Contracts() {
     projectsApi.list().then((r) => r.ok && setProjectList(r.data))
   }, [])
 
-  // Apply a template: merge the chosen client/project into the body.
-  const applyTemplate = (key: string, cId = clientId, pId = projectId) => {
+  // What a template produces for the chosen client and project, merged into the body.
+  const renderTemplate = (key: string, cId = clientId, pId = projectId) => {
     const t = TEMPLATES[key]
-    if (!t) return
+    if (!t) return null
     const company = clientList.find((c) => String(c.id) === cId)?.company ?? "the Client"
     const proj = projectList.find((p) => String(p.id) === pId)?.name ?? "the project"
     const today = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
-    setTitle(t.title)
-    setBody(t.body.replace(/\{\{client\}\}/g, company).replace(/\{\{project\}\}/g, proj).replace(/\{\{date\}\}/g, today))
+    return {
+      title: t.title,
+      body: t.body.replace(/\{\{client\}\}/g, company).replace(/\{\{project\}\}/g, proj).replace(/\{\{date\}\}/g, today),
+    }
   }
+  const applyTemplate = (key: string, cId = clientId, pId = projectId) => {
+    const r = renderTemplate(key, cId, pId)
+    if (!r) return
+    setTitle(r.title)
+    setBody(r.body)
+  }
+
+  // Dirty means the owner changed the text away from the template, or filled the extra fields.
+  const generated = renderTemplate(template)
+  const contractDirty =
+    open && (isDirty({ title, body }, generated ?? { title: "", body: "" }) || triage !== "" || signerName !== "")
+  const guard = useUnsavedGuard(contractDirty)
+  const closeContract = () =>
+    guard.requestLeave(() => {
+      setClientId("")
+      setProjectId("")
+      setTriage("")
+      setSignerName("")
+      setOpen(false)
+    })
 
   useEffect(() => {
     if (open) applyTemplate(template)
@@ -186,7 +211,7 @@ export default function Contracts() {
   }
 
   const newContractDialog = (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(o) => (o ? setOpen(true) : closeContract())}>
       <DialogTrigger asChild>
         <Button>
           <Plus /> New contract
@@ -258,7 +283,7 @@ export default function Contracts() {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={closeContract}>
             Cancel
           </Button>
           <Button onClick={create} disabled={saving}>
@@ -403,6 +428,7 @@ export default function Contracts() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <UnsavedGuardDialog prompt={guard.prompt} />
     </div>
   )
 }
