@@ -12,8 +12,9 @@
  *   }
  *
  * The query is trimmed, then must be 2 to 80 characters (400 otherwise). It
- * is matched as a plain substring: `%`, `_` and `\` are escaped and the LIKE
- * carries an explicit ESCAPE clause, so a typed `%` matches a percent sign and
+ * is matched as a plain substring: `%`, `_` and the escape character `!` are
+ * escaped and the LIKE carries an explicit ESCAPE '!' clause (server/_like.php,
+ * which reads the same under any sql_mode), so a typed `%` matches a percent sign and
  * never everything. Every query is a prepared statement and only rows with
  * `deleted_at IS NULL` are searched.
  *
@@ -45,6 +46,7 @@
  * `unavailable` and adds no results for it.
  */
 require __DIR__ . '/_bootstrap.php';
+require __DIR__ . '/_like.php';
 
 const SEARCH_MIN = 2;
 const SEARCH_MAX = 80;
@@ -61,11 +63,6 @@ const SEARCH_TYPES = [
   'invoice' => SEARCH_INVOICES_ROLES,
   'quote'   => SEARCH_PROPOSALS_ROLES,
 ];
-
-/** A LIKE pattern that matches $q literally anywhere: \ % _ escaped with \. */
-function sr_pattern(string $q): string {
-  return '%' . strtr($q, ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']) . '%';
-}
 
 /** Rows of a prepared query whose every parameter is the same pattern. Throws on failure. */
 function sr_rows(mysqli $conn, string $sql, string $pattern, int $count): array {
@@ -96,7 +93,7 @@ function sr_result(string $type, $id, string $title, string $secondary, string $
 
 /** One type's results. Each may throw. */
 function sr_type(mysqli $conn, string $type, string $p): array {
-  $like = " LIKE ? ESCAPE '\\\\'";
+  $like = LIKE_CONTAINS_SQL;
   $limit = ' LIMIT ' . SEARCH_PER_TYPE;
   switch ($type) {
     case 'client': {
@@ -126,7 +123,7 @@ function sr_type(mysqli $conn, string $type, string $p): array {
         LEFT JOIN clients c ON c.id = i.client_id AND c.deleted_at IS NULL
         WHERE i.deleted_at IS NULL AND i.number' . $like . '
         ORDER BY i.id DESC' . $limit, $p, 1);
-      return array_map(fn($r) => sr_result('invoice', $r['id'], (string)($r['number'] ?: 'Invoice #' . $r['id']),
+      return array_map(fn($r) => sr_result('invoice', $r['id'], (string)$r['number'],
         sr_join([$r['company'], sr_status($r['status'])]), '/app/invoicing?invoice=' . (int)$r['id']), $rows);
     }
     case 'quote': {
@@ -149,11 +146,12 @@ $user = require_auth($conn, $allRoles); // staff only; a client or trainer gets 
 
 $raw = $_GET['q'] ?? '';
 $q = is_string($raw) ? trim($raw) : '';
+if (!mb_check_encoding($q, 'UTF-8')) fail('Search text must be valid UTF-8.');
 $len = mb_strlen($q, 'UTF-8');
 if ($len < SEARCH_MIN) fail('Type at least ' . SEARCH_MIN . ' characters to search.');
 if ($len > SEARCH_MAX) fail('Search for ' . SEARCH_MAX . ' characters or fewer.');
 
-$pattern = sr_pattern($q);
+$pattern = like_contains($q);
 $types = [];
 $results = [];
 foreach (SEARCH_TYPES as $type => $roles) {
