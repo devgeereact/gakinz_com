@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest"
 import { DEFAULT_COPY, mergeBusiness } from "@/marketing/data/content"
 import { BusinessDetails } from "./site-ui"
 import { telHref } from "./site-helpers"
+import { isHttpsUrl, jsonLdString } from "./seo-schema"
 
 const html = (business: Parameters<typeof BusinessDetails>[0]["business"]) =>
   renderToStaticMarkup(
@@ -41,5 +42,23 @@ describe("BusinessDetails", () => {
 
   it("keeps the leading plus and drops spaces and brackets in a tel link", () => {
     expect(telHref("+44 (0)20 7946 0000")).toBe("tel:+4402079460000")
+  })
+})
+
+describe("hostile profile addresses", () => {
+  const hostile = ["https://x.com/</script><script>alert(1)</script>", 'https://x.com/a"b', "https://x.com/a`b", "https://x.com/a\\b", "https://x.com/a<b", "https://x.com/a\u2028b", "https://x.com/a\u0007b"]
+
+  it("are refused by isHttpsUrl and dropped by the merge", () => {
+    for (const url of hostile) {
+      expect(isHttpsUrl(url), JSON.stringify(url)).toBe(false)
+      expect(mergeBusiness({ social: [{ platform: "x", url }] }, "a@b.co").social).toEqual([])
+    }
+  })
+
+  it("cannot close the JSON-LD script tag even if a value reaches it", () => {
+    const out = jsonLdString({ sameAs: ["https://x.com/</script><script>alert(1)</script>"], note: "a&b \u2028 \u2029 >" })
+    expect(out).not.toMatch(/[<>&\u2028\u2029]/)
+    expect(out.toLowerCase()).not.toContain("</script")
+    expect(JSON.parse(out).sameAs[0]).toBe("https://x.com/</script><script>alert(1)</script>")
   })
 })

@@ -220,6 +220,8 @@ describe("business and social links", () => {
     await bad(profile({ url: "https://user:pw@x.com/example" }), /https/)
     await bad(profile({ url: "https://x.com/exa mple" }), /https/)
     await bad(profile({ url: "https://localhost/example" }), /https/)
+    await bad(profile({ url: "https://x.com/</script><script>alert(1)</script>" }), /https/)
+    for (const ch of ['"', "<", ">", "\\", "`", "\u0007"]) await bad(profile({ url: `https://x.com/a${ch}b` }), /https/)
     await bad(profile({ platform: "myspace" }), /one of: linkedin/)
     await bad(profile({ url: "https://x.com/" + "a".repeat(300) }), /300 characters/)
     await bad(profile({ label: "x".repeat(61) }), /60 characters/)

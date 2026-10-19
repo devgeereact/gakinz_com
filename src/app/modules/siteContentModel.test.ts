@@ -356,3 +356,11 @@ describe("business details", () => {
     expect(eff.business).toEqual({ phone: "020 7946 0000" })
   })
 })
+
+describe("business details, hostile addresses", () => {
+  it("refuses angle brackets, quotes, backslashes and backticks in a profile address", () => {
+    for (const url of ["https://x.com/</script>", 'https://x.com/a"b', "https://x.com/a`b", "https://x.com/a\\b"]) {
+      expect(checkBusiness({ social: [{ platform: "x", url }] }), url).toMatch(/full https/)
+    }
+  })
+})

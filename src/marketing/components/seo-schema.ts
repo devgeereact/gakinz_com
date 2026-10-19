@@ -5,9 +5,24 @@ export const SITE_URL = "https://gakinz.com"
 export const SITE_NAME = "Gideon Akinlotan"
 export const OG_IMAGE = `${SITE_URL}/og.png`
 
+/** One pattern each for a public email and phone number, shared by the website and the editor. Mirrors server/site.php. */
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+export const PHONE_PATTERN = /^\+?[0-9][0-9 ()-]*$/
+
+/** JSON for a <script type="application/ld+json"> block: `<`, `>`, `&` and the line separators escaped so no value can close the tag. */
+export function jsonLdString(block: unknown): string {
+  return JSON.stringify(block)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029")
+}
+
 /** True for a full https address with a host and no sign-in details. Anything else never becomes a link or a sameAs entry. */
 export function isHttpsUrl(v: unknown): v is string {
-  if (typeof v !== "string" || /\s/.test(v)) return false
+  // Whitespace, control characters and the characters that can break out of markup or a JSON string never belong in a profile address.
+  if (typeof v !== "string" || /[\s<>"\\`]/.test(v) || [...v].some((c) => c.charCodeAt(0) < 32 || c.charCodeAt(0) === 127)) return false
   try {
     const u = new URL(v)
     return u.protocol === "https:" && u.hostname.includes(".") && !u.username && !u.password

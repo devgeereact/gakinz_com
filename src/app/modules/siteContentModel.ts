@@ -1,6 +1,6 @@
 import type { SiteBusiness, SiteContent, SiteDrafts, SiteSection, SiteService, SiteSocial, WorkAdminRow, WorkInput } from "@/lib/api"
 import { SITE_SECTIONS, SOCIAL_PLATFORMS } from "@/lib/api"
-import { isHttpsUrl } from "@/marketing/components/seo-schema"
+import { EMAIL_PATTERN, isHttpsUrl, PHONE_PATTERN } from "@/marketing/components/seo-schema"
 import { DEFAULT_COPY, builtInFor, type ServiceCopy } from "@/marketing/data/content"
 
 // Pure helpers behind the Site content module and the hero controls in Work.
@@ -216,14 +216,13 @@ const HERO_RULES: FieldRule[] = [
   { key: "cta2", label: "Second button", max: SHORT },
 ]
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function checkRecord(rec: Record<string, unknown>, rules: FieldRule[], where: string): string | null {
   for (const r of rules) {
     const v = typeof rec[r.key] === "string" ? (rec[r.key] as string).trim() : ""
     if (!v) return `${where}${r.label} cannot be empty.`
     if (v.length > r.max) return `${where}${r.label} must be ${r.max} characters or fewer.`
-    if (r.email && !EMAIL.test(v)) return `${where}${r.label} must be a valid email address.`
+    if (r.email && !EMAIL_PATTERN.test(v)) return `${where}${r.label} must be a valid email address.`
   }
   return null
 }
@@ -310,7 +309,6 @@ function checkServices(rows: SiteService[]): string | null {
 // ── Business and social links ───────────────────────────────────────────────
 
 export const BUSINESS_LIMITS = { phone: 30, addressLines: 4, social: 10, url: 300, label: 60 } as const
-const PHONE = /^\+?[0-9][0-9 ()-]*$/
 
 /**
  * A business record as it should be saved: text trimmed, blank fields and blank
@@ -339,9 +337,9 @@ export function checkBusiness(raw: SiteBusiness | null | undefined): string | nu
   const b = tidyBusiness(raw)
   if (b.email) {
     if (b.email.length > 200) return "Public email must be 200 characters or fewer."
-    if (!EMAIL.test(b.email)) return "Public email must be a valid email address."
+    if (!EMAIL_PATTERN.test(b.email)) return "Public email must be a valid email address."
   }
-  if (b.phone && (b.phone.length > BUSINESS_LIMITS.phone || !PHONE.test(b.phone) || b.phone.replace(/\D/g, "").length < 7)) {
+  if (b.phone && (b.phone.length > BUSINESS_LIMITS.phone || !PHONE_PATTERN.test(b.phone) || b.phone.replace(/\D/g, "").length < 7)) {
     return "Phone must be a number of 7 or more digits, using only digits, spaces, brackets and hyphens, with an optional leading +."
   }
   if (b.address) {

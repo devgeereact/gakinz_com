@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { siteContent, SOCIAL_PLATFORMS, type SiteSocialPlatform } from "@/lib/api"
-import { isHttpsUrl } from "@/marketing/components/seo-schema"
+import { EMAIL_PATTERN, isHttpsUrl, PHONE_PATTERN } from "@/marketing/components/seo-schema"
 import { services as baseServices, packages as basePackages, addOns, paymentTerms, faqs as baseFaqs, processStages, site, SERVICE_GROUPS, type ServiceGroup } from "./site"
 
 /**
@@ -214,8 +214,6 @@ export function enquiryServiceOptions(list: ServiceCopy[]): string[] {
   return [...new Set([...list.map((s) => s.title), OTHER_SERVICE])]
 }
 
-const PHONE = /^\+?[0-9][0-9 ()-]*$/
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const isPlatform = (v: unknown): v is SiteSocialPlatform => (SOCIAL_PLATFORMS as readonly string[]).includes(v as string)
 
 /**
@@ -241,8 +239,8 @@ export function mergeBusiness(p: PublishedSections["business"] | null | undefine
     }
   }
   return {
-    email: EMAIL.test(email) ? email : contactEmail,
-    phone: PHONE.test(phone) && phone.replace(/\D/g, "").length >= 7 ? phone : d.phone,
+    email: EMAIL_PATTERN.test(email) ? email : contactEmail,
+    phone: PHONE_PATTERN.test(phone) && phone.replace(/\D/g, "").length >= 7 ? phone : d.phone,
     address: address.length ? address : d.address,
     hours: hours || d.hours,
     social: social.length ? social : d.social,

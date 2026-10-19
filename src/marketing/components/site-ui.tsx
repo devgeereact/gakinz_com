@@ -209,7 +209,6 @@ const NAV: [string, string][] = [
   ["/resources", "Writing"],
 ]
 
-
 /**
  * The published business details beyond the email: phone, address, opening
  * note and social profiles. A field with nothing published prints nothing, and

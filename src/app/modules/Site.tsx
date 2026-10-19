@@ -318,7 +318,7 @@ function BusinessEditor({ value, error, onChange }: { value: SiteBusiness; error
           <div>
             <Label htmlFor="sb-email">Public email</Label>
             <Input id="sb-email" type="email" className="mt-1.5" value={value.email ?? ""} onChange={(e) => set("email", e.target.value)} aria-describedby="sb-email-help" />
-            <Help id="sb-email-help">Optional. Empty uses the enquiry email from Contact and footer.</Help>
+            <Help id="sb-email-help">Optional. Empty uses the enquiry email from Contact and footer. The Contact page always shows the enquiry email.</Help>
           </div>
           <div>
             <Label htmlFor="sb-phone">Phone</Label>
@@ -493,7 +493,10 @@ export default function Site() {
       if (res.ok) {
         d = { ...d, [s]: { ...d[s], draft: res.data.draft } }
         ;(saved as Record<string, unknown>)[s] = values[s]
-      } else next[s] = res.error
+      } else next[s] =
+        s === "business" && /unknown section/i.test(res.error || "")
+          ? "Business details need the updated site.php on the server."
+          : res.error
     }
     setDrafts(d)
     setBaseline((b) => ({ ...b, ...saved }))

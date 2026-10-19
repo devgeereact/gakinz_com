@@ -21,7 +21,7 @@
  * only the component (react-refresh). Import them from there.
  */
 
-import { OG_IMAGE, SITE_NAME, SITE_URL } from "@/marketing/components/seo-schema"
+import { jsonLdString, OG_IMAGE, SITE_NAME, SITE_URL } from "@/marketing/components/seo-schema"
 
 type SeoProps = {
   /** Page title, without the site suffix. Omit on the home page. */
@@ -82,7 +82,7 @@ export default function Seo({
         <script
           key={i}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(block) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdString(block) }}
         />
       ))}
     </>

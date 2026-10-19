@@ -197,7 +197,7 @@ function clean_record($rec, array $fields, string $where): array {
         }
         if (strlen($v) > $limit) fail("$label must be $limit characters or fewer.");
         $parts = preg_match('/\s/', $v) ? false : parse_url($v);
-        if (!$parts || strtolower($parts['scheme'] ?? '') !== 'https' || empty($parts['host']) || isset($parts['user']) || isset($parts['pass'])
+        if (!$parts || preg_match('/[\x00-\x1f\x7f<>"\\\\`]/', $v) || strtolower($parts['scheme'] ?? '') !== 'https' || empty($parts['host']) || isset($parts['user']) || isset($parts['pass'])
             || !filter_var($v, FILTER_VALIDATE_URL) || !str_contains($parts['host'], '.')) {
           fail("$label must be a full https:// address, with no sign-in details.");
         }
