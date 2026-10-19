@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select"
 import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/page-kit"
 import { ProjectAssetsPanel } from "@/app/components/AssetChecklist"
+import { ProjectBriefPanel } from "@/app/components/ProjectBrief"
 import { LINKED_RECORD, projectsLink, recordElementId } from "@/lib/deepLink"
 import { useReveal } from "@/hooks/use-reveal"
 import {
@@ -321,6 +322,7 @@ export default function Projects() {
             projectName={selected.name}
             linkedAsset={link.project === selected.id ? link.asset : null}
           />
+          <ProjectBriefPanel key={`brief-${selected.id}`} projectId={selected.id} projectName={selected.name} />
         </div>
       )}
     </div>
