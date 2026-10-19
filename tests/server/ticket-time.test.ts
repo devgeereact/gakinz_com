@@ -273,6 +273,7 @@ describe("reading ticket time", () => {
     expect(JSON.stringify(portal.json)).not.toMatch(/Helpdesk internal bucket|Secret internal task|Internal note|minutes/)
     expect(portal.json.projects.find((p) => p.id === pid)).toEqual({
       id: pid, name: "IT support", status: "in_progress", due_date: null, kind: "it_support", task_count: 0, done_count: 0,
+      reference: expect.stringMatching(/^GK-P-\d{4}-\d{4}$/), // its work reference (SQL 19)
     })
     expect(portal.json.projects.find((p) => p.id === site)).toMatchObject({ name: "Website rebuild", kind: null, task_count: 2, done_count: 1 })
 

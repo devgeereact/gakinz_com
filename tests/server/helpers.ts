@@ -46,12 +46,13 @@ const TABLES = [
   "site_content", "payment_events", "audit_log", "magic_links", "password_resets", "auth_tokens", "invoice_items", "invoices",
   "ticket_replies", "tickets", "work_images", "work", "files",
   "proposal_items", "proposals", "tasks", "projects", "posts", "users", "clients", "enquiries",
-  "contracts", "certificates", "leave_entries", "time_entries",
+  "contracts", "certificates", "leave_entries", "time_entries", "reference_counters",
 ]
 
-/** Empty every table the tests touch. */
+/** Empty every table the tests touch. The work reference anchors (SQL 19) go back, as schema.sql seeds them. */
 export function resetDb(): void {
-  sql(`SET FOREIGN_KEY_CHECKS = 0; ${TABLES.map((t) => `TRUNCATE TABLE ${t};`).join(" ")} SET FOREIGN_KEY_CHECKS = 1;`)
+  sql(`SET FOREIGN_KEY_CHECKS = 0; ${TABLES.map((t) => `TRUNCATE TABLE ${t};`).join(" ")} SET FOREIGN_KEY_CHECKS = 1;` +
+    ` INSERT INTO reference_counters (kind, ref_year, last_n) VALUES ('E', 0, 0), ('P', 0, 0);`)
 }
 
 export type ApiResult<T = Record<string, unknown>> = { status: number; json: T; headers: Headers }
