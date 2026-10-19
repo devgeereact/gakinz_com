@@ -7,6 +7,8 @@
  *
  * Every row is synthetic.
  */
+import { spawnSync } from "node:child_process"
+import path from "node:path"
 import { beforeEach, describe, expect, it } from "vitest"
 import { api, createUser, login, one, q, resetDb, sql } from "./helpers"
 
@@ -138,6 +140,14 @@ describe("search.php record search", () => {
     const s = await search(owner, "k\\s")
     expect(idsOf(s.json, "client")).toEqual([slash])
 
+    // `!` is the escape character, so a typed `!` is itself escaped.
+    const bang = client("Wow! Studio")
+    client("Wowx Studio")
+    const b = await search(owner, "w!")
+    expect(idsOf(b.json, "client")).toEqual([bang])
+    const bb = await search(owner, "!%")
+    expect(bb.json.results).toEqual([])
+
     // A bare wildcard query matches nothing rather than everything.
     const all = await search(owner, "%%")
     expect(all.status).toBe(200)
@@ -162,6 +172,72 @@ describe("search.php record search", () => {
     // A query that is not a plain string is refused, not an error.
     const arr = await api<Search>("search.php?q[]=ab", { token: owner })
     expect(arr.status).toBe(400)
+  })
+
+  it("matches literally under NO_BACKSLASH_ESCAPES too, using the pattern search.php binds", () => {
+    // PHP opens its own connection per request, so the mode is set on a
+    // direct session instead, with the exact pattern from server/_like.php
+    // and the exact clause search.php appends.
+    const likePhp = path.resolve(__dirname, "../../server/_like.php")
+    const php = (code: string, typed = "") => {
+      const r = spawnSync("php", ["-r", `require $argv[1]; ${code}`, "--", likePhp, typed], { encoding: "utf8" })
+      if (r.status !== 0) throw new Error(r.stderr)
+      return r.stdout
+    }
+    const clause = php("echo LIKE_CONTAINS_SQL;")
+    expect(clause).toBe(" LIKE ? ESCAPE '!'")
+    const hex = (v: string) => `CONVERT(X'${Buffer.from(v, "utf8").toString("hex")}' USING utf8mb4)`
+    const matches = (candidate: string, typed: string) =>
+      one(
+        `SET SESSION sql_mode = CONCAT(@@SESSION.sql_mode, ',NO_BACKSLASH_ESCAPES');
+         SELECT ${hex(candidate)}${clause.replace("?", hex(php("echo like_contains($argv[2]);", typed)))}`,
+      )
+    expect(one(`SET SESSION sql_mode = CONCAT(@@SESSION.sql_mode, ',NO_BACKSLASH_ESCAPES'); SELECT @@SESSION.sql_mode`)).toContain(
+      "NO_BACKSLASH_ESCAPES",
+    )
+    expect(matches("100% Organic", "0%")).toBe("1")
+    expect(matches("1000 Organic", "0%")).toBe("0")
+    expect(matches("Snake_Case", "e_c")).toBe("1")
+    expect(matches("SnakeXCase", "e_c")).toBe("0")
+    expect(matches("Back\\slash", "k\\s")).toBe("1")
+    expect(matches("Backslash", "k\\s")).toBe("0")
+    expect(matches("Wow! Studio", "w!")).toBe("1")
+    expect(matches("Wowx Studio", "w!")).toBe("0")
+  })
+
+  it("refuses search text that is not valid UTF-8", async () => {
+    const r = await api<Search>("search.php?q=%C3%28%C3%28", { token: owner })
+    expect(r.status).toBe(400)
+    expect(r.json.error).toMatch(/UTF-8/)
+  })
+
+  it("blanks the company of a deleted client on a project or invoice", async () => {
+    const gone = client("Vanished Client Ltd", null, null, true)
+    const proj = project("Orphan build", gone)
+    const inv = invoice("GK-ORPHAN-1", gone)
+    const r = await search(owner, "orphan")
+    expect(of(r.json, "project")).toEqual([
+      { type: "project", id: proj, title: "Orphan build", secondary: "in progress", route: `/app/projects?project=${proj}` },
+    ])
+    expect(of(r.json, "invoice")).toEqual([
+      { type: "invoice", id: inv, title: "GK-ORPHAN-1", secondary: "sent", route: `/app/invoicing?invoice=${inv}` },
+    ])
+    expect(JSON.stringify(r.json)).not.toContain("Vanished")
+  })
+
+  it("marks one failing type unavailable while the others still return", async () => {
+    const c = client("Outage Co")
+    quote("Outage quote", c)
+    sql("RENAME TABLE proposals TO proposals_hidden")
+    try {
+      const r = await search(owner, "outage")
+      expect(r.status).toBe(200)
+      expect(r.json.types).toEqual({ client: "ok", project: "ok", enquiry: "ok", invoice: "ok", quote: "unavailable" })
+      expect(r.json.results.map((x) => [x.type, x.id])).toEqual([["client", c]])
+    } finally {
+      sql("RENAME TABLE proposals_hidden TO proposals")
+    }
+    expect(of((await search(owner, "outage")).json, "quote")).toHaveLength(1)
   })
 
   it("never returns a deleted row of any type", async () => {
