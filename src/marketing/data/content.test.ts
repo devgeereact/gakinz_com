@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
-import { DEFAULT_COPY, enquiryServiceOptions, groupServices, mergeCopy, mergeServices, OTHER_SERVICE, serviceFromRow } from "./content"
+import { isHttpsUrl, personSchema, sameAsFrom } from "@/marketing/components/seo-schema"
+import { DEFAULT_COPY, enquiryServiceOptions, groupServices, mergeBusiness, mergeCopy, mergeServices, OTHER_SERVICE, serviceFromRow } from "./content"
 import { IT_EXCLUSION, QUOTE_ONLY } from "./site"
 import { heroFrom, onColour, SHOWCASE } from "./showcase"
 
@@ -122,5 +123,76 @@ describe("showcase", () => {
     expect(onColour("#1B2E6B")).toBe("#FFFFFF")
     expect(onColour("#F59E0B")).toBe("#16120A")
     expect(onColour("not a colour")).toBe("#FFFFFF")
+  })
+})
+
+describe("business details", () => {
+  const li = { platform: "linkedin", url: "https://www.linkedin.com/in/example", label: "Gideon on LinkedIn" }
+
+  it("falls back to the built-in details, with no phone, address, hours or profiles invented", () => {
+    const b = mergeCopy(null).business
+    expect(b).toEqual({ email: DEFAULT_COPY.contact.email, phone: null, address: [], hours: null, social: [] })
+    expect(mergeCopy({}).business).toEqual(b)
+    expect(mergeBusiness({}, "x@y.co")).toMatchObject({ email: "x@y.co", phone: null, social: [] })
+  })
+
+  it("applies published values over the built-in ones, field by field", () => {
+    const b = mergeBusiness({ email: " public@example.test ", phone: "+44 20 7946 0000", address: ["1 Road", " ", "London"], hours: "Weekdays", social: [li] }, "enquiry@example.test")
+    expect(b).toEqual({ email: "public@example.test", phone: "+44 20 7946 0000", address: ["1 Road", "London"], hours: "Weekdays", social: [li] })
+    // A partial record keeps the rest at the built-in value.
+    expect(mergeBusiness({ phone: "020 7946 0000" }, "enquiry@example.test")).toEqual({ email: "enquiry@example.test", phone: "020 7946 0000", address: [], hours: null, social: [] })
+  })
+
+  it("uses the published enquiry email when there is no public email", () => {
+    const c = mergeCopy({ contact: { email: "new@example.test" }, business: { phone: "020 7946 0000" } })
+    expect(c.business.email).toBe("new@example.test")
+    expect(c.contact.email).toBe("new@example.test")
+    expect(mergeCopy({ contact: { email: "new@example.test" }, business: { email: "pub@example.test" } }).business.email).toBe("pub@example.test")
+  })
+
+  it("drops a profile that is not https, not on a listed platform, or listed twice, and labels a blank one by platform", () => {
+    const b = mergeBusiness(
+      {
+        social: [
+          { platform: "x", url: "http://x.com/a" },
+          { platform: "x", url: "javascript:alert(1)" },
+          { platform: "myspace", url: "https://myspace.com/a" },
+          { platform: "github", url: "https://u:p@github.com/a" },
+          { platform: "github", url: "https://github.com/ok", label: "  " },
+          { platform: "github", url: "https://github.com/ok", label: "again" },
+          "https://github.com/string",
+          null,
+        ],
+      },
+      "a@b.co",
+    )
+    expect(b.social).toEqual([{ platform: "github", url: "https://github.com/ok", label: "GitHub" }])
+  })
+
+  it("ignores a bad published email or phone rather than showing it", () => {
+    const b = mergeBusiness({ email: "not an email", phone: "ring me", social: "https://x.com/a" }, "keep@example.test")
+    expect(b).toMatchObject({ email: "keep@example.test", phone: null, social: [] })
+  })
+})
+
+describe("structured data sameAs", () => {
+  it("lists published https profiles only, once each, in order", () => {
+    const published = mergeBusiness({ social: [{ platform: "x", url: "https://x.com/a" }, { platform: "x", url: "http://x.com/b" }, { platform: "github", url: "https://github.com/a" }] }, "a@b.co")
+    expect(sameAsFrom(published.social)).toEqual(["https://x.com/a", "https://github.com/a"])
+    expect(sameAsFrom([{ url: "https://x.com/a" }, { url: "https://x.com/a" }, { url: "ftp://x.com/a" }])).toEqual(["https://x.com/a"])
+  })
+
+  it("is empty before anything is published, and the Person record then carries no sameAs", () => {
+    expect(sameAsFrom(mergeCopy(null).business.social)).toEqual([])
+    expect(sameAsFrom(null)).toEqual([])
+    const bare = personSchema({ jobTitle: "Designer", description: "d", sameAs: sameAsFrom(mergeCopy(null).business.social) })
+    expect("sameAs" in bare).toBe(false)
+    const withLinks = personSchema({ jobTitle: "Designer", description: "d", sameAs: sameAsFrom([{ url: "https://x.com/a" }]) })
+    expect(withLinks.sameAs).toEqual(["https://x.com/a"])
+  })
+
+  it("accepts only full https addresses with a host", () => {
+    for (const v of ["https://example.com/a", "https://sub.example.co.uk"]) expect(isHttpsUrl(v), v).toBe(true)
+    for (const v of ["http://example.com", "https://example", "//example.com", "https://a:b@example.com", "https://ex ample.com", "", null, 5]) expect(isHttpsUrl(v), String(v)).toBe(false)
   })
 })

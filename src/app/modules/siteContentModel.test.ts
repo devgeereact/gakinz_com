@@ -5,6 +5,8 @@ import { DEFAULT_COPY } from "@/marketing/data/content"
 import {
   addRow,
   blankHero,
+  checkBusiness,
+  tidyBusiness,
   defaultSiteContent,
   dirtySections,
   effectiveContent,
@@ -298,5 +300,59 @@ describe("older services lists", () => {
     const row = { ...defaultSiteContent().services[0], slug: "a".repeat(81) }
     expect(validateSection("services", [row])).toMatch(/Web address must be 80 characters or fewer/)
     expect(validateSection("services", [{ ...row, slug: "a".repeat(80) }])).toBeNull()
+  })
+})
+
+describe("business details", () => {
+  const profile = { platform: "github" as const, url: "https://github.com/example" }
+
+  it("tidies a record: trims, drops blank fields, blank address lines and profile rows with no address", () => {
+    expect(
+      tidyBusiness({ email: " a@b.co ", phone: " ", address: ["1 Road", "  ", "London "], hours: "", social: [{ ...profile, label: " GH " }, { platform: "x", url: "  " }] }),
+    ).toEqual({ email: "a@b.co", address: ["1 Road", "London"], social: [{ ...profile, label: "GH" }] })
+    expect(tidyBusiness({ social: [{ platform: "x", url: "" }] })).toEqual({})
+    expect(tidyBusiness(undefined)).toEqual({})
+  })
+
+  it("accepts an empty record and a full one", () => {
+    expect(checkBusiness({})).toBeNull()
+    expect(checkBusiness({ email: "a@b.co", phone: "+44 (0)20 7946 0000", address: ["a"], hours: "Weekdays", social: [profile] })).toBeNull()
+  })
+
+  it("refuses http, odd schemes, sign-in details, hostless and duplicate profile addresses, naming the profile", () => {
+    for (const url of ["http://github.com/e", "javascript:alert(1)", "https://u:p@github.com/e", "https://localhost/e", "github.com/e", "https://git hub.com/e"]) {
+      expect(checkBusiness({ social: [profile, { platform: "github", url }] }), url).toMatch(/^Profile 2: Address must be a full https/)
+    }
+    expect(checkBusiness({ social: [profile, { ...profile, url: "https://GitHub.com/example" }] })).toMatch(/^Profile 2: That address is already listed/)
+    expect(checkBusiness({ social: [{ platform: "myspace" as never, url: "https://x.com/e" }] })).toMatch(/Choose a platform/)
+  })
+
+  it("enforces the server's lengths and counts", () => {
+    expect(checkBusiness({ email: "nope" })).toMatch(/valid email/)
+    expect(checkBusiness({ phone: "12345" })).toMatch(/Phone must be/)
+    expect(checkBusiness({ phone: "call me" })).toMatch(/Phone must be/)
+    expect(checkBusiness({ address: ["a", "b", "c", "d", "e"] })).toMatch(/up to 4 lines/)
+    expect(checkBusiness({ hours: "x".repeat(301) })).toMatch(/300 characters/)
+    expect(checkBusiness({ social: [{ ...profile, label: "x".repeat(61) }] })).toMatch(/Label must be 60/)
+    expect(checkBusiness({ social: Array.from({ length: 11 }, (_, i) => ({ platform: "x" as const, url: `https://x.com/u${i}` })) })).toMatch(/Up to 10/)
+  })
+
+  it("is wired into the section checks, tab map and defaults", () => {
+    expect(validateSection("business", { social: [{ platform: "x", url: "http://x.com/a" }] })).toMatch(/https/)
+    expect(SECTION_TAB.business).toBe("business")
+    expect(defaultSiteContent().business).toEqual({})
+    expect(prepareSection("business", { email: " a@b.co ", hours: " " })).toEqual({ email: "a@b.co" })
+  })
+
+  it("counts typing and then clearing a field as no change, so the unsaved guard stays quiet", () => {
+    const base = defaultSiteContent()
+    expect(dirtySections({ ...base, business: { phone: "" } }, base)).toEqual([])
+    expect(dirtySections({ ...base, business: { phone: "020 7946 0000" } }, base)).toEqual(["business"])
+    expect(dirtySections({ ...base, business: { social: [{ platform: "x", url: "" }] } }, base)).toEqual([])
+  })
+
+  it("shows a saved draft in the editor", () => {
+    const eff = effectiveContent(draftsWith({ business: { draft: { phone: "020 7946 0000" } } }))
+    expect(eff.business).toEqual({ phone: "020 7946 0000" })
   })
 })
