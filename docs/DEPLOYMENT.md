@@ -151,8 +151,8 @@ This is the one list of server work that is committed and not known to be live. 
 every server change since `c57eb4a` (`main`, 2026-10-10) on the stacked branches in PR #8,
 including `audit/readiness-2026-10-17` (PR #20) and `feat/journeys-2026-10-18` (2026-10-18,
 stacked on PR #20, pushed to origin, not merged, deployed or uploaded; its second batch of
-2026-10-19 is in PR #21, and its third batch of 2026-10-19, `029f867..bdca4aa`, follows it on
-the same branch), and, conditionally, the 2026-09-22 relaunch set already on `main`. Keep it current: a change under
+2026-10-19 is in PR #21, and its third, fourth and fifth batches of 2026-10-19 follow it on
+the same branch, the fifth being `3636373..b0bbf8b`), and, conditionally, the 2026-09-22 relaunch set already on `main`. Keep it current: a change under
 `server/` updates this section in the same pull request (`AGENTS.md`, "Keeping documents
 current"), and `npm run docs:check` enforces that in CI.
 
@@ -231,8 +231,8 @@ statements are already live; only someone with server access can (section 5.6).
      screen, where Log time would stop working for everyone until `_time.php` arrives.
    - **`_templates.php` with `projects.php`.** Without it the two template routes answer 503
      "Project templates are not available yet." and every other Projects route works.
-   `files.php`, `portal.php` and `privacy.php` stand alone and are each safe before SQL 17 and
-   18 (section 5.5). `files.php` changes the download headers for every caller, staff and the
+   `files.php`, `portal.php` and `privacy.php` are each safe before SQL 17 and 18 (section
+   5.5). Since the fifth batch `files.php` and `privacy.php` need their includes first (step 13). `files.php` changes the download headers for every caller, staff and the
    public share link included, the moment it is uploaded (section 5.5).
 12. **For the fourth journeys batch (2026-10-19, six service pages, `8193555..ebcb002`)**: upload
    `server/site.php` (section 5.3), then merge. There is **no SQL**. The order matters on one
@@ -246,9 +246,38 @@ statements are already live; only someone with server access can (section 5.6).
    IT pages at the end and explains this in a note. Until that save the website shows the
    built-in six in their default order (`docs/KNOWN-ISSUES.md` K-093). NOT TESTED against the
    live host.
-13. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
+13. **For the fifth journeys batch (2026-10-19, work references, deletion tooling and business
+   details, `3636373..b0bbf8b`)**, and from here on for the whole branch, upload in this order.
+   It comes from the batch 5 final review and covers every file in section 5.3:
+   1. **`.htaccess` first.** Its `_*.php` deny covers the three new includes.
+   2. **Includes before the files that load them:** `_like.php`, `_retention.php`,
+      `_uploads.php`, `_money.php`, `_ics.php`, `_time.php`, `_templates.php`,
+      `_reference.php`, then `_erasure.php`, which hard-requires `_retention.php`,
+      `_uploads.php` and `_like.php`.
+   3. **Files that hard-require an include:** `files.php` after `_uploads.php`. Without it
+      **every Files route fails, the public Work image share links included**, so the Work
+      pictures on the live site break. Then `search.php` after `_like.php`, `invoices.php`
+      after `_money.php`, `bookings.php` with `_ics.php`, and `privacy.php` and `cron.php`
+      after `_retention.php`. The erase routes answer 503 until all four of `_erasure.php`,
+      `_retention.php`, `_uploads.php` and `_like.php` are up.
+   4. **Files with an optional or lazy include:** `support.php` and `time.php` (after
+      `_time.php`), `projects.php` (with `_templates.php`), and `contact.php`, `leads.php`,
+      `contracts.php` and `proposals.php`, which each work without `_reference.php` and
+      answer `reference: null`.
+   5. **Stand-alone:** `portal.php`, `assets.php`, `briefs.php`, `today.php` and `site.php`.
+      **`site.php` must be up before the merge**: the merged CMS sends the `business` section
+      and the service page fields, which an older file refuses.
+   6. **The readiness set together, in one go:** `_bootstrap.php`, `auth.php`, `oauth.php` and
+      `users.php` (K-059).
+   7. **SQL 13 to 18 as documented, then SQL 19 after all the PHP above** (section 5.2):
+      step 1, then step 2 pasted as one piece into one SQL tab, then check that no
+      `reference IS NULL` remains in `enquiries` or `projects`; if one does, run step 2 again.
+   8. **Merge** (step 14), which deploys `dist/`.
+   Keep **`$RETENTION_APPLY = false`** in the live `config.php` (section 5.4) and do not run
+   `cron.php job=retention_apply --apply`. NOT TESTED against the live host.
+14. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
    deploys the client that expects these server changes.
-14. **Walk the post-upload checks** in section 5.6.
+15. **Walk the post-upload checks** in section 5.6.
 
 ### 5.2 SQL, in order
 
@@ -277,8 +306,10 @@ is UNVERIFIED, so check them before step 1.
 | 16 | `CREATE TABLE IF NOT EXISTS project_briefs (...)` and `CREATE TABLE IF NOT EXISTS project_measurements (...)` | 2026-10-19, project brief and agreed measurements | Two new tables, safe to run twice. After `projects`; both carry a foreign key to it. Until it runs, every `briefs.php` route answers 503 and the project board says "The project brief needs a database update first (SQL 16 in docs/DEPLOYMENT.md)." Staff only: no client screen reads either table |
 | 17 | `ALTER TABLE time_entries ADD COLUMN ticket_id INT NULL DEFAULT NULL AFTER project_id, ADD KEY idx_time_ticket (ticket_id), ADD CONSTRAINT fk_time_ticket FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE SET NULL;` then `ALTER TABLE projects ADD COLUMN kind VARCHAR(20) NULL DEFAULT NULL AFTER stage;` | 2026-10-19, IT support time from tickets | Two statements, in that order. Additive. Run once only; a second run fails on the duplicate column. Needs `tickets` to exist (it does on any install with Support). Until it runs, `support.php?action=log_time` answers 503 naming this step, the ticket view hides "Log time", `time.php` lists `ticket_id` as null, and every existing support, time and portal action works as before |
 | 18 | `ALTER TABLE files ADD COLUMN client_visible TINYINT(1) NOT NULL DEFAULT 0 AFTER expires_at, ADD COLUMN shared_at TIMESTAMP NULL DEFAULT NULL AFTER client_visible;` | 2026-10-19, files shared to the client portal | After SQL 17. Additive. Run once only. Off by default, so nothing already stored becomes visible to a client. Until it runs, `files.php` `client_share`, `mine` and `mine_download` answer 503, the Files screen hides "Visible to client", the portal hides "Shared files", and every existing files action works as before |
+| 19 | Step 1, once: `ALTER TABLE enquiries ADD COLUMN reference VARCHAR(20) NULL DEFAULT NULL AFTER ip, ADD UNIQUE KEY uq_enquiry_reference (reference);` and `ALTER TABLE projects ADD COLUMN reference VARCHAR(20) NULL DEFAULT NULL AFTER due_date, ADD UNIQUE KEY uq_project_reference (reference);`. Step 2: the live block at the foot of `server/schema.sql` (`reference_counters`, the backfill, the counter seed, the two anchor rows last) | 2026-10-19, work references (D-049) | **After all the PHP in section 5.3** and after SQL 13 to 18. Step 1 runs once; a second run fails on the duplicate column. Run step 2 straight after it, **pasted as one piece into one SQL tab**, because it uses a temporary table that lives only in that session. It numbers every existing enquiry and project per year in id order, after the highest number already in use, so **it changes existing rows**, the first statement here that does. Then check that `SELECT COUNT(*) FROM enquiries WHERE reference IS NULL;` and the same for `projects` both return 0; if not (a record was saved while it ran), run step 2 again: since the 2026-10-19 fix wave (`43752c5`) a repeat is safe and numbers only what is still unnumbered. Between step 2 starting and finishing, reads answer `reference: null`, and nothing is issued until the anchors exist. The commented recovery line applies only to someone who ran the older draft order and wants id-ordered numbers again. MySQL 8.0.20 and later warn that `VALUES()` in the seed is deprecated (harmless). Run on MariaDB only; MySQL 5.7 and 8 NOT TESTED (`docs/KNOWN-ISSUES.md` K-099) |
 
-No existing data is migrated by any of these statements.
+No existing data is migrated by statements 1 to 18. Statement 19 step 2 writes a reference
+onto every existing enquiry and project.
 
 ### 5.3 PHP to upload
 
@@ -288,7 +319,8 @@ Upload all of them, with `.htaccess`:
 ```
 .htaccess           api.php             cron.php            _bootstrap.php
 _money.php (new)    _ics.php (new)      _like.php (new)     _retention.php (new)
-_templates.php (new) _time.php (new)    assets.php (new)    auth.php
+_templates.php (new) _time.php (new)    _reference.php (new) _erasure.php (new)
+_uploads.php (new)  assets.php (new)    auth.php
 blog.php            bookings.php (new)  briefs.php (new)    clients.php
 comms.php           contact.php         content.php         contracts.php
 design.php          dev.php             feedback.php (new)  files.php
@@ -381,7 +413,7 @@ sets:
   list reports `ticket_id: null`. Delete, approve and reject are unaffected. Then run SQL 17.
 - **`projects.php` with `_templates.php`.** Without `_templates.php` only the two template
   routes answer 503; list, plain create, status and stage work.
-- **`files.php`** stands alone (no new include). Before SQL 18 `client_share` and both client
+- **`files.php`** (third batch) added no include. Before SQL 18 `client_share` and both client
   routes answer 503, the staff list sends `client_visible: null`, and every existing action
   works. It changes every download the moment it is up (section 5.5). Its client branch is
   security-critical (`docs/SECURITY.md` section 3).
@@ -390,6 +422,35 @@ sets:
   depends on `_time.php`.
 - **`privacy.php`** stands alone: the export's files rows add `client_visible` and
   `shared_at` once SQL 18 has run, and fall back to the old columns before.
+
+**Since the fifth batch `files.php` no longer stands alone**: it requires `_uploads.php` at
+the top, so upload `_uploads.php` first (section 5.1 step 13).
+
+**The 2026-10-19 fifth journeys batch** (`3636373..b0bbf8b`, from `git diff --name-only
+68074f5..HEAD -- server`) adds `_reference.php`, `_erasure.php` and `_uploads.php`, and changes
+again `contact.php`, `contracts.php`, `invoices.php`, `leads.php`, `portal.php`,
+`projects.php`, `proposals.php`, `search.php`, `site.php`, `support.php`, `cron.php`,
+`privacy.php`, `files.php`, `_retention.php` (header comment only), `config.php.example` (the
+new `$RETENTION_APPLY` key) and `schema.sql` (SQL 19). No `.htaccess` change: the existing
+`_*.php` deny covers the three new includes. Use the order in section 5.1 step 13. In short:
+
+- **`_uploads.php` before `files.php`**, or every Files route fails, public Work images
+  included.
+- **`_erasure.php` with `_retention.php`, `_uploads.php` and `_like.php`**, then `privacy.php`
+  and `cron.php`. Without any of the four, the two erase routes answer 503 "Not available on
+  this server yet." and `cron.php job=retention_apply` exits 1 deleting nothing; the export
+  and older routes keep working. Since the fix wave (`b0bbf8b`) the retention report also
+  answers 503 (web) or exits 1 (command line) without `_retention.php`, instead of a fatal
+  error.
+- **`_reference.php`** is optional for `contact.php`, `leads.php`, `projects.php`,
+  `proposals.php`, `invoices.php`, `contracts.php`, `search.php` and `support.php`: without it,
+  or before SQL 19, each creates records as before and answers `reference: null`.
+  `portal.php` does not load it and stands alone.
+- **`support.php`** adds the client's `deletion_request` and is security-critical
+  (`docs/SECURITY.md` section 3), like `portal.php`, whose client branch now carries
+  references.
+- **`site.php`** gains the `business` section and must be up before the merge (section 5.1
+  step 13). No SQL.
 
 `site.php` and `work.php` are the 2026-10-14 redesign batch (homepage hero and editable site
 copy). Upload them **after** SQL statements 7 and 8 if you want the new features at once;
@@ -418,7 +479,8 @@ of the document root.
 | `$PAYPAL_ENABLED` | Leave unset or `false`. PayPal checkout refuses to start unless it is `true`, because there is no PayPal webhook yet (K-026) |
 | `$SEED_ADMIN_EMAIL` | `auth.php` no longer falls back to a hard-coded address. With this unset, a first run against an empty `users` table creates **no account at all** |
 | PHP `fileinfo` extension | `files.php` sniffs the real type of an upload with `finfo_file()`. Without it, uploads return 503 rather than accepting anything |
-| `$RETENTION_*` (nine keys, 2026-10-19) | Leave them `null`, or leave them out: a missing key behaves exactly as `null`. Each is a retention period that only changes what the read-only retention report **counts**; nothing deletes or anonymises a row by them. The periods are owner and legal decisions (`docs/PRIVACY-READINESS.md` section 6). A value other than a positive whole number is reported as an invalid period and counts nothing |
+| `$RETENTION_*` (nine keys, 2026-10-19) | Leave them `null`, or leave them out: a missing key behaves exactly as `null`. Each is a retention period. Seven only change what the read-only retention report **counts**. Two, `$RETENTION_ENQUIRY_MONTHS` and `$RETENTION_DELETED_FILE_DAYS`, are also what `cron.php job=retention_apply` would delete by, **but only with `--apply` and `$RETENTION_APPLY = true` as well**. While the periods are `null` nothing deletes by them, whatever the switch says. The periods are owner and legal decisions (`docs/PRIVACY-READINESS.md` section 6). A value other than a positive whole number is reported as an invalid period and counts and deletes nothing |
+| `$RETENTION_APPLY` (2026-10-19) | **Keep it `false`** (the template value), or leave it out: a missing key is `false`, and only the boolean `true` counts (`1`, `"true"` and `"yes"` do not). It is one of three gates on the retention executor. Turn it on only once the owner and an adviser have agreed the two periods (`docs/STATUS.md` section 5). The super admin's single-enquiry erase does not depend on it |
 
 The full key list is in section 5.7.
 
@@ -551,6 +613,33 @@ From the third journeys batch (2026-10-19), once its files and SQL 17 and 18 are
 - **The privacy export lists `client_visible` and `shared_at`** on each file once SQL 18 has
   run.
 
+From the fifth journeys batch (2026-10-19), once its files and SQL 19 are up:
+
+- **Every new enquiry and project gets a work reference**, `GK-E-YYYY-NNNN` or
+  `GK-P-YYYY-NNNN`, and SQL 19 numbers the existing ones. A visitor sees theirs on the contact
+  form's thank-you ("Your reference is GK-E-2026-0042. Mention it if you write to me about
+  this."). Staff see references in Enquiries (card and drawer), Projects (card and board
+  header), Proposals and Contracts lists ("Project GK-P-..."), the contract and invoice PDFs
+  and record search. A client sees their own project references on portal cards, the
+  accepted shared quote and invoice PDFs. Nothing signs in or looks a record up by reference,
+  and no acknowledgement email is sent (K-097).
+- **A super admin can erase one prospect's enquiry** from the Enquiries drawer ("Erase
+  enquiry"), after a preview of what stays and typing the enquiry's email address. It
+  hard-deletes the enquiry and its calls and scrubs the address from the audit log; it is
+  refused for anything linked to a client, a user or a contract signer. **This is the first
+  action in the CMS that deletes personal data for good.** Other roles never see the button.
+- **A client can "Ask to delete my data"** in My account. It opens one "Data deletion
+  request" ticket in Support and deletes nothing. It is not flagged urgent and nobody is
+  notified (K-095), so watch Support for it.
+- **`cron.php job=retention_apply`** exists on the command line and is a dry run unless
+  `--apply`, `$RETENTION_APPLY = true` and a period all agree. With the template settings it
+  deletes nothing.
+- **Business details** (Site content > Business details): the public email, phone, address,
+  opening note and social profiles. Nothing changes on the public site until the section is
+  published; then the footer, About and the legal pages show them, and the home page's
+  structured data lists the https profiles as `sameAs`. The Contact page keeps the enquiry
+  email.
+
 **What staff see in each gap**, if the merge goes first. The rule is `src/lib/notAvailable.ts`:
 a bare 404, the `app-shell.html` page with status 200, a 405, a 503, or the role gate's "Not
 allowed." from an older file all mean "not on the server yet", and the screen says so quietly
@@ -570,6 +659,10 @@ stubbed (`docs/STATUS.md` section 0.3); not seen on the live host.
 | The new `support.php` | No "Log time" section on a ticket |
 | `_templates.php` or the new `projects.php` | No "Start from template" in New project; a plain create works |
 | The new `files.php`, or SQL 18 | No "Client portal" column in Files and no "Shared files" card in the portal |
+| `_reference.php` or SQL 19 | No reference anywhere: the contact thank-you, cards, PDFs and the portal simply omit it |
+| `_erasure.php` or one of its includes, or the new `privacy.php` | "Erase enquiry" shows a quiet "not available yet" toast and closes |
+| The new `support.php` (deletion request) | My account says "Deletion requests open once GAkinz finishes a server update. Until then, email hello@gakinz.com." |
+| The new `site.php` | Saving Business details fails with "Business details need the updated site.php on the server."; the public site shows its built-in details |
 
 Uploading first and merging later is invisible to staff: the deployed client calls none of
 the new files.
@@ -674,7 +767,29 @@ the new files.
      public, max-age=86400`, and the images still load.
    - The client side (Shared files card, the "IT support" project in the portal) needs a
      client account. Check it only with a client the owner agrees to use.
-16. Do **not** test a real payment or a real send. Stripe behaviour is covered by
+16. After the fifth journeys batch (its PHP and SQL 19). Nothing here sends a message, but a
+   contact submission is a real enquiry, so make one only if it is genuine.
+   - `https://gakinz.com/_reference.php`, `/_erasure.php` and `/_uploads.php` return 403.
+   - SQL 19: both `SELECT COUNT(*) ... WHERE reference IS NULL` checks return 0, and
+     `reference_counters` holds the two anchor rows (`ref_year` 0).
+   - Contact: the next genuine enquiry's `contact.php` response (browser network panel)
+     carries `reference`, and the thank-you shows it. Do not submit a test enquiry.
+   - Files: a staff download of one existing file works, and on the public `/work` page a
+     Work image served through `files.php?token=` still loads. A failure on both means
+     `files.php` is up without `_uploads.php`.
+   - Erase (super admin): `GET privacy.php?action=erase_preview&id=<a real enquiry id>`
+     answers 200 with `other_enquiries` and `blocked`. It is read only. Do not erase a real
+     enquiry to test it.
+   - Retention: `php /home/<account>/public_html/cron.php job=retention_apply` prints "DRY
+     RUN" and deletes nothing. Do not pass `--apply`. Whether the cPanel cron PHP binary
+     reports `PHP_SAPI` as the command line and passes the arguments as `argv`, which this
+     job relies on, is NOT TESTED.
+   - Business details: Site content shows the Business details tab; save a draft only with the
+     real details, and publish only when they are final.
+   - The client side (references in the portal, "Ask to delete my data") needs a client
+     account. Check it only with a client the owner agrees to use, because a request opens a
+     real ticket.
+17. Do **not** test a real payment or a real send. Stripe behaviour is covered by
    `npm run test:server` against a fake provider; a live check needs Stripe test-mode keys on a
    non-production copy.
 
@@ -707,7 +822,8 @@ breaking the application.
 | `$GOOGLE_CLIENT_ID`, `$GOOGLE_CLIENT_SECRET`, `$GOOGLE_REDIRECT`, `$APP_URL` | Google SSO |
 | `$CRON_KEY`, `$REPORT_RECIPIENTS` | Scheduled jobs and the digest |
 | `$GITHUB_TOKEN`, `$FIGMA_TOKEN`, `$SLACK_WEBHOOK_URL`, `$CALENDLY_URL` | The four external connectors |
-| `$RETENTION_ENQUIRY_MONTHS`, `$RETENTION_CLIENT_MONTHS`, `$RETENTION_INVOICE_MONTHS`, `$RETENTION_AUDIT_MONTHS`, `$RETENTION_SUPPORT_MONTHS`, `$RETENTION_COMMS_MONTHS`, `$RETENTION_STAFF_MONTHS`, `$RETENTION_CERTIFICATE_MONTHS`, `$RETENTION_DELETED_FILE_DAYS` | What the read-only retention report counts. All `null` in the template; a missing key is the same as `null`. Nothing deletes by them (section 5.4) |
+| `$RETENTION_ENQUIRY_MONTHS`, `$RETENTION_CLIENT_MONTHS`, `$RETENTION_INVOICE_MONTHS`, `$RETENTION_AUDIT_MONTHS`, `$RETENTION_SUPPORT_MONTHS`, `$RETENTION_COMMS_MONTHS`, `$RETENTION_STAFF_MONTHS`, `$RETENTION_CERTIFICATE_MONTHS`, `$RETENTION_DELETED_FILE_DAYS` | What the read-only retention report counts. All `null` in the template; a missing key is the same as `null`. The enquiry and deleted-file periods are also what the gated executor deletes by, only with `$RETENTION_APPLY` and `--apply` too (section 5.4) |
+| `$RETENTION_APPLY` | The retention executor's switch. `false` in the template; keep it `false` (section 5.4) |
 
 **The tracked template carries placeholders, not values.** `DB_NAME`, `DB_USER`,
 `$SEED_ADMIN_EMAIL`, `$SMTP_HOST` and `$IMAP_HOST` are `REPLACE_` placeholders. The mail host

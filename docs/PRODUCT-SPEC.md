@@ -217,7 +217,7 @@ month, 40/30/30 terms) await the owner's confirmation and a stated VAT basis.
 
 | Information | Canonical home | Rule |
 |---|---|---|
-| Identity, contact, social links | `site.ts` today; a small public settings record later | Header, footer, About, legal pages and structured data read an allowlisted public projection; private configuration is never exposed |
+| Identity, contact, social links | `site.ts` defaults; since 2026-10-19 (not uploaded) the Site content `business` section holds the public email, phone, address, opening note and social profiles | Header, footer, About, legal pages and structured data read an allowlisted public projection; private configuration is never exposed |
 | Service and pricing copy | Site content (`site.php`, D-046), defaults in `site.ts` | Fixed sections edited as drafts and published in the CMS since 2026-10-14; still not a page builder |
 | Portfolio | Existing `work` records | Published and approved only; a private project produces a reviewed draft, never an automatic publication |
 | Blog | Existing posts | Published list, detail and sitemap; drafts stay private; Content Hub is not a second authority |
@@ -874,7 +874,7 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 | Client messages through support tickets | Two-way conversation without a new chat system | Built 2026-10-10 (K-039) | 2 | M | Client branch in `support.php` |
 | Request an update, request a call, supply assets | Fewer chasing emails | Built 2026-10-18 (`support.php`, `bookings.php`, `assets.php`); calls need SQL 9 and 10, assets need SQL 15. Supply is a note, not an upload (K-072) | 2 | M | Client messages |
 | Private delivery feedback, with separate permission to publish | Honest feedback and lawful testimonials | Built 2026-10-16 (`feedback.php`); needs SQL 11. The excerpt-approval request is not built | 2 | S | Client messages |
-| Project reference on documents; reference plus email link sign-in | Access without another password | Missing | After J03 | M | K-027 fixed and J03 passing |
+| Project reference on documents; reference plus email link sign-in | Access without another password | Reference on documents built 2026-10-19, not uploaded: `GK-E` and `GK-P` references on the contact thank-you, Enquiries, Projects, quotes, invoices, contracts, the portal and staff search; needs SQL 19 (D-049). Never used for lookup or access. Reference plus email link sign-in still Missing, gated by J03 and the owner's sign-in policy. No acknowledgement email (K-097) | After J03 | M | K-027 fixed and J03 passing |
 
 ### Quotes and money
 
@@ -913,7 +913,7 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 | Publish and unpublish that really removes content | Fallback no longer resurrects posts | Fixed 2026-10-10 (K-036) | 4 | S | None |
 | Route-specific metadata and a sitemap from published records | Search and share previews | Static (K-018, K-019) | 4 | M | Rendering choice |
 | Replace "to supply" gaps and engineering counts with real content | A professional public site | Engineering counts removed 2026-10-10; "to supply" gaps remain (K-038) | 4 | M | Owner content |
-| Business and social links held in one settings record | Header, footer and structured data stay consistent | Hard-coded in `site.ts` | 4 | S | Profiles created |
+| Business and social links held in one settings record | Header, footer and structured data stay consistent | Built 2026-10-19, not uploaded: Site content > Business details (`site.php` section `business`), read by the footer, About, the legal pages and the Person JSON-LD `sameAs` (https profiles only, escaped). Nothing shows until published; the profiles themselves are an owner input | 4 | S | Profiles created |
 | "Already working with us?" link in header and footer | Client access without competing with the enquiry | Built 2026-10-18 in the header, drawer and footer, to `/login`; not deployed | 4 | S | Portal |
 
 ### Monetisation and social

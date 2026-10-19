@@ -175,6 +175,20 @@ Measured on branch `feat/redesign-2026` at `d314833` (stacked on `feat/plan-2026
   merged, uploaded or deployed. **Upload `site.php` before merging (no SQL), then save Site
   content > Services once.** IT coverage, area and prices are owner inputs (K-090). Browser
   check on mocked API only. Open items K-090 to K-093.
+  **Fifth batch, 2026-10-19** (`3636373..b0bbf8b`, same branch, pushed): work references
+  `GK-E`/`GK-P` per kind and year (`_reference.php`, SQL 19), shown but never used for lookup
+  or sign-in (D-049); a client's deletion request ticket; a super admin's typed-confirmation
+  erase of one prospect's enquiry (`_erasure.php`); a retention executor
+  (`cron.php job=retention_apply`) that deletes only with `--apply`, `$RETENTION_APPLY = true`
+  and a period (the first code that deletes personal data, **though nothing deletes as
+  shipped**); and
+  Site content > Business details with escaped JSON-LD `sameAs`. Measured on the Mac at
+  `b0bbf8b`: `npm test` 450, `npm run test:server` 455 (ports 5411 and 5412), lint ratchet 33
+  and 0, 32 pages prerendered, `php -l` over 62 files, `tsc -b` and docs check PASS. Not
+  merged, uploaded or deployed. **Follow the ordered upload list in `docs/DEPLOYMENT.md`
+  section 5.1 step 13: `_uploads.php` before `files.php` (or every Files route, public Work
+  images included, fails), `site.php` before the merge, SQL 19 after the PHP; keep
+  `$RETENTION_APPLY = false`.** Browser check on mocked API only. Open items K-094 to K-099.
 - A live super-admin credential was published in an earlier revision of this file and is in
   git history. The owner reports it rotated on 2026-10-12; session revocation is unconfirmed.
   See `docs/KNOWN-ISSUES.md` K-001.

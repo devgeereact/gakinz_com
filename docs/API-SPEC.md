@@ -112,7 +112,7 @@ Treat these as the internet-facing attack surface.
 
 | Endpoint | Method | Purpose |
 |---|---|---|
-| `contact.php` | POST | Public enquiry form. Validates name, email and a message of at least 10 characters, then inserts into `enquiries` with the caller IP. Throttled per IP from `audit_log`, modelled on the login throttle; over the limit it returns 429 |
+| `contact.php` | POST | Public enquiry form. Validates name, email and a message of at least 10 characters, then inserts into `enquiries` with the caller IP. Throttled per IP from `audit_log`, modelled on the login throttle; over the limit it returns 429. Answers `{ id, reference }` with 201; `reference` is the enquiry's `GK-E-YYYY-NNNN` once SQL 19 has run and `_reference.php` is up, else `null` (2026-10-19, see Work references in section 5) |
 | `verify.php` | GET `?id=` | Certificate lookup by `public_id`, excluding revoked ones |
 | `book.php` | GET | Returns the configured Calendly URL, or an empty string |
 | `blog.php` | GET, and GET `?slug=` | Published posts without their body, and one published post with its body |
@@ -126,7 +126,7 @@ Treat these as the internet-facing attack surface.
 | `payments.php` | POST `?action=webhook` | Stripe webhook. HMAC verified, 5 minute replay window. Marks an invoice paid only when the amount and currency Stripe took match the VAT-inclusive payable total. See section 5, Money |
 | `payments.php` | GET `?action=paypal_return` | PayPal capture on return. Marks the invoice paid only on a completed capture whose `custom_id`, amount and currency match. Not gated by `$PAYPAL_ENABLED`, but with checkout switched off no new order is created |
 | `oauth.php` | GET `?action=status`, `start`, `callback` | Google SSO. Matches an existing active user only, never provisions. Refuses an account with two-factor on, redirecting with `#sso_error=two_factor`, so Google never stands in for the second factor. Carries a CSRF `state` parameter in a short-lived HttpOnly cookie, and validates the id_token's `aud` and `iss` |
-| `cron.php` | GET `?key=&job=` | Scheduled jobs. Gated by a shared secret with `hash_equals`, not by a user session |
+| `cron.php` | GET `?key=&job=` | Scheduled jobs. Gated by a shared secret with `hash_equals`, not by a user session. `retention_report` and `retention_apply` (2026-10-19) answer 400 over the web even with the key; they run from the command line only (`docs/OPERATIONS.md` section 2) |
 | `api.php` | GET | Read-only health check. Returns `{ ok, php, db }`, touches no application table and mutates nothing. Any other method is 405 |
 
 `api.php` used to list and INSERT rows in `items` with no authentication. Both branches were
@@ -276,6 +276,31 @@ security-critical, `docs/SECURITY.md` section 3):
   and `accepted_terms_sha256` (nulls before SQL 14). The public `?token=` view adds only
   `accepted_on`, the date, for an accepted quote.
 - Covered by `tests/server/acceptance-evidence.test.ts`.
+
+Work references (2026-10-19, SQL 19, `docs/PRODUCT-SPEC.md` section 6.1, D-049):
+
+- Every new enquiry gets `GK-E-YYYY-NNNN` and every new project `GK-P-YYYY-NNNN`, numbered from
+  0001 per kind and per year of creation (database clock), growing to five digits past 9999.
+  `_reference.php` assigns it at creation; it is never changed and never reused, even after
+  the record is deleted. Quotes, invoices and contracts have no reference of their own: they
+  show their project's, as `project_reference`.
+- Where it appears: `contact.php` answers `{ id, reference }`; `leads.php` GET list and
+  `projects.php` GET list carry `reference`; `projects.php` `create` (plain and from a
+  template) answers `reference`; `proposals.php` GET list, GET `?id=` and the `accept` reply
+  (first, repeated and concurrent) carry `project_reference`, and the public `?token=` view
+  carries it only once the quote is accepted; `contracts.php` GET list and GET `?id=` and
+  `invoices.php` GET `?id=` carry `project_reference`; `portal.php` gives each of the client's
+  projects `reference` and each invoice `project_reference`; `search.php` matches
+  `reference` for projects and enquiries. The staff invoice list is unchanged.
+- `project_reference` is `null` unless the linked project is live (not soft-deleted) and
+  belongs to the same client as the quote, invoice or contract, so a record linked to another
+  client's project shows nothing. Every field is `null` before SQL 19, between its two steps,
+  or while `_reference.php` is missing, and creation works the same.
+- **A reference is never an input.** No endpoint reads `reference`, `ref` or
+  `project_reference` from a request, nothing looks a record up by it without staff sign-in,
+  and nothing signs anyone in with it. A static test enforces this, and probes with a
+  reference in 13 URL shapes, signed out and as a client, leak nothing. Covered by
+  `tests/server/references.test.ts`.
 
 ### Delivery
 
@@ -564,6 +589,10 @@ id, title, secondary, route }` and never carries a note, message, budget or amou
 | `invoice` | number | `/app/invoicing?invoice=<id>` |
 | `quote` | title (proposals have no number) | `/app/proposals` (no detail view, K-077) |
 
+Since 2026-10-19, once SQL 19 has run, `project` and `enquiry` also match `reference`, which
+then leads their `secondary` line. Before SQL 19 the older query runs, so neither type turns
+`unavailable`. The role mapping is unchanged.
+
 405 for anything but GET. Covered by `tests/server/search.test.ts`.
 
 `privacy.php` (`docs/PRIVACY-READINESS.md` sections 6 and 7):
@@ -734,6 +763,7 @@ Lists hold 1 to 12 rows. Unknown sections and unknown keys are refused.
 | `terms` | `[{ stage, share }]` |
 | `faqs` | `[{ q, a }]` |
 | `contact` | `{ email, reply, footer }`, `email` a valid address |
+| `business` | `{ email?, phone?, address?, hours?, social? }`, every field optional (2026-10-19). See below |
 
 Service page fields (2026-10-19). `slug` is lower-case words joined by single hyphens, at most
 80 characters, unique within the list; `group` is `websites` or `it`; `hook` and `price_basis`
@@ -744,6 +774,22 @@ some but not all of them is refused with a message naming the row. `detail` is o
 with only `title` and `summary` is still accepted (the older shape). Unknown keys are refused as
 before. The public site shows a custom row only when it has every one of those fields
 (`docs/KNOWN-ISSUES.md` K-093).
+
+Business details (2026-10-19, `docs/PRODUCT-SPEC.md` section 4.4). `email` is a valid
+address; `phone` is up to 30 characters of digits, spaces, brackets and hyphens with an
+optional leading `+` and at least 7 digits; `address` is 1 to 4 lines of up to 300 characters;
+`hours` is an opening note of up to 300 characters; `social` is 1 to 10 profiles of `{
+platform, url, label? }`, where `platform` is `linkedin`, `instagram`, `facebook`, `x`,
+`youtube`, `tiktok` or `github`, `url` is a full `https://` address with a host containing a
+dot, no sign-in details, no whitespace or control characters and none of `<`, `>`, `"`,
+backslash or backtick, unique within the list (case ignored), and `label` is up to 60
+characters. A field left out falls back to the site's built-in value; the built-in phone,
+address and profiles are empty, so nothing shows until published. The public site reads the
+published section in the footer, About, the legal pages and the Person JSON-LD `sameAs`, which
+lists only https profiles and is serialised with `<`, `>`, `&`, U+2028 and U+2029 escaped. No
+schema change and no new audit action (`site_save`, `site_publish`). An older `site.php`
+refuses the section as unknown, and the CMS then says "Business details need the updated
+site.php on the server."
 
 Before the table exists, `get` answers `{}` and the staff actions answer 503 with a message
 naming the schema step.

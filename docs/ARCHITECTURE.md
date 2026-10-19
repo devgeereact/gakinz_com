@@ -152,11 +152,12 @@ sections 10 and 11.
 
 ## 3. Server
 
-PHP files in `server/`, one per resource. Eleven are shared includes with no route of their own,
+PHP files in `server/`, one per resource. Fourteen are shared includes with no route of their own,
 all denied to direct requests by `.htaccess` (K-013). `work.php` was added on 2026-09-22,
 `_money.php` on 2026-10-10, `site.php` on 2026-10-14, `assets.php` and `_ics.php` on
 2026-10-18, and `today.php`, `search.php`, `briefs.php`, `privacy.php`, `_like.php`,
-`_retention.php`, `_time.php` and `_templates.php` on 2026-10-19.
+`_retention.php`, `_time.php`, `_templates.php`, `_reference.php`, `_erasure.php` and
+`_uploads.php` on 2026-10-19.
 
 | Include | Role |
 |---|---|
@@ -170,6 +171,7 @@ all denied to direct requests by `.htaccess` (K-013). `work.php` was added on 20
 | `_like.php` | Literal substring matching for `LIKE` with `!` as the escape, used by `search.php` |
 | `_retention.php` | The read-only retention dry run, used by `privacy.php` and `cron.php job=retention_report` |
 | `_erasure.php` | Erasing one prospect's enquiry (`privacy.php?action=erase_enquiry`) and the gated retention executor (`cron.php job=retention_apply`). The only code that hard-deletes personal data |
+| `_reference.php` | Work references (`GK-E-YYYY-NNNN`, `GK-P-YYYY-NNNN`) from `reference_counters`, SQL 19: one atomic counter raise behind a locked anchor row per kind, loaded only if present by the endpoints that create or show a reference (D-049) |
 | `_uploads.php` | `UPLOAD_DIR` and `stored_path()`, the one rule from a stored file name to a path on disk, used by `files.php` and `_erasure.php` |
 | `_time.php` | The time entry rules (minutes, description, billable, date) and the SQL 17 probe, loaded on first use by `time.php` and `support.php` |
 | `_templates.php` | The five project templates as pure data, loaded on first use by the two template routes of `projects.php` |
@@ -284,6 +286,17 @@ need SQL 7 and 8 and the upload in `docs/DEPLOYMENT.md` section 5.
 | Site content | One `site_content` row per section with a draft and a published copy; the public read returns published copy only. A `services` row may be a whole service page (slug, group, hook, needs, deliverables, exclusions, price basis), all together or none, and the public site falls back to its built-in six services (`content.ts`) | `server/site.php`, `src/app/modules/Site.tsx`, `siteContentModel.ts`, `siteContent` in `api.ts` |
 | CMS shell and screens | Graphite sidebar in both themes, new header, `AuthFrame` sign-in pages, a page kit shared by every screen | `src/layouts/AppLayout.tsx`, `src/components/app-sidebar.tsx`, `src/app/components/AuthFrame.tsx`, `src/app/components/page-kit.tsx` |
 | Enquiries | Drag and drop between stages, through the existing `move()` | `src/app/modules/Leads.tsx` |
+
+### Client journeys, fifth batch, 2026-10-19
+
+On the same branch (`3636373..b0bbf8b`); not merged, deployed or uploaded. The server files
+need SQL 19 and the upload order in `docs/DEPLOYMENT.md` section 5.1.
+
+| Area | Shape | Where |
+|---|---|---|
+| Work references | A counters table and one include; each endpoint loads it only if present, so every reference degrades to `null`. Quotes, invoices and contracts show the project's reference through a join, never a stored copy. No route takes a reference as input (D-049) | `server/_reference.php`, `server/schema.sql` SQL 19, `contact.php`, `leads.php`, `projects.php`, `proposals.php`, `invoices.php`, `contracts.php`, `portal.php`, `search.php`, `support.php`; `Contact.tsx`, `Leads.tsx`, `Projects.tsx`, `Proposals.tsx`, `Contracts.tsx`, `Portal.tsx`, `ProposalView.tsx`, `invoicePdf.ts` |
+| Deletion tooling | One erasure library behind two entry points: the super admin's typed-confirmation erase with a read-only preview, and a command-line executor that is a dry run unless three gates agree. A client's request is only a support ticket (D-049) | `server/_erasure.php`, `server/_uploads.php`, `privacy.php`, `cron.php`, `support.php`; `EraseEnquiryDialog.tsx`, `DeletionRequest.tsx`, `erasureModel.ts`, `Leads.tsx`, `Account.tsx` |
+| Business details | A `business` section in Site content, read by the footer, About, the legal pages and the Person JSON-LD `sameAs`; no schema change | `server/site.php`, `Site.tsx`, `siteContentModel.ts`, `content.ts`, `seo-schema.ts`, `site-ui.tsx`, `Seo.tsx` |
 
 ### Client journeys, third batch, 2026-10-19
 

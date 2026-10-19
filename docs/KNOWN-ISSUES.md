@@ -72,7 +72,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-059 | Session, reset, magic-link and share tokens are stored in plain text | Medium | **Fixed 2026-10-17** for sessions, reset and magic links, no schema change, not uploaded. Share tokens open by design |
 | K-060 | Proposal share links never expire and cannot be revoked | Low | **Fixed 2026-10-17**, not uploaded |
 | K-061 | Smaller server findings from the 2026-10-17 audit | Low | Four fixed (PHP version, non-image Work files, cron key, PayPal return), not uploaded. Certificate IDs and the seed-password log open |
-| K-062 | No retention, deletion or export: personal data is kept indefinitely | High | **Partly addressed 2026-10-19:** subject access export and a read-only retention dry run built, not uploaded. No deletion; periods and erasure are owner and legal decisions (`docs/PRIVACY-READINESS.md`) |
+| K-062 | No retention, deletion or export: personal data is kept indefinitely | High | **Partly addressed 2026-10-19:** subject access export, a read-only retention dry run, a super admin's erase of one prospect's enquiry, a client's deletion request ticket and a retention executor gated off by `$RETENTION_APPLY = false`, all built, not uploaded. Periods and client erasure are owner and legal decisions (`docs/PRIVACY-READINESS.md`) |
 | K-063 | The privacy and cookie pages did not match what the site does | High | **Partly fixed 2026-10-17:** facts corrected and the full structure in place with labelled placeholders for owner facts, not deployed. Placeholders and adviser review outstanding (K-021) |
 | K-064 | Enquiry and client text can reach an AI provider, undisclosed | Medium | Open. Owner and legal decision |
 | K-065 | Testimonials default to five stars and carry no source or consent record | Medium | Open. Owner decision |
@@ -104,6 +104,12 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-091 | Enquiry budget bands are unchanged, so the lowest is still "Under £1,500" | Low | Open by owner decision 2026-10-19; not deployed |
 | K-092 | Three exclusions on the website service pages are inferred from `site.ts`, not stated in spec 4.3 | Low | Open, waiting on the owner. Built 2026-10-19, not deployed |
 | K-093 | An older services list shows the built-in six until the owner saves once, and a custom row without every page field is no longer published | Medium | Open by design (D-048). Built 2026-10-19, not uploaded or deployed |
+| K-094 | Sequential work references reveal roughly how many enquiries and projects there were that year | Low | Open, owner decision (random yearly offset is the option). Built 2026-10-19, not uploaded |
+| K-095 | A client's deletion request has no priority, due date or notification | Medium | Open, owner decision. Built 2026-10-19, not uploaded |
+| K-096 | Erasing an enquiry scans and briefly locks `audit_log` rows | Low | Accepted 2026-10-19 at the current size. Not uploaded |
+| K-097 | No acknowledgement email carries the enquiry reference | Low | Open by ruling 2026-10-19 (spam relay risk); the thank-you shows it |
+| K-098 | A retention dry run writes no audit row | Low | Accepted 2026-10-19: a dry run changes nothing |
+| K-099 | SQL 19 step 2 is tested on MariaDB only, not MySQL 5.7 or 8 | Low | Open. Live database engine and version UNVERIFIED |
 
 
 ---
@@ -1336,7 +1342,26 @@ Share issues a different link, and Proposals has a Revoke button. Six tests in
 **Severity:** high · **Status:** open, **partly addressed 2026-10-19** on
 `feat/journeys-2026-10-18` (PR #21), not uploaded. Owner and legal decisions.
 
-**2026-10-19.** Two parts with no business judgement are now built, neither uploaded:
+**Later on 2026-10-19 (journeys batch 5, `docs/STATUS.md` section 0.6), not uploaded.** The
+first code that deletes personal data for good, all in `server/_erasure.php`:
+1. **Erase one prospect's enquiry.** A super admin types the enquiry's email address in the
+   Enquiries drawer (`privacy.php?action=erase_enquiry`, with a read-only `erase_preview`).
+   It deletes the enquiry, its calls and their history, and replaces the address and name
+   with `[erased]` in the audit rows that name the address. It refuses a won enquiry and
+   anything linked to a client, a user or a contract signer.
+2. **A client's deletion request.** "Ask to delete my data" in My account opens one "Data
+   deletion request" ticket and deletes nothing (K-095).
+3. **The retention executor.** `cron.php job=retention_apply`, command line only, covers two
+   rules (old prospect enquiries and soft-deleted files). It is a dry run unless `--apply`,
+   `$RETENTION_APPLY = true` and the rule's period all agree. The template keeps the switch
+   `false` and every period `null`, so it deletes nothing as shipped.
+Clients, users, projects, invoices, contracts, tickets and messages still have no delete, by
+design, until the periods and the procedure are agreed. Tested in
+`tests/server/erase-enquiry.test.ts`, `retention-apply.test.ts` and
+`deletion-request.test.ts` and in a mocked-API browser check; the live host is NOT TESTED.
+What stays open here: the periods, the erasure procedure for clients, and the live upload.
+
+**Earlier on 2026-10-19.** Two parts with no business judgement were built, neither uploaded:
 `server/privacy.php?action=export` gives a super admin or admin a JSON file of every row held
 about one client or one enquirer email (soft-deleted rows included, secrets and token values
 left out), and `?action=retention_report` (super admin) with `cron.php job=retention_report`
@@ -1847,3 +1872,68 @@ Two behaviour changes follow from making a service a whole page.
    completes it or removes it.
 Neither is tested against the live server or real published rows (UNVERIFIED). The server
 refuses a half page on save, so no new incomplete row can reach the public site.
+
+## K-094 · Sequential work references reveal roughly how many enquiries and projects there were that year
+**Severity:** low · **Status:** open, owner decision. Built 2026-10-19, not uploaded.
+
+Work references count from 0001 per kind and per year (`GK-E-2026-0042`, D-049). A visitor
+who sees their enquiry reference on the contact thank-you, or a client who sees a project
+reference in the portal, can infer roughly how many enquiries or projects came before theirs
+that year. It reveals volume only, never another record, because no endpoint looks anything
+up by reference. The option, if the owner minds: start each year at a random offset rather
+than 0001 (a seed in `reference_counters`). Raised in the Task 21 review; recorded for the
+owner in `docs/STATUS.md` section 5.
+
+## K-095 · A client's deletion request has no priority, due date or notification
+**Severity:** medium · **Status:** open, owner decision. Built 2026-10-19, not uploaded.
+
+"Ask to delete my data" (`support.php?action=deletion_request`) opens a ticket with priority
+`normal`, like any other, and nobody is told: there is no email, flag, due date or Today item.
+A request under UK GDPR has a response deadline, generally one month, and the exact deadline
+and procedure need legal review (`docs/PRIVACY-READINESS.md` section 7). Until the owner
+decides, someone must watch Support for tickets titled "Data deletion request". Options:
+create it at high priority, show it in Today with its age, or email the owner. Same family as
+K-071.
+
+## K-096 · Erasing an enquiry scans and briefly locks `audit_log` rows
+**Severity:** low · **Status:** accepted 2026-10-19 at the current size. Not uploaded.
+
+The audit scrub in `er_erase_enquiry()` finds rows whose `detail` contains the address with a
+`LIKE '%...%'` prefilter (`_like.php`) in a `SELECT ... FOR UPDATE`. The prefilter cannot use
+an index, so the locking read scans the whole `audit_log` table inside the erase transaction,
+and InnoDB can hold locks on the rows it scans until the commit, briefly holding up other
+audit writes. At today's size (a small studio's log) this takes moments, and an erase is a rare
+super admin action. The executor runs the same scrub per enquiry. If the log grows large,
+batch the scrub or add a pruning rule for the audit log (`docs/PRIVACY-READINESS.md` section
+6). Raised as minor 3 in the batch 5 final review. NOT TESTED on the live database.
+
+## K-097 · No acknowledgement email carries the enquiry reference
+**Severity:** low · **Status:** open by ruling, 2026-10-19.
+
+`docs/PRODUCT-SPEC.md` section 6.1 says the enquiry reference is shown in the
+acknowledgement. `contact.php` sends no email to the visitor, and Task 21 did not add one: a
+public form that mails any address typed into it can be used to send mail to strangers, and
+it is new behaviour with deliverability risk. The reference is shown on the thank-you message
+only ("Your reference is GK-E-... Mention it if you write to me about this."). If the owner
+wants an acknowledgement email, it is a separate task with its own throttle, and it should
+carry the reference.
+
+## K-098 · A retention dry run writes no audit row
+**Severity:** low · **Status:** accepted 2026-10-19.
+
+`cron.php job=retention_apply` writes one `retention_apply` audit row per applying run, with
+counts only, and none for a dry run, because a dry run changes nothing. So the application
+keeps no record of who ran a dry run or when; the only trace is the host's own shell or cron
+log. Accepted in the Task 22 review as a deviation. Revisit if the owner wants every run
+recorded.
+
+## K-099 · SQL 19 step 2 is tested on MariaDB only, not MySQL 5.7 or 8
+**Severity:** low · **Status:** open. Live database engine and version UNVERIFIED.
+
+The SQL 19 backfill, counter seed and anchors ran in `tests/server/references.test.ts` on
+the local MariaDB only. They avoid window functions so that MySQL 5.7 should accept them,
+and the seed's `INSERT ... ON DUPLICATE KEY UPDATE ... VALUES()` is deprecated on MySQL
+8.0.20 and later, which prints a warning but still runs. Neither engine was tested. Before
+running step 2 on the host, read its engine and version in cPanel (phpMyAdmin shows it) and
+record it in `docs/STATUS.md` section 3. If step 2 fails part way, it is safe to repeat
+(`docs/DEPLOYMENT.md` section 5.2).

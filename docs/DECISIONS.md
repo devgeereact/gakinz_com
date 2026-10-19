@@ -854,3 +854,42 @@ and an all-or-none page avoids a published service that looks unfinished. **Evid
 `src/marketing/data/content.test.ts`, `src/app/modules/siteContentModel.test.ts`,
 `tests/server/site.test.ts`, and a mocked-API browser check recorded in `docs/STATUS.md`
 section 0.5. Live behaviour is NOT TESTED.
+
+---
+
+## D-049 · Work references are shown but never used for access; code deletes only a prospect's data, and only behind explicit gates
+**Numbering:** D-047 is reserved by the open pull request #19, so the next free number after
+D-048 is D-049.
+**Date:** 2026-10-19 · **Status:** active. Narrows `docs/PRODUCT-SPEC.md` section 6.1 for now;
+builds on the retention proposals in `docs/PRIVACY-READINESS.md` section 6.
+
+Two rules from journeys batch 5.
+1. **A work reference identifies work and is never a key.** Every new enquiry gets
+   `GK-E-YYYY-NNNN` and every new project `GK-P-YYYY-NNNN`, numbered per kind and per year from
+   `reference_counters` and never reused (SQL 19). Quotes, invoices and contracts show their
+   project's reference only while that project is live and belongs to the same client. The
+   reference is shown to the visitor on the contact thank-you, to staff on their screens and
+   in search, and to a client on their own portal cards and documents. **No endpoint reads a
+   reference from a request**: nothing is looked up by it without staff sign-in, and nobody
+   signs in with it. Spec 6.1 phase 2 (reference plus an email link) stays unbuilt until
+   journey J03 passes and the owner sets the policy. No acknowledgement email is sent (K-097).
+2. **Code deletes personal data only for prospects, and only behind explicit gates.** A super
+   admin may erase one enquiry that never became a client, after a preview and typing its
+   email address; a won enquiry, or one linked to a client, a user or a contract signer, is
+   refused and nothing changes. The retention executor (`cron.php job=retention_apply`) acts
+   on old prospect enquiries and soft-deleted files only, from the command line only, and
+   deletes only when `--apply`, `$RETENTION_APPLY = true` and that rule's period all agree;
+   the template ships `false` and `null`. A client's request opens a ticket and deletes
+   nothing. Clients, users, projects, invoices, contracts, tickets and messages have no
+   delete until the owner and an adviser agree the periods and procedure (K-062).
+
+**Why:** a reference that unlocks anything would be a guessable password, so it is kept as a
+label until a proper verified sign-in exists; per-year sequences are short to read out on the
+phone, at the cost of revealing yearly volume (K-094). Deleting a prospect who never became a
+client touches no record the business must keep, so it can be built now; anything else
+needs periods that are legal decisions, and an accidental run must not be able to delete.
+**Evidence:** `tests/server/references.test.ts` (sequence, concurrency, backfill, no lookup
+by reference, a static check on request reads), `tests/server/erase-enquiry.test.ts`,
+`tests/server/retention-apply.test.ts`, `tests/server/deletion-request.test.ts`, and a
+mocked-API browser check recorded in `docs/STATUS.md` section 0.6. Live behaviour is NOT
+TESTED.

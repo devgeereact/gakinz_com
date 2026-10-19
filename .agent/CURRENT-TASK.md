@@ -6,9 +6,10 @@ The client journeys work of 2026-10-18 to 2026-10-19 is built, tested locally an
 on `feat/journeys-2026-10-18`, in two batches: 43 commits on `audit/readiness-2026-10-17` at
 `8499761` (PR #20), then a second batch of 53 commits from `6789b47` to `def1909` (PR #21),
 then a third batch of 39 commits from `029f867` to `bdca4aa` on the same branch, then a fourth
-batch of nine commits from `8193555` to `ebcb002` (the six service pages), each with its
-documentation commits. **Not merged, deployed or uploaded.** SQL 13 to 18 have run only on the
-throwaway test database.
+batch of nine commits from `8193555` to `ebcb002` (the six service pages), then a fifth batch
+of 31 commits from `3636373` to `b0bbf8b` (work references, deletion tooling, business
+details and a final fix wave), each with its documentation commits. **Not merged, deployed or
+uploaded.** SQL 13 to 19 have run only on the throwaway test database.
 
 The branch stack is now: `main` <- `feat/plan-2026-batch-1` (PR #8) <- `feat/redesign-2026` <-
 `audit/readiness-2026-10-17` (PR #20) <- `feat/journeys-2026-10-18`. Merge in that order, and
@@ -125,6 +126,58 @@ Owner inputs this batch leaves open (`docs/STATUS.md` section 5): IT coverage, a
 response time (K-090); IT prices; confirmation of the package prices with a VAT basis; the three
 inferred website exclusions (K-092); whether the budget bands should add a smaller band (K-091).
 
+### Done in the fifth batch (2026-10-19, `3636373..b0bbf8b`)
+
+Server (upload by hand in the order of `docs/DEPLOYMENT.md` section 5.1 step 13):
+
+- `_reference.php` (new) and SQL 19: `GK-E-YYYY-NNNN` and `GK-P-YYYY-NNNN` on every new
+  enquiry and project, per kind and year, never reused; carried by `contact.php`,
+  `leads.php`, `projects.php`, `proposals.php`, `invoices.php`, `contracts.php`, `portal.php`,
+  `search.php` and `support.php`. Never read from a request (D-049). SQL 19 is two steps;
+  step 2 is one paste in one SQL tab, safe to repeat, and changes existing rows.
+- `_erasure.php` (new), `privacy.php` (`erase_preview`, `erase_enquiry`, super admin),
+  `cron.php` (`job=retention_apply`, gated by `--apply`, `$RETENTION_APPLY` and the period),
+  `support.php` (client `deletion_request`), `config.php.example` (`$RETENTION_APPLY =
+  false`).
+- `_uploads.php` (new): `files.php` now requires it on every route, the public Work image
+  links included, so **upload `_uploads.php` before `files.php`**.
+- `site.php`: the `business` section. **Upload before merging.**
+
+Client: references on the contact thank-you, Enquiries, Projects, Proposals, Contracts, the
+PDFs and the portal; "Erase enquiry" in the Enquiries drawer for a super admin; "Ask to delete
+my data" in My account for a client; Site content > Business details, read by the footer,
+About, the legal pages and the JSON-LD `sameAs`.
+
+Documents: `docs/STATUS.md` (sections 0, 0.6, 2, 3, 4, 5), `docs/KNOWN-ISSUES.md` (K-062, new
+K-094 to K-099), `docs/DEPLOYMENT.md` section 5, `docs/DECISIONS.md` D-049,
+`docs/DATA-MODEL.md`, `docs/API-SPEC.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY.md`,
+`docs/OPERATIONS.md`, `docs/PRIVACY-READINESS.md`, `docs/PRODUCT-SPEC.md` sections 4.4 and 7,
+`server/README.md`, `CLAUDE.md`.
+
+Ruled out of this batch: sign-in by reference (needs J03 and the owner's policy), an
+acknowledgement email (K-097), a consent banner (no analytics or ads planned yet) and AdSense
+(needs an account and a consent platform).
+
+Owner inputs this batch leaves open (`docs/STATUS.md` section 5): a random yearly offset for
+references (K-094); priority, due date or notification for deletion requests (K-095); the
+retention periods, with `$RETENTION_APPLY` kept `false` until then (K-062).
+
+### Verification status, fifth batch, 2026-10-19 (Mac, `b0bbf8b`)
+
+- `npx tsc -b`, `npm run build` (32 public pages and `app-shell.html`, 32 sitemap URLs): PASS.
+- `npm test`: PASS, 450 tests in 36 files.
+- `GK_TEST_DB=gakinz_docs5_test GK_TEST_PHP_PORT=5411 GK_TEST_PROVIDER_PORT=5412 npm run test:server`:
+  PASS, 455 tests in 34 files (394 s).
+- `npm run lint:ratchet`: PASS at 33 errors, 0 warnings. `npm run lint`: FAIL (K-002).
+- `php -l` over 62 server files: PASS. `npm run docs:check -- --base audit/readiness-2026-10-17`:
+  PASS.
+- Production build in a browser with the API stubbed, at `486d77c` (before the fix wave):
+  references, prospect erase, the client deletion request and Business details with hostile
+  values, at 390 and 1440px, light and dark: PASS, axe 0 violations.
+- NOT TESTED: the fix wave's two CMS changes in a browser, the contract and invoice PDFs,
+  SQL 19 on MySQL (K-099), `cron.php` under the cPanel cron binary, the live server
+  (UNVERIFIED), real data, a real sign-in, real assistive technology.
+
 ### Verification status, fourth batch, 2026-10-19 (Mac, `ebcb002`)
 
 - `npx tsc -b`, `npm run build` (32 public pages and `app-shell.html`, 32 sitemap URLs): PASS.
@@ -201,8 +254,14 @@ inferred website exclusions (K-092); whether the budget bands should add a small
 
 ## Next actions, in order
 
-1. **Owner review of PR #21** (the second, third and fourth batches on `feat/journeys-2026-10-18`).
-   An agent does not merge.
+1. **Owner review of PR #21** (the second to fifth batches on `feat/journeys-2026-10-18`).
+   An agent does not merge. **For the upload, use the one ordered list in
+   `docs/DEPLOYMENT.md` section 5.1 step 13**, which supersedes the per-batch orders below:
+   `.htaccess`; includes before the files that load them (`_uploads.php` before `files.php`,
+   `_erasure.php` after `_retention.php`, `_uploads.php` and `_like.php`); `site.php` before
+   the merge; the readiness set together; SQL 13 to 18, then SQL 19 step 1 and step 2 (one
+   paste, one SQL tab) with the `reference IS NULL` check; then merge. Keep
+   `$RETENTION_APPLY = false` and never pass `--apply`. Walk section 5.6 check 16.
 2. **Operator order for the second batch** (`docs/DEPLOYMENT.md` section 5.1 step 10): read and
    record the live PHP version (8.1 or later expected; K-082, K-068), upload `today.php`,
    `search.php` with `_like.php`, `briefs.php`, `privacy.php` with `_retention.php` and
@@ -223,7 +282,9 @@ inferred website exclusions (K-092); whether the budget bands should add a small
    5.1 step 12): upload `site.php` before the merge, then save Site content > Services once;
    the six service pages are built, and IT coverage, area, IT prices, the package price
    confirmation and VAT basis, and the inferred exclusions wait on the owner (K-038, K-090 to
-   K-092).
+   K-092). **The fifth batch** (section 5): a random yearly offset for references (K-094),
+   how deletion requests are prioritised or notified (K-095), and the retention periods
+   before `$RETENTION_APPLY` is ever switched on (K-062).
 4. **Housekeeping for the owner**: the stash `int-wave-lintcheck-x1` (made by an agent for a
    lint comparison and already applied back; a hook blocked dropping it) and four agent
    worktrees under `.claude/worktrees/` can be removed. The git-ignored `.playwright-mcp`
@@ -240,7 +301,7 @@ inferred website exclusions (K-092); whether the budget bands should add a small
 7. **Operator, P0** (`docs/STATUS.md` section 3): confirm sessions revoked after the K-001
    rotation, delete the seed-password file and check the PHP error log (K-015, K-061), record
    what is live on the server (K-006), restore a backup (K-010).
-8. **Operator, upload** (`docs/DEPLOYMENT.md` section 5): SQL 1 to 18 as needed, then the PHP
+8. **Operator, upload** (`docs/DEPLOYMENT.md` section 5, step 13 order): SQL 1 to 19 as needed, then the PHP
    set with `.htaccess`, keeping `_bootstrap.php`, `auth.php`, `oauth.php` and `users.php`
    together and `bookings.php` with `_ics.php`, `_money.php` present for `invoices.php`,
    `_time.php` with `support.php` and `time.php`, and `_templates.php` with `projects.php`;
@@ -252,7 +313,7 @@ inferred website exclusions (K-092); whether the budget bands should add a small
    one below first). An agent does not merge.
 12. Afterwards: the server time zone (K-067, K-075), header link contrast over the hero (K-069), a
    client upload path for assets (K-072), `requested_at` for asset waits (K-074), a quote
-   detail view (K-077), deep-link misses (K-078), the retention job (K-062), certificate ID length
+   detail view (K-077), deep-link misses (K-078), retention periods and client erasure (K-062), certificate ID length
    and throttle (K-061), `/sectors` keep-or-fold (K-066), the rest of the draft guard (K-083),
    the unnamed Client select in New project (K-088).
 
@@ -262,7 +323,7 @@ inferred website exclusions (K-092); whether the budget bands should add a small
    (the branch is pushed to origin). This branch holds everything in `audit/readiness-2026-10-17` plus the
    journeys batch.
 2. `npm ci` (Node 22 or newer).
-3. Read `docs/STATUS.md` (sections 0.1 to 0.5, 3 and 5) and `docs/KNOWN-ISSUES.md` K-056 to K-093,
+3. Read `docs/STATUS.md` (sections 0.1 to 0.6, 3 and 5) and `docs/KNOWN-ISSUES.md` K-056 to K-099,
    then this file and `docs/PRIVACY-READINESS.md`.
 4. Baseline: `npm run typecheck`, `npm test`, `npm run build`, `npm run lint:ratchet`,
    `npm run docs:check`; for server work, `npm run test:server` against a local `*_test`

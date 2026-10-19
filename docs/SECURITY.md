@@ -154,6 +154,19 @@ clients.
   support" (`projects.kind`, SQL 17) with zero task counts; its scope is unchanged. The
   staff-only `support.php?action=log_time` and the ticket's logged time never reach the client
   branch, which carries no time.
+- **Work references (2026-10-19, SQL 19, D-049) identify work; they are never a credential.**
+  `portal.php` adds `reference` to the client's own projects and `project_reference` to its
+  invoices only when the invoice's project belongs to the same client (`pj.client_id =
+  i.client_id`), and `portal.php` keeps depending on `_bootstrap.php` only (its own probe, not
+  `_reference.php`). Quotes, invoices and contracts show a project reference only for a live
+  project of the same client. No endpoint reads a reference from a request, so nothing can be
+  found or opened by guessing one, and nothing signs in by reference: spec 6.1 phase 2 stays
+  unbuilt until J03 passes and the owner sets the policy. A static test in the server suite fails if any
+  `server/*.php` reads `reference`, `ref` or `project_reference` from request input outside
+  the two allowed branches (`invoices.php` `record_payment`, where it is the payment
+  reference, and `proposals.php` `accept`, where it is the acceptance evidence). The numbers
+  are sequential, so one reveals roughly how many enquiries or projects came before it that
+  year (K-094). Covered by `tests/server/references.test.ts`.
 
 A client also reaches its own account through `auth.php` (sessions, two-factor). Every other
 resource endpoint is staff only, including the staff routes of `bookings.php` and `assets.php`
@@ -216,7 +229,10 @@ None of these serves the `client` role, and none is uploaded (`docs/DEPLOYMENT.m
   even one pointing at another upload, or a directory is never followed or removed. Without
   a usable `uploads/` folder the files rule does nothing, and files used by Work or a
   project asset checklist are kept. No code deletes or anonymises client, project, invoice, proposal,
-  contract, ticket or user data. A client's "Ask to delete my data" only opens a ticket.
+  contract, ticket or user data. A client's "Ask to delete my data" only opens a ticket
+  (client role, client id from the token, one open request per client).
+  `privacy.php?action=erase_preview` is super_admin only and read only. The audit scrub
+  briefly scans and locks `audit_log` rows that may name the address (K-096).
 
 ## 4. Input handling and injection
 
@@ -231,6 +247,13 @@ None of these serves the `client` role, and none is uploaded (`docs/DEPLOYMENT.m
 - Record search (`search.php`, 2026-10-19) escapes `!`, `%` and `_` and uses `LIKE ? ESCAPE
   '!'` from `_like.php`, so a typed wildcard matches literally under any `sql_mode`, and it
   refuses a query that is not valid UTF-8.
+- Business details (`site.php` section `business`, 2026-10-19) accept a profile address only
+  as a full `https://` URL with a host, no credentials, no whitespace or control characters
+  and none of `<`, `>`, `"`, backslash or backtick; the public merge drops anything else
+  again. The Person JSON-LD is written with `<`, `>`, `&`, U+2028 and U+2029 escaped, so a
+  stored value cannot close the `<script>` element. Covered by `tests/server/site.test.ts`,
+  `src/marketing/data/content.test.ts`, `src/marketing/components/BusinessDetails.test.tsx` and a mocked-API browser check with hostile values
+  (`docs/STATUS.md` section 0.6).
 - Uploaded filenames have newlines stripped, are truncated to 255 characters, and the
   extension is reduced to `[A-Za-z0-9]`.
 

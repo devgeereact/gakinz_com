@@ -73,7 +73,8 @@ wget -qO- "https://gakinz.com/cron.php?key=<CRON_KEY>&job=all"
 The response is JSON: `{"ran": {...}}` with a per-job result, so the cron output is readable
 in a mail log. The retention report is the exception: run it by hand when the owner wants the
 figures, not from the cron entry, and it exits 1 with "Retention report failed: SQL error
-<code>" if a query fails:
+<code>" if a query fails, or with "retention_report is not available on this server yet:
+_retention.php is missing." if that include is not uploaded (2026-10-19):
 
 ```
 php /home/<account>/public_html/cron.php job=retention_report
@@ -102,8 +103,14 @@ that plain file at that name: left alone and never followed), `shared_file` and
 reports that and does nothing, so rows are never deleted as "missing". It exits 1 with
 "Retention apply stopped: ..." if anything fails; the item in progress is rolled back, and
 the `retention_apply` audit row still records what was already deleted, with
-`"stopped": true`. If `_erasure.php`, `_retention.php`, `_uploads.php` or `_like.php` is not
-on the server, it exits 1 saying so and deletes nothing.
+`"stopped": true`. If writing that audit row fails as well, the run's own error is still the
+one reported, and the host error log gets "GAkinz retention apply: could not write the audit
+row (SQL error N)." If `_erasure.php`, `_retention.php`, `_uploads.php` or `_like.php` is not
+on the server, it exits 1 saying so and deletes nothing. A dry run writes no audit row, so
+there is no record in the application of who ran one or when (`docs/KNOWN-ISSUES.md` K-098).
+Leave `$RETENTION_APPLY = false` until the owner and an adviser agree the periods
+(`docs/STATUS.md` section 5). How the cPanel cron's PHP binary reports `PHP_SAPI` and passes
+the arguments, which the command-line-only check relies on, is NOT TESTED on the host.
 
 Whether the cPanel cron entry exists, and whether `$CRON_KEY` is set on the server, is
 **UNVERIFIED**.

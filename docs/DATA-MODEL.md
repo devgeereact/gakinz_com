@@ -1,6 +1,6 @@
 # Data model
 
-**Status:** current for the tracked schema as at 2026-10-19 (SQL 18). Whether the live database
+**Status:** current for the tracked schema as at 2026-10-19 (SQL 19). Whether the live database
 matches it is **UNVERIFIED**, because no live database was contacted.
 
 Authority: `server/schema.sql`. MySQL or MariaDB, InnoDB, `utf8mb4`; the table count is in
@@ -9,7 +9,7 @@ Authority: `server/schema.sql`. MySQL or MariaDB, InnoDB, `utf8mb4`; the table c
 Not applied to any live database, because they were written into the file and never run:
 `work` and `work_images` (2026-09-22), `payment_events` and the three enquiry follow-up
 columns (2026-10-10), the seven work hero columns and `site_content` (2026-10-14), and every later statement up to
-SQL 18 (2026-10-19). That is not an inference from a failed check; nothing was checked. See
+SQL 19 (2026-10-19). That is not an inference from a failed check; nothing was checked. See
 section 4.
 
 ---
@@ -49,7 +49,7 @@ section 4.
 
 | Table | Purpose | Notes |
 |---|---|---|
-| `enquiries` | Public contact form, the top of the leads pipeline | `status` moves through new, contacted, proposal, won, lost. `tags`, `score`, `lost_reason` added later. Follow-ups, 2026-10-10: `next_action_at` (DATE, null), `next_action_note` (VARCHAR 300, null) and `priority` (TINYINT, 0 none to 3 high, the owner's choice and separate from `score`) |
+| `enquiries` | Public contact form, the top of the leads pipeline | `status` moves through new, contacted, proposal, won, lost. `tags`, `score`, `lost_reason` added later. Follow-ups, 2026-10-10: `next_action_at` (DATE, null), `next_action_note` (VARCHAR 300, null) and `priority` (TINYINT, 0 none to 3 high, the owner's choice and separate from `score`). Work reference, 2026-10-19 (SQL 19): `reference` (VARCHAR 20, null, unique key `uq_enquiry_reference`), `GK-E-YYYY-NNNN`, set by the server when the enquiry is created and never changed. It identifies the enquiry; nothing looks a record up by it or signs anyone in with it (D-049) |
 | `clients` | CRM record, created when a lead is won | `tag` is one of retainer, one-off, vip, dormant. `retainer_amount` drives recurring billing and care-plan revenue |
 | `bookings` | Calls recorded by hand inside Enquiries, added 2026-10-16 | Linked to an `enquiry_id`, a `client_id` or both. `starts_at` is UTC and `timezone` the IANA zone the time was agreed in; `bookings.php` converts with PHP's own zone database and refuses a local time inside the spring-forward gap. `status` is requested, confirmed, completed or cancelled; only the owner moves a request to confirmed. `notes` and `outcome` are owner only and never sent |
 | `booking_events` | History of each booking, added 2026-10-16 | One row per create, reschedule and status change, with the old and new time or status. A customer email about a reschedule or cancellation records `notify_status` (sending, sent, failed), `notify_to`, `notify_attempts` and `notify_error` on its event, so the owner sees a failure and can retry it. Cascades with its booking |
@@ -59,7 +59,7 @@ section 4.
 
 | Table | Purpose | Notes |
 |---|---|---|
-| `projects` | One workspace per client build | `status` is planning, in_progress, on_hold or launched. `stage` is the five-step delivery ladder: discover, design, build, launch, support. `kind` (VARCHAR 20, 2026-10-19, SQL 17) is NULL on every ordinary project and `it_support` on a client's standing IT support project, which `support.php?action=log_time` creates on the first time logged from one of that client's tickets (status in_progress, stage support, named "IT support"). No unique key: a soft-deleted standing project is not reused, and the one-per-client rule is held by row locks in a transaction. The portal and `files.php?action=mine` always name it "IT support" |
+| `projects` | One workspace per client build | `status` is planning, in_progress, on_hold or launched. `stage` is the five-step delivery ladder: discover, design, build, launch, support. `kind` (VARCHAR 20, 2026-10-19, SQL 17) is NULL on every ordinary project and `it_support` on a client's standing IT support project, which `support.php?action=log_time` creates on the first time logged from one of that client's tickets (status in_progress, stage support, named "IT support"). No unique key: a soft-deleted standing project is not reused, and the one-per-client rule is held by row locks in a transaction. The portal and `files.php?action=mine` always name it "IT support". Work reference, 2026-10-19 (SQL 19): `reference` (VARCHAR 20, null, unique key `uq_project_reference`), `GK-P-YYYY-NNNN`, set by the server on every create path (plain, template, quote accept, the standing IT support project) and never changed. Quotes, invoices and contracts show their project's reference only while that project is live and belongs to the same client; they store no copy |
 | `tasks` | Kanban within a project | todo, doing, review, done |
 | `design_reviews` | Figma review rounds | `round` is capped at 2 in `design.php` |
 | `project_dev` | Repository and environment URLs, JSON build checklist | Also holds the monitor results: `last_http_status`, `ssl_days_left`, `last_checked_at` |
@@ -97,7 +97,8 @@ section 4.
 | `content_drafts` | AI content hub output | Platforms: blog, linkedin, x, instagram, facebook, tiktok |
 | `kb_articles` | Internal SOPs and wiki | |
 | `announcements` | Dashboard broadcasts | Optionally mirrored to Slack |
-| `site_content` | Editable public-site copy, added 2026-10-14 | One row per section (`hero`, `services`, `process`, `packages`, `addons`, `terms`, `faqs`, `contact`), keyed by `section`. `draft` and `published` are JSON held as `MEDIUMTEXT`, because the host's MySQL version is UNVERIFIED. `site.php` validates every section against a fixed shape before storing it and serves only `published` publicly. `updated_by` and `published_by` are user ids with no foreign key, so removing a user leaves the history readable |
+| `site_content` | Editable public-site copy, added 2026-10-14 | One row per section (`hero`, `services`, `process`, `packages`, `addons`, `terms`, `faqs`, `contact`, and since 2026-10-19 `business`, the public email, phone, address, opening note and social profiles; no schema change), keyed by `section`. `draft` and `published` are JSON held as `MEDIUMTEXT`, because the host's MySQL version is UNVERIFIED. `site.php` validates every section against a fixed shape before storing it and serves only `published` publicly. `updated_by` and `published_by` are user ids with no foreign key, so removing a user leaves the history readable |
+| `reference_counters` | Work reference sequences, added 2026-10-19 (SQL 19) | Primary key (`kind`, `ref_year`). `kind` is `E` (enquiry) or `P` (project), `ref_year` the year in the reference, and `last_n` the highest number issued, never lowered, so a number is not reused after its record is deleted. One anchor row per kind with `ref_year` 0: `_reference.php` locks it with `SELECT ... FOR UPDATE` before raising a counter, so assignments of one kind take turns, and issues nothing while the anchor is missing (the SQL 19 gate). Read and written only by `_reference.php` and the SQL 19 backfill |
 | `items` | Smoke test only | Two columns. Now **unused**: `api.php` was reduced to a read-only health check on 2026-09-22 and no longer reads or writes it. The table is left in place because dropping it on a live database is not something this repository can verify. See `docs/DECISIONS.md` D-031 |
 
 ### Work, added 2026-09-22
@@ -211,10 +212,11 @@ Outstanding statements, grouped as they appear in the file:
 | Project brief and measurements, 2026-10-19 (SQL 16) | `CREATE TABLE IF NOT EXISTS project_briefs`, then `project_measurements`. New tables only, safe to run twice |
 | IT support time from tickets, 2026-10-19 (SQL 17) | `ALTER TABLE time_entries ADD COLUMN ticket_id` with `idx_time_ticket` and `fk_time_ticket`, then `ALTER TABLE projects ADD COLUMN kind`. Run once; a second run fails on the duplicate column |
 | Files shared to the client portal, 2026-10-19 (SQL 18) | `ALTER TABLE files ADD COLUMN client_visible`, `shared_at`. Run once; a second run fails on the duplicate column |
+| Work references, 2026-10-19 (SQL 19) | Step 1, once: `ALTER TABLE enquiries ADD COLUMN reference` with `uq_enquiry_reference`, and `ALTER TABLE projects ADD COLUMN reference` with `uq_project_reference`. Step 2, safe to repeat, pasted as one piece in one SQL tab because it uses a temporary table: `CREATE TABLE IF NOT EXISTS reference_counters`, the backfill (each row still without a reference gets the next number after the highest in use for its kind and year, in id order), the counter seed, and the two anchor rows last. **This is the first statement that changes existing rows**: it numbers every older enquiry and project. Then check that no `reference IS NULL` remains in either table |
 
 Which of the older statements have already been applied to the live database is
 **UNVERIFIED**. The 2026-09-22, 2026-10-10 and 2026-10-14 groups are known **not** to have been applied by
-this work, nor have the 2026-10-16 tables, the 2026-10-18 statements or SQL 16 to 18, because no database has been contacted since they were written. Their order is in
+this work, nor have the 2026-10-16 tables, the 2026-10-18 statements or SQL 16 to 19, because no database has been contacted since they were written. Their order is in
 `docs/DEPLOYMENT.md` section 5.2.
 
 **The unique key has a precondition.** `files.share_token` currently has no unique
@@ -303,6 +305,15 @@ the portal hides the Shared files card, and the privacy export lists files witho
 columns. All of these are tested against a real database with the columns dropped
 (`tests/server/ticket-time.test.ts`, `tests/server/portal-files.test.ts`,
 `tests/server/privacy.test.ts`).
+
+**SQL 19 degrades to no reference.** Before step 1, or while `_reference.php` is not on the
+server, enquiries and projects are created exactly as before and every reference field
+answers `null`; the screens show none and search ignores it. Between step 1 and the end of
+step 2 the anchors are missing, so nothing is issued and step 2's backfill numbers whatever
+was saved meanwhile. Any other database error while assigning is logged and the record is
+saved without a reference, so a visitor never has to resubmit. Tested in
+`tests/server/references.test.ts` on the local MariaDB only; MySQL 5.7 and 8 are NOT TESTED
+(`docs/KNOWN-ISSUES.md` K-099).
 
 ## 7. Files, share tokens and what stays public
 
