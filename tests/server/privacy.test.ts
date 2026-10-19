@@ -214,6 +214,38 @@ describe("privacy export", () => {
     for (const [act, d] of notMine) expect(got).not.toContain(`${act} ${d}`)
   })
 
+  it("drops the author and IP of an audit row someone else wrote, and keeps them on the subject's own rows", async () => {
+    const C = a.clientId
+    sql(`INSERT INTO audit_log (user_id, action, detail, ip) VALUES (${adminId}, 'client_update', ${q(`#${C}`)}, '192.0.2.44')`)
+    sql(`INSERT INTO audit_log (user_id, action, detail, ip) VALUES (${a.userId}, 'portal_message', 'Alpha asked a question', '198.51.100.20')`)
+    const r = await api<Export>(`privacy.php?action=export&client_id=${C}`, { token: admin })
+    expect(r.status).toBe(200)
+    const audit = rows(r.json, "audit_log")
+    const staff = audit.find((x) => x.action === "client_update" && x.detail === `#${C}`)!
+    expect(staff).toBeDefined()
+    expect(staff.user_id).toBeNull()
+    expect(staff.ip).toBeNull()
+    expect(staff.created_at).toBeTruthy()
+    const own = audit.find((x) => x.action === "portal_message")!
+    expect(Number(own.user_id)).toBe(a.userId)
+    expect(own.ip).toBe("198.51.100.20")
+    // No staff id or staff IP anywhere in the audit section.
+    expect(audit.some((x) => x.user_id !== null && Number(x.user_id) !== a.userId)).toBe(false)
+    expect(JSON.stringify(audit)).not.toContain("192.0.2.44")
+    expect(r.json.about.excluded.some((x) => /audit entries not written by the subject/.test(x))).toBe(true)
+  })
+
+  it("drops the author and IP of every audit row in an enquirer export, since an enquirer has no login", async () => {
+    sql(`INSERT INTO audit_log (user_id, action, detail, ip) VALUES (${adminId}, 'lead_meta', 'noted alpha@example.test', '192.0.2.45')`)
+    const r = await api<Export>(`privacy.php?action=export&enquiry_email=alpha%40example.test`, { token: admin })
+    expect(r.status).toBe(200)
+    const audit = rows(r.json, "audit_log")
+    const row = audit.find((x) => x.detail === "noted alpha@example.test")!
+    expect(row).toBeDefined()
+    expect(row.user_id).toBeNull()
+    expect(row.ip).toBeNull()
+  })
+
   it("matches a client_create row by company only when no other client has that name", async () => {
     createClient("alpha ltd", "twin@example.test")
     sql("INSERT INTO audit_log (action, detail) VALUES ('client_create', 'Alpha Ltd')")

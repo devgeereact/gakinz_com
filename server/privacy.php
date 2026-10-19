@@ -32,7 +32,10 @@
  *   files              metadata only: name, type, size, dates. Never the bytes.
  *   comm_threads, comm_messages    Comms conversations filed against the client
  *   audit_log          rows written by the client's logins, and rows whose text
- *                      names the client's or a login's email address
+ *                      names the client's or a login's email address. On a row
+ *                      someone else wrote, user_id and ip are null: the export
+ *                      says what was done to the subject, not which member of
+ *                      staff did it or from where.
  *
  * Included for an enquiry email: every enquiry from that address, the calls on
  * those enquiries and their history, and audit rows that name the address. The
@@ -42,6 +45,7 @@
  * Excluded, always: password hashes, session, magic-link and reset token values
  * or hashes, 2FA secrets, recovery codes and replay counters, proposal and file
  * share-link tokens, on-disk file names, API keys and every other config value,
+ * the author and IP of any audit row not written by the subject's own logins,
  * and every row of any other client. Not covered because nothing links them to
  * a client record: certificates and testimonials (matched by name only), and
  * staff-only records (time entries, leave, resourcing).
@@ -63,6 +67,7 @@ const PV_EXCLUDED = [
   'File contents (only file metadata is included)',
   'API keys and every other server configuration value',
   'Any row belonging to another client',
+  'On audit entries not written by the subject\'s own logins: who wrote them and from which IP',
 ];
 
 function pv_id($v): int {
@@ -154,6 +159,17 @@ function pv_audit(mysqli $conn, array &$unavailable, array $emails, array $userI
     }
   }
   ksort($byId);
+  // A row someone else wrote (staff updating the client, converting the
+  // enquiry) is about the subject but its author is not: keep what was done
+  // and when, and drop who did it and from which IP.
+  $own = array_flip(array_map('intval', $userIds));
+  foreach ($byId as &$r) {
+    if ($r['user_id'] === null || !isset($own[(int)$r['user_id']])) {
+      $r['user_id'] = null;
+      $r['ip'] = null;
+    }
+  }
+  unset($r);
   return array_values($byId);
 }
 
