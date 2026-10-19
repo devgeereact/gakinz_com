@@ -15,6 +15,7 @@ import {
   heroIdsInListOrder,
   isBuiltInService,
   isLegacyServices,
+  missingBuiltIns,
   storedServices,
   upgradeLegacyServices,
   lastPublished,
@@ -256,6 +257,7 @@ describe("older services lists", () => {
     expect(up[1].hook).toBe(defaultSiteContent().services[3].hook)
     expect(up[0]).toMatchObject({ slug: "web-design", summary: "Edited design." })
     expect(up[2]).toEqual(LEGACY[2])
+    expect(up.slice(3).map((r) => r.slug)).toEqual(["web-development", "ecommerce", "it-support", "it-consultancy"])
     // A list that already has web addresses is left alone.
     const modern = defaultSiteContent().services
     expect(upgradeLegacyServices(modern)).toBe(modern)
@@ -265,8 +267,24 @@ describe("older services lists", () => {
     const drafts = draftsWith({ services: { published: LEGACY.slice(0, 2) } })
     expect(isLegacyServices(storedServices(drafts))).toBe(true)
     const eff = effectiveContent(drafts)
-    expect(eff.services.map((r) => r.slug)).toEqual(["web-design", "care-and-support"])
+    expect(eff.services.map((r) => r.slug)).toEqual(["web-design", "care-and-support", "web-development", "ecommerce", "it-support", "it-consultancy"])
     expect(validateSection("services", eff.services)).toBeNull()
+  })
+
+  it("upgrades the old four-row list to all six, with the IT services added at the end", () => {
+    const four = [
+      { title: "Web design", summary: "One." },
+      { title: "Web development", summary: "Two." },
+      { title: "Ecommerce", summary: "Three." },
+      { title: "Care and support", summary: "Four." },
+    ]
+    expect(missingBuiltIns(four).map((s) => s.title)).toEqual(["General IT support", "IT consultancy"])
+    const up = upgradeLegacyServices(four)
+    expect(up).toHaveLength(6)
+    expect(up.map((r) => r.slug)).toEqual(["web-design", "web-development", "ecommerce", "care-and-support", "it-support", "it-consultancy"])
+    expect(up.slice(0, 4).map((r) => r.summary)).toEqual(["One.", "Two.", "Three.", "Four."])
+    expect(validateSection("services", up)).toBeNull()
+    expect(missingBuiltIns(defaultSiteContent().services)).toEqual([])
   })
 
   it("names an unmatched older row clearly instead of blocking on a field", () => {

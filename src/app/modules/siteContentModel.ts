@@ -74,15 +74,27 @@ export function isLegacyServices(rows: SiteService[] | null | undefined): boolea
  * An older title-and-summary list as whole service rows: each row that names a
  * built-in service (by name or former name) takes that service's page and
  * keeps its own title and summary. A row that names none is left as it is,
- * and the editor asks for its page fields. A list with web addresses is
- * returned unchanged.
+ * and the editor asks for its page fields. Built-in services the list does
+ * not name are added at the end. A list with web addresses is returned
+ * unchanged.
  */
 export function upgradeLegacyServices(rows: SiteService[]): SiteService[] {
   if (!isLegacyServices(rows)) return rows
-  return rows.map((r) => {
+  const upgraded = rows.map((r) => {
     const known = builtInFor(r)
     return known ? { ...serviceRow(known), title: r.title, summary: r.summary } : r
   })
+  // An older list predates the IT services. Saving it as it stands would drop
+  // their pages from the website, so any built-in service it lacks is added
+  // at the end, whole, for the owner to keep or remove.
+  return [...upgraded, ...missingBuiltIns(rows).map(serviceRow)]
+}
+
+/** Built-in services an older list does not name, in the built-in order. Empty for a list with web addresses. */
+export function missingBuiltIns(rows: SiteService[] | null | undefined): ServiceCopy[] {
+  if (!rows || !isLegacyServices(rows)) return []
+  const named = new Set(rows.map((r) => builtInFor(r)?.slug).filter(Boolean))
+  return DEFAULT_COPY.services.filter((s) => !named.has(s.slug))
 }
 
 /** The stored services rows before any upgrade: the draft, else the published list, else null. */

@@ -23,6 +23,7 @@ import {
   focusAfterMove,
   formatPublishedDate,
   isLegacyServices,
+  missingBuiltIns,
   lastPublished,
   moveRow,
   normaliseSecs,
@@ -62,6 +63,9 @@ function SectionError({ message }: { message?: string }) {
     </p>
   )
 }
+
+/** "A", "A and B", "A, B and C". */
+const joinNames = (xs: string[]) => (xs.length < 2 ? xs.join("") : `${xs.slice(0, -1).join(", ")} and ${xs[xs.length - 1]}`)
 
 function Help({ id, children }: { id?: string; children: React.ReactNode }) {
   return (
@@ -307,6 +311,7 @@ export default function Site() {
   const [slotsLoaded, setSlotsLoaded] = useState(false)
   const [removing, setRemoving] = useState<number | null>(null)
   const [legacyServices, setLegacyServices] = useState(false)
+  const [addedServices, setAddedServices] = useState<string[]>([])
 
   const applyDrafts = (d: SiteDrafts) => {
     const eff = effectiveContent(d)
@@ -319,6 +324,7 @@ export default function Site() {
     setValues(eff)
     setBaseline(legacy && stored ? { ...eff, services: stored } : eff)
     setLegacyServices(legacy)
+    setAddedServices(missingBuiltIns(stored).map((x) => x.title))
     setLoadError(null)
   }
 
@@ -664,8 +670,10 @@ export default function Site() {
               </p>
               {legacyServices && (
                 <p role="status" className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
-                  These services were upgraded to full pages; save to keep this order. Until then the website shows the built-in
-                  services in their usual order, with your titles and summaries.
+                  These services were upgraded to full pages; save to keep this order.
+                  {addedServices.length > 0 &&
+                    ` The ${joinNames(addedServices)} ${addedServices.length === 1 ? "page was" : "pages were"} added at the end; remove any you do not want before saving.`}{" "}
+                  Until then the website shows the built-in services in their usual order, with your titles and summaries.
                 </p>
               )}
               <SectionError message={errors.services} />
