@@ -132,7 +132,10 @@ export const api = {
       if (!res.ok) {
         if (res.status === 401) useAuth.getState().clear()
         const body = parseJsonBody(await res.text())
-        return { ok: false, error: bodyError(body) || statusError(res.status, "Download"), status: res.status }
+        // `details` is the JSON error body, when there is one, so a JSON 404
+        // ("Client not found.") can be told apart from the host's own page.
+        const details = body && typeof body === "object" && !Array.isArray(body) ? (body as Record<string, unknown>) : undefined
+        return { ok: false, error: bodyError(body) || statusError(res.status, "Download"), status: res.status, details }
       }
       const type = (res.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase()
       if (type !== expectedType.toLowerCase()) return { ok: false, error: DOWNLOAD_NOT_READY, status: res.status }
