@@ -108,11 +108,16 @@ describe("files shared to the client portal", () => {
     const loose = fileRow({})
     const noClientProject = fileRow({ projectId: createProject(null, "Internal") })
     const mismatched = fileRow({ clientId: clientA, projectId: projectB })
-    for (const id of [loose, noClientProject, mismatched]) {
+    const removedProject = createProject(clientA, "A removed")
+    const onRemoved = fileRow({ projectId: removedProject })
+    sql(`UPDATE projects SET deleted_at = NOW() WHERE id = ${removedProject}`)
+    for (const id of [loose, noClientProject, mismatched, onRemoved]) {
       const r = await setShare(id, true)
       expect(r.status).toBe(409)
       expect(one(`SELECT client_visible FROM files WHERE id = ${id}`)).toBe("0")
     }
+    expect((await setShare(onRemoved, true)).json.error).toMatch(/project was removed/)
+    expect((await setShare(noClientProject, true)).json.error).toMatch(/project has no client/)
     expect((await setShare(9999, true)).status).toBe(404)
     expect((await setShare(fileRow({ clientId: clientA }), "yes")).status).toBe(400)
     expect((await setShare(fileRow({ clientId: clientA }), undefined)).status).toBe(400)
@@ -158,7 +163,9 @@ describe("files shared to the client portal", () => {
     expect(r.status).toBe(200)
     expect(r.body.equals(PDF)).toBe(true)
     expect(r.headers.get("content-type")).toBe("application/pdf")
-    expect(r.headers.get("content-disposition")).toBe('attachment; filename="Final recommendation.pdf"')
+    expect(r.headers.get("content-disposition")).toBe(
+      "attachment; filename=\"Final recommendation.pdf\"; filename*=UTF-8''Final%20recommendation.pdf",
+    )
     expect(r.headers.get("content-length")).toBe(String(PDF.length))
     expect(r.headers.get("x-content-type-options")).toBe("nosniff")
     expect(r.headers.get("cache-control")).toBe("private, no-store")
@@ -166,6 +173,37 @@ describe("files shared to the client portal", () => {
     const staff = await fetchRaw(`files.php?download=${up.id}`, owner)
     expect(staff.body.equals(PDF)).toBe(true)
     expect(staff.headers.get("cache-control")).toBe("private, no-store")
+  })
+
+  it("sends an ASCII fallback name beside the UTF-8 name, and never a quote, backslash or control character", async () => {
+    const id = fileRow({ clientId: clientA, visible: true, name: 'Résumé "final"\\v2\t.pdf', stored: "a1b2c3named.pdf" })
+    fs.mkdirSync(UPLOADS, { recursive: true })
+    fs.writeFileSync(path.join(UPLOADS, "a1b2c3named.pdf"), PDF)
+    try {
+      const r = await fetchRaw(`files.php?action=mine_download&id=${id}`, tokenA)
+      expect(r.status).toBe(200)
+      expect(r.headers.get("content-disposition")).toBe(
+        "attachment; filename=\"R_sum_ _final__v2.pdf\"; filename*=UTF-8''R%C3%A9sum%C3%A9%20%22final%22%5Cv2.pdf",
+      )
+    } finally {
+      fs.rmSync(path.join(UPLOADS, "a1b2c3named.pdf"), { force: true })
+    }
+  })
+
+  it("serves the public share link with the same download headers, and refuses an expired one", async () => {
+    const up = await upload(owner, "Public brief.pdf", PDF, { project_id: projectA })
+    const link = await api<{ token: string }>("files.php?action=share", { token: owner, body: { id: up.id, days: 1 } })
+    expect(link.status).toBe(200)
+    const res = await fetch(`${BASE}/files.php?token=${link.json.token}`)
+    expect(res.status).toBe(200)
+    expect(Buffer.from(await res.arrayBuffer()).equals(PDF)).toBe(true)
+    expect(res.headers.get("content-type")).toBe("application/pdf")
+    expect(res.headers.get("content-disposition")).toMatch(/^attachment; filename="Public brief\.pdf"/)
+    expect(res.headers.get("x-content-type-options")).toBe("nosniff")
+    expect(res.headers.get("cache-control")).toBe("private, no-store")
+
+    sql(`UPDATE files SET expires_at = NOW() - INTERVAL 1 MINUTE WHERE id = ${up.id}`)
+    expect((await fetch(`${BASE}/files.php?token=${link.json.token}`)).status).toBe(404)
   })
 
   it("answers another client's file, a hidden file, a deleted file and a missing id with the same 404", async () => {
@@ -196,19 +234,30 @@ describe("files shared to the client portal", () => {
     const link = path.join(UPLOADS, "a1b2c3linked.pdf")
     fs.rmSync(link, { force: true })
     fs.symlinkSync(path.join(WORK_DIR, "config.php"), link)
+    // A real file whose name ends in a newline: a `$` anchor would accept it.
+    const newline = path.join(UPLOADS, "a1b2c3nl.pdf\n")
+    fs.writeFileSync(newline, PDF)
     try {
-      const stored = ["../config.php", "..", ".htaccess", "sub/../../config.php", "/etc/passwd", "a1b2c3linked.pdf", ""]
-      for (const s of stored) {
+      const stored = ["../config.php", "..", ".htaccess", "sub/../../config.php", "/etc/passwd", "a1b2c3linked.pdf", "a1b2c3nl.pdf\n", ""]
+      for (const [n, s] of stored.entries()) {
         const id = fileRow({ clientId: clientA, stored: s, visible: true })
-        for (const [route, token] of [[`files.php?action=mine_download&id=${id}`, tokenA], [`files.php?download=${id}`, owner]] as const) {
+        const share = (n + 1).toString(16).padStart(40, "a")
+        sql(`UPDATE files SET share_token = ${q(share)} WHERE id = ${id}`)
+        const routes = [
+          [`files.php?action=mine_download&id=${id}`, tokenA],
+          [`files.php?download=${id}`, owner],
+          [`files.php?token=${share}`, ""],
+        ] as const
+        for (const [route, token] of routes) {
           const r = await fetchRaw(route, token)
-          expect(r.status, `${s} via ${route}`).toBe(404)
+          expect(r.status, `${JSON.stringify(s)} via ${route}`).toBe(404)
           expect(r.body.toString("utf8")).not.toContain(DB_NAME)
           expect(r.headers.get("content-type")).toMatch(/^application\/json/)
         }
       }
     } finally {
       fs.rmSync(link, { force: true })
+      fs.rmSync(newline, { force: true })
     }
   })
 
