@@ -118,7 +118,7 @@ pages at the end). After the merge the owner opens Site content > Services once 
 (K-093). Prerender now 32 pages.
 
 Documents: `docs/STATUS.md` (sections 0, 0.5, 2, 3, 4, 5), `docs/KNOWN-ISSUES.md` (K-038, new
-K-090 to K-093), `docs/DEPLOYMENT.md` section 5, `docs/DECISIONS.md` D-047, `docs/API-SPEC.md`
+K-090 to K-093), `docs/DEPLOYMENT.md` section 5, `docs/DECISIONS.md` D-048, `docs/API-SPEC.md`
 section 7a, `docs/ARCHITECTURE.md`, `docs/PRODUCT-SPEC.md` sections 4.1, 4.3 and 7, `CLAUDE.md`.
 
 Owner inputs this batch leaves open (`docs/STATUS.md` section 5): IT coverage, area and

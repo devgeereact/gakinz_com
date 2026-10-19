@@ -103,7 +103,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-090 | The IT support pages omit coverage, area and response time, so spec 4.2 acceptance is unmet | Medium | Open, waiting on the owner. Built 2026-10-19, not deployed |
 | K-091 | Enquiry budget bands are unchanged, so the lowest is still "Under £1,500" | Low | Open by owner decision 2026-10-19; not deployed |
 | K-092 | Three exclusions on the website service pages are inferred from `site.ts`, not stated in spec 4.3 | Low | Open, waiting on the owner. Built 2026-10-19, not deployed |
-| K-093 | An older services list shows the built-in six until the owner saves once, and a custom row without every page field is no longer published | Medium | Open by design (D-047). Built 2026-10-19, not uploaded or deployed |
+| K-093 | An older services list shows the built-in six until the owner saves once, and a custom row without every page field is no longer published | Medium | Open by design (D-048). Built 2026-10-19, not uploaded or deployed |
 
 
 ---
@@ -919,7 +919,7 @@ and complete content, and unpublish incomplete entries rather than invent replac
 narrows D-027).
 
 **Update 2026-10-19 (journeys batch 4, `8193555..ebcb002`, not deployed).** The six service
-pages are built from the approved copy in `docs/PRODUCT-SPEC.md` section 4.3 (D-047): hook,
+pages are built from the approved copy in `docs/PRODUCT-SPEC.md` section 4.3 (D-048): hook,
 typical needs, what you get, not included and price basis for each, in the groups Websites and
 IT support, with the six choices on the enquiry form. Nothing is invented. What remains for the
 owner: IT coverage, area and response time (K-090); IT prices; confirmation of the package
@@ -1829,7 +1829,7 @@ price list, which itself awaits confirmation with a VAT basis (`docs/STATUS.md` 
 the owner has not approved the wording. Confirm or replace them in Site content.
 
 ## K-093 · An older services list shows the built-in six until the owner saves once, and an incomplete custom row is no longer published
-**Severity:** medium · **Status:** open by design (D-047). Built 2026-10-19, not uploaded or deployed.
+**Severity:** medium · **Status:** open by design (D-048). Built 2026-10-19, not uploaded or deployed.
 
 Two behaviour changes follow from making a service a whole page.
 1. **A legacy list.** While the published services list holds only title-and-summary rows (no

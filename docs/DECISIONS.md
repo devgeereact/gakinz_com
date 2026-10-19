@@ -827,7 +827,8 @@ and key sections editable without a developer. **Evidence:** prototypes reviewed
 by the owner on 2026-10-14; screenshots of the owner's projects captured from their local
 builds on 2026-10-13. Client sites are named with the owner's confirmation.
 
-## D-047 · The six service pages use the approved copy only, and an incomplete service is never published
+## D-048 · The six service pages use the approved copy only, and an incomplete service is never published
+**Numbering:** D-047 is reserved by the open pull request #19 (`design/hero-nav-footer-demo`), so this decision is D-048.
 **Date:** 2026-10-19 · **Status:** active. Builds on D-038; D-039's rule against visible gaps
 still holds.
 

@@ -177,7 +177,7 @@ technology.
 
 On `feat/journeys-2026-10-18`, nine commits from `8193555` to `ebcb002` on the Mac (Task 20 of
 the journeys plan). Pushed to origin, not merged, deployed or uploaded; no SQL. The work uses
-only the approved service content in `docs/PRODUCT-SPEC.md` sections 4.1 to 4.3 (D-038, D-047),
+only the approved service content in `docs/PRODUCT-SPEC.md` sections 4.1 to 4.3 (D-038, D-048),
 so it invents no fact. Same method as section 0.3: a test-first build, a review that found
 legacy CMS rows, two fix rounds, a re-review, then a browser check.
 
@@ -191,7 +191,7 @@ its choice across. `site.php` accepts the page fields on a services row (all tog
 `docs/API-SPEC.md` section 7a), and Site content > Services edits whole pages and refuses a
 half page. A published list of title-and-summary rows (the older shape) keeps working: the
 website shows the built-in six, and the editor upgrades such a list when it is opened
-(K-038, K-090 to K-093, D-047). Section 4 has the detail.
+(K-038, K-090 to K-093, D-048). Section 4 has the detail.
 
 | Check | Result |
 |---|---|
@@ -416,7 +416,7 @@ SQL. Summary and method in section 0.5.
 | Enquiry form | The service select offers the six names, "Not sure yet" and "Something else"; `?service=<slug>` preselects, and a `?package=` choice keeps its package note. The message label is "What do you need?". Budget bands are unchanged (K-091) | `tests/server/enquiry-services.test.ts`, browser check |
 | `site.php` | A services row may carry `slug`, `group`, `hook`, `detail`, `needs`, `deliverables`, `exclusions` and `price_basis`. The set `slug`, `group`, `hook`, `needs`, `deliverables`, `exclusions`, `price_basis` comes all together or not at all, and `slug` is unique. `docs/API-SPEC.md` section 7a | `tests/server/site.test.ts` |
 | CMS editor | Site content > Services edits whole pages, one list line per row, refuses a half page naming the row and field, and checks the slug length. An older title-and-summary list is upgraded when opened: rows naming a built-in service (or its former name "Care and support") become whole pages keeping the published title and summary, the missing built-ins are added at the end, and a note names them. The upgrade counts as an unsaved edit (K-093) | `siteContentModel.test.ts` |
-| Public fallback | While the published list has no slugs the website shows the built-in six in their default order, with matching titles and summaries replaced; a custom row without every page field is not shown (K-093, D-047) | `content.test.ts` |
+| Public fallback | While the published list has no slugs the website shows the built-in six in their default order, with matching titles and summaries replaced; a custom row without every page field is not shown (K-093, D-048) | `content.test.ts` |
 
 Verification at `ebcb002`, 2026-10-19 on the Mac: section 0. **NOT TESTED:** the live server,
 real data, a real sign-in, the editor upgrade note in a browser, and real assistive technology.
