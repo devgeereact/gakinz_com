@@ -103,16 +103,29 @@ describe("mergeRecords", () => {
 })
 
 describe("stateFromReply", () => {
-  it("hides the group only when search.php is missing", () => {
+  it("hides the group when search.php is missing (host 404 page, no JSON body)", () => {
     expect(stateFromReply("ac", { ok: false, error: "x", status: 404 }, "admin")).toEqual({ status: "hidden" })
   })
 
-  it("shows a 403 as a failure rather than hiding it", () => {
-    expect(stateFromReply("ac", { ok: false, error: "Not allowed.", status: 403 }, "admin")).toEqual({
-      status: "failed",
-      query: "ac",
-      error: "Not allowed.",
-    })
+  it("hides the group when the old .htaccess answers the missing file with the SPA shell (HTML 200)", () => {
+    expect(stateFromReply("ac", { ok: false, error: BAD_REPLY_ERROR, status: 200 }, "admin")).toEqual({ status: "hidden" })
+  })
+
+  it("hides the group on a 503 or a 405, the other not-yet-set-up answers", () => {
+    expect(stateFromReply("ac", { ok: false, error: "Not set up.", status: 503, details: { error: "Not set up." } }, "admin")).toEqual({ status: "hidden" })
+    expect(stateFromReply("ac", { ok: false, error: "Method not allowed.", status: 405 }, "admin")).toEqual({ status: "hidden" })
+  })
+
+  it("hides the group on the role gate's bare refusal, which an older file gives", () => {
+    const res = { ok: false as const, error: "Not allowed.", status: 403, details: { error: "Not allowed." } }
+    expect(stateFromReply("ac", res, "admin")).toEqual({ status: "hidden" })
+  })
+
+  it("shows any other 403, and a 404 with a JSON error, as a failure", () => {
+    const inactive = { ok: false as const, error: "Account is not active.", status: 403, details: { error: "Account is not active." } }
+    expect(stateFromReply("ac", inactive, "admin")).toEqual({ status: "failed", query: "ac", error: "Account is not active." })
+    const missing = { ok: false as const, error: "Unknown action.", status: 404, details: { error: "Unknown action." } }
+    expect(stateFromReply("ac", missing, "admin")).toMatchObject({ status: "failed", error: "Unknown action." })
   })
 
   it("reports a network or server failure as failed with its message", () => {
@@ -256,16 +269,16 @@ describe("createRecordSearcher", () => {
     expect(picks).toEqual(["record-client-7", "record-client-9"])
   })
 
-  it("warns on a 403, shows it as failed and keeps searching", async () => {
+  it("warns on a 403 that is not the role gate's, shows it as failed and keeps searching", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
     try {
       const { calls, states, searcher } = setup()
       searcher.update("ac")
       await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
-      calls[0].resolve({ ok: false, error: "Not allowed.", status: 403 })
+      calls[0].resolve({ ok: false, error: "Account is not active.", status: 403, details: { error: "Account is not active." } })
       await vi.advanceTimersByTimeAsync(0)
       expect(warn).toHaveBeenCalledTimes(1)
-      expect(states.at(-1)).toEqual({ status: "failed", query: "ac", error: "Not allowed." })
+      expect(states.at(-1)).toEqual({ status: "failed", query: "ac", error: "Account is not active." })
       searcher.update("acme")
       await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
       expect(calls).toHaveLength(2)

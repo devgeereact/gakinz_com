@@ -20,6 +20,7 @@ import {
   type RecordType,
 } from "@/lib/api"
 import { canAccess, moduleKeyForPath } from "@/lib/access"
+import { notAvailableYet } from "@/lib/notAvailable"
 import type { Role } from "@/store/auth.store"
 
 export const RECORD_SEARCH_DEBOUNCE_MS = 250
@@ -128,16 +129,20 @@ export type RecordSearchState =
   | { status: "hidden" } // the server has no record search yet, or refuses this role
 
 /**
- * The state after a reply. A 404 (search.php not uploaded yet) hides the
- * group for the session rather than show an error on every keystroke. Any
- * other failure, a 403 included, is shown: a staff role refused here means the
- * server and access.ts disagree, which should be seen, not hidden. `partial`
+ * The state after a reply. When search.php is not on the server yet, by the
+ * shared rule in src/lib/notAvailable.ts (a 503, a 405, the role gate's bare
+ * "Not allowed.", a 404 with no JSON body, or the SPA shell's HTML 200), the
+ * group is hidden for the session rather than show an error on every
+ * keystroke. Every other failure is shown, a 403 with any other message
+ * included. A staff role refused with "Not allowed." is hidden too, since an
+ * older file answers that way, and the searcher logs it to the console so a
+ * disagreement between search.php and access.ts can still be seen. `partial`
  * is true when any type the server searched was unavailable, so the list may
  * be missing rows.
  */
 export function stateFromReply(query: string, res: ApiResult<RecordSearchData>, role: Role | undefined): RecordSearchState {
   if (!res.ok) {
-    if (res.status === 404) return { status: "hidden" }
+    if (notAvailableYet(res)) return { status: "hidden" }
     return { status: "failed", query, error: res.error }
   }
   const data = res.data
