@@ -14,6 +14,9 @@ import {
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { blog, type BlogAdminRow, type BlogInput } from "@/lib/api"
+import { isDirty } from "@/lib/dirty-model"
+import { useUnsavedGuard } from "@/hooks/use-unsaved-guard"
+import { UnsavedGuardDialog } from "@/components/unsaved-guard-dialog"
 import {
   Table,
   TableBody,
@@ -45,6 +48,8 @@ export default function Blog() {
   const [error, setError] = useState<string | null>(null)
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(blank)
+  // The values last loaded or saved; the form is dirty when it differs from them.
+  const [baseline, setBaseline] = useState(blank)
   const [saving, setSaving] = useState(false)
   // Editing loads the full post first. Until it arrives (or if it fails) the
   // form cannot be saved, so a half-loaded form never overwrites the body.
@@ -65,13 +70,18 @@ export default function Blog() {
     load()
   }, [])
 
+  const guard = useUnsavedGuard(open && !loadingPost && isDirty(form, baseline))
+
   const startNew = () => {
     setForm(blank)
+    setBaseline(blank)
     setPostError(null)
     setOpen(true)
   }
   const startEdit = async (a: BlogAdminRow) => {
-    setForm({ ...blank, id: a.id, title: a.title, slug: a.slug, category: a.category, cover: a.cover, read_mins: a.read_mins, status: a.status })
+    const partial = { ...blank, id: a.id, title: a.title, slug: a.slug, category: a.category, cover: a.cover, read_mins: a.read_mins, status: a.status }
+    setForm(partial)
+    setBaseline(partial)
     setPostError(null)
     setLoadingPost(true)
     setOpen(true)
@@ -82,7 +92,7 @@ export default function Blog() {
       return
     }
     const p = res.data
-    setForm({
+    const loaded = {
       id: p.id,
       title: p.title,
       slug: p.slug,
@@ -92,7 +102,9 @@ export default function Blog() {
       read_mins: p.read_mins,
       status: p.status,
       body: p.body ?? "",
-    })
+    }
+    setForm(loaded)
+    setBaseline(loaded)
   }
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }))
@@ -106,6 +118,7 @@ export default function Blog() {
     setSaving(false)
     if (res.ok) {
       toast.success(id ? "Post saved." : "Post created.")
+      setBaseline(form)
       setOpen(false)
       load()
     } else toast.error(res.error || "Could not save.")
@@ -226,7 +239,7 @@ export default function Blog() {
         )}
       </div>
 
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={(o) => (o ? setOpen(true) : guard.requestLeave(() => setOpen(false)))}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle>{form.id ? "Edit post" : "New post"}</DialogTitle>
@@ -299,7 +312,7 @@ export default function Blog() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setOpen(false)}>
+            <Button variant="outline" onClick={() => guard.requestLeave(() => setOpen(false))}>
               Cancel
             </Button>
             <Button onClick={save} disabled={saving || loadingPost || postError !== null}>
@@ -309,6 +322,7 @@ export default function Blog() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <UnsavedGuardDialog prompt={guard.prompt} />
     </div>
   )
 }
