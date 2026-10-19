@@ -11,6 +11,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { siteContent, work, type SiteContent, type SiteDrafts, type SiteSection } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { PageHeader } from "@/app/components/page-kit"
+import { useUnsavedGuard } from "@/hooks/use-unsaved-guard"
+import { UnsavedGuardDialog } from "@/components/unsaved-guard-dialog"
 import {
   HERO_MAX,
   SECTION_TAB,
@@ -320,15 +322,8 @@ export default function Site() {
   const unpublished = useMemo(() => unpublishedSections(drafts), [drafts])
   const last = useMemo(() => lastPublished(drafts), [drafts])
 
-  // Leaving with unsaved edits asks first.
-  useEffect(() => {
-    if (!dirty.length) return
-    const warn = (e: BeforeUnloadEvent) => {
-      e.preventDefault()
-    }
-    window.addEventListener("beforeunload", warn)
-    return () => window.removeEventListener("beforeunload", warn)
-  }, [dirty.length])
+  // Leaving with unsaved edits asks first: tab close, in-app links and back.
+  const guard = useUnsavedGuard(dirty.length > 0)
 
   const setSection = <S extends SiteSection>(s: S, v: SiteContent[S]) => {
     setValues((prev) => ({ ...prev, [s]: v }))
@@ -767,6 +762,7 @@ export default function Site() {
           </div>
         </>
       )}
+      <UnsavedGuardDialog prompt={guard.prompt} />
     </div>
   )
 }

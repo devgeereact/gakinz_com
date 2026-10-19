@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useBlocker } from "react-router-dom"
 
 /**
@@ -18,8 +18,6 @@ import { useBlocker } from "react-router-dom"
 export function useUnsavedGuard(dirty: boolean) {
   const blocker = useBlocker(dirty)
   const [pendingClose, setPendingClose] = useState<(() => void) | null>(null)
-  const dirtyRef = useRef(dirty)
-  dirtyRef.current = dirty
 
   useEffect(() => {
     if (!dirty) return
@@ -31,21 +29,18 @@ export function useUnsavedGuard(dirty: boolean) {
     return () => window.removeEventListener("beforeunload", warn)
   }, [dirty])
 
-  // The form went clean (saved) while a prompt was open: nothing left to protect.
-  useEffect(() => {
-    if (dirty) return
-    if (blocker.state === "blocked") blocker.proceed()
-    setPendingClose(null)
-  }, [dirty, blocker])
-
   /** Run `leave` now if the form is clean, otherwise ask first. */
-  const requestLeave = useCallback((leave: () => void) => {
-    if (dirtyRef.current) setPendingClose(() => leave)
-    else leave()
-  }, [])
+  const requestLeave = useCallback(
+    (leave: () => void) => {
+      if (dirty) setPendingClose(() => leave)
+      else leave()
+    },
+    [dirty],
+  )
 
   const prompt = {
-    open: blocker.state === "blocked" || pendingClose !== null,
+    // A prompt can only be waiting while there is still something unsaved.
+    open: blocker.state === "blocked" || (dirty && pendingClose !== null),
     onStay: () => {
       setPendingClose(null)
       if (blocker.state === "blocked") blocker.reset()

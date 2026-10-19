@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { saveAs } from "file-saver"
+import { useUnsavedGuard } from "@/hooks/use-unsaved-guard"
+import { UnsavedGuardDialog } from "@/components/unsaved-guard-dialog"
 import { Download, FileText, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -53,6 +55,19 @@ export function ProjectBriefPanel({ projectId, projectName }: { projectId: numbe
   // Why the panel cannot be used yet, or null: SQL 16 not run, or briefs.php not uploaded.
   const [unavailable, setUnavailable] = useState<Exclude<BriefFailure, "error"> | null>(null)
   const [downloading, setDownloading] = useState(false)
+  // Sections being edited with unsaved changes. One guard covers the whole panel,
+  // so several open sections raise a single "Leave without saving?" prompt.
+  const [dirtySections, setDirtySections] = useState<ReadonlySet<string>>(new Set())
+  const reportDirty = useCallback((id: string, isDirty: boolean) => {
+    setDirtySections((prev) => {
+      if (prev.has(id) === isDirty) return prev
+      const next = new Set(prev)
+      if (isDirty) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }, [])
+  const guard = useUnsavedGuard(dirtySections.size > 0)
 
   const apply = useCallback((res: Awaited<ReturnType<typeof projectBriefs.get>>) => {
     if (res.ok) {
@@ -129,7 +144,7 @@ export function ProjectBriefPanel({ projectId, projectName }: { projectId: numbe
           </p>
           <div className="grid gap-3 lg:grid-cols-2">
             {BRIEF_SECTIONS.map((section) => (
-              <BriefSection key={section.title} projectId={projectId} section={section} brief={brief} onSaved={setBrief} onUnavailable={() => setUnavailable("sql")} />
+              <BriefSection key={section.title} projectId={projectId} section={section} brief={brief} onSaved={setBrief} onUnavailable={() => setUnavailable("sql")} reportDirty={reportDirty} requestLeave={guard.requestLeave} />
             ))}
           </div>
           <Measurements
@@ -141,6 +156,7 @@ export function ProjectBriefPanel({ projectId, projectName }: { projectId: numbe
           />
         </>
       )}
+      <UnsavedGuardDialog prompt={guard.prompt} />
     </section>
   )
 }
@@ -151,12 +167,16 @@ function BriefSection({
   brief,
   onSaved,
   onUnavailable,
+  reportDirty,
+  requestLeave,
 }: {
   projectId: number
   section: (typeof BRIEF_SECTIONS)[number]
   brief: ProjectBrief | null
   onSaved: (b: ProjectBrief) => void
   onUnavailable: () => void
+  reportDirty: (id: string, dirty: boolean) => void
+  requestLeave: (leave: () => void) => void
 }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState<BriefDraft>(() => draftFromBrief(brief))
@@ -169,6 +189,13 @@ function BriefSection({
   // Only this group's fields are compared, so another group's edit is never resent.
   const keys = section.fields.map((f) => f.key)
   const patch = Object.fromEntries(Object.entries(briefPatch(brief, draft)).filter(([k]) => keys.includes(k as (typeof keys)[number])))
+
+  // Dirty = open for editing and differs from the saved brief (the patch is exactly that difference).
+  const dirty = editing && Object.keys(patch).length > 0
+  useEffect(() => {
+    reportDirty(slug, dirty)
+    return () => reportDirty(slug, false)
+  }, [slug, dirty, reportDirty])
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -261,7 +288,7 @@ function BriefSection({
         </p>
       )}
       <div className="flex flex-wrap justify-end gap-2">
-        <Button type="button" variant="outline" size="sm" onClick={() => setEditing(false)} disabled={saving}>
+        <Button type="button" variant="outline" size="sm" onClick={() => requestLeave(() => setEditing(false))} disabled={saving}>
           Cancel
         </Button>
         <Button type="submit" size="sm" disabled={!!problem || saving}>
