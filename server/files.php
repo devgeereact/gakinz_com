@@ -25,10 +25,10 @@
  * share token, the uploader or the client id.
  */
 require __DIR__ . '/_bootstrap.php';
+require __DIR__ . '/_uploads.php'; // UPLOAD_DIR and stored_path()
 
 const STAFF = ['super_admin', 'admin', 'manager', 'editor', 'employee'];
 const MAX_BYTES = 20 * 1024 * 1024; // 20 MB
-const UPLOAD_DIR = __DIR__ . '/uploads';
 
 // Upload allowlist. Extension → the MIME types finfo may report for it. An
 // upload must satisfy both: a known extension, and a sniffed type that belongs
@@ -367,22 +367,6 @@ function fl_client_shape(array $r): array {
     'shared_at' => $r['shared_at'],
     'project_name' => ($r['project_kind'] ?? null) === 'it_support' ? 'IT support' : ($r['project_name'] ?? null),
   ];
-}
-
-/**
- * The on-disk path for a stored name, or null. The stored name comes from the
- * database, so it is never trusted: it must be one plain file name (no
- * separator and no leading dot, so never `..` or `.htaccess`), and the
- * resolved path must sit directly inside the upload directory, which also
- * rules out a symlink pointing elsewhere.
- */
-function stored_path(string $stored): ?string {
-  // \z, not $: a `$` would also match before a trailing newline.
-  if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]{0,254}\z/', $stored)) return null;
-  $dir = realpath(UPLOAD_DIR);
-  $real = realpath(UPLOAD_DIR . '/' . $stored);
-  if ($dir === false || $real === false || dirname($real) !== $dir || !is_file($real)) return null;
-  return $real;
 }
 
 /**
