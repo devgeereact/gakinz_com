@@ -23,7 +23,9 @@
  *   or LiteSpeed) the answer is sent before any lookup; otherwise the work runs
  *   first and every answer is held to the same minimum time, CA_MIN_MS.
  * - Throttled: by address and by IP, counted on requests, never on matches,
- *   so a 429 says nothing about whether an account exists.
+ *   so a 429 says nothing about whether an account exists. An address is
+ *   limited per IP (5) and, higher, from anywhere (15), so one IP cannot
+ *   lock another out of its own requests at the per-pair limit.
  * - Tokens: 256 random bits, stored only as token_hash() (K-059) in
  *   magic_links, 15 minutes, single use, claimed by a guarded UPDATE, so
  *   concurrent redemptions mint at most one session. The token travels in the
@@ -51,9 +53,11 @@ if (($GLOBALS['REFERENCE_SIGNIN_ENABLED'] ?? false) !== true) fail('Not found.',
 const CA_TTL_MINUTES = 15;          // link lifetime
 const CA_SESSION_DAYS = 30;         // auth.php TOKEN_TTL_DAYS
 const CA_MIN_MS = 1000;             // floor for every `request` answer when the response cannot be finished early
-const CA_PER_EMAIL = 5;             // requests for one address in 15 minutes, from anywhere
+const CA_PER_EMAIL_IP = 5;          // requests for one address from one IP in 15 minutes
+const CA_PER_EMAIL = 15;            // requests for one address in 15 minutes from anywhere: a higher ceiling,
+                                    // so one IP cannot lock another out at the per-pair limit
 const CA_PER_IP = 20;               // requests from one IP in 15 minutes, any address
-const CA_REDEEM_FAILS_PER_IP = 20;  // failed redemptions from one IP in 15 minutes
+const CA_REDEEM_FAILS_PER_IP = 20;  // failed redemptions from one IP in 15 minutes (a valid link is never blocked)
 const CA_LINKS_PER_USER = 3;        // links issued to one user in 15 minutes (shared with magic links)
 const CA_NEUTRAL = 'If the reference and email match a client account, we have sent a sign-in link to that email. It works once, for 15 minutes.';
 const CA_BAD_LINK = 'This sign-in link is invalid or has expired.';
@@ -89,18 +93,21 @@ function ca_request(mysqli $conn, string $reference, string $email): void {
   if (strlen($email) > 200 || !filter_var($email, FILTER_VALIDATE_EMAIL)) fail('Enter a valid email address.');
   if (!preg_match(CA_REF_PATTERN, $reference)) fail('Enter the reference as it appears on your documents, for example GK-P-2026-0001.');
 
-  // The address is kept as a keyed fingerprint, not in plain text, so the
-  // audit log can count requests without holding every address typed.
+  // The address is kept as a fingerprint (a truncated SHA-256), not in plain
+  // text, so the audit log can count requests without holding every address
+  // typed. Not keyed: there is no server secret to key it with.
   $emailKey = 'e:' . substr(hash('sha256', 'client_access|' . $email), 0, 40);
   $ip = $_SERVER['REMOTE_ADDR'] ?? '';
   $stmt = $conn->prepare(
-    "SELECT COALESCE(SUM(detail = ?), 0) AS mine, COALESCE(SUM(ip = ?), 0) AS from_ip FROM audit_log
+    "SELECT COALESCE(SUM(detail = ? AND ip = ?), 0) AS pair, COALESCE(SUM(detail = ?), 0) AS mine,
+            COALESCE(SUM(ip = ?), 0) AS from_ip FROM audit_log
      WHERE action = 'client_access_request' AND created_at > (NOW() - INTERVAL 15 MINUTE)"
   );
-  $stmt->bind_param('ss', $emailKey, $ip);
+  $stmt->bind_param('ssss', $emailKey, $ip, $emailKey, $ip);
   $stmt->execute();
   $tries = $stmt->get_result()->fetch_assoc();
-  if ((int)($tries['mine'] ?? 0) >= CA_PER_EMAIL || (int)($tries['from_ip'] ?? 0) >= CA_PER_IP) {
+  if ((int)($tries['pair'] ?? 0) >= CA_PER_EMAIL_IP || (int)($tries['mine'] ?? 0) >= CA_PER_EMAIL
+      || (int)($tries['from_ip'] ?? 0) >= CA_PER_IP) {
     fail('Too many requests. Please wait a few minutes and try again.', 429);
   }
   audit($conn, null, 'client_access_request', $emailKey);
@@ -211,16 +218,9 @@ function ca_reference_clients(mysqli $conn, string $reference): array {
 // ── Redeem a link ────────────────────────────────────────────────────────────
 function ca_redeem(mysqli $conn): void {
   $ip = $_SERVER['REMOTE_ADDR'] ?? '';
-  $stmt = $conn->prepare(
-    "SELECT COUNT(*) AS c FROM audit_log
-     WHERE action = 'client_access_redeem_failed' AND ip = ? AND created_at > (NOW() - INTERVAL 15 MINUTE)"
-  );
-  $stmt->bind_param('s', $ip);
-  $stmt->execute();
-  if ((int)($stmt->get_result()->fetch_assoc()['c'] ?? 0) >= CA_REDEEM_FAILS_PER_IP) {
-    fail('Too many attempts. Please wait a few minutes and try again.', 429);
-  }
-
+  // A valid, unused, unexpired link is looked up before the failure throttle
+  // applies, so junk posted from a shared address (an office, a mobile
+  // carrier) cannot block a real client's link. Only a failure is throttled.
   $in = body();
   $token = is_string($in['token'] ?? null) ? $in['token'] : '';
   if (!preg_match('/^[0-9a-f]{64}$/', $token)) ca_redeem_failed($conn, null);
@@ -278,8 +278,22 @@ function ca_redeem(mysqli $conn): void {
   ]);
 }
 
-/** One answer for a missing, wrong, used or expired link, counted for the throttle. */
+/**
+ * One answer for a missing, wrong, used or expired link, counted for the
+ * throttle. Past the limit the answer is 429 instead, which tells a guesser
+ * nothing a 400 would not.
+ */
 function ca_redeem_failed(mysqli $conn, ?int $uid): void {
+  $ip = $_SERVER['REMOTE_ADDR'] ?? '';
+  $stmt = $conn->prepare(
+    "SELECT COUNT(*) AS c FROM audit_log
+     WHERE action = 'client_access_redeem_failed' AND ip = ? AND created_at > (NOW() - INTERVAL 15 MINUTE)"
+  );
+  $stmt->bind_param('s', $ip);
+  $stmt->execute();
+  if ((int)($stmt->get_result()->fetch_assoc()['c'] ?? 0) >= CA_REDEEM_FAILS_PER_IP) {
+    fail('Too many attempts. Please wait a few minutes and try again.', 429);
+  }
   audit($conn, $uid, 'client_access_redeem_failed', '');
   fail(CA_BAD_LINK, 400);
 }
