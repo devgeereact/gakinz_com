@@ -82,6 +82,7 @@ export default function Proposals() {
   const [clientList, setClientList] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [acceptError, setAcceptError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
   const [confirming, setConfirming] = useState<Proposal | null>(null)
   const [evidence, setEvidence] = useState<AcceptanceEvidence>({ method: "email", reference: "", received_on: "" })
@@ -211,6 +212,7 @@ export default function Proposals() {
   // Open the accept confirmation with fresh evidence: email, received today.
   const startAccept = (p: Proposal) => {
     setEvidence({ method: "email", reference: "", received_on: localIsoDate() })
+    setAcceptError(null)
     setConfirming(p)
   }
   // An accept request is in flight: the dialog cannot be cancelled or closed until it answers.
@@ -218,6 +220,7 @@ export default function Proposals() {
   const evidenceIssue = confirming?.evidence_ready ? evidenceProblem(evidence, confirming, localIsoDate()) : null
 
   const accept = async (p: Proposal) => {
+    setAcceptError(null)
     setBusyId(p.id)
     const res = await proposals.accept(p.id, { ...evidence, reference: evidence.reference.trim() })
     setBusyId(null)
@@ -232,7 +235,10 @@ export default function Proposals() {
         toast.success(`Accepted. ${made}`)
       }
       navigate("/app/projects")
-    } else toast.error(res.error || "Could not accept.")
+    } else {
+      // Shown inside the dialog, as the Record payment dialog does, so it sits beside the fields to correct.
+      setAcceptError(res.error || "Could not accept.")
+    }
   }
 
   const newQuoteDialog = (
@@ -523,7 +529,10 @@ export default function Proposals() {
                   <div className="grid gap-[14px] sm:grid-cols-2">
                     <div className="grid gap-1.5">
                       <Label htmlFor="amethod">How the client accepted</Label>
-                      <Select value={evidence.method} onValueChange={(v) => setEvidence((e) => ({ ...e, method: v as AcceptanceMethod }))}>
+                      <Select value={evidence.method} onValueChange={(v) => {
+                          setAcceptError(null)
+                          setEvidence((e) => ({ ...e, method: v as AcceptanceMethod }))
+                        }}>
                         <SelectTrigger id="amethod">
                           <SelectValue />
                         </SelectTrigger>
@@ -544,7 +553,10 @@ export default function Proposals() {
                         min={confirming.created_at.slice(0, 10)}
                         max={localIsoDate()}
                         value={evidence.received_on}
-                        onChange={(e) => setEvidence((d) => ({ ...d, received_on: e.target.value }))}
+                        onChange={(e) => {
+                          setAcceptError(null)
+                          setEvidence((d) => ({ ...d, received_on: e.target.value }))
+                        }}
                       />
                     </div>
                   </div>
@@ -555,7 +567,10 @@ export default function Proposals() {
                       maxLength={200}
                       value={evidence.reference}
                       placeholder={referenceHint(evidence.method)}
-                      onChange={(e) => setEvidence((d) => ({ ...d, reference: e.target.value }))}
+                      onChange={(e) => {
+                        setAcceptError(null)
+                        setEvidence((d) => ({ ...d, reference: e.target.value }))
+                      }}
                     />
                   </div>
                   {evidenceIssue && (
@@ -570,6 +585,13 @@ export default function Proposals() {
                   Accepting now records no evidence of the client's agreement.
                 </p>
               )}
+            </div>
+          )}
+
+          {acceptError && (
+            <div role="alert" className="flex items-start gap-3 rounded-2xl border border-bad/30 bg-bad-soft p-[14px] text-sm text-foreground">
+              <AlertCircle className="mt-0.5 size-4 shrink-0 text-bad" aria-hidden="true" />
+              <p className="min-w-0 flex-1 [overflow-wrap:anywhere]">{acceptError}</p>
             </div>
           )}
           <DialogFooter className="gap-2 sm:gap-0">
