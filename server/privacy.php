@@ -29,7 +29,7 @@
  *   tickets, ticket_replies        portal messages and every reply
  *   client_feedback    including the owner's follow-up note
  *   contracts          including signer details and the signing IP
- *   files              metadata only: name, type, size, dates. Never the bytes.
+ *   files              metadata only: name, type, size, portal sharing (SQL 18), dates. Never the bytes.
  *   comm_threads, comm_messages    Comms conversations filed against the client
  *   audit_log          rows written by the client's logins, and rows whose text
  *                      names the client's or a login's email address. On a row
@@ -285,8 +285,10 @@ function pv_client_export(mysqli $conn, int $cid, array &$unavailable): array {
     'contracts' => pv_rows($conn, $unavailable, 'contracts',
       'SELECT id, project_id, kind, title, body, status, nda_triage, signer_name, signer_email, signed_name, signed_ip, signed_at, created_at, updated_at, deleted_at
          FROM contracts WHERE client_id = ? ORDER BY id', 'i', [$cid]),
+    // client_visible and shared_at (SQL 18) say whether staff shared the file to the portal.
     'files' => pv_rows($conn, $unavailable, 'files',
-      "SELECT id, project_id, name, mime, size, expires_at, created_at, deleted_at FROM files WHERE $fileWhere ORDER BY id", $fileTypes, $fileParams),
+      "SELECT id, project_id, name, mime, size, client_visible, shared_at, expires_at, created_at, deleted_at FROM files WHERE $fileWhere ORDER BY id", $fileTypes, $fileParams,
+      "SELECT id, project_id, name, mime, size, expires_at, created_at, deleted_at FROM files WHERE $fileWhere ORDER BY id"),
     'comm_threads' => $threads,
     'comm_messages' => pv_rows_in($conn, $unavailable, 'comm_messages', 'SELECT id, thread_id, direction, body, created_at FROM comm_messages WHERE thread_id IN ', pv_ids($threads)),
     'audit_log' => pv_audit($conn, $unavailable, $emails, $userIds, $cid, $company, pv_ids($enquiries)),

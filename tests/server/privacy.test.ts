@@ -163,6 +163,27 @@ describe("privacy export", () => {
     expect(r.json.about.excluded.join(" ")).toMatch(/Password hashes/)
   })
 
+  it("says whether each file was shared to the portal, and still exports files before SQL 18", async () => {
+    sql(`UPDATE files SET client_visible = 1, shared_at = '2026-10-19 09:30:00' WHERE client_id = ${a.clientId}`)
+    const shared = await api<Export>(`privacy.php?action=export&client_id=${a.clientId}`, { token: admin })
+    expect(shared.status).toBe(200)
+    expect(rows(shared.json, "files")[0]).toMatchObject({ name: "Alpha-brief.pdf", client_visible: 1, shared_at: "2026-10-19 09:30:00" })
+
+    // Before SQL 18 the columns are absent: the files section falls back, not the export.
+    sql("ALTER TABLE files DROP COLUMN shared_at, DROP COLUMN client_visible")
+    try {
+      const before = await api<Export>(`privacy.php?action=export&client_id=${a.clientId}`, { token: admin })
+      expect(before.status).toBe(200)
+      const [file] = rows(before.json, "files")
+      expect(file).toMatchObject({ name: "Alpha-brief.pdf" })
+      expect(file).not.toHaveProperty("client_visible")
+      expect(file).not.toHaveProperty("shared_at")
+    } finally {
+      sql("ALTER TABLE files ADD COLUMN client_visible TINYINT(1) NOT NULL DEFAULT 0 AFTER expires_at, " +
+        "ADD COLUMN shared_at TIMESTAMP NULL DEFAULT NULL AFTER client_visible")
+    }
+  })
+
   it("refuses every role but super_admin and admin, and an unknown or invalid subject", async () => {
     createUser({ email: "manager@example.test", role: "manager" })
     createUser({ email: "editor@example.test", role: "editor" })
