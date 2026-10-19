@@ -504,6 +504,9 @@ export default function Leads() {
                             {lead.company ? lead.name : lead.email}
                             {lead.project_type ? ` · ${lead.project_type}` : ""}
                           </span>
+                          {lead.reference && (
+                            <span className="min-w-0 font-mono text-[12px] tabular-nums text-muted-foreground [overflow-wrap:anywhere]">{lead.reference}</span>
+                          )}
                           {(foot || lead.budget) && (
                             <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[12.5px] text-muted-foreground">
                               <span className={cn("min-w-0", st === "overdue" && "text-bad", st === "today" && "text-warn")}>{foot}</span>
@@ -538,6 +541,12 @@ export default function Leads() {
               </SheetHeader>
               <div className="flex-1 overflow-y-auto p-5">
                 <dl className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-x-4 gap-y-2.5 max-sm:grid-cols-1">
+                  {openLead.reference && (
+                    <>
+                      <dt className="text-[13.5px] text-muted-foreground">Reference</dt>
+                      <dd className="m-0 font-mono text-[13px] tabular-nums">{openLead.reference}</dd>
+                    </>
+                  )}
                   <dt className="text-[13.5px] text-muted-foreground">Contact</dt>
                   <dd className="m-0 min-w-0 [overflow-wrap:anywhere]">{openLead.name}</dd>
                   <dt className="text-[13.5px] text-muted-foreground">Email</dt>

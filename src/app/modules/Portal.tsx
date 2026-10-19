@@ -258,7 +258,9 @@ export default function Portal() {
                           <li key={p.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3">
                             <span className="min-w-0">
                               <b className="block font-semibold">IT support</b>
-                              <span className="block text-[13px] text-muted-foreground">Ongoing support</span>
+                              <span className="block text-[13px] text-muted-foreground">
+                                Ongoing support{p.reference && <> · <span className="font-mono tabular-nums">{p.reference}</span></>}
+                              </span>
                             </span>
                             <StatusBadge status={p.status} />
                           </li>
@@ -270,6 +272,7 @@ export default function Portal() {
                           <span className="min-w-0">
                             <b className="block font-semibold [overflow-wrap:anywhere]">{p.name}</b>
                             <span className="block text-[13px] text-muted-foreground">
+                              {p.reference && <span className="font-mono tabular-nums">{p.reference} · </span>}
                               {pct}% complete{p.due_date ? ` · due ${fmt(p.due_date)}` : ""}
                             </span>
                             <span
@@ -312,6 +315,12 @@ export default function Portal() {
                           <b className="block font-mono font-semibold tabular-nums [overflow-wrap:anywhere]">{inv.number || `#${inv.id}`}</b>
                           <span className="block text-[13px] text-muted-foreground">
                             Due {fmt(inv.due_at)} · <span className="tabular-nums">{gbp(inv.total)}</span>
+                            {inv.project_reference && (
+                              <>
+                                {" "}
+                                · Project <span className="font-mono tabular-nums">{inv.project_reference}</span>
+                              </>
+                            )}
                           </span>
                         </span>
                         {inv.status !== "paid" && inv.total > 0 ? (

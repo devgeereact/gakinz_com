@@ -385,7 +385,10 @@ export default function Projects() {
                   </span>
                 </span>
                 <span className="font-display text-[1.15rem] font-semibold leading-snug [overflow-wrap:anywhere]">{p.name}</span>
-                <span className="min-w-0 text-muted-foreground [overflow-wrap:anywhere]">{p.client_company || "Internal"}</span>
+                <span className="min-w-0 text-muted-foreground [overflow-wrap:anywhere]">
+                  {p.client_company || "Internal"}
+                  {p.reference && <span className="block font-mono text-[12px] tabular-nums">{p.reference}</span>}
+                </span>
                 <Progress value={pct(p)} label={`${p.name}: ${pct(p)}% of tasks done`} />
                 <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[12.5px] text-muted-foreground">
                   <span>{PROJECT_STATUS.find((s) => s.key === p.status)?.label}</span>
@@ -517,6 +520,7 @@ function ProjectBoard({
         <div className="min-w-[min(100%,200px)] flex-1">
           <p className="font-mono text-xs uppercase tracking-[.08em] text-muted-foreground [overflow-wrap:anywhere]">
             {project.client_company || "Internal"}
+            {project.reference && <> · {project.reference}</>}
           </p>
           <h2 className="mt-1 font-display text-[1.4rem] font-semibold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">
             {project.name}

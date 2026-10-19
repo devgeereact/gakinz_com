@@ -91,6 +91,7 @@ export default function ProposalView() {
                     )}
                     <span className="font-data text-label uppercase text-gk-ink-mute">
                       Status · {p.status}
+                      {p.project_reference && <> · Project {p.project_reference}</>}
                     </span>
                   </div>
 

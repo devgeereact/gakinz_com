@@ -454,6 +454,9 @@ export default function Proposals() {
                   <TableRow key={p.id}>
                     <TableCell className="min-w-[12rem] [overflow-wrap:anywhere]">
                       <span className="font-semibold">{p.title}</span>
+                      {p.project_reference && (
+                        <span className="mt-0.5 block font-mono text-xs tabular-nums text-muted-foreground">Project {p.project_reference}</span>
+                      )}
                       {p.status === "accepted" && evidenceLine(p) && (
                         <span className="mt-1 block text-[13px] text-muted-foreground">
                           {evidenceLine(p)}
