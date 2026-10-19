@@ -447,6 +447,8 @@ CREATE TABLE IF NOT EXISTS files (
   size        INT NOT NULL DEFAULT 0,
   share_token CHAR(40) DEFAULT NULL,            -- set when a public link is issued
   expires_at  TIMESTAMP NULL DEFAULT NULL,      -- share-link expiry
+  client_visible TINYINT(1) NOT NULL DEFAULT 0,  -- SQL 18: listed in the client's portal
+  shared_at   TIMESTAMP NULL DEFAULT NULL,      -- SQL 18: when it was made visible to the client
   uploaded_by INT NULL,
   created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   deleted_at  TIMESTAMP NULL DEFAULT NULL,
@@ -934,3 +936,19 @@ CREATE TABLE IF NOT EXISTS project_measurements (
 --     ADD KEY idx_time_ticket (ticket_id),
 --     ADD CONSTRAINT fk_time_ticket FOREIGN KEY (ticket_id) REFERENCES tickets(id) ON DELETE SET NULL;
 --   ALTER TABLE projects ADD COLUMN kind VARCHAR(20) NULL DEFAULT NULL AFTER stage;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- 2026-10-19 · SQL 18 · Files shared to the client portal (files.php).
+-- docs/PRODUCT-SPEC.md sections 6.2 and 7: a client reads the documents the
+-- studio shares with them, such as a consultancy recommendation. Staff turn
+-- "Visible to client" on for a file attached to a client or to a client's
+-- project (files.php?action=client_share); the client lists and downloads only
+-- their own visible, live files (files.php?action=mine, mine_download). Off by
+-- default, so nothing already stored becomes visible. Fresh installs get the
+-- columns from the CREATE TABLE above. Additive. Run once only; a second run
+-- fails on the duplicate column. Until it runs, client_share and both client
+-- routes answer 503, the Files screen hides the toggle, the portal hides the
+-- Shared files card, and every existing files action works as before.
+--   ALTER TABLE files
+--     ADD COLUMN client_visible TINYINT(1) NOT NULL DEFAULT 0 AFTER expires_at,
+--     ADD COLUMN shared_at TIMESTAMP NULL DEFAULT NULL AFTER client_visible;
