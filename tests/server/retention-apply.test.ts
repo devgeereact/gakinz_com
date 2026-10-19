@@ -231,6 +231,29 @@ describe("retention_apply", () => {
     expect(JSON.parse(one("SELECT detail FROM audit_log WHERE action = 'retention_apply'")!).deleted_files).toBe("uploads_unavailable")
   })
 
+  it("reports the error that stopped the run, not a failing audit write after it", () => {
+    setOverrides({ RETENTION_APPLY: true })
+    // The run stops on the old file row (default errno 1644); then the audit write fails with errno 1645.
+    sql(`DELIMITER //
+CREATE TRIGGER t22_fail BEFORE DELETE ON files FOR EACH ROW BEGIN
+  IF OLD.id = ${ids.oldFile} THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'forced'; END IF; END//
+CREATE TRIGGER t22_audit_fail BEFORE INSERT ON audit_log FOR EACH ROW BEGIN
+  IF NEW.action = 'retention_apply' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'audit down', MYSQL_ERRNO = 1645; END IF; END//
+DELIMITER ;`)
+    try {
+      const r = cron("--apply")
+      expect(r.status).toBe(1)
+      expect(r.err).toContain("Retention apply stopped: SQL error 1644.")
+      expect(r.err).not.toContain("Retention apply stopped: SQL error 1645")
+      expect(r.err).toContain("could not write the audit row (SQL error 1645)")
+    } finally {
+      sql("DROP TRIGGER IF EXISTS t22_fail")
+      sql("DROP TRIGGER IF EXISTS t22_audit_fail")
+    }
+    expect(one(`SELECT COUNT(*) FROM enquiries WHERE id IN (${ids.oldProspect}, ${ids.oldWithCall})`)).toBe("0")
+    expect(one("SELECT COUNT(*) FROM audit_log WHERE action = 'retention_apply'")).toBe("0")
+  })
+
   it("still writes the counts row, marked stopped, when a run fails part way after deleting", () => {
     setOverrides({ RETENTION_APPLY: true })
     // Forced failure: deleting the first old file row raises an error, after both enquiries have gone.

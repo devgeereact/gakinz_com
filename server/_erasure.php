@@ -429,7 +429,15 @@ function retention_apply_run(mysqli $conn, bool $wantApply): array {
           : $r['status'];
       }
       if ($stopped) $counts['stopped'] = true;
-      audit($conn, null, 'retention_apply', (string)json_encode($counts));
+      // A failing audit write must never hide the error that stopped the run,
+      // so it is logged, and rethrown only when there is no such error.
+      try {
+        audit($conn, null, 'retention_apply', (string)json_encode($counts));
+      } catch (Throwable $a) {
+        $what = $a instanceof mysqli_sql_exception ? 'SQL error ' . $a->getCode() : get_class($a);
+        error_log("GAkinz retention apply: could not write the audit row ($what).");
+        if (!$stopped) throw $a;
+      }
     }
   }
   return $out;
