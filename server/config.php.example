@@ -129,6 +129,22 @@ $FIGMA_TOKEN       = '';  // Figma personal access token — required for the De
 $SLACK_WEBHOOK_URL = '';  // Slack Incoming Webhook — announcements broadcast here
 $CALENDLY_URL      = '';  // e.g. 'https://calendly.com/gakinz/discovery' — discovery-call booking
 
+// ── Retention periods (_retention.php) — owner and legal decisions. ─────────────
+// docs/PRIVACY-READINESS.md section 6. null means "not decided, nothing happens":
+// the retention report says "period not set" for that rule. A whole number
+// only changes what the report COUNTS. Nothing anywhere deletes or anonymises
+// a row by these periods; that job is not built until the periods are agreed.
+//   php cron.php job=retention_report      (command line, read only)
+$RETENTION_ENQUIRY_MONTHS      = null; // enquiries that did not become a client, from last change
+$RETENTION_CLIENT_MONTHS       = null; // clients with no activity on them, their projects, invoices or messages
+$RETENTION_INVOICE_MONTHS      = null; // invoices and their payment events, from issue date (HMRC rules apply)
+$RETENTION_AUDIT_MONTHS        = null; // audit log entries, from entry date
+$RETENTION_SUPPORT_MONTHS      = null; // portal messages and feedback, from last change
+$RETENTION_COMMS_MONTHS        = null; // Comms conversations and their messages, from last message
+$RETENTION_STAFF_MONTHS        = null; // suspended staff accounts and their leave, from last change
+$RETENTION_CERTIFICATE_MONTHS  = null; // certificates, from issue date
+$RETENTION_DELETED_FILE_DAYS   = null; // soft-deleted files, from deletion (in days)
+
 // ── Connection ────────────────────────────────────────────────────────────────
 $conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 if ($conn->connect_errno) {

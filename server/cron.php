@@ -17,6 +17,10 @@
  *   ?job=prune    delete sessions, magic links and reset links a day past expiry
  *   ?job=all      run them all (default)
  *
+ *   job=retention_report   command line only, and not part of `all`: prints a
+ *                plain summary of the rows each proposed retention rule would
+ *                affect (_retention.php). It counts and never changes a row.
+ *
  * Config (config.php): $CRON_KEY (required), $REPORT_RECIPIENTS (comma list).
  * Every job degrades quietly if its dependency (SMTP, columns) is absent.
  */
@@ -33,6 +37,16 @@ if (PHP_SAPI === 'cli') {
   if ($expected === '' || !hash_equals((string)$expected, (string)$key)) fail('Forbidden.', 403);
   $job = $_GET['job'] ?? 'all';
 }
+// Retention dry run: command line only, plain text, read only. Over the web it
+// is refused even with the key, so the report never lands in an access log.
+if ($job === 'retention_report') {
+  if (PHP_SAPI !== 'cli') fail('retention_report runs from the command line only.', 400);
+  require_once __DIR__ . '/_retention.php';
+  header_remove('Content-Type');
+  echo retention_report_text(retention_report($conn));
+  exit(0);
+}
+
 $out = [];
 
 if ($job === 'all' || $job === 'chase')   $out['chase']   = cron_chase($conn);
