@@ -13,6 +13,10 @@ import {
   heroChanges,
   heroIdsInHeroOrder,
   heroIdsInListOrder,
+  isBuiltInService,
+  isLegacyServices,
+  storedServices,
+  upgradeLegacyServices,
   lastPublished,
   moveRow,
   normaliseSecs,
@@ -209,7 +213,7 @@ describe("service rows", () => {
   })
 
   it("refuses a new service without every page field, naming the first one missing", () => {
-    expect(validateSection("services", [{ title: "Printers", summary: "Printer help." }])).toMatch(/^Row 1: Web address cannot be empty\. .*no half page/)
+    expect(validateSection("services", [{ title: "Printers", summary: "Printer help." }])).toMatch(/^Row 1: "Printers" is not one of the built-in services, .* Web address is empty\.$/)
     const bad = { ...whole(), slug: "printers", title: "Printers", hook: " " }
     expect(validateSection("services", [bad])).toMatch(/^Row 1: Buyer hook cannot be empty/)
     expect(validateSection("services", [{ ...whole(), exclusions: ["", ""] }])).toMatch(/Not included cannot be empty/)
@@ -231,5 +235,50 @@ describe("service rows", () => {
     const t = tidyService({ ...whole(), needs: ["  One ", "", "Two"], detail: "  " })
     expect(t.needs).toEqual(["One", "Two"])
     expect("detail" in t).toBe(false)
+  })
+})
+
+describe("older services lists", () => {
+  const LEGACY = [
+    { title: "Web design", summary: "Edited design." },
+    { title: "Care and support", summary: "Care, as it was called." },
+    { title: "SEO and content", summary: "Not a built-in service." },
+  ]
+
+  it("knows Website care by its former name", () => {
+    expect(isBuiltInService({ title: "Care and support" })).toBe(true)
+    expect(isBuiltInService({ title: "SEO and content" })).toBe(false)
+  })
+
+  it("upgrades each row that names a built-in service to its whole page, keeping the published title and summary", () => {
+    const up = upgradeLegacyServices(LEGACY)
+    expect(up[1]).toMatchObject({ slug: "care-and-support", group: "websites", title: "Care and support", summary: "Care, as it was called." })
+    expect(up[1].hook).toBe(defaultSiteContent().services[3].hook)
+    expect(up[0]).toMatchObject({ slug: "web-design", summary: "Edited design." })
+    expect(up[2]).toEqual(LEGACY[2])
+    // A list that already has web addresses is left alone.
+    const modern = defaultSiteContent().services
+    expect(upgradeLegacyServices(modern)).toBe(modern)
+  })
+
+  it("loads a published legacy list upgraded, so a save is not blocked by the former name", () => {
+    const drafts = draftsWith({ services: { published: LEGACY.slice(0, 2) } })
+    expect(isLegacyServices(storedServices(drafts))).toBe(true)
+    const eff = effectiveContent(drafts)
+    expect(eff.services.map((r) => r.slug)).toEqual(["web-design", "care-and-support"])
+    expect(validateSection("services", eff.services)).toBeNull()
+  })
+
+  it("names an unmatched older row clearly instead of blocking on a field", () => {
+    const eff = effectiveContent(draftsWith({ services: { published: LEGACY } }))
+    expect(validateSection("services", eff.services)).toBe(
+      'Row 3: "SEO and content" is not one of the built-in services, so it needs every page field before it can be published. Web address is empty.',
+    )
+  })
+
+  it("refuses a web address longer than site.php allows", () => {
+    const row = { ...defaultSiteContent().services[0], slug: "a".repeat(81) }
+    expect(validateSection("services", [row])).toMatch(/Web address must be 80 characters or fewer/)
+    expect(validateSection("services", [{ ...row, slug: "a".repeat(80) }])).toBeNull()
   })
 })

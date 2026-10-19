@@ -1,6 +1,6 @@
 import type { SiteContent, SiteDrafts, SiteSection, SiteService, WorkAdminRow, WorkInput } from "@/lib/api"
 import { SITE_SECTIONS } from "@/lib/api"
-import { DEFAULT_COPY } from "@/marketing/data/content"
+import { DEFAULT_COPY, builtInFor, type ServiceCopy } from "@/marketing/data/content"
 
 // Pure helpers behind the Site content module and the hero controls in Work.
 // Kept free of React so they can be unit tested (siteContentModel.test.ts).
@@ -19,23 +19,28 @@ export function normaliseSecs(v: unknown): number {
   return Math.min(10, Math.max(4, n))
 }
 
+/** A built-in service as a whole site.php row. */
+function serviceRow(s: ServiceCopy): SiteService {
+  return {
+    title: s.title,
+    summary: s.summary,
+    slug: s.slug,
+    group: s.group,
+    hook: s.hook,
+    detail: s.detail,
+    needs: [...s.needs],
+    deliverables: [...s.deliverables],
+    exclusions: [...s.exclusions],
+    price_basis: s.price_basis,
+  }
+}
+
 /** The public site's built-in copy, in the shapes site.php stores. */
 export function defaultSiteContent(): SiteContent {
   const d = DEFAULT_COPY
   return {
     hero: { status: d.hero.status, lead: d.hero.lead, cta1: d.hero.cta1, cta2: d.hero.cta2, secs: normaliseSecs(d.hero.secs) },
-    services: d.services.map((s) => ({
-      title: s.title,
-      summary: s.summary,
-      slug: s.slug,
-      group: s.group,
-      hook: s.hook,
-      detail: s.detail,
-      needs: [...s.needs],
-      deliverables: [...s.deliverables],
-      exclusions: [...s.exclusions],
-      price_basis: s.price_basis,
-    })),
+    services: d.services.map(serviceRow),
     process: d.process.map((s) => ({ title: s.title, detail: s.detail })),
     packages: d.packages.map((p) => ({ name: p.name, price: p.price, best: p.best, featured: p.featured })),
     addons: d.addons.map((a) => ({ name: a.name, price: a.price })),
@@ -56,7 +61,34 @@ export function effectiveContent(drafts: SiteDrafts | null | undefined): SiteCon
   }
   for (const s of SITE_SECTIONS) put(s)
   out.hero = { ...out.hero, secs: normaliseSecs(out.hero.secs) }
+  out.services = upgradeLegacyServices(out.services)
   return out
+}
+
+/** True for a services list saved before service pages existed: no row has a web address. */
+export function isLegacyServices(rows: SiteService[] | null | undefined): boolean {
+  return Array.isArray(rows) && rows.length > 0 && !rows.some((r) => typeof r?.slug === "string" && r.slug.trim() !== "")
+}
+
+/**
+ * An older title-and-summary list as whole service rows: each row that names a
+ * built-in service (by name or former name) takes that service's page and
+ * keeps its own title and summary. A row that names none is left as it is,
+ * and the editor asks for its page fields. A list with web addresses is
+ * returned unchanged.
+ */
+export function upgradeLegacyServices(rows: SiteService[]): SiteService[] {
+  if (!isLegacyServices(rows)) return rows
+  return rows.map((r) => {
+    const known = builtInFor(r)
+    return known ? { ...serviceRow(known), title: r.title, summary: r.summary } : r
+  })
+}
+
+/** The stored services rows before any upgrade: the draft, else the published list, else null. */
+export function storedServices(drafts: SiteDrafts | null | undefined): SiteService[] | null {
+  const st = drafts?.services
+  return (st?.draft ?? st?.published ?? null) as SiteService[] | null
 }
 
 export const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
@@ -183,6 +215,8 @@ function checkRecord(rec: Record<string, unknown>, rules: FieldRule[], where: st
 /** Lines per list on a service page, mirrored from server/site.php SERVICE_LIST_MAX. */
 export const SERVICE_LIST_MAX = 10
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+/** Mirrors the 80-character slug limit in server/site.php. */
+const SLUG_MAX = 80
 const SERVICE_LISTS = ["needs", "deliverables", "exclusions"] as const
 /** The fields a service page needs, in the order the editor shows them. */
 const SERVICE_PAGE_FIELDS: { key: keyof SiteService; label: string }[] = [
@@ -214,11 +248,9 @@ export function tidyService(row: SiteService): SiteService {
   return out
 }
 
-/** True when a row names one of the website's built-in services, by web address or name. */
+/** True when a row names one of the website's built-in services, by web address, name or former name. */
 export function isBuiltInService(row: Pick<SiteService, "title" | "slug">): boolean {
-  const title = (row.title ?? "").trim().toLowerCase()
-  const slug = (row.slug ?? "").trim()
-  return DEFAULT_COPY.services.some((s) => (slug && s.slug === slug) || s.title.toLowerCase() === title)
+  return builtInFor(row) !== undefined
 }
 
 /** Each row's own problem, or null. Run on tidied rows. */
@@ -227,6 +259,7 @@ function checkServices(rows: SiteService[]): string | null {
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i]
     const where = `Row ${i + 1}: `
+    if (r.slug && r.slug.length > SLUG_MAX) return `${where}Web address must be ${SLUG_MAX} characters or fewer.`
     if (r.slug && !SLUG.test(r.slug)) return `${where}Web address can use lower-case letters, numbers and single hyphens only.`
     if (r.slug && seen.has(r.slug)) return `${where}Another service already uses the web address ${r.slug}.`
     if (r.slug) seen.add(r.slug)
@@ -245,6 +278,9 @@ function checkServices(rows: SiteService[]): string | null {
     const hasPageField = SERVICE_PAGE_FIELDS.some((f) => r[f.key] !== undefined)
     if (hasPageField || !isBuiltInService(r)) {
       const missing = SERVICE_PAGE_FIELDS.find((f) => r[f.key] === undefined)
+      if (missing && !hasPageField) {
+        return `${where}"${r.title}" is not one of the built-in services, so it needs every page field before it can be published. ${missing.label} is empty.`
+      }
       if (missing) {
         return `${where}${missing.label} cannot be empty. A service page is published only when it has every field, so no half page appears.`
       }

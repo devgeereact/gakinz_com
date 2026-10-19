@@ -104,7 +104,7 @@ const isGroup = (v: unknown): v is ServiceGroup => SERVICE_GROUPS.some((g) => g.
 const FORMER_TITLES: Record<string, string> = { "care and support": "care-and-support" }
 
 /** The built-in service a published row stands for: by slug, then by title, then by a former title. */
-function builtInFor(row: PublishedService): ServiceCopy | undefined {
+export function builtInFor(row: PublishedService): ServiceCopy | undefined {
   const slug = str(row.slug)
   const title = str(row.title).toLowerCase()
   return (
@@ -147,7 +147,9 @@ export function serviceFromRow(row: PublishedService): ServiceCopy | null {
  * Published services over the built-in six.
  *
  * Rows published before slugs existed (no row has a slug) only edit the
- * built-in services they name, so the six pages stay. Rows with slugs decide
+ * built-in services they name, so the six pages stay, in the built-in order,
+ * until the owner saves the list again in the CMS (which then upgrades every
+ * row to a whole page with a slug). Rows with slugs decide
  * which services show and in what order. An empty result keeps the built-in
  * list rather than a services page with nothing on it.
  */

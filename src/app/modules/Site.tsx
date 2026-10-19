@@ -22,11 +22,13 @@ import {
   effectiveContent,
   focusAfterMove,
   formatPublishedDate,
+  isLegacyServices,
   lastPublished,
   moveRow,
   normaliseSecs,
   prepareSection,
   removeRow,
+  storedServices,
   textOn,
   unpublishedSections,
   validateSection,
@@ -304,12 +306,19 @@ export default function Site() {
   const [slots, setSlots] = useState<HeroSlot[]>([])
   const [slotsLoaded, setSlotsLoaded] = useState(false)
   const [removing, setRemoving] = useState<number | null>(null)
+  const [legacyServices, setLegacyServices] = useState(false)
 
   const applyDrafts = (d: SiteDrafts) => {
     const eff = effectiveContent(d)
+    // An older title-and-summary services list is shown upgraded to whole pages.
+    // The baseline keeps the stored rows, so the upgrade counts as an edit and
+    // the next save writes it (with web addresses, so the order then holds).
+    const stored = storedServices(d)
+    const legacy = isLegacyServices(stored)
     setDrafts(d)
     setValues(eff)
-    setBaseline(eff)
+    setBaseline(legacy && stored ? { ...eff, services: stored } : eff)
+    setLegacyServices(legacy)
     setLoadError(null)
   }
 
@@ -392,6 +401,7 @@ export default function Site() {
     }
     setDrafts(d)
     setBaseline((b) => ({ ...b, ...saved }))
+    if (saved.services) setLegacyServices(false)
     setErrors(next)
     const failed = dirty.find((s) => next[s])
     if (failed) {
@@ -652,6 +662,12 @@ export default function Site() {
                 Shown in this order on the home page and the Services page, under Websites or IT support. Each service has its own page,
                 so a service is published only when every field below is filled in.
               </p>
+              {legacyServices && (
+                <p role="status" className="mb-3 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3 text-sm">
+                  These services were upgraded to full pages; save to keep this order. Until then the website shows the built-in
+                  services in their usual order, with your titles and summaries.
+                </p>
+              )}
               <SectionError message={errors.services} />
               <ListEditor
                 id="services"
