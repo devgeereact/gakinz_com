@@ -125,15 +125,23 @@ function retention_period(string $var) {
  * stop the rest of the report. Every column used is in the original CREATE
  * TABLE, so an unknown column (1054) is a bug, and like any other SQL error it
  * is logged and thrown rather than reported as a quiet gap.
+ *
+ * The result of each step is checked as well as caught, so a PHP before 8.1
+ * (where mysqli does not throw by default) behaves the same: a failure is
+ * thrown as a mysqli_sql_exception, never counted as 0. This file does not
+ * change the global mysqli_report() mode, because cron.php includes it too.
  */
 function retention_count(mysqli $conn, string $sql, int $period): ?int {
   $n = substr_count($sql, '?') + substr_count($sql, '@p');
   $sql = str_replace('@p', '?', $sql);
   try {
     $s = $conn->prepare($sql);
+    if ($s === false) throw new mysqli_sql_exception($conn->error, $conn->errno);
     $s->bind_param(str_repeat('i', $n), ...array_fill(0, $n, $period));
-    $s->execute();
-    $row = $s->get_result()->fetch_row();
+    if ($s->execute() === false) throw new mysqli_sql_exception($s->error, $s->errno);
+    $res = $s->get_result();
+    if ($res === false) throw new mysqli_sql_exception($s->error, $s->errno);
+    $row = $res->fetch_row();
     return $row ? (int)$row[0] : 0;
   } catch (mysqli_sql_exception $e) {
     if ($e->getCode() === 1146) return null;

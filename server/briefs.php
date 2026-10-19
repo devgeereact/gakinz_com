@@ -69,6 +69,10 @@
  * Until SQL 16 runs, every route answers 503.
  */
 require __DIR__ . '/_bootstrap.php';
+// Every SQL failure throws, as PHP 8.1 and later do by default, so on an older
+// PHP a failed statement can never fall through to ok(). br_exec() checks the
+// result as well, in case config.php turns reporting off again.
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 const STAFF = ['super_admin', 'admin', 'manager', 'editor', 'employee']; // as projects.php
 /** Also shown as the brief panel's hint (HANDOFF_NOTE in projectBriefModel.ts). Keep the two the same. */
@@ -119,6 +123,14 @@ function br_stmt(mysqli $conn, string $sql): mysqli_stmt {
   return $s;
 }
 
+/** Runs a prepared statement; a failure is a 500 (or the 503 for a missing table), never a quiet success. */
+function br_exec(mysqli_stmt $s): void {
+  if ($s->execute() === false) {
+    if ($s->errno === 1146) fail(BRIEF_MIGRATION, 503);
+    fail('Database error.', 500);
+  }
+}
+
 function br_id($v): int {
   if (is_int($v)) return $v > 0 ? $v : 0;
   if (is_string($v) && preg_match('/^[1-9]\d{0,9}$/', $v)) return (int)$v;
@@ -150,7 +162,7 @@ function br_project(mysqli $conn, int $pid): array {
   if ($pid <= 0) fail('A project id is required.');
   $s = br_stmt($conn, 'SELECT id, name, client_id FROM projects WHERE id = ? AND deleted_at IS NULL LIMIT 1');
   $s->bind_param('i', $pid);
-  $s->execute();
+  br_exec($s);
   $p = $s->get_result()->fetch_assoc();
   if (!$p) fail('Project not found.', 404);
   return $p;
@@ -160,7 +172,7 @@ function br_brief(mysqli $conn, int $pid): ?array {
   $cols = implode(', ', array_keys(BRIEF_FIELDS));
   $s = br_stmt($conn, "SELECT $cols, completion_ack_on, updated_at FROM project_briefs WHERE project_id = ? LIMIT 1");
   $s->bind_param('i', $pid);
-  $s->execute();
+  br_exec($s);
   return $s->get_result()->fetch_assoc() ?: null;
 }
 
@@ -173,7 +185,7 @@ function br_measure_shape(array $r): array {
 function br_measurements(mysqli $conn, int $pid): array {
   $s = br_stmt($conn, 'SELECT ' . implode(', ', MEASURE_COLS) . ' FROM project_measurements WHERE project_id = ? AND deleted_at IS NULL ORDER BY id ASC LIMIT 200');
   $s->bind_param('i', $pid);
-  $s->execute();
+  br_exec($s);
   return array_map('br_measure_shape', $s->get_result()->fetch_all(MYSQLI_ASSOC));
 }
 
@@ -183,7 +195,7 @@ function br_measure(mysqli $conn, int $id, int $pid): array {
     FROM project_measurements m JOIN projects p ON p.id = m.project_id AND p.deleted_at IS NULL
     WHERE m.id = ? AND m.project_id = ? AND m.deleted_at IS NULL LIMIT 1');
   $s->bind_param('ii', $id, $pid);
-  $s->execute();
+  br_exec($s);
   $r = $s->get_result()->fetch_assoc();
   if (!$r) fail('Measurement not found.', 404);
   return br_measure_shape($r);
@@ -378,20 +390,20 @@ function br_handoff(mysqli $conn, array $project): string {
   if ($clientId !== null) {
     $c = br_stmt($conn, 'SELECT company, contact_name, email, phone FROM clients WHERE id = ? LIMIT 1');
     $c->bind_param('i', $clientId);
-    $c->execute();
+    br_exec($c);
     $known = $c->get_result()->fetch_assoc() ?: [];
   }
   $clean = fn(?string $s) => md_sanitise($s, $known);
 
   $s = br_stmt($conn, 'SELECT deliverables, exclusions, quote_reference, open_decisions, next_action FROM project_briefs WHERE project_id = ? LIMIT 1');
   $s->bind_param('i', $pid);
-  $s->execute();
+  br_exec($s);
   $b = $s->get_result()->fetch_assoc() ?: [];
 
   $m = br_stmt($conn, 'SELECT label, target, method, result, evidence_location FROM project_measurements
     WHERE project_id = ? AND deleted_at IS NULL ORDER BY id ASC LIMIT 200');
   $m->bind_param('i', $pid);
-  $m->execute();
+  br_exec($m);
   $measures = $m->get_result()->fetch_all(MYSQLI_ASSOC);
 
   $out = "# GEE OS handoff: project $pid\n\n";
@@ -491,7 +503,7 @@ try {
     foreach ($cols as $c) $types .= $c === 'updated_by' ? 'i' : 's';
     $s = br_stmt($conn, $sql);
     $s->bind_param($types, $pid, ...$vals);
-    $s->execute();
+    br_exec($s);
     $changed = array_values(array_diff($cols, ['updated_by']));
     audit($conn, $uid, 'brief_save', "project #$pid" . ($changed ? ': ' . implode(', ', $changed) : ''));
     ok(br_brief($conn, $pid));
@@ -504,7 +516,7 @@ try {
     ));
     $n = br_stmt($conn, 'SELECT COUNT(*) AS n FROM project_measurements WHERE project_id = ? AND deleted_at IS NULL');
     $n->bind_param('i', $pid);
-    $n->execute();
+    br_exec($n);
     if ((int)$n->get_result()->fetch_assoc()['n'] >= MEASURES_PER_PROJECT_MAX) {
       fail('A project can hold up to ' . MEASURES_PER_PROJECT_MAX . ' measurements.', 409);
     }
@@ -512,7 +524,7 @@ try {
       environment, method, evidence_location, kind, observation_window, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
     $s->bind_param('isssssssssssi', $pid, $f['label'], $f['target'], $f['baseline'], $f['actual'], $f['result'], $f['measured_on'],
       $f['environment'], $f['method'], $f['evidence_location'], $f['kind'], $f['observation_window'], $uid);
-    $s->execute();
+    br_exec($s);
     $id = $conn->insert_id; // read before audit(), which inserts its own row
     audit($conn, $uid, 'measure_create', "#$id project #$pid");
     ok(br_measure($conn, $id, $pid), 201);
@@ -529,7 +541,7 @@ try {
       WHERE id = ? AND project_id = ? AND deleted_at IS NULL');
     $s->bind_param('sssssssssssii', $f['label'], $f['target'], $f['baseline'], $f['actual'], $f['result'], $f['measured_on'],
       $f['environment'], $f['method'], $f['evidence_location'], $f['kind'], $f['observation_window'], $id, $pid);
-    $s->execute();
+    br_exec($s);
     audit($conn, $uid, 'measure_update', "#$id project #$pid result " . $f['result']);
     ok(br_measure($conn, $id, $pid));
   }
@@ -537,7 +549,7 @@ try {
   // measure_delete
   $s = br_stmt($conn, 'UPDATE project_measurements SET deleted_at = NOW() WHERE id = ? AND project_id = ? AND deleted_at IS NULL');
   $s->bind_param('ii', $id, $pid);
-  $s->execute();
+  br_exec($s);
   if ($s->affected_rows < 1) fail('Measurement not found.', 404);
   audit($conn, $uid, 'measure_delete', "#$id project #$pid");
   ok(['ok' => true]);

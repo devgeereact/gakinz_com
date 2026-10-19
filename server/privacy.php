@@ -55,6 +55,10 @@
  * reads only. Nothing in this file deletes, updates or anonymises a row.
  */
 require __DIR__ . '/_bootstrap.php';
+// pv_rows() tells a missing table or column apart by its exception, so every
+// SQL failure must throw, as PHP 8.1 and later do by default. Set here so an
+// older PHP behaves the same and never exports a section it failed to read.
+mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT);
 
 const EXPORT_ROLES = ['super_admin', 'admin'];
 const RETENTION_ROLES = ['super_admin'];
