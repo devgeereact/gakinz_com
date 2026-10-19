@@ -132,11 +132,17 @@ export function GlobalSearch() {
     [searcher],
   )
   // Every open and close goes through here (button, Escape, Cmd/Ctrl+K, a
-  // selection), so closing always clears the query, the timer and the request.
+  // selection), so closing always clears the query, the timer, the request and
+  // the selected item. An empty selection lets cmdk highlight the first item
+  // again on reopen; a stale record value would leave nothing highlighted.
+  // onQuery("") also clears the searcher's "user moved" mark.
   const onOpenChange = React.useCallback(
     (next: boolean) => {
       setOpen(next)
-      if (!next) onQuery("")
+      if (!next) {
+        setSelected("")
+        onQuery("")
+      }
     },
     [onQuery],
   )
