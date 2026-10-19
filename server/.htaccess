@@ -44,6 +44,15 @@ RewriteRule ^ - [L]
 # Don't rewrite the PHP API endpoints
 RewriteRule ^(api|contact|ai|verify)\.php$ - [L]
 
+# A request for a .php file that does not exist answers 404 instead of falling
+# through to the SPA shell. dist/ can go live before a new endpoint is uploaded,
+# and an HTML 200 for a missing endpoint reads to the CMS as a broken reply; a
+# 404 lets it say "not available yet" quietly (src/lib/notAvailable.ts). Real
+# .php files never reach this rule (the pass-through above ends them), and the
+# _*.php and config.php deny below still answers 403 for the ones that exist.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule \.php$ - [R=404,L]
+
 # Everything else → the SPA shell: the CMS (/app/*), /login, /set-password,
 # /p/:token, /verify/:id, a record published only in the CMS, and unknown
 # paths. Not index.html, which is now the prerendered home page. Until a build
