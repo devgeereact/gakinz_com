@@ -256,7 +256,7 @@ so nothing moves when the real image arrives. `Gap` renders an inline bold clay 
 the rule. **Related guards elsewhere:** `server/work.php` refuses to publish a record that
 names a client without stored consent and refuses an image with no alt text;
 `src/marketing/data/work.ts` holds a static fallback in which every field without a true value
-is `null`; `personSchema()` in `src/marketing/components/Seo.tsx` omits `sameAs` rather than
+is `null`; `personSchema()` in `src/marketing/components/seo-schema.ts` omits `sameAs` rather than
 pointing it at a bare domain.
 
 ## 7. Focus, motion and the global details

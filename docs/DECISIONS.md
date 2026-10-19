@@ -504,7 +504,7 @@ false statement to the exact audience it is trying to persuade. A labelled gap h
 **Where it binds beyond the interface.** `src/marketing/data/work.ts` holds a static fallback
 whose every record is true and describes the owner's own work; a field with no true value is
 `null` and renders as a gap. `server/work.php` refuses to publish a record that names a
-client without stored consent. `personSchema()` in `Seo.tsx` omits `sameAs` entirely rather
+client without stored consent. `personSchema()` (now in `seo-schema.ts`, beside `Seo.tsx`) omits `sameAs` entirely rather
 than pointing it at `https://github.com/`, because structured data is read by machines that
 cannot tell a placeholder from an identity claim.
 

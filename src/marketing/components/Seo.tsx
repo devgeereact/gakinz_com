@@ -15,6 +15,10 @@
  * React adopts the tags already in the head when it hydrates. A path that is
  * not prerendered (a CMS-only record, /verify/:id) still gets them only once
  * JavaScript runs.
+ *
+ * The site constants (SITE_URL, SITE_NAME, OG_IMAGE) and the JSON-LD builders
+ * (personSchema, websiteSchema) live in seo-schema.ts, so this file exports
+ * only the component (react-refresh). Import them from there.
  */
 
 import { OG_IMAGE, SITE_NAME, SITE_URL } from "@/marketing/components/seo-schema"
@@ -24,7 +28,7 @@ type SeoProps = {
   title?: string
   /** 50–160 characters. One sentence, specific, no marketing register. */
   description: string
-  /** Path only, e.g. "/work". Joined to SITE_URL for the canonical. */
+  /** Path only, e.g. "/work". Joined to SITE_URL (seo-schema.ts) for the canonical. */
   path: string
   /** "website" for pages, "article" for a post or a work record. */
   type?: "website" | "article"
