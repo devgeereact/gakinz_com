@@ -425,7 +425,7 @@ or sent clears them. Covered by `tests/server/manual-payment.test.ts`.
 | Endpoint | Actions | Roles |
 |---|---|---|
 | `portal.php` | GET | Any authenticated user. The `client` role is bound to its own `client_id`. The staff preview branch requires super_admin, admin or manager. Since 2026-10-19 each project carries `kind` (`it_support` or `null`); the standing IT support project is always named "IT support" with zero task counts |
-| `support.php` | Staff: GET list, GET `?id=`, `create`, `status`, `priority`, `assign`, `reply`, `log_time`. Client: GET list, GET `?id=`, `create`, `reply`, `update_request` | STAFF, plus the `client` role on its own branch |
+| `support.php` | Staff: GET list, GET `?id=`, `create`, `status`, `priority`, `assign`, `reply`, `log_time`. Client: GET list, GET `?id=`, `create`, `reply`, `update_request`, `deletion_request` | STAFF, plus the `client` role on its own branch |
 | `feedback.php` | Staff: GET list (`?client_id=` to filter), `create`, `update`. Client: `create` only | STAFF for every read; the `client` role may only create |
 | `comms.php` | GET list, GET `?id=`, `create`, `post`, `send`, `status` | STAFF |
 | `mail.php` | GET `status`, `inbox`, `message`; POST `send`, `seen` | MAIL_ROLES |
@@ -452,6 +452,14 @@ or sent clears them. Covered by `tests/server/manual-payment.test.ts`.
   question answers 400, a project that is not one of the caller's own 404, and the same open
   question again within ten minutes 409. Audit action `ticket_update_request`. Covered by
   `tests/server/portal-requests.test.ts`.
+- `deletion_request` (2026-10-19, `docs/PRIVACY-READINESS.md` section 7) takes no input and
+  ignores any body. It creates a ticket with the fixed subject "Data deletion request" and a
+  fixed body saying nothing has been deleted yet, priority `normal`, and returns `{ id,
+  subject }` with 201. While that client has such a ticket that is not `resolved`, another
+  request from any of its logins answers 409; the client row is locked for the check, so
+  simultaneous requests make one ticket. Nothing is deleted. Audit action
+  `ticket_deletion_request`, `#id (client)`. A staff caller gets 405. Covered by
+  `tests/server/deletion-request.test.ts`.
 
 `support.php?action=log_time` (2026-10-19, SQL 17, `docs/PRODUCT-SPEC.md` sections 6.4 and 7):
 
@@ -524,7 +532,7 @@ security-critical):
 |---|---|---|
 | `today.php` | GET only, read only, not audited | The union of the roles below; a `client` or `trainer` gets 403. Each section mirrors the endpoint that owns its data and is **omitted** for a role that cannot read it: enquiries, follow-ups and calls as `leads.php` and `bookings.php` (super_admin, admin, manager, editor), tasks and assets as `tasks.php` and `assets.php` (plus employee), invoices as `invoices.php` (super_admin, admin, manager) |
 | `search.php` | GET `?q=`, read only, not audited | The union of the roles below; a `client` or `trainer` gets 403. Clients, enquiries and quotes as `clients.php`, `leads.php` and `proposals.php` (super_admin, admin, manager, editor); projects as `projects.php` (plus employee); invoices as `invoices.php` (super_admin, admin, manager) |
-| `privacy.php` | GET `?action=export&client_id=N` or `&enquiry_email=`, GET `?action=retention_report` | Export: super_admin and admin. Retention report: super_admin |
+| `privacy.php` | GET `?action=export&client_id=N` or `&enquiry_email=`, GET `?action=retention_report`, POST `?action=erase_enquiry` | Export: super_admin and admin. Retention report and erase: super_admin |
 
 `today.php` returns `{ generated_at, sections }`, where each present section is `{ status:
 "ok", count, items }` or `{ status: "unavailable", count: null, items: [] }`. Sections:
@@ -579,6 +587,18 @@ id, title, secondary, route }` and never carries a note, message, budget or amou
   `period_not_set`, `invalid_period` or `counted`, and `counts` maps a table to the rows the
   rule would affect. It runs `SELECT COUNT(*)` only. The same report prints from
   `php cron.php job=retention_report` (command line only; the web answers 400).
+- `erase_enquiry` (POST, 2026-10-19) takes `{ id, confirm }`, where `confirm` is the
+  enquiry's email address (case and outer spaces ignored). In one transaction, under a row
+  lock, it hard-deletes that enquiry (its follow-up fields are columns on the row), the calls
+  on it (`bookings`) and their history (`booking_events`), and on every `audit_log` row whose
+  text names the address as a whole address it replaces the address and the enquirer's name
+  with `[erased]`, clearing the IP of the enquirer's own `enquiry_submit` row. It writes one
+  audit row `enquiry_erase`, detail `#id`, and returns `{ erased: true, id, bookings,
+  booking_events, audit_scrubbed }`. 400 for a bad id or a missing or wrong confirmation, 404
+  for an unknown enquiry, and 409 with `reason` (`won`, `converted`, `client_call`,
+  `known_address`), changing nothing, for an enquiry that was won, that a client was created
+  from, that has a call filed against a client, or whose address is also a client's, a
+  user's or a contract signer's. Covered by `tests/server/erase-enquiry.test.ts`.
 - Any other GET answers 400 "Unknown action.", any other method 405. Covered by
   `tests/server/privacy.test.ts`.
 

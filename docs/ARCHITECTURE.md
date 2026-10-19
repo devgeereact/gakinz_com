@@ -169,6 +169,8 @@ all denied to direct requests by `.htaccess` (K-013). `work.php` was added on 20
 | `_ics.php` | RFC 5545 calendar file for a confirmed call, used by `bookings.php` |
 | `_like.php` | Literal substring matching for `LIKE` with `!` as the escape, used by `search.php` |
 | `_retention.php` | The read-only retention dry run, used by `privacy.php` and `cron.php job=retention_report` |
+| `_erasure.php` | Erasing one prospect's enquiry (`privacy.php?action=erase_enquiry`) and the gated retention executor (`cron.php job=retention_apply`). The only code that hard-deletes personal data |
+| `_uploads.php` | `UPLOAD_DIR` and `stored_path()`, the one rule from a stored file name to a path on disk, used by `files.php` and `_erasure.php` |
 | `_time.php` | The time entry rules (minutes, description, billable, date) and the SQL 17 probe, loaded on first use by `time.php` and `support.php` |
 | `_templates.php` | The five project templates as pure data, loaded on first use by the two template routes of `projects.php` |
 

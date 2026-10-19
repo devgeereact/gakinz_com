@@ -36,7 +36,7 @@ call; whether each key is set in production is UNVERIFIED.
 
 | Activity | Data | Subject | Collected at | Purpose | Stored in | Recipients | Retention and deletion today | Disclosed? |
 |---|---|---|---|---|---|---|---|---|
-| Enquiry form | name, email, company (optional), budget (optional), message, IP address, time | prospects | `/contact` (`Contact.tsx`, `contact.php`) | reply, spam control | `enquiries`; `audit_log` copy of email and IP | hosting | kept indefinitely; no delete | partly (fixed 2026-10-17, K-063) |
+| Enquiry form | name, email, company (optional), budget (optional), message, IP address, time | prospects | `/contact` (`Contact.tsx`, `contact.php`) | reply, spam control | `enquiries`; `audit_log` copy of email and IP | hosting | kept indefinitely; since 2026-10-19 (not uploaded) a super admin can erase one that never became a client, and `retention_apply` can delete old ones once enabled (section 6) | partly (fixed 2026-10-17, K-063) |
 | Staff and client sign-in | email, password hash, 2FA secret and recovery hashes, sessions with IP and user agent | staff, clients | `/login`, `/set-password`, My account | access control, security | `users`, `auth_tokens`, `magic_links`, `password_resets`, `audit_log` | Google (if Google sign-in used); mail provider for invites and magic links | sessions 30 days, but expired rows are never pruned; users are suspended, never deleted | no |
 | Client records | contact name, email, phone, company, notes, retainer; since 2026-10-19 which files were shared to the client's portal and when (`files.client_visible`, `files.shared_at`, SQL 18) and the IT support time logged from their tickets (`time_entries.ticket_id`, SQL 17) | clients | CMS, staff entry | delivering work, billing | `clients`, `projects`, `tasks`, `files`, `time_entries` | hosting; a shared file is visible to the client's own portal users | indefinite; no delete; soft-deleted files stay on disk; hiding a file clears `shared_at` | no |
 | Invoices and payments | client email, amounts, payment events | clients | CMS, Stripe or PayPal checkout | billing, tax records | `invoices`, `payment_events` | Stripe; PayPal (switched off, K-026) | indefinite | no |
@@ -117,7 +117,9 @@ that point a consent tool that blocks the script until the visitor chooses is re
 ## 6. Proposed retention schedule
 
 **Every period below is a proposal for the owner to decide and an adviser to confirm. None is
-implemented: nothing deletes or anonymises by any of them.** The proposals follow data minimisation; tax-record periods depend on whether the
+set, so nothing deletes or anonymises by any of them.** Since 2026-10-19 (not uploaded) two
+rules can act once set and switched on, through the gated executor described at the end of
+this section; every other rule is report only. The proposals follow data minimisation; tax-record periods depend on whether the
 business is a sole trader or a company, so they are left blank on purpose.
 
 | Data | Purpose | System of record | Proposed period | Starts from | Then | Backups | Needs |
@@ -148,10 +150,22 @@ invoices or portal messages changed within the period, a reading of "end of enga
 the owner to confirm. Tested against a local database (`tests/server/privacy.test.ts`); NOT
 TESTED on the live host.
 
-Still to build, once periods are agreed: the job that deletes or anonymises by these rules,
-reusing the dry run's counts, with tests against the local `*_test` database and an entry in
-`docs/DEPLOYMENT.md`. Expired-token pruning, which carries no business judgement, is already
-built as the `prune` job, together with running `cron.php` from the command line (K-061).
+**Executor, built 2026-10-19, not uploaded.** `php cron.php job=retention_apply`
+(`server/_erasure.php`, command line only, never part of `all`) acts on two rules and no
+others: (a) enquiries that never became a client, unchanged for `$RETENTION_ENQUIRY_MONTHS`,
+with no call on them changed or scheduled within that period, and passing every check of the
+manual erasure in section 7 (so never one linked to a client, a user or a contract signer);
+(b) soft-deleted files older than `$RETENTION_DELETED_FILE_DAYS`, whose file in `uploads/`
+is removed through the same path rule as downloads (`stored_path()`, `_uploads.php`) and
+then the row, unless a project asset checklist still points at it. By default it is a dry run
+that lists ids only. It deletes only when `--apply` is passed AND `config.php` sets the new
+key `$RETENTION_APPLY = true` (false in `config.php.example`) AND that rule's period is set,
+and then writes one `retention_apply` audit row with counts only (`docs/OPERATIONS.md`
+section 2). Client, project, contract, invoice, audit, message, comms, staff and certificate
+rules stay report only: their periods and erasure rules need the owner and an adviser.
+Tested against a local database (`tests/server/retention-apply.test.ts`); NOT TESTED on the
+live host. Expired-token pruning, which carries no business judgement, is the separate `prune`
+job (K-061).
 
 ## 7. Rights and account deletion
 
@@ -159,14 +173,16 @@ built as the `prune` job, together with running `cron.php` from the command line
 |---|---|---|
 | Access, portability | email hello@gakinz.com, then the owner exports | **export built 2026-10-19, not uploaded**: a super admin or admin downloads a JSON file of every row held about one client (client record, "Export data") or one enquirer email (Settings, Privacy). Secrets and token values are left out; staff notes are included (K-079). Since 2026-10-19 each file row carries `client_visible` and `shared_at`, so the export shows what was shared to the portal and when (before SQL 18 the rows come without them). A written procedure for checking identity and replying is still needed |
 | Correction | staff edit client records; My account says "contact GAkinz" for name and email | none for staff-held data; fine as a manual route |
-| Erasure | email | no delete for enquiries, clients, users, tickets or messages; audit log keeps emails. **Not built**, by design, until periods and the procedure are agreed |
+| Erasure | email; since 2026-10-19 (not uploaded) a client can also use "Ask to delete my data" in My account | **built 2026-10-19, not uploaded**: a super admin can erase one prospect's enquiry from the Enquiries drawer by typing its email address (`privacy.php?action=erase_enquiry`). It deletes the enquiry, its calls and their history, and replaces the address and name with "[erased]" in the audit rows that name the address; it refuses anything linked to a client, a user or a contract signer. A client's request only opens a "Data deletion request" ticket for the owner. Still no delete for clients, users, tickets or messages, by design, until periods and the procedure are agreed |
 | Restriction, objection | not mentioned | not offered on the privacy page |
 | Complaint to the ICO | not mentioned | must be stated |
 
 Self-service account deletion was **not built**. Client accounts hold invoices and contracts the
 business may have to keep, so deletion means a mix of deletion, anonymisation and retention
-that the owner and an adviser must define first. The safe interim route is the one that already
-exists: a request by email to hello@gakinz.com, handled by the owner. A written procedure is
+that the owner and an adviser must define first. The safe interim route is a request handled
+by the owner: by email to hello@gakinz.com, or, since 2026-10-19 (not uploaded), "Ask to
+delete my data" in My account, which opens one "Data deletion request" support ticket with
+fixed text (one open request per client) and deletes nothing. A written procedure is
 needed: how identity is checked (reply from the address on file, never an ID document by
 email), what is deleted, what is kept and why, and how the requester is told. Response
 deadline: REQUIRES LEGAL REVIEW, not stated here.

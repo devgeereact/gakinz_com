@@ -68,6 +68,7 @@ wget -qO- "https://gakinz.com/cron.php?key=<CRON_KEY>&job=all"
 | `prune` | Deletes sessions, magic links and reset links more than a day past expiry (2026-10-17, K-062). No business record is touched | Never |
 | `all` | Runs all five. This is the default | |
 | `retention_report` | Prints, as plain text, how many rows each proposed retention rule would affect (2026-10-19, `_retention.php`, K-062). Counts only: it never changes a row. Not part of `all` | Command line only: over the web it answers 400, even with the key |
+| `retention_apply` | The retention executor (2026-10-19, `_erasure.php`). Acts on two rules only: enquiries that never became a client, older than `$RETENTION_ENQUIRY_MONTHS`, and soft-deleted files older than `$RETENTION_DELETED_FILE_DAYS`. A dry run by default: it lists the ids that would go and why others are kept. It deletes only with `--apply` AND `$RETENTION_APPLY = true` in `config.php` AND that rule's period set, then writes one `retention_apply` audit row with counts. Not part of `all` | Command line only: over the web it answers 400, even with the key. Unknown flags, or `--apply` with `--dry-run`, exit 2 |
 
 The response is JSON: `{"ran": {...}}` with a per-job result, so the cron output is readable
 in a mail log. The retention report is the exception: run it by hand when the owner wants the
@@ -81,6 +82,22 @@ php /home/<account>/public_html/cron.php job=retention_report
 Each rule prints "period not set (...). Nothing happens." while its `$RETENTION_*` key is
 `null` or absent (`docs/PRIVACY-READINESS.md` section 6). Uploaded or run on the host:
 UNVERIFIED.
+
+The executor is also run by hand, never from the cron entry until the owner has agreed the
+periods. Always read a dry run first; the output names ids only, never a name, email or file
+name:
+
+```
+php /home/<account>/public_html/cron.php job=retention_apply            # dry run
+php /home/<account>/public_html/cron.php job=retention_apply --apply    # deletes only if $RETENTION_APPLY = true
+```
+
+Kept items are listed by reason: `known_address` (the address is also a client's, a user's or
+a contract signer's), `recent` (the enquiry or a call on it changed within the period),
+`client_call`, `no_email`, `linked_asset` (a project asset checklist points at the file),
+`unsafe_name`, `unsafe_path` (a directory or symlink at that name, left alone),
+`shared_file` and `unlink_failed`. It exits 1 with "Retention apply stopped: SQL error
+<code>" if a query fails; the item in progress is rolled back.
 
 Whether the cPanel cron entry exists, and whether `$CRON_KEY` is set on the server, is
 **UNVERIFIED**.

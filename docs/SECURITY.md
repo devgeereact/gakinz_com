@@ -202,10 +202,18 @@ None of these serves the `client` role, and none is uploaded (`docs/DEPLOYMENT.m
   `Cache-Control: private, no-store`. Each export writes a `privacy_export` audit row naming
   who exported whom, not the content. The file itself is personal data on the downloading
   computer, and it includes staff notes about the client (K-079).
-- **`privacy.php` retention report** is super_admin only and counts rows; nothing in the
-  repository deletes or anonymises by retention period. `cron.php job=retention_report` runs
-  from the command line only and answers 400 over the web even with the cron key, so the
-  report never lands in an access log.
+- **`privacy.php` retention report** is super_admin only and counts rows.
+  `cron.php job=retention_report` runs from the command line only and answers 400 over the
+  web even with the cron key, so the report never lands in an access log.
+- **Deletion (2026-10-19, `_erasure.php`)** is limited to two paths. A super admin may erase
+  one prospect's enquiry (`privacy.php?action=erase_enquiry`) by typing its email address;
+  anything linked to a client, a user or a contract signer is refused with 409 and nothing
+  changes. `cron.php job=retention_apply` deletes only old enquiries of the same kind and
+  soft-deleted files, only from the command line, and only with `--apply` AND
+  `$RETENTION_APPLY = true` AND the rule's period set. Files are removed through
+  `stored_path()` (`_uploads.php`), so a symlink or directory at a stored name is never
+  followed or removed. No code deletes or anonymises client, project, invoice, proposal,
+  contract, ticket or user data. A client's "Ask to delete my data" only opens a ticket.
 
 ## 4. Input handling and injection
 
