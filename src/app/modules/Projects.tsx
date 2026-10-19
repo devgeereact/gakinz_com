@@ -110,15 +110,17 @@ export default function Projects() {
   const [briefDirty, setBriefDirty] = useState(false)
   const guard = useUnsavedGuard(briefDirty)
 
+  const show = (p: Project) => {
+    setSelected(p)
+    // The prototype brings the selected project's board into view.
+    requestAnimationFrame(() => boardRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" }))
+  }
+
+  // A board click asks first. Re-choosing the open project keeps its panel
+  // (same key), so nothing is lost.
   const select = (p: Project) => {
-    const apply = () => {
-      setSelected(p)
-      // The prototype brings the selected project's board into view.
-      requestAnimationFrame(() => boardRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" }))
-    }
-    // Re-choosing the open project keeps its panel (same key), so nothing is lost.
-    if (p.id === selected?.id) apply()
-    else guard.requestLeave(apply)
+    if (p.id === selected?.id) show(p)
+    else guard.requestLeave(() => show(p))
   }
 
   const loadProjects = async () => {
@@ -133,9 +135,11 @@ export default function Projects() {
     setLoading(false)
   }
 
+  // A deep link is a navigation, so with an unsaved Brief edit the router's
+  // blocker has already asked. Asking again here would prompt twice.
   useApplyLink(mark, !loading && error === null, () => {
     const linked = link.project !== null ? list.find((p) => p.id === link.project) : undefined
-    if (linked) select(linked)
+    if (linked) show(linked)
   })
 
   useEffect(() => {
