@@ -88,6 +88,20 @@ function fl_client_share_ready(mysqli $conn): bool {
   return $ready;
 }
 
+/**
+ * True once SQL 17 has added projects.kind. Probed here, as portal.php does,
+ * so the client routes depend on nothing but _bootstrap.php.
+ */
+function fl_kind_ready(mysqli $conn): bool {
+  try {
+    // LIMIT 0 reads no rows; it only proves the column is there.
+    return $conn->query('SELECT kind FROM projects LIMIT 0') !== false;
+  } catch (mysqli_sql_exception $e) {
+    if ($e->getCode() !== 1054) throw $e; // ER_BAD_FIELD_ERROR only
+    return false;
+  }
+}
+
 // Every MIME any allowed extension may resolve to. A download only ever sends
 // a type from this set, so a stored row can never dictate an arbitrary header.
 function allowed_mimes(): array {
@@ -124,7 +138,10 @@ if ($method === 'GET' && ($action === 'mine' || $action === 'mine_download')) {
   if (!fl_client_share_ready($conn)) fail(CLIENT_SHARE_MIGRATION, 503);
 
   if ($action === 'mine') {
-    $stmt = $conn->prepare('SELECT f.id, f.name, f.mime, f.size, f.shared_at, p.name AS project_name' . CLIENT_FILE_FROM .
+    // The standing IT support project (SQL 17) is named to a client as the
+    // portal names it, whatever staff have called it internally.
+    $kindCol = fl_kind_ready($conn) ? 'p.kind' : 'NULL';
+    $stmt = $conn->prepare("SELECT f.id, f.name, f.mime, f.size, f.shared_at, p.name AS project_name, $kindCol AS project_kind" . CLIENT_FILE_FROM .
       ' ORDER BY f.shared_at DESC, f.id DESC LIMIT 500');
     $stmt->bind_param('iii', $clientId, $clientId, $clientId);
     $stmt->execute();
@@ -345,7 +362,7 @@ function fl_client_shape(array $r): array {
     'mime' => isset(allowed_mimes()[$mime]) ? $mime : 'application/octet-stream',
     'size' => (int)$r['size'],
     'shared_at' => $r['shared_at'],
-    'project_name' => $r['project_name'] ?? null,
+    'project_name' => ($r['project_kind'] ?? null) === 'it_support' ? 'IT support' : ($r['project_name'] ?? null),
   ];
 }
 

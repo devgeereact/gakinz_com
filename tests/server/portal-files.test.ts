@@ -152,6 +152,18 @@ describe("files shared to the client portal", () => {
     expect(b.json.map((f) => f.name).sort()).toEqual(["B direct.pdf", "B project.pdf"])
   })
 
+  it("names a file on the standing IT support project as IT support, whatever staff called it", async () => {
+    sql(`INSERT INTO projects (client_id, name, status, kind) VALUES (${clientA}, 'Helpdesk internal bucket', 'in_progress', 'it_support')`)
+    const standing = Number(one(`SELECT MAX(id) FROM projects`))
+    fileRow({ projectId: standing, visible: true, name: "Router notes.pdf" })
+    fileRow({ projectId: projectA, visible: true, name: "Plan.pdf" })
+    const listed = (await mine()).json
+    expect(listed.find((f) => f.name === "Router notes.pdf")?.project_name).toBe("IT support")
+    // An ordinary project keeps its own name, and the kind itself is never sent.
+    expect(listed.find((f) => f.name === "Plan.pdf")?.project_name).toBe("A recommendation")
+    expect(JSON.stringify(listed)).not.toMatch(/Helpdesk internal bucket|kind/)
+  })
+
   it("streams the client's own file with the exact bytes and the download headers", async () => {
     const up = await upload(owner, "Final recommendation.pdf", PDF, { project_id: projectA })
     await setShare(up.id, true)
