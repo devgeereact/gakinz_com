@@ -13,6 +13,8 @@ import {
   type TodayItem,
   type TodaySectionKey,
 } from "@/lib/api"
+import { followUpState, localIsoDate } from "@/lib/format"
+import { notAvailableYet } from "@/lib/notAvailable"
 import type { Role } from "@/store/auth.store"
 
 export const TODAY_SECTION_LABELS: Record<TodaySectionKey, string> = {
@@ -55,6 +57,12 @@ export type TodayView = {
   updatedAt: string | null
   /** Why the latest load failed, or null. */
   error: string | null
+  /**
+   * True when the latest load showed today.php is not on the server yet (the
+   * shared rule in src/lib/notAvailable.ts). The screen then falls back to the
+   * client-side "Follow-ups due" card instead of an error.
+   */
+  notOnServer?: boolean
 }
 
 export const initialTodayView: TodayView = { data: null, updatedAt: null, error: null }
@@ -71,6 +79,7 @@ function isTodayData(v: unknown): v is TodayData {
  */
 export function applyTodayResult(prev: TodayView, res: ApiResult<unknown>): TodayView {
   if (res.ok && isTodayData(res.data)) return { data: res.data, updatedAt: res.data.generated_at, error: null }
+  if (!res.ok && notAvailableYet(res)) return { data: null, updatedAt: prev.updatedAt, error: null, notOnServer: true }
   return { data: null, updatedAt: prev.updatedAt, error: res.ok ? BAD_REPLY_ERROR : res.error }
 }
 
@@ -132,15 +141,57 @@ export type TodayPanel =
   | { kind: "none" }
   | { kind: "failed"; error: string }
   | { kind: "rows"; rows: TodayRow[] }
+  | { kind: "follow_ups" }
 
 /**
- * What the attention list shows as a whole. A failed load always shows: as
- * unavailable sections when the role is known, or, before the role is known,
- * as a single "could not be loaded" alert with Retry, never an empty space.
+ * What the attention list shows as a whole. When today.php is not on the
+ * server yet, a role that would get follow-ups sees the client-side
+ * "Follow-ups due" card (built from the enquiries list) and any other role
+ * sees nothing, never an error. A failed load always shows: as unavailable
+ * sections when the role is known, or, before the role is known, as a single
+ * "could not be loaded" alert with Retry, never an empty space.
  */
 export function todayPanel(view: TodayView, role: Role | null | undefined): TodayPanel {
+  if (view.notOnServer && !view.data) {
+    return expectedSections(role).includes("follow_ups_due") ? { kind: "follow_ups" } : { kind: "none" }
+  }
   const rows = todayRows(view, role)
   if (rows.length > 0) return { kind: "rows", rows }
   if (!view.data && view.error) return { kind: "failed", error: view.error }
   return { kind: "none" }
+}
+
+export type FollowUpLead = {
+  status: string
+  next_action_at?: string | null
+  priority?: number | null
+}
+
+export type FollowUps<L> = {
+  /** False until the server sends the follow-up fields (the 2026-10-10 schema step). */
+  ready: boolean
+  count: number
+  top: L[]
+  today: string
+}
+
+/**
+ * The fallback "Follow-ups due" card, used only while today.php is not on the
+ * server: open enquiries whose next action is today or earlier, oldest first,
+ * then the owner's priority, at most five. `ready` is false until the server
+ * has the follow-up columns (it omits them before that schema step runs).
+ */
+export function fallbackFollowUps<L extends FollowUpLead>(leads: L[], today = localIsoDate()): FollowUps<L> {
+  const due = leads
+    .filter((l) => {
+      const st = followUpState(l, today)
+      return st === "overdue" || st === "today"
+    })
+    .sort((a, b) => (a.next_action_at ?? "").localeCompare(b.next_action_at ?? "") || (b.priority ?? 0) - (a.priority ?? 0))
+  return {
+    ready: leads.length === 0 || leads.some((l) => l.priority !== undefined),
+    count: due.length,
+    top: due.slice(0, 5),
+    today,
+  }
 }

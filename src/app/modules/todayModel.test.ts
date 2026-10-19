@@ -3,6 +3,7 @@ import { BAD_REPLY_ERROR, NETWORK_ERROR, type TodayData, type TodayItem } from "
 import {
   applyTodayResult,
   expectedSections,
+  fallbackFollowUps,
   initialTodayView,
   itemRoute,
   itemWhen,
@@ -153,3 +154,79 @@ describe("todayPanel", () => {
     expect(todayPanel({ data: data({}), updatedAt: "x", error: null }, "admin")).toEqual({ kind: "none" })
   })
 })
+
+describe("today.php not on the server yet", () => {
+  const shell = { ok: false as const, error: BAD_REPLY_ERROR, status: 200 }
+
+  it("marks the view as not on the server, with no error, for the SPA shell's HTML 200", () => {
+    const v = applyTodayResult(initialTodayView, shell)
+    expect(v).toEqual({ data: null, updatedAt: null, error: null, notOnServer: true })
+  })
+
+  it("treats a bare 404, a 503 and the old role gate the same way", () => {
+    expect(applyTodayResult(initialTodayView, { ok: false, error: "x", status: 404 }).notOnServer).toBe(true)
+    expect(applyTodayResult(initialTodayView, { ok: false, error: "x", status: 503, details: { error: "x" } }).notOnServer).toBe(true)
+    const gate = { ok: false as const, error: "Not allowed.", status: 403, details: { error: "Not allowed." } }
+    expect(applyTodayResult(initialTodayView, gate).notOnServer).toBe(true)
+  })
+
+  it("still reports a real failure as an error", () => {
+    const v = applyTodayResult(initialTodayView, { ok: false, error: "Server error.", status: 500, details: { error: "Server error." } })
+    expect(v.notOnServer).toBeUndefined()
+    expect(v.error).toBe("Server error.")
+    expect(applyTodayResult(initialTodayView, { ok: false, error: NETWORK_ERROR }).error).toBe(NETWORK_ERROR)
+  })
+
+  it("clears the flag once today.php answers", () => {
+    const missing = applyTodayResult(initialTodayView, shell)
+    const d = data({})
+    expect(applyTodayResult(missing, { ok: true, data: d }).notOnServer).toBeUndefined()
+  })
+
+  it("shows the client-side follow-ups card to a role that gets follow-ups, and nothing to any other role", () => {
+    const v = applyTodayResult(initialTodayView, shell)
+    expect(todayPanel(v, "editor")).toEqual({ kind: "follow_ups" })
+    expect(todayPanel(v, "admin")).toEqual({ kind: "follow_ups" })
+    expect(todayPanel(v, "employee")).toEqual({ kind: "none" })
+    expect(todayPanel(v, undefined)).toEqual({ kind: "none" })
+  })
+})
+
+describe("fallbackFollowUps", () => {
+  const lead = (id: number, next_action_at: string | null, over: Partial<{ status: string; priority: 0 | 1 | 2 | 3 }> = {}) => ({
+    id,
+    status: "new",
+    priority: 0 as 0 | 1 | 2 | 3,
+    next_action_at,
+    ...over,
+  })
+
+  it("keeps open enquiries due today or earlier, oldest first, then higher priority", () => {
+    const leads = [
+      lead(1, "2026-10-19"),
+      lead(2, "2026-10-12"),
+      lead(3, "2026-10-20"),
+      lead(4, "2026-10-19", { priority: 3 }),
+      lead(5, "2026-10-01", { status: "won" }),
+      lead(6, null),
+    ]
+    const f = fallbackFollowUps(leads, "2026-10-19")
+    expect(f.ready).toBe(true)
+    expect(f.count).toBe(3)
+    expect(f.top.map((l) => l.id)).toEqual([2, 4, 1])
+  })
+
+  it("shows at most five but counts them all", () => {
+    const leads = Array.from({ length: 7 }, (_, i) => lead(i + 1, `2026-10-0${i + 1}`))
+    const f = fallbackFollowUps(leads, "2026-10-19")
+    expect(f.count).toBe(7)
+    expect(f.top).toHaveLength(5)
+  })
+
+  it("is not ready while the server omits the follow-up fields", () => {
+    const f = fallbackFollowUps([{ status: "new" }], "2026-10-19")
+    expect(f.ready).toBe(false)
+    expect(fallbackFollowUps([], "2026-10-19").ready).toBe(true)
+  })
+})
+

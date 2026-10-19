@@ -18,7 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Skeleton } from "@/components/ui/skeleton"
 import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/page-kit"
 import { cn } from "@/lib/utils"
-import { money } from "@/lib/format"
+import { followUpState, formatYmd, money } from "@/lib/format"
 import { useAuth } from "@/store/auth.store"
 import {
   leads as leadsApi,
@@ -39,6 +39,7 @@ import {
 } from "@/lib/api"
 import {
   applyTodayResult,
+  fallbackFollowUps,
   initialTodayView,
   itemRoute,
   itemWhen,
@@ -407,7 +408,11 @@ export default function Dashboard() {
     <div>
       {header}
 
-      <AttentionList panel={attention} error={todayView.error} retrying={todayLoading} onRetry={loadToday} />
+      {attention.kind === "follow_ups" ? (
+        <FollowUpsCard leads={leads} down={down("leads")} />
+      ) : (
+        <AttentionList panel={attention} error={todayView.error} retrying={todayLoading} onRetry={loadToday} />
+      )}
 
       {errors.length > 0 && (
         <div role="alert" className="mb-4 flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
@@ -637,6 +642,60 @@ function Snapshot({ label, value, to, bad }: { label: string; value: string; to:
   )
 }
 
+// The fallback for a server without today.php (it is uploaded by hand, so
+// dist/ can go live first): the client-side "Follow-ups due" card the
+// attention list replaced, built from the enquiries list already loaded for
+// the totals. Shown only while today.php is not available; never an error.
+function FollowUpsCard({ leads, down }: { leads: Lead[]; down: boolean }) {
+  const navigate = useNavigate()
+  const followUps = useMemo(() => fallbackFollowUps(leads), [leads])
+  return (
+    <Card className="mb-4">
+      <CardHeader className="flex-row items-center gap-2.5 space-y-0">
+        <CardTitle className="min-w-0">Follow-ups due</CardTitle>
+        <span className="font-mono text-xs tabular-nums text-muted-foreground">{down || !followUps.ready ? "—" : followUps.count}</span>
+        <Button variant="ghost" size="sm" className="ml-auto" onClick={() => navigate("/app/leads?due=1")}>
+          All <ArrowRight />
+        </Button>
+      </CardHeader>
+      <CardContent>
+        {down ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">Follow-ups could not be loaded. Refresh to try again.</p>
+        ) : !followUps.ready ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">Follow-ups are not available until the server database update has run.</p>
+        ) : followUps.top.length === 0 ? (
+          <p className="py-8 text-center text-sm text-muted-foreground">Nothing due. No enquiry has a next action today or earlier.</p>
+        ) : (
+          <ul className="divide-y">
+            {followUps.top.map((l) => {
+              const overdue = followUpState(l, followUps.today) === "overdue"
+              const when = l.next_action_at ? formatYmd(l.next_action_at) : ""
+              return (
+                <li key={l.id}>
+                  <button
+                    type="button"
+                    onClick={() => navigate("/app/leads?due=1")}
+                    aria-label={`Follow up ${l.name}${l.company ? `, ${l.company}` : ""}, ${overdue ? `overdue since ${when}` : "due today"}. Open enquiries.`}
+                    className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3 text-left hover:text-acc"
+                  >
+                    <span className="min-w-0">
+                      <b className="block font-semibold [overflow-wrap:anywhere]">{l.company || l.name}</b>
+                      <span className="block text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
+                        {l.next_action_note || (l.company ? l.name : l.email)}
+                      </span>
+                    </span>
+                    <StatusBadge status={overdue ? "overdue" : "due today"}>{overdue ? `Overdue, ${when}` : "Due today"}</StatusBadge>
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 // The attention list. One block per section the server sent (or, after a
 // failed load, per section this role should get), each in one of three states:
 // items that link to their screen, "Nothing due", or "Unavailable" with Retry.
@@ -651,7 +710,7 @@ function AttentionList({
   retrying: boolean
   onRetry: () => void
 }) {
-  if (panel.kind === "none") return null
+  if (panel.kind === "none" || panel.kind === "follow_ups") return null
   if (panel.kind === "failed") {
     return (
       <div role="alert" className="mb-4 flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
