@@ -80,17 +80,32 @@ export function buildShell(template: string): string {
  * Third-party code in a built page (Task 25). The public site ships with
  * advertising and consent switched off, and even when they are on, both load
  * only in the browser after the page runs. So a built page must contain no
- * script or frame from another origin, no AdSense or CMP marker and no ad slot.
- * The prerender fails the build on any of them. Returns one line per problem.
+ * script or frame with an absolute address, no AdSense or CMP code and no ad
+ * slot. The prerender fails the build on any of them. Returns one line per
+ * problem.
+ *
+ * Only markup is checked, never article text: words such as "adsbygoogle" in a
+ * paragraph, or in an Article's JSON-LD, are escaped text and pass. What fails
+ * is a script or frame src that is not a same-origin path, an inline
+ * (non-JSON-LD) script naming AdSense or the TCF API, the ad slot's
+ * data-gk-ad or data-gk-third-party attribute on an element, or an AdSense ins.
  */
+const AD_CODE = /adsbygoogle|googlesyndication|__tcfapi/
 export function thirdPartyProblems(html: string): string[] {
   const problems: string[] = []
-  for (const m of html.matchAll(/<(script|iframe)\b([^>]*)>/gi)) {
-    const src = /\ssrc\s*=\s*["']?([^"'\s>]+)/i.exec(m[2])?.[1]
-    if (src && /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(src)) problems.push(`<${m[1].toLowerCase()}> from another origin: ${src}`)
+  for (const m of html.matchAll(/<(script|iframe)\b([^>]*)>([\s\S]*?)<\/\1\s*>/gi)) {
+    const tag = m[1].toLowerCase()
+    const attrs = m[2]
+    const src = /\ssrc\s*=\s*["']?([^"'\s>]+)/i.exec(attrs)?.[1]
+    if (src && /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(src)) {
+      problems.push(`<${tag}> with an absolute src (only same-origin paths are allowed): ${src}`)
+    } else if (src && AD_CODE.test(src)) {
+      problems.push(`<${tag}> src names ad or consent code: ${src}`)
+    }
+    const jsonLd = /\stype\s*=\s*["']?application\/ld\+json/i.test(attrs)
+    if (tag === "script" && !jsonLd && AD_CODE.test(m[3])) problems.push(`inline <script> names ad or consent code: ${AD_CODE.exec(m[3])![0]}`)
   }
-  for (const marker of ["adsbygoogle", "googlesyndication", "data-gk-ad", "data-gk-third-party", "__tcfapi"]) {
-    if (html.includes(marker)) problems.push(`contains ${marker}`)
-  }
+  for (const m of html.matchAll(/<[a-z][a-z0-9-]*\b[^>]*\s(data-gk-ad|data-gk-third-party)\s*=/gi)) problems.push(`element with ${m[1]}`)
+  if (/<ins\b[^>]*\sclass\s*=\s*["'][^"']*\badsbygoogle\b/i.test(html)) problems.push("AdSense <ins> element")
   return problems
 }

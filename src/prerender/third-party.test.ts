@@ -57,12 +57,31 @@ describe("thirdPartyProblems", () => {
     expect(thirdPartyProblems(html)).toEqual([])
   })
 
-  it("flags scripts and frames from other origins and every ad or consent marker", () => {
-    expect(thirdPartyProblems(`<script async src="https://cmp.inmobi.com/x.js"></script>`)).toHaveLength(1)
+  it("passes article text and JSON-LD that merely mention ad code or the slot attribute", () => {
+    const html = [
+      `<p>How adsbygoogle.js and googlesyndication.com work, and what __tcfapi does.</p>`,
+      `<p>The attribute data-gk-ad= marks a slot; so does &lt;aside data-gk-ad=&quot;&quot;&gt;.</p>`,
+      `<p>&lt;ins class=&quot;adsbygoogle&quot;&gt;</p>`,
+      `<script type="application/ld+json">{"headline":"Why adsbygoogle and __tcfapi matter"}</script>`,
+    ].join("")
+    expect(thirdPartyProblems(html)).toEqual([])
+  })
+
+  it("flags absolute script and frame addresses, same-origin ones included, with accurate wording", () => {
+    expect(thirdPartyProblems(`<script async src="https://cmp.inmobi.com/x.js"></script>`)).toEqual([
+      "<script> with an absolute src (only same-origin paths are allowed): https://cmp.inmobi.com/x.js",
+    ])
+    expect(thirdPartyProblems(`<script src="https://gakinz.com/assets/x.js"></script>`)[0]).toMatch(/absolute src/)
     expect(thirdPartyProblems(`<SCRIPT src=//cdn.example/x.js></SCRIPT>`)).toHaveLength(1)
     expect(thirdPartyProblems(`<iframe src="https://ads.example/"></iframe>`)).toHaveLength(1)
-    expect(thirdPartyProblems(`<ins class="adsbygoogle"></ins>`)).toEqual(["contains adsbygoogle"])
-    expect(thirdPartyProblems(`<aside data-gk-ad=""></aside>`)).toEqual(["contains data-gk-ad"])
-    expect(thirdPartyProblems(`<script>window.__tcfapi=1</script>`)).toEqual(["contains __tcfapi"])
+  })
+
+  it("flags ad code in a same-origin src or an inline script, the slot attributes and an AdSense ins", () => {
+    expect(thirdPartyProblems(`<script src="/vendor/adsbygoogle.js"></script>`)).toEqual(["<script> src names ad or consent code: /vendor/adsbygoogle.js"])
+    expect(thirdPartyProblems(`<script>window.__tcfapi=1</script>`)).toEqual(["inline <script> names ad or consent code: __tcfapi"])
+    expect(thirdPartyProblems(`<script>(adsbygoogle = window.adsbygoogle || []).push({})</script>`)).toHaveLength(1)
+    expect(thirdPartyProblems(`<aside class="adslot" data-gk-ad=""></aside>`)).toEqual(["element with data-gk-ad"])
+    expect(thirdPartyProblems(`<script data-gk-third-party="x" src="/x.js"></script>`)).toEqual(["element with data-gk-third-party"])
+    expect(thirdPartyProblems(`<ins class="adsbygoogle" style="display:block"></ins>`)).toEqual(["AdSense <ins> element"])
   })
 })
