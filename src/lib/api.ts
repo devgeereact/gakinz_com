@@ -48,6 +48,20 @@ export function filenameFromDisposition(header: string | null): string | null {
   return /^[\w.-]{1,200}$/.test(base) && !/^\.+$/.test(base) ? base : null
 }
 
+/**
+ * True for the type of a reply that can be a stored file, given lower case
+ * with no parameters, as download() passes it. Refuses no type at all and the
+ * two a non-file reply arrives as: JSON (an error or an older server) and HTML
+ * (the app shell or the host's own page). files.php never sends either for a
+ * stored file: its upload allowlist has no JSON or HTML type.
+ */
+export function isFileReply(type: string): boolean {
+  if (type === "") return false
+  if (type === "application/json" || type.endsWith("+json")) return false
+  if (type === "text/html" || type === "application/xhtml+xml") return false
+  return true
+}
+
 /** The name the server gave a download, or `fallback`. */
 export function downloadName(blob: Blob, fallback: string): string {
   return typeof File !== "undefined" && blob instanceof File && blob.name ? blob.name : fallback
@@ -124,8 +138,9 @@ export const api = {
   // carry the bearer token, so the file is fetched here and handed back as a
   // Blob for the page to save. Errors arrive as JSON, as everywhere else. A
   // 200 of any other type (an older server answering JSON) is refused, so it is
-  // never saved under the file's name.
-  download: async (path: string, expectedType: string): Promise<ApiResult<Blob>> => {
+  // never saved under the file's name. `expectedType` is one exact type, or a
+  // check on the reply's type for a file whose type varies (see isFileReply).
+  download: async (path: string, expectedType: string | ((type: string) => boolean)): Promise<ApiResult<Blob>> => {
     try {
       const token = getStoredToken()
       const res = await fetch(`${API_BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
@@ -138,7 +153,8 @@ export const api = {
         return { ok: false, error: bodyError(body) || statusError(res.status, "Download"), status: res.status, details }
       }
       const type = (res.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase()
-      if (type !== expectedType.toLowerCase()) return { ok: false, error: DOWNLOAD_NOT_READY, status: res.status }
+      const expected = typeof expectedType === "string" ? type === expectedType.toLowerCase() : expectedType(type)
+      if (!expected) return { ok: false, error: DOWNLOAD_NOT_READY, status: res.status }
       const blob = await res.blob()
       // When the server names the file, hand back a File (still a Blob) so the
       // page can save it under that name; see downloadName().
@@ -1253,6 +1269,9 @@ export type FileRow = {
   client_company: string | null
   project_name: string | null
   uploaded_by_name: string | null
+  /** Shown in the client's portal (SQL 18). null (or absent on an older server) until SQL 18 runs. */
+  client_visible?: boolean | null
+  shared_at?: string | null
 }
 export const files = {
   list: (params?: { project_id?: number; client_id?: number }) => {
@@ -1270,11 +1289,31 @@ export const files = {
     return api.upload<{ id: number }>("/files.php?action=upload", form)
   },
   share: (id: number, days = 7) => api.post<{ token: string; expires_at: string }>("/files.php?action=share", { id, days }),
+  // Show or hide a file in its client's portal (SQL 18; 503 until it runs).
+  clientShare: (id: number, visible: boolean) =>
+    api.post<{ id: number; client_visible: boolean; shared_at: string | null }>("/files.php?action=client_share", { id, visible }),
   remove: (id: number) => api.post<{ ok: boolean }>("/files.php?action=delete", { id }),
   // Authenticated download URL (token is attached by the browser via the page,
   // so for direct links prefer a share link). Returns the absolute API path.
   downloadUrl: (id: number) => `${API_BASE}/files.php?download=${id}`,
   shareUrl: (token: string) => `${API_BASE}/files.php?token=${token}`,
+}
+
+// Files the studio shared with the signed-in client (files.php client routes,
+// SQL 18). No client id is sent: the server derives it from the token. A file
+// may be any allowed type, so the download accepts any file reply and refuses
+// only a JSON or HTML one (an error or the app shell).
+export type PortalFile = {
+  id: number
+  name: string
+  mime: string
+  size: number
+  shared_at: string | null
+  project_name: string | null
+}
+export const portalFiles = {
+  list: () => api.get<PortalFile[]>("/files.php?action=mine"),
+  download: (id: number) => api.download(`/files.php?action=mine_download&id=${id}`, isFileReply),
 }
 
 // Announcements / broadcasts.
