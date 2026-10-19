@@ -4,6 +4,7 @@ import { saveAs } from "file-saver"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
 import { PageHeader } from "@/app/components/page-kit"
 import { TableSkeleton } from "@/app/components/TableSkeleton"
 import {
@@ -109,6 +110,17 @@ export default function Files() {
     } else toast.error(res.error || "Could not create a link.")
   }
 
+  // Show or hide a file in its client's portal (SQL 18).
+  const setClientVisible = async (f: FileRow, visible: boolean) => {
+    setBusyId(f.id)
+    const res = await files.clientShare(f.id, visible)
+    setBusyId(null)
+    if (res.ok) {
+      setItems((xs) => xs.map((x) => (x.id === f.id ? { ...x, client_visible: res.data.client_visible, shared_at: res.data.shared_at } : x)))
+      toast.success(visible ? "Visible in the client portal." : "Hidden from the client portal.")
+    } else toast.error(res.error || "Could not change what the client sees.")
+  }
+
   const remove = async (f: FileRow) => {
     const res = await files.remove(f.id)
     if (res.ok) setItems((xs) => xs.filter((x) => x.id !== f.id))
@@ -118,6 +130,8 @@ export default function Files() {
   const q = query.trim().toLowerCase()
   const shown = q ? items.filter((f) => `${f.name} ${f.project_name ?? ""} ${f.client_company ?? ""}`.toLowerCase().includes(q)) : items
   const pick = () => inputRef.current?.click()
+  // An older server, or one before SQL 18, sends no flag: the column stays hidden.
+  const portalReady = items.some((f) => typeof f.client_visible === "boolean")
 
   return (
     <div>
@@ -157,7 +171,7 @@ export default function Files() {
         <b className="font-semibold">
           {projectFilter !== "all" ? "Drop files here, or click to upload to this project" : "Drop files here, or click to upload"}
         </b>
-        <span className="text-[13px] text-muted-foreground">Up to 20 MB each. Files stay private until you share a link.</span>
+        <span className="text-[13px] text-muted-foreground">Up to 20 MB each. Files stay private until you share a link or make one visible to its client.</span>
         <input ref={inputRef} type="file" multiple className="hidden" onChange={(e) => doUpload(e.target.files)} />
       </div>
 
@@ -219,6 +233,7 @@ export default function Files() {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Project</TableHead>
+                {portalReady && <TableHead>Client portal</TableHead>}
                 <TableHead className="text-right">Size</TableHead>
                 <TableHead>Uploaded</TableHead>
                 <TableHead>
@@ -237,6 +252,25 @@ export default function Files() {
                     </span>
                   </TableCell>
                   <TableCell className="min-w-[140px]">{f.project_name || f.client_company || <span className="text-muted-foreground">None</span>}</TableCell>
+                  {portalReady && (
+                    <TableCell className="min-w-[150px]">
+                      {typeof f.client_visible === "boolean" && (f.project_id != null || f.client_id != null) ? (
+                        <span className="flex items-center gap-2">
+                          <Switch
+                            id={`client-visible-${f.id}`}
+                            checked={f.client_visible}
+                            disabled={busyId === f.id}
+                            onCheckedChange={(on) => setClientVisible(f, on)}
+                          />
+                          <label htmlFor={`client-visible-${f.id}`} className="text-[13px]">
+                            Visible to client<span className="sr-only">: {f.name}</span>
+                          </label>
+                        </span>
+                      ) : (
+                        <span className="text-[13px] text-muted-foreground">No client</span>
+                      )}
+                    </TableCell>
+                  )}
                   <TableCell className="whitespace-nowrap text-right font-mono">{humanSize(f.size)}</TableCell>
                   <TableCell className="whitespace-nowrap">
                     {fmt(f.created_at)}
