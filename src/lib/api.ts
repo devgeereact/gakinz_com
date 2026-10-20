@@ -1085,6 +1085,34 @@ export const privacy = {
   // A `client`-role user asks for their data to be deleted: one support ticket
   // with fixed text, at most one open per client. Nothing is deleted. New route.
   requestDeletion: () => api.post<{ id: number; subject: string }>("/support.php?action=deletion_request", {}),
+  // Client anonymisation, super admin only and SWITCHED OFF by default: while
+  // $CLIENT_ANONYMISE_ENABLED is not true both routes answer 404, so the
+  // client record shows nothing. The preview is the only sign it is on. New routes.
+  anonymisePreview: (clientId: number) => api.get<ClientAnonymisePreview>(`/privacy.php?action=anonymise_preview&id=${clientId}`),
+  anonymiseClient: (clientId: number, confirm: string, keepCompany: boolean) =>
+    api.post<ClientAnonymisation>("/privacy.php?action=anonymise_client", { id: clientId, confirm, keep_company: keepCompany }),
+}
+export type ClientAnonymisePreview = {
+  id: number
+  company: string
+  placeholder: string
+  logins: number
+  source_enquiry: boolean
+  other_enquiries: number
+  problems: Array<{ reason: string; message: string }>
+  kept: string[]
+}
+export type ClientAnonymisation = {
+  anonymised: true
+  id: number
+  logins: number
+  sessions: number
+  magic_links: number
+  password_resets: number
+  enquiry: number
+  feedback: number
+  booking_events: number
+  audit_scrubbed: number
 }
 export type EnquiryErasePreview = { id: number; other_enquiries: number; blocked: string | null; message: string | null }
 export type EnquiryErasure = { erased: true; id: number; bookings: number; booking_events: number; audit_scrubbed: number }

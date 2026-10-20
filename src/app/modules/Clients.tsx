@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react"
 import { useLocation, useSearchParams } from "react-router-dom"
-import { Loader2, Download, RefreshCw, Plus, Building2, Search, FileJson } from "lucide-react"
+import { Loader2, Download, RefreshCw, Plus, Building2, Search, FileJson, UserX } from "lucide-react"
 import { saveAs } from "file-saver"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { toast } from "sonner"
@@ -32,7 +32,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { clients, privacy, downloadName, type Client, type ClientInput, type ClientTag, type ClientDetail } from "@/lib/api"
+import { clients, privacy, downloadName, type Client, type ClientInput, type ClientTag, type ClientDetail, type ClientAnonymisePreview } from "@/lib/api"
+import { AnonymiseClientDialog } from "@/app/components/AnonymiseClientDialog"
+import { anonymiseAvailable } from "@/app/modules/anonymiseModel"
 import { cn } from "@/lib/utils"
 import { gbp } from "@/lib/format"
 import { EmptyState, LoadError } from "@/app/components/EmptyState"
@@ -101,14 +103,23 @@ export default function Clients() {
     else toast.error(out.error || "Could not export the client's data.")
   }
 
+  // Client anonymisation (privacy.php): super_admin only and switched off by
+  // default. The action appears only when the preview answers, so while the
+  // switch is off, or the file is not uploaded, nothing new shows.
+  const canAnonymise = role === "super_admin"
+  const [anonPreview, setAnonPreview] = useState<ClientAnonymisePreview | null>(null)
+  const [anonOpen, setAnonOpen] = useState(false)
+
   const openDetail = async (id: number) => {
     setDetailOpen(true)
     setDetail(null)
+    setAnonPreview(null)
     setDetailLoading(true)
     const res = await clients.get(id)
     setDetailLoading(false)
     if (res.ok) setDetail(res.data)
     else toast.error(res.error || "Could not load the client.")
+    if (res.ok && canAnonymise) setAnonPreview(anonymiseAvailable(await privacy.anonymisePreview(id)))
   }
 
   const load = async () => {
@@ -443,12 +454,28 @@ export default function Clients() {
                 {exporting ? <Loader2 className="animate-spin" /> : <FileJson />} Export data
               </Button>
             )}
+            {anonPreview && detail && anonPreview.id === detail.client.id && (
+              <Button variant="destructive" onClick={() => setAnonOpen(true)}>
+                <UserX /> Anonymise
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setDetailOpen(false)}>
               Close
             </Button>
           </SheetFooter>
         </SheetContent>
       </Sheet>
+      {anonOpen && anonPreview && (
+        <AnonymiseClientDialog
+          preview={anonPreview}
+          onClose={() => setAnonOpen(false)}
+          onDone={() => {
+            setAnonOpen(false)
+            openDetail(anonPreview.id)
+            load()
+          }}
+        />
+      )}
     </div>
   )
 }
