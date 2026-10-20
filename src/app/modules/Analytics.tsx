@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
+import { useLoader } from "@/hooks/use-load"
 import {
   Area,
   AreaChart,
@@ -67,7 +68,6 @@ const STATUS_LABEL: Record<Project["status"], string> = {
 }
 
 export default function Analytics() {
-  const [loading, setLoading] = useState(true)
   const [errors, setErrors] = useState<string[]>([])
   const [leads, setLeads] = useState<Lead[]>([])
   const [invoices, setInvoices] = useState<Invoice[]>([])
@@ -76,35 +76,34 @@ export default function Analytics() {
   const [clientList, setClientList] = useState<Client[]>([])
   const [profit, setProfit] = useState<ProfitabilityRow[]>([])
 
-  const load = async () => {
-    setLoading(true)
-    const errs: string[] = []
-    const [l, inv, p, tm, cl, pr] = await Promise.all([
-      leadsApi.list(),
-      invoicesApi.list(),
-      projectsApi.list(),
-      timeApi.list(),
-      clientsApi.list(),
-      reportsApi.profitability(),
-    ])
-    if (pr.ok) setProfit(pr.data)
-    if (l.ok) setLeads(l.data)
-    else errs.push("leads")
-    if (inv.ok) setInvoices(inv.data)
-    else errs.push("invoices")
-    if (p.ok) setProjects(p.data)
-    else errs.push("projects")
-    if (tm.ok) setEntries(tm.data)
-    else errs.push("time")
-    if (cl.ok) setClientList(cl.data)
-    else errs.push("clients")
-    setErrors(errs)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
+  // Loads on open; Refresh and Retry load again. A source that fails keeps
+  // what it showed before and is named in the warning.
+  const { loading, reload: load } = useLoader(
+    () =>
+      Promise.all([
+        leadsApi.list(),
+        invoicesApi.list(),
+        projectsApi.list(),
+        timeApi.list(),
+        clientsApi.list(),
+        reportsApi.profitability(),
+      ]),
+    ([l, inv, p, tm, cl, pr]) => {
+      const errs: string[] = []
+      if (pr.ok) setProfit(pr.data)
+      if (l.ok) setLeads(l.data)
+      else errs.push("leads")
+      if (inv.ok) setInvoices(inv.data)
+      else errs.push("invoices")
+      if (p.ok) setProjects(p.data)
+      else errs.push("projects")
+      if (tm.ok) setEntries(tm.data)
+      else errs.push("time")
+      if (cl.ok) setClientList(cl.data)
+      else errs.push("clients")
+      setErrors(errs)
+    },
+  )
 
   const kpis = useMemo(() => {
     const decided = leads.filter((x) => x.status === "won" || x.status === "lost")
