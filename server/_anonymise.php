@@ -33,7 +33,14 @@
  *                    a user's outside this client, or a contract signer's on
  *                    another client's contract: scrubbing it from the audit
  *                    text would change someone else's record
- * A signed or void contract is NOT a refusal: it is a finished record, kept.
+ * OPEN ADVISER DECISION: "active contract" is read as status draft or sent.
+ * A SIGNED contract does NOT block (nor does a void one): it is treated as a
+ * finished record and kept. contracts has no end date, so a signed agreement
+ * still in force cannot be told apart from one that has ended. The adviser
+ * must confirm this reading, or ask for signed to block too.
+ *
+ * A client's own open "Data deletion request" ticket (support.php) is an open
+ * ticket and so blocks: resolve it first, then anonymise.
  *
  * ── Field decisions ─────────────────────────────────────────────────────────
  * "#id" is the client id. A = anonymised, K = kept untouched, D = deleted.
@@ -50,7 +57,8 @@
  * | users (role client, this client)    |      |                                                      |
  * |   .name                             | A    | "Former client #id": every ticket reply and Comms    |
  * |                                     |      | message the login wrote now shows this name          |
- * |   .email                            | A    | anonymised-<id>-<n>@invalid (unique, undeliverable)  |
+ * |   .email                            | A    | anonymised-<user id>@invalid (unique per login,      |
+ * |                                     |      | undeliverable)                                       |
  * |   .password_hash                    | A    | "!anonymised", which no password ever verifies       |
  * |   .status                           | A    | suspended                                            |
  * |   .totp_secret, totp_recovery       | A    | NULL; totp_enabled 0; totp_last_step NULL if present |
@@ -64,7 +72,10 @@
  * |   .company                          | A    | NULL; K with keep_company: true                      |
  * |   .ip                               | A    | NULL                                                 |
  * |   .message and the rest             | K    | the request as received, like portal messages        |
- * | other enquiries from the same email | K    | a prospect's record: erase_enquiry handles those     |
+ * |   .next_action_note, lost_reason    | K    | staff free text; not searched for personal data      |
+ * | other enquiries from the same email | K    | the rows are a prospect's record (erase_enquiry      |
+ * |                                     |      | handles them), but their audit copies are scrubbed   |
+ * |                                     |      | and their submission IPs cleared: see audit_log      |
  * | client_feedback.attribution         | A    | NULL (how the person wanted to be named if quoted)   |
  * | client_feedback text, rating        | K    | kept by the brief, with the client record            |
  * | booking_events.notify_to            | A    | NULL where it is one of the client's addresses, on   |
@@ -76,13 +87,35 @@
  * | payment_events                      | K    | financial record (tax)                               |
  * | proposals, proposal_items           | K    | contractual record (what was offered and accepted)   |
  * | contracts (signer name, email, IP)  | K    | contractual record (evidence of signature)           |
+ * | contracts.status                    | K    | draft or sent blocks; signed and void do not (OPEN   |
+ * |                                     |      | ADVISER DECISION, see above)                         |
  * | projects, tasks, briefs, assets,    | K    | delivery record; project_assets.client_note is the   |
  * |   measurements, time_entries        |      | client's own text, kept like portal messages         |
  * | files (names and contents)          | K    | not searched; a file name can hold a name            |
- * | audit_log.detail                    | A    | each client address replaced with "[erased]", and   |
- * |                                     |      | the matching person's name on those rows only        |
- * | audit_log.ip                        | A    | NULL on the source enquiry's enquiry_submit rows     |
- * | testimonials, certificates          | K    | not linked to a client record (matched by name only) |
+ * | audit_log.detail                    | A    | on every row naming one of the client's addresses   |
+ * |                                     |      | (client, logins, source enquiry) as a whole address: |
+ * |                                     |      | the address and the matching person's name become    |
+ * |                                     |      | "[erased]". This includes the audit copies of OTHER  |
+ * |                                     |      | enquiries sent from the same address                 |
+ * | audit_log.ip                        | A    | NULL on every enquiry_submit row (written with no    |
+ * |                                     |      | user) naming one of those addresses: the source      |
+ * |                                     |      | enquiry's and any other enquiry's from that address  |
+ * | audit_log.ip, user_id on the        | K    | security record of what the account did; the rows    |
+ * |   logins' own rows                  |      | keep the IP and the user id, which now points at an  |
+ * |                                     |      | anonymised login (their address text is scrubbed)    |
+ * | audit_log client_access_request     | K    | detail is a truncated SHA-256 fingerprint of the     |
+ * |                                     |      | typed email, not the address: pseudonymous, and it   |
+ * |                                     |      | cannot be matched without the address itself         |
+ * | audit_log client_create rows        | K    | detail is the company name as created; kept even     |
+ * |                                     |      | without keep_company, as rows naming the company     |
+ * |                                     |      | alone cannot be told apart from another client of    |
+ * |                                     |      | the same name. Adviser to confirm                    |
+ * | work.client_name                    | K    | public portfolio text the owner published with the   |
+ * |                                     |      | client's consent; not linked to the client record,   |
+ * |                                     |      | so the owner unpublishes or edits it in Work         |
+ * | testimonials author, role, company  | K    | public text, not linked to a client record (matched  |
+ * |                                     |      | by name only); the owner removes it in Testimonials  |
+ * | certificates                        | K    | not linked to a client record                        |
  * | Mailbox, backups                    | K    | outside the database                                 |
  *
  * Contracts keep the signer's name, email and signing IP because they are the
@@ -91,10 +124,7 @@
  */
 require_once __DIR__ . '/_erasure.php';
 
-/** True only when config.php sets $CLIENT_ANONYMISE_ENABLED = true; exactly. */
-function client_anonymise_enabled(): bool {
-  return ($GLOBALS['CLIENT_ANONYMISE_ENABLED'] ?? false) === true;
-}
+// The switch is read by privacy.php (pv_anonymise_switch) before this file is loaded.
 
 const CA_PASSWORD_LOCK = '!anonymised';
 
@@ -103,7 +133,7 @@ const CA_PROBLEMS = [
   'retainer' => 'This client still has a care plan amount set, so it would keep being billed. Set the care plan to none first.',
   'unpaid_invoices' => 'This client has an invoice that is not paid (a draft or a sent invoice). Finish or delete it first.',
   'open_projects' => 'This client has a project that is not launched. Launch or delete it first.',
-  'open_tickets' => 'This client has a portal message that is not resolved. Resolve it first.',
+  'open_tickets' => 'This client has a portal message that is not resolved, which includes a data deletion request they opened. Resolve it first.',
   'active_contract' => 'This client has a contract in draft or sent. Void, sign or delete it first.',
   'open_quote' => 'This client has a quote in draft or sent. Decline or delete it first.',
   'upcoming_call' => 'This client has a call that has not happened yet. Cancel or complete it first.',
@@ -119,7 +149,9 @@ const CA_KEPT = [
   'Projects, tasks, briefs and files: the delivery record. File names are not changed.',
   'Portal messages, replies and feedback text: kept, with the author shown as the former client.',
   'Comms conversations, call notes and the Mailbox: free text, not searched.',
-  'Other enquiries sent from the same address: a prospect\'s record, handled by enquiry erasure.',
+  'Other enquiries sent from the same address: the enquiries are not changed (enquiry erasure handles them), but their activity log copies are scrubbed and their submission IP addresses cleared.',
+  'Public Work entries and testimonials that name the client: not linked to the record, so edit or remove them by hand.',
+  'Activity log entries recording the company name when the client was created, and what the logins did and from which IP.',
   'Backups, until they age out.',
 ];
 
@@ -256,10 +288,9 @@ function ca_anonymise_client(mysqli $conn, int $cid, string $confirm, bool $keep
 
     $placeholder = ca_placeholder($cid);
     $userIds = array_map(fn($u) => (int)$u['id'], $subject['users']);
-    $n = 0;
     foreach ($userIds as $uid) {
-      $n++;
-      $email = "anonymised-$cid-$n@invalid";
+      // By user id, so it can never collide with another login's placeholder.
+      $email = "anonymised-$uid@invalid";
       er_exec($conn, 'UPDATE users SET name = ?, email = ?, password_hash = ?, status = \'suspended\',
           totp_secret = NULL, totp_enabled = 0, totp_recovery = NULL' . ($hasLastStep ? ', totp_last_step = NULL' : '') . '
         WHERE id = ? AND client_id = ? AND role = \'client\'',
