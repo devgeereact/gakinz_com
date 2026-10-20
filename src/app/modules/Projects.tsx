@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { useLoad } from "@/hooks/use-load"
 import { useLocation, useSearchParams } from "react-router-dom"
 import { AlertCircle, FolderKanban, Loader2, Plus, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
@@ -81,10 +82,7 @@ function fmt(d: string | null) {
 const pct = (p: Project) => (p.task_count > 0 ? Math.round((p.done_count / p.task_count) * 100) : 0)
 
 export default function Projects() {
-  const [list, setList] = useState<Project[]>([])
   const [clientList, setClientList] = useState<Client[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Project | null>(null)
   const boardRef = useRef<HTMLDivElement>(null)
 
@@ -123,17 +121,8 @@ export default function Projects() {
     else guard.requestLeave(() => show(p))
   }
 
-  const loadProjects = async () => {
-    setLoading(true)
-    const res = await projects.list()
-    if (res.ok) {
-      setList(res.data)
-      setError(null)
-    } else {
-      setError(res.error)
-    }
-    setLoading(false)
-  }
+  // The list loads on open; Refresh, Retry, a new project and a failed change load it again.
+  const { data: list, setData: setList, error, loading, reload: loadProjects } = useLoad(() => projects.list(), [] as Project[])
 
   // A deep link is a navigation, so with an unsaved Brief edit the router's
   // blocker has already asked. Asking again here would prompt twice.
@@ -143,7 +132,6 @@ export default function Projects() {
   })
 
   useEffect(() => {
-    loadProjects()
     clientsApi.list().then((r) => r.ok && setClientList(r.data))
     projects.templates().then((r) => setTemplates(r.ok ? parseTemplates(r.data) : null))
   }, [])
@@ -465,22 +453,12 @@ function ProjectBoard({
   /** Changes when the link is re-applied, so the task is scrolled to again. */
   linkRevision?: string
 }) {
-  const [items, setItems] = useState<Task[]>([])
-  const [loading, setLoading] = useState(true)
+  // The project's tasks, loaded again whenever another project is shown. A
+  // failed load keeps what was shown and shows no error, as before.
+  const { data: items, setData: setItems, loading, reload: load } = useLoad(() => tasksApi.list(project.id), [] as Task[], project.id)
   const [newTitle, setNewTitle] = useState("")
   const [adding, setAdding] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await tasksApi.list(project.id)
-    if (res.ok) setItems(res.data)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.id])
   useReveal(linkedTask !== null && items.some((t) => t.id === linkedTask) ? recordElementId("task", linkedTask) : null, !loading, linkRevision)
 
   const byStatus = useMemo(() => {
