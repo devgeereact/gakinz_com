@@ -88,6 +88,15 @@ function seedClient(tag: string, domain: string) {
 
 type Seed = ReturnType<typeof seedClient>
 
+/** One row as column name to value (NULL as "NULL"), every column but updated_at. */
+function row(table: string, where: string): Record<string, string> {
+  const cols = sql(`SELECT column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ${q(table)} ORDER BY ordinal_position`)
+    .map((r) => r[0]).filter((c) => c !== "updated_at")
+  const values = sql(`SELECT ${cols.map((c) => `IFNULL(\`${c}\`, 'NULL')`).join(", ")} FROM ${table} WHERE ${where}`)
+  expect(values).toHaveLength(1)
+  return Object.fromEntries(cols.map((c, i) => [c, values[0][i]]))
+}
+
 /** Every column of the rows that belong to the other client, so a change to it shows up. */
 function otherClientRows(o: Seed): string {
   return JSON.stringify([
@@ -140,11 +149,15 @@ describe("client anonymisation", () => {
     })
 
     it("stays off for anything but the boolean true", async () => {
+      const before = checksums(ALL_TABLES)
       for (const value of [1, "true", "yes"]) {
         fs.writeFileSync(OVERRIDES, JSON.stringify({ CLIENT_ANONYMISE_ENABLED: value }))
+        const p = await preview(owner, a.cid)
+        expect(p.status).toBe(404)
+        expect(p.json.problems).toBeUndefined()
         expect((await anonymise(owner, { id: a.cid, confirm: a.company })).status).toBe(404)
       }
-      expect(one(`SELECT company FROM clients WHERE id = ${a.cid}`)).toBe("Acme Ltd")
+      expect(checksums(ALL_TABLES)).toBe(before)
     })
   })
 
@@ -192,6 +205,8 @@ describe("client anonymisation", () => {
       ["unpaid_invoices", (s) => sql(`INSERT INTO invoices (client_id, status, issued_at) VALUES (${s.cid}, 'draft', CURRENT_DATE)`)],
       ["open_projects", (s) => sql(`INSERT INTO projects (client_id, name, status) VALUES (${s.cid}, 'Phase 2', 'on_hold')`)],
       ["open_tickets", (s) => sql(`INSERT INTO tickets (client_id, subject, status) VALUES (${s.cid}, 'Still broken', 'in_progress')`)],
+      // The client's own deletion request is an open ticket too: it must be resolved first.
+      ["open_tickets", (s) => sql(`INSERT INTO tickets (client_id, subject, body, status) VALUES (${s.cid}, 'Data deletion request', 'Please delete my data', 'open')`)],
       ["active_contract", (s) => sql(`INSERT INTO contracts (client_id, title, status) VALUES (${s.cid}, 'Care plan', 'sent')`)],
       ["open_quote", (s) => sql(`INSERT INTO proposals (client_id, title, status) VALUES (${s.cid}, 'Phase 2 quote', 'sent')`)],
       ["retainer", (s) => sql(`UPDATE clients SET tag = 'retainer', retainer_amount = 49 WHERE id = ${s.cid}`)],
@@ -228,19 +243,23 @@ describe("client anonymisation", () => {
       const rowCounts = ["clients", "users", "enquiries", "client_feedback", "booking_events"].map((t) => one(`SELECT COUNT(*) FROM ${t}`))
       const auditCount = Number(one("SELECT COUNT(*) FROM audit_log"))
       const enquiryBefore = sql(`SELECT message, status, source FROM enquiries WHERE id = ${a.enquiryId}`)
+      const clientBefore = row("clients", `id = ${a.cid}`)
+      const bossBefore = row("users", `id = ${a.boss}`)
+      const stafferBefore = row("users", `id = ${a.staffer}`)
+      // The second enquiry from Acme's address has its own audit copy and submission IP.
+      sql(`INSERT INTO audit_log (user_id, action, detail, ip) VALUES (NULL, 'enquiry_submit', 'boss@acme.test second idea', '198.51.100.9')`)
 
       const r = await anonymise(owner, { id: a.cid, confirm: "  acme   LTD " })
       expect(r.status).toBe(200)
       expect(r.json).toMatchObject({ anonymised: true, id: a.cid, logins: 2, sessions: 1, magic_links: 0, password_resets: 1, enquiry: 1, feedback: 1, booking_events: 1 })
 
       const placeholder = `Former client #${a.cid}`
-      expect(sql(`SELECT company, IFNULL(contact_name, 'NULL'), IFNULL(email, 'NULL'), IFNULL(phone, 'NULL'), IFNULL(notes, 'NULL'), tag, source_lead_id FROM clients WHERE id = ${a.cid}`)[0])
-        .toEqual([placeholder, "NULL", "NULL", "NULL", "NULL", "one-off", String(a.enquiryId)])
-      expect(sql(`SELECT id, name, email, password_hash, status, IFNULL(totp_secret, 'NULL'), totp_enabled, IFNULL(totp_recovery, 'NULL'), role, client_id FROM users WHERE client_id = ${a.cid} ORDER BY id`))
-        .toEqual([
-          [String(a.boss), placeholder, `anonymised-${a.cid}-1@invalid`, "!anonymised", "suspended", "NULL", "0", "NULL", "client", String(a.cid)],
-          [String(a.staffer), placeholder, `anonymised-${a.cid}-2@invalid`, "!anonymised", "suspended", "NULL", "0", "NULL", "client", String(a.cid)],
-        ])
+      // Every column is compared: only the listed ones may differ (updated_at is set by the database).
+      expect(row("clients", `id = ${a.cid}`)).toEqual({ ...clientBefore, company: placeholder, contact_name: "NULL", email: "NULL", phone: "NULL", notes: "NULL" })
+      const lockedOut = { name: placeholder, password_hash: "!anonymised", status: "suspended", totp_secret: "NULL", totp_enabled: "0", totp_recovery: "NULL", totp_last_step: "NULL" }
+      expect(row("users", `id = ${a.boss}`)).toEqual({ ...bossBefore, ...lockedOut, email: `anonymised-${a.boss}@invalid` })
+      expect(row("users", `id = ${a.staffer}`)).toEqual({ ...stafferBefore, ...lockedOut, email: `anonymised-${a.staffer}@invalid` })
+      expect(one("SELECT IFNULL(ip, 'NULL') FROM audit_log WHERE detail = '[erased] second idea'")).toBe("NULL")
       expect(sql(`SELECT name, email, IFNULL(company, 'NULL'), IFNULL(ip, 'NULL') FROM enquiries WHERE id = ${a.enquiryId}`)[0])
         .toEqual([placeholder, `anonymised-${a.cid}-enquiry@invalid`, "NULL", "NULL"])
       expect(sql(`SELECT message, status, source FROM enquiries WHERE id = ${a.enquiryId}`)).toEqual(enquiryBefore)
@@ -262,7 +281,7 @@ describe("client anonymisation", () => {
       expect(one("SELECT detail FROM audit_log WHERE detail LIKE 'to [erased]%'")).toBe("to [erased]: Hello [erased], your invoice")
       expect(one("SELECT IFNULL(ip, 'NULL') FROM audit_log WHERE action = 'enquiry_submit' AND detail = '[erased]'")).toBe("NULL")
       expect(one("SELECT COUNT(*) FROM audit_log WHERE detail = 'to boss@acme.test.uk: a different address'")).toBe("1")
-      expect(Number(one("SELECT COUNT(*) FROM audit_log"))).toBe(auditCount + 1)
+      expect(Number(one("SELECT COUNT(*) FROM audit_log"))).toBe(auditCount + 2) // the second idea's submit row, then client_anonymise
       expect(sql("SELECT action, detail FROM audit_log WHERE action = 'client_anonymise'")).toEqual([["client_anonymise", `#${a.cid}`]])
 
       // The ticket is kept, and its reply now shows the former client as the author.
@@ -282,7 +301,7 @@ describe("client anonymisation", () => {
       const link = magicLink(a.boss)
       expect((await anonymise(owner, { id: a.cid, confirm: a.company })).status).toBe(200)
       expect((await api("portal.php", { token: bossSession })).status).toBe(401)
-      for (const email of ["boss@acme.test", "team@acme.test", `anonymised-${a.cid}-1@invalid`]) {
+      for (const email of ["boss@acme.test", "team@acme.test", `anonymised-${a.boss}@invalid`]) {
         const r = await api<{ token?: string }>("auth.php?action=login", { body: { email, password: PASSWORD } })
         expect(r.status).toBe(401)
         expect(r.json.token).toBeUndefined()
@@ -290,7 +309,7 @@ describe("client anonymisation", () => {
       const consumed = await api<{ token?: string }>("auth.php?action=magic_consume", { body: { token: link } })
       expect(consumed.status).toBe(400)
       expect(consumed.json.token).toBeUndefined()
-      await api("auth.php?action=magic_request", { body: { email: `anonymised-${a.cid}-1@invalid` } })
+      await api("auth.php?action=magic_request", { body: { email: `anonymised-${a.boss}@invalid` } })
       expect(one(`SELECT COUNT(*) FROM magic_links WHERE user_id = ${a.boss}`)).toBe("0")
       // The other client's login still works.
       expect(await login("boss@other.test")).toMatch(/\w+/)
