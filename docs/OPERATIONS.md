@@ -229,7 +229,7 @@ set these for the run (they are read by `tests/server/env.ts`; the host must be 
 | Variable | Default | Example on Ubuntu with a password user |
 |---|---|---|
 | `GK_TEST_DB_HOST` | `localhost` (socket) | `127.0.0.1` |
-| `GK_TEST_DB_PORT` | `3306` | `3306` |
+| `GK_TEST_DB_PORT` | `3306` | `3306` (read by both the `mysql` client and the PHP config) |
 | `GK_TEST_DB_USER` | the operating-system user | `gakinz_test` |
 | `GK_TEST_DB_PASS` | empty | a local test-only password, never a production one |
 | `GK_TEST_DB` | `gakinz_test` | `gakinz_test` |
@@ -241,6 +241,27 @@ One-time database user on Ubuntu (run as the MySQL root user; test-only credenti
 CREATE USER 'gakinz_test'@'localhost' IDENTIFIED BY '<local test password>';
 GRANT ALL PRIVILEGES ON `%\_test`.* TO 'gakinz_test'@'localhost';
 ```
+
+**Running the suite against MySQL 8 in Docker (2026-10-20).** Since `6de6baa` the synthetic
+`config.php` passes `GK_TEST_DB_PORT` to `mysqli` as the fifth argument, so the PHP side and the
+`mysql` client agree on the port (before that the PHP side always used 3306 and every login
+failed with "Test database connection failed"). On the Mac, Docker needs colima:
+
+```sh
+colima start
+docker run -d --name gk-mysql8 -e MYSQL_ROOT_PASSWORD=<local test password> \
+  -p 127.0.0.1:3308:3306 mysql:8.0 --default-authentication-plugin=mysql_native_password
+GK_TEST_DB_HOST=127.0.0.1 GK_TEST_DB_PORT=3308 GK_TEST_DB_USER=root \
+  GK_TEST_DB_PASS=<local test password> GK_TEST_DB=gakinz_mysql8_test \
+  GK_TEST_PHP_PORT=5427 GK_TEST_PROVIDER_PORT=5428 npm run test:server
+docker rm -f gk-mysql8 && colima stop
+```
+
+Use a host other than `localhost` (`127.0.0.1`), because a socket ignores the port. The
+2026-10-20 run on MySQL 8.0.46 passed 519 of 519 tests in about nine minutes. Expect one
+warning, the `VALUES()` deprecation (code 1287); a "reference probe failed: database error
+1356" line in `php-error.log` comes from a deliberate probe-failure test. MySQL 5.7 has not
+been run. Remove the container afterwards so nothing keeps listening.
 
 `server/config.php` and every `.env` file stay on the Mac (D-042, GEE OS two-computer rule).
 The tests never read them: they write a synthetic `config.php` into a temporary folder.

@@ -109,7 +109,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-096 | Erasing an enquiry scans and briefly locks `audit_log` rows | Low | Accepted 2026-10-19 at the current size. Not uploaded |
 | K-097 | No acknowledgement email carries the enquiry reference | Low | Open by ruling 2026-10-19 (spam relay risk); the thank-you shows it |
 | K-098 | A retention dry run writes no audit row | Low | Accepted 2026-10-19: a dry run changes nothing |
-| K-099 | SQL 19 step 2 is tested on MariaDB only, not MySQL 5.7 or 8 | Low | Open. Live database engine and version UNVERIFIED |
+| K-099 | SQL 19 step 2 passed on MariaDB and MySQL 8.0.46, not MySQL 5.7 | Low | Open. Live database engine and version UNVERIFIED |
 | K-100 | Reference sign-in links share `magic_links`, so `magic_consume` also redeems them, for up to 15 minutes after the switch goes off | Low | Open, pre-enable gate: a `purpose` column (future SQL). Built 2026-10-19, switched off, not uploaded |
 | K-101 | The reference sign-in timing floor relies on early finish or fast SMTP | Low | Open, pre-enable gate. Host SAPI UNVERIFIED |
 | K-102 | Reference sign-in per-IP throttles read `REMOTE_ADDR`, which may be Cloudflare's address | Medium if switched on | Open, pre-enable gate. Real-IP setup on the host UNVERIFIED |
@@ -1936,13 +1936,17 @@ keeps no record of who ran a dry run or when; the only trace is the host's own s
 log. Accepted in the Task 22 review as a deviation. Revisit if the owner wants every run
 recorded.
 
-## K-099 · SQL 19 step 2 is tested on MariaDB only, not MySQL 5.7 or 8
+## K-099 · SQL 19 step 2 passed on MariaDB and MySQL 8.0.46, not MySQL 5.7
 **Severity:** low · **Status:** open. Live database engine and version UNVERIFIED.
 
 The SQL 19 backfill, counter seed and anchors ran in `tests/server/references.test.ts` on
-the local MariaDB only. They avoid window functions so that MySQL 5.7 should accept them,
-and the seed's `INSERT ... ON DUPLICATE KEY UPDATE ... VALUES()` is deprecated on MySQL
-8.0.20 and later, which prints a warning but still runs. Neither engine was tested. Before
+the local MariaDB and, on 2026-10-20 at `3e2fee3`, on MySQL 8.0.46 in a local container: the
+whole server suite (519 tests, 36 files) passed there. The only warning was the expected
+`VALUES()` deprecation (code 1287) from the seed's `INSERT ... ON DUPLICATE KEY UPDATE ...
+VALUES()` in `server/schema.sql` SQL 19 and in `briefs.php`, `dev.php` and `site.php`. It
+still runs on 8.0, and MariaDB lacks the alias form, so it stays while both are targeted.
+The statements avoid window functions so that MySQL 5.7 should accept them, but MySQL 5.7
+is NOT TESTED, and the live host's engine is UNVERIFIED. Before
 running step 2 on the host, read its engine and version in cPanel (phpMyAdmin shows it) and
 record it in `docs/STATUS.md` section 3. If step 2 fails part way, it is safe to repeat
 (`docs/DEPLOYMENT.md` section 5.2).
@@ -2047,7 +2051,7 @@ the client's addresses replaced with `[erased]` in the audit text, one audit row
 `client_anonymise #id`. No row is deleted except the logins' sessions, magic links and reset
 tokens. Invoices, contracts, proposals, projects and tickets are kept. While the key is absent
 or anything but the boolean `true`, both routes answer 404 before authentication or any read
-(`tests/server/client-anonymise.test.ts`, 23 tests, local MariaDB only). The decision table in
+(`tests/server/client-anonymise.test.ts`, 23 tests, local MariaDB, and the whole suite on MySQL 8.0.46). The decision table in
 the header of `server/_anonymise.php` is authoritative.
 
 **Open adviser decisions** (nothing is switched on until each is answered):
@@ -2075,6 +2079,6 @@ the header of `server/_anonymise.php` is authoritative.
    cleared though those enquiry rows stay.
 
 **Not tested:** anything on the live host (the switch, the upload order, real data), the CMS
-dialog in a browser, MySQL 5.7 or 8 (MariaDB only), and Google sign-in for an anonymised
+MySQL 5.7, and Google sign-in for an anonymised
 login. Upload and gates: `docs/DEPLOYMENT.md` sections 5.1 step 14 and 5.4. Rules for the
 adviser: `docs/PRIVACY-READINESS.md` section 7.

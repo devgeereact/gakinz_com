@@ -312,8 +312,8 @@ answers `null`; the screens show none and search ignores it. Between step 1 and 
 step 2 the anchors are missing, so nothing is issued and step 2's backfill numbers whatever
 was saved meanwhile. Any other database error while assigning is logged and the record is
 saved without a reference, so a visitor never has to resubmit. Tested in
-`tests/server/references.test.ts` on the local MariaDB only; MySQL 5.7 and 8 are NOT TESTED
-(`docs/KNOWN-ISSUES.md` K-099).
+`tests/server/references.test.ts` on the local MariaDB and on MySQL 8.0.46 (2026-10-20); MySQL 5.7
+is NOT TESTED (`docs/KNOWN-ISSUES.md` K-099).
 
 ## 7. Files, share tokens and what stays public
 

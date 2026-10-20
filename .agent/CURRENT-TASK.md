@@ -226,7 +226,7 @@ retention periods, with `$RETENTION_APPLY` kept `false` until then (K-062).
   references, prospect erase, the client deletion request and Business details with hostile
   values, at 390 and 1440px, light and dark: PASS, axe 0 violations.
 - NOT TESTED: the fix wave's two CMS changes in a browser, the contract and invoice PDFs,
-  SQL 19 on MySQL (K-099), `cron.php` under the cPanel cron binary, the live server
+  SQL 19 on MySQL 5.7 (K-099; MySQL 8.0.46 passed the full server suite on 2026-10-20), `cron.php` under the cPanel cron binary, the live server
   (UNVERIFIED), real data, a real sign-in, real assistive technology.
 
 ### Verification status, fourth batch, 2026-10-19 (Mac, `ebcb002`)
