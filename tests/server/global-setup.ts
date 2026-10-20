@@ -14,7 +14,7 @@ import http from "node:http"
 import net from "node:net"
 import path from "node:path"
 import {
-  assertSafeTarget, BASE, DB_HOST, DB_NAME, DB_PASS, DB_USER, PHP_PORT, PROVIDER_BASE,
+  assertSafeTarget, BASE, DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_USER, PHP_PORT, PROVIDER_BASE,
   PROVIDER_LOG, PROVIDER_PORT, STRIPE_SECRET, WEBHOOK_SECRET, WORK_DIR,
 } from "./env"
 import { mysqlArgs } from "./helpers"
@@ -26,7 +26,7 @@ function phpString(v: string): string {
 }
 
 function syntheticConfig(): string {
-  // config.php passes no port, so the test database must listen on 3306.
+  // The port is passed as the fifth mysqli argument, so GK_TEST_DB_PORT reaches the PHP side too.
   const host = DB_HOST === "127.0.0.1" ? "127.0.0.1" : "localhost"
   return `<?php
 // Synthetic configuration written by tests/server/global-setup.ts. Test only.
@@ -73,7 +73,7 @@ $CLIENT_ANONYMISE_ENABLED = false;
 // an invalid one and a cron key), and removes it afterwards.
 $__gk_over = @json_decode((string)@file_get_contents(__DIR__ . '/overrides.json'), true);
 if (is_array($__gk_over)) foreach ($__gk_over as $__k => $__v) $GLOBALS[$__k] = $__v;
-$conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+$conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, ${Number(DB_PORT) || 3306});
 if ($conn->connect_errno) { http_response_code(500); echo json_encode(['error' => 'Test database connection failed']); exit; }
 $conn->set_charset('utf8mb4');
 $OR_API_KEY = OPENROUTER_KEY;
