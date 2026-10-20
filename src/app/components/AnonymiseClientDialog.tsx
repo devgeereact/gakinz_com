@@ -44,7 +44,8 @@ export function AnonymiseClientDialog({ preview, onClose, onDone }: { preview: C
           <DialogTitle>Anonymise this former client?</DialogTitle>
           <DialogDescription>
             For an erasure request from a client whose work is finished. Nothing is deleted except their sign-in sessions and links,
-            but the personal details below are replaced for good. It cannot be undone.
+            but the personal details below are replaced for good. It cannot be undone. Any open portal message blocks it, the
+            client&apos;s own data deletion request included, so resolve that request first.
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[45vh] space-y-3 overflow-y-auto text-[13px] text-muted-foreground">

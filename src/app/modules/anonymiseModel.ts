@@ -46,7 +46,11 @@ export function changesList(p: ClientAnonymisePreview, keepCompany: boolean): st
   if (p.source_enquiry) out.push("The enquiry this client came from loses its name, email address, IP address" + (keepCompany ? "." : " and company."))
   out.push("Their email addresses are replaced with “[erased]” in the activity log.")
   if (p.other_enquiries > 0) {
-    out.push(`${p.other_enquiries === 1 ? "1 other enquiry uses" : `${p.other_enquiries} other enquiries use`} the same address and ${p.other_enquiries === 1 ? "is" : "are"} not changed.`)
+    const one = p.other_enquiries === 1
+    out.push(
+      `${one ? "1 other enquiry uses" : `${p.other_enquiries} other enquiries use`} the same address. ${one ? "It is" : "They are"} not changed, ` +
+        `but ${one ? "its" : "their"} activity log copies are scrubbed and ${one ? "its" : "their"} submission IP addresses cleared.`,
+    )
   }
   return out
 }
