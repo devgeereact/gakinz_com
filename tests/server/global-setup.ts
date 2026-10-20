@@ -65,6 +65,9 @@ $RETENTION_CERTIFICATE_MONTHS = null;
 // The retention executor (cron.php job=retention_apply) never deletes unless a
 // test turns this on through overrides.json, as in config.php.example.
 $RETENTION_APPLY = false;
+// Client anonymisation is off, as in config.php.example; client-anonymise.test.ts
+// turns it on through overrides.json for its own requests.
+$CLIENT_ANONYMISE_ENABLED = false;
 // Test only: a test may write overrides.json beside this file to change config
 // globals for its own requests (privacy.test.ts sets every retention period,
 // an invalid one and a cron key), and removes it afterwards.
