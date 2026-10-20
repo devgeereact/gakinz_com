@@ -118,7 +118,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-105 | An ad slot shifts the article text when it appears after consent | Low | Open, not measured. Switched off |
 | K-106 | The CMP host allow-list is not checked against Google's certified CMP list | Medium if switched on | Open, check before switching on |
 | K-107 | Some CMPs need more than a script URL | Low | Open, check when a CMP is chosen |
-| K-108 | Client anonymisation is not built | Medium | Open, owner and adviser decision. Not built |
+| K-108 | Client anonymisation is built but switched off, awaiting adviser confirmation | Medium | Built 2026-10-20, switched off, not uploaded. Adviser confirms the rules first |
 
 
 ---
@@ -2032,12 +2032,49 @@ The setting holds one https loader URL. Some platforms need attributes on the sc
 would need a small change. Recorded in `docs/PRIVACY-READINESS.md` section 4 and
 `docs/CONTENT-AND-GROWTH.md` section 3.
 
-## K-108 · Client anonymisation is not built
-**Severity:** medium · **Status:** open, owner and adviser decision. Not built.
+## K-108 · Client anonymisation is built but switched off, awaiting adviser confirmation
+**Severity:** medium · **Status:** built 2026-10-20 (Task 26), switched off, not uploaded. An
+adviser must confirm the field and refusal rules before the owner sets
+`$CLIENT_ANONYMISE_ENABLED = true`.
 
-Task 26 of the journeys plan (anonymising a former client's personal data while keeping the
-financial records the law requires) was not built. Its dispatch was refused on 2026-10-19 by
-the session's safety check, because it deletes and rewrites client data, and it was not worked
-around. Code still deletes only a prospect's data, behind explicit gates (D-049). The rules
-(what is kept, for how long, and what is replaced) are an owner and adviser decision
-(`docs/STATUS.md` section 5, `docs/PRIVACY-READINESS.md`); build it only after that.
+The first dispatch of Task 26 was refused on 2026-10-19 by the session's safety check and was
+not worked around. The owner explicitly approved building it on 2026-10-20 ("go on"), and it
+was built behind a switch (D-050). A super admin anonymises one former client from the client
+record, typing the company name to confirm. `server/_anonymise.php` and two routes in
+`privacy.php` (`anonymise_preview`, `anonymise_client`) do it in one transaction under row
+locks: contact details replaced with neutral values, portal logins suspended and locked out,
+the client's addresses replaced with `[erased]` in the audit text, one audit row
+`client_anonymise #id`. No row is deleted except the logins' sessions, magic links and reset
+tokens. Invoices, contracts, proposals, projects and tickets are kept. While the key is absent
+or anything but the boolean `true`, both routes answer 404 before authentication or any read
+(`tests/server/client-anonymise.test.ts`, 23 tests, local MariaDB only). The decision table in
+the header of `server/_anonymise.php` is authoritative.
+
+**Open adviser decisions** (nothing is switched on until each is answered):
+1. **Signed contracts do not block.** "Active contract" is read as `draft` or `sent`. A signed
+   or void contract is kept as a finished record and does not refuse the anonymisation, but
+   `contracts` has no end date, so an agreement still in force cannot be told from one that
+   has ended. The adviser confirms this reading or asks for signed to block too.
+2. **The company name stays in `client_create` audit rows**, even without "keep company",
+   because those rows cannot be told apart from a same-named client.
+3. **Work and testimonial entries are handled by hand.** `work.client_name` and the author,
+   role and company of testimonials are public, consented and not linked to the client
+   record. The owner edits or unpublishes them in Work and Testimonials.
+4. **Free text is not searched**: tickets and replies, Comms threads and messages, call notes,
+   file names and contents, the enquiry message, `next_action_note` and `lost_reason`. A name
+   typed there stays.
+5. **Kept columns that can hold personal data but are not named in the table**:
+   `proposals.acceptance_reference` (may hold an email subject and sender),
+   `client_feedback.owner_note`, and `contracts.signed_name` (kept as signature evidence, under
+   the signer-name row). The adviser decides whether each stays.
+6. **Other points to confirm**: unpaid-invoice refusal includes drafts; `client_feedback`
+   text, rating and `may_publish` are kept; the retainer, open-quote, upcoming-call,
+   staff-login, shared-enquiry and shared-address refusals were added beyond the brief; audit
+   rows that name the person without an address (by first name only) are not found; the
+   audit copies and submission IPs of the client's other enquiries from the same address are
+   cleared though those enquiry rows stay.
+
+**Not tested:** anything on the live host (the switch, the upload order, real data), the CMS
+dialog in a browser, MySQL 5.7 or 8 (MariaDB only), and Google sign-in for an anonymised
+login. Upload and gates: `docs/DEPLOYMENT.md` sections 5.1 step 14 and 5.4. Rules for the
+adviser: `docs/PRIVACY-READINESS.md` section 7.

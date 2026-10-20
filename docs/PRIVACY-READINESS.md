@@ -189,9 +189,27 @@ job (K-061).
 |---|---|---|
 | Access, portability | email hello@gakinz.com, then the owner exports | **export built 2026-10-19, not uploaded**: a super admin or admin downloads a JSON file of every row held about one client (client record, "Export data") or one enquirer email (Settings, Privacy). Secrets and token values are left out; staff notes are included (K-079). Since 2026-10-19 each file row carries `client_visible` and `shared_at`, so the export shows what was shared to the portal and when (before SQL 18 the rows come without them). A written procedure for checking identity and replying is still needed |
 | Correction | staff edit client records; My account says "contact GAkinz" for name and email | none for staff-held data; fine as a manual route |
-| Erasure | email; since 2026-10-19 (not uploaded) a client can also use "Ask to delete my data" in My account | **built 2026-10-19, not uploaded**: a super admin can erase one prospect's enquiry from the Enquiries drawer by typing its email address (`privacy.php?action=erase_enquiry`). It deletes the enquiry, its calls and their history, and replaces the address and name with "[erased]" in the audit rows that name the address; it refuses anything linked to a client, a user or a contract signer. Not erased, and the dialog says so: Comms threads and messages, the Mailbox, other enquiries from the same address (the dialog counts them; their audit copies and submission IPs are cleared too), backups, and audit rows that name the person without their address (by first name only, say). A client's request only opens a "Data deletion request" ticket for the owner. Still no delete for clients, users, tickets or messages, by design, until periods and the procedure are agreed |
+| Erasure | email; since 2026-10-19 (not uploaded) a client can also use "Ask to delete my data" in My account | **built 2026-10-19, not uploaded**: a super admin can erase one prospect's enquiry from the Enquiries drawer by typing its email address (`privacy.php?action=erase_enquiry`). It deletes the enquiry, its calls and their history, and replaces the address and name with "[erased]" in the audit rows that name the address; it refuses anything linked to a client, a user or a contract signer. Not erased, and the dialog says so: Comms threads and messages, the Mailbox, other enquiries from the same address (the dialog counts them; their audit copies and submission IPs are cleared too), backups, and audit rows that name the person without their address (by first name only, say). A client's request only opens a "Data deletion request" ticket for the owner. Still no delete for clients, users, tickets or messages, by design; the anonymisation tool above is the interim route for a former client once switched on |
 | Restriction, objection | not mentioned | not offered on the privacy page |
 | Complaint to the ICO | not mentioned | must be stated |
+
+**Client anonymisation: built 2026-10-20 (Task 26), switched off, not uploaded, adviser gate
+open (K-108).** A super admin can anonymise one former client from the client record
+(`privacy.php?action=anonymise_client`), typing the company name. It replaces the client's
+contact details, the client's logins' names and emails, the source enquiry's name, email,
+company and IP, `client_feedback.attribution` and the call notification addresses with neutral
+values, suspends and locks out the logins, deletes their sessions, magic links and reset
+tokens, and replaces the client's addresses with `[erased]` in the audit text. It keeps
+invoices, payment events, proposals, contracts, projects, tasks, tickets and replies, Comms,
+files, time entries and the enquiry message, because the law or a claim may need them. It
+refuses while money, work or a contract is open. It does nothing until the owner sets
+`$CLIENT_ANONYMISE_ENABLED = true`, and **that must wait for an adviser to confirm the field
+and refusal rules** in the header of `server/_anonymise.php` (the decision table), including
+the open points in K-108: whether a signed contract should block, the company name kept in
+`client_create` audit rows, public Work and testimonial entries handled by hand, free text
+not searched, and `proposals.acceptance_reference`, `client_feedback.owner_note` and
+`contracts.signed_name` kept. Not covered either way: the Mailbox and backups. Live behaviour
+NOT TESTED.
 
 Self-service account deletion was **not built**. Client accounts hold invoices and contracts the
 business may have to keep, so deletion means a mix of deletion, anonymisation and retention

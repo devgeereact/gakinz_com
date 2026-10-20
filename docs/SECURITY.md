@@ -274,8 +274,20 @@ None of these serves the `client` role, and none is uploaded (`docs/DEPLOYMENT.m
   `is_link`, `is_file`, `realpath` and `stored_path()` from `_uploads.php`), so a symlink,
   even one pointing at another upload, or a directory is never followed or removed. Without
   a usable `uploads/` folder the files rule does nothing, and files used by Work or a
-  project asset checklist are kept. No code deletes or anonymises client, project, invoice, proposal,
-  contract, ticket or user data. A client's "Ask to delete my data" only opens a ticket
+  project asset checklist are kept. No code deletes client, project, invoice, proposal,
+  contract, ticket or user data. Since 2026-10-20 (Task 26, not uploaded) `privacy.php` can
+  also anonymise one former client (`anonymise_client`, super_admin only, preview is read
+  only), but it ships **switched off**: unless `config.php` sets
+  `$CLIENT_ANONYMISE_ENABLED = true` (the boolean only) both routes answer 404 before
+  authentication or any read, so they reveal nothing and change nothing. When on, an
+  anonymised client login is suspended, its password hash is replaced with a value no
+  password verifies, its 2FA is cleared, its email becomes `anonymised-<user id>@invalid`,
+  and its sessions, magic links and reset tokens are deleted. It refuses (409) and changes
+  nothing while an unpaid invoice, an open project, ticket or quote, a pending contract, an
+  upcoming call, a retainer, a staff login or a shared address or enquiry exists, and the
+  checks run again under row locks. Anonymising is irreversible except from a backup.
+  Treat any change to `_anonymise.php` as security-critical (K-108). Live behaviour
+  NOT TESTED. A client's "Ask to delete my data" only opens a ticket
   (client role, client id from the token, one open request per client).
   `privacy.php?action=erase_preview` is super_admin only and read only. The audit scrub
   briefly scans and locks `audit_log` rows that may name the address (K-096).

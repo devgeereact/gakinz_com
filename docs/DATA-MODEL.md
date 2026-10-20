@@ -39,7 +39,7 @@ section 4.
 
 | Table | Purpose | Notes |
 |---|---|---|
-| `users` | Staff and client logins | `role` is one of the seven roles. `client_id` binds a `client` login to one client. `cost_rate` feeds profitability. `totp_secret`, `totp_enabled`, `totp_recovery` carry 2FA |
+| `users` | Staff and client logins | `role` is one of the seven roles. `client_id` binds a `client` login to one client. `cost_rate` feeds profitability. `totp_secret`, `totp_enabled`, `totp_recovery` carry 2FA. After a client is anonymised (Task 26, switched off, K-108) its logins read `status` suspended, `email` `anonymised-<user id>@invalid`, `name` "Former client #id", `password_hash` `!anonymised` and 2FA cleared |
 | `auth_tokens` | Session tokens, stored hashed | The browser holds 64 hex characters; the row holds `token_hash()` of them (62 characters) since 2026-10-17, or the raw value for an older session (K-059). `user_agent`, `ip`, `last_seen_at` drive the active-sessions list |
 | `magic_links` | Passwordless sign-in | Short lived, single use. Since 2026-10-19 also holds the reference sign-in links of `client_access.php` (switched off), so `magic_consume` can redeem them too; a `purpose` column is a gate before switching on (K-100) |
 | `password_resets` | Reset and invite tokens | |

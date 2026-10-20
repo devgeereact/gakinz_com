@@ -146,8 +146,14 @@ Both features ship switched off, with tests proving nothing changes while off (D
   that render only after Purpose 1 consent; a prerender gate that fails the build on any
   third-party markup. Ships in `dist/` with the merge; switching it on is a code change and a
   deploy, not an upload.
-- **Task 26, client anonymisation: not built.** The dispatch was refused by the session's
-  safety check and not worked around. Owner and adviser decision (K-108).
+- **Task 26, client anonymisation: built 2026-10-20, switched off.** Refused by the session's
+  safety check on 2026-10-19 and not worked around; built after the owner approved it ("go on").
+  `server/_anonymise.php` and two `privacy.php` routes (404 unless
+  `$CLIENT_ANONYMISE_ENABLED = true`), an Anonymise button in the client record, no SQL. Upload
+  `_anonymise.php` with `privacy.php` and keep the key `false`; an adviser confirms the rules
+  in the header of `_anonymise.php` first (K-108). Measured at `de3c7fa`: `npm test` 509,
+  `npm run test:server` 519, lint ratchet 33 and 0, `php -l` over 64 files. Live host and
+  browser NOT TESTED.
 
 Documents: `docs/STATUS.md` (sections 0, 0.7, 3, 4, 5), `docs/KNOWN-ISSUES.md` (K-100 to
 K-108), `docs/DEPLOYMENT.md` section 5 (step 14, the 5.4 gates, check 17),
@@ -335,7 +341,7 @@ retention periods, with `$RETENTION_APPLY` kept `false` until then (K-062).
    whether and when to switch on reference sign-in, after the sign-in policy and the gates
    (D-050); the ad pilot decisions (CMP, AdSense IDs, Purpose 1 only, cookie notices, a
    privacy choices link; K-104 to K-107); and the client anonymisation rules with an adviser
-   (K-108, not built).
+   (K-108, built 2026-10-20 and switched off; the adviser reviews its rules).
 4. **Housekeeping for the owner**: the stash `int-wave-lintcheck-x1` (made by an agent for a
    lint comparison and already applied back; a hook blocked dropping it) and four agent
    worktrees under `.claude/worktrees/` can be removed. The git-ignored `.playwright-mcp`

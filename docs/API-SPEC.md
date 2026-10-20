@@ -579,7 +579,7 @@ security-critical):
 |---|---|---|
 | `today.php` | GET only, read only, not audited | The union of the roles below; a `client` or `trainer` gets 403. Each section mirrors the endpoint that owns its data and is **omitted** for a role that cannot read it: enquiries, follow-ups and calls as `leads.php` and `bookings.php` (super_admin, admin, manager, editor), tasks and assets as `tasks.php` and `assets.php` (plus employee), invoices as `invoices.php` (super_admin, admin, manager) |
 | `search.php` | GET `?q=`, read only, not audited | The union of the roles below; a `client` or `trainer` gets 403. Clients, enquiries and quotes as `clients.php`, `leads.php` and `proposals.php` (super_admin, admin, manager, editor); projects as `projects.php` (plus employee); invoices as `invoices.php` (super_admin, admin, manager) |
-| `privacy.php` | GET `?action=export&client_id=N` or `&enquiry_email=`, GET `?action=retention_report`, GET `?action=erase_preview`, POST `?action=erase_enquiry` | Export: super_admin and admin. Retention report and erase: super_admin |
+| `privacy.php` | GET `?action=export&client_id=N` or `&enquiry_email=`, GET `?action=retention_report`, GET `?action=erase_preview`, POST `?action=erase_enquiry`, GET `?action=anonymise_preview`, POST `?action=anonymise_client` | Export: super_admin and admin. Retention report, erase and anonymise: super_admin. The two anonymise routes answer 404 while `$CLIENT_ANONYMISE_ENABLED` is not `true` |
 
 `today.php` returns `{ generated_at, sections }`, where each present section is `{ status:
 "ok", count, items }` or `{ status: "unavailable", count: null, items: [] }`. Sections:
@@ -654,6 +654,26 @@ then leads their `secondary` line. Before SQL 19 the older query runs, so neithe
   blocked, message }`: how many other enquiries use the same address (not erased, but the
   audit rows naming the address, their submission rows included, are scrubbed too) and the
   refusal reason, if any, that an erase would give. 400 bad id, 404 unknown enquiry.
+- `anonymise_preview` (GET `&id=N`, super_admin, read only, 2026-10-20) returns `{ id, company,
+  placeholder, logins, source_enquiry, other_enquiries, problems: [{ reason, message }],
+  kept }`. The CMS shows its Anonymise button only when this answers 200, so it is also the
+  feature flag.
+- `anonymise_client` (POST, super_admin) takes `{ id, confirm, keep_company }`; `confirm` is
+  the company name (case, outer spaces and runs of spaces ignored), `keep_company` an
+  optional boolean (default false). In one transaction, under row locks, it replaces the
+  client's contact details, suspends and locks out its logins, scrubs its addresses from the
+  audit text, and writes one `client_anonymise` audit row. It returns `{ anonymised, id,
+  logins, sessions, magic_links, password_resets, enquiry, feedback, booking_events,
+  audit_scrubbed }`. 400 bad input or a wrong confirmation, 404 unknown client, 409 `{ error,
+  reasons[] }` for a refusal (`already`, `retainer`, `unpaid_invoices`, `open_projects`,
+  `open_tickets`, `active_contract`, `open_quote`, `upcoming_call`, `staff_login`,
+  `shared_enquiry`, `shared_address`), changing nothing, and 500 "Nothing was changed" after a
+  rollback. **While `$CLIENT_ANONYMISE_ENABLED` is absent or anything but the boolean `true`
+  (`1`, `"true"` and `"yes"` included), both routes answer 404 `{"error":"Not found."}`
+  before authentication or any read.** 503 when `_anonymise.php` or one of its includes is
+  missing, once on. The field rules are in the header of `server/_anonymise.php` and await an
+  adviser (K-108). Covered by `tests/server/client-anonymise.test.ts`; live behaviour NOT
+  TESTED.
 - Both erase routes answer 503 "Not available on this server yet." while `_erasure.php`,
   `_retention.php`, `_uploads.php` or `_like.php` is missing from the server.
 - Any other GET answers 400 "Unknown action.", any other method 405. Covered by

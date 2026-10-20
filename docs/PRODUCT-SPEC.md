@@ -448,7 +448,10 @@ One record holds company or trading name, main contact, email and phone, active 
 invoices, quote links, conversations and shared files. Main contact first; extra contacts
 only when a real account needs them. Keep tags light. Separate confidential owner notes from
 client-visible information. Provide archive and an export path for lawful data requests
-instead of automatic deletion of financial history.
+instead of automatic deletion of financial history. Since 2026-10-20 a super admin also has
+an "Anonymise" action on a former client's record (contact details replaced, financial and
+contractual records kept). It is built but switched off until an adviser confirms its rules
+(K-108).
 
 Acceptance: the owner can answer "what happened with this client?" from one timeline, and
 changing a contact updates future communications without altering issued documents.

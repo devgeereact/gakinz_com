@@ -915,8 +915,11 @@ Three rules from journeys batch 6.
    after Purpose 1 consent; nothing third-party loads on a private route, and the build fails
    if a prerendered page or the app shell carries third-party markup.
 3. **A feature the session could not build safely is recorded, not worked around.** Client
-   anonymisation (Task 26) was refused by the session's safety check and is left to an owner
-   and adviser decision (K-108).
+   anonymisation (Task 26) was refused by the session's safety check on 2026-10-19 and left to
+   an owner and adviser decision (K-108).
+   *Amended 2026-10-20:* the owner then approved building it ("go on"), and the client
+   anonymisation tool also ships switched off (`$CLIENT_ANONYMISE_ENABLED`, off unless the
+   boolean `true`), with an adviser's confirmation of its rules as the gate.
 
 **Why:** building ahead of a decision keeps the work moving while the decision stays with the
 owner, and an off switch that is proven by tests costs nothing in production. The CMS

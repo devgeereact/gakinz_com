@@ -290,6 +290,15 @@ statements are already live; only someone with server access can (section 5.6).
      the merge. Turning the pilot on or off means a reviewed code change and a deploy. Nothing
      under `server/` changed for them. `npm run build` now fails if a prerendered page or
      `app-shell.html` carries third-party script or ad markup.
+   - **Client anonymisation (Task 26, 2026-10-20, K-108), built and switched off.** Upload the
+     new **`server/_anonymise.php` together with `server/privacy.php`**. It needs
+     `_erasure.php`, `_retention.php`, `_uploads.php` and `_like.php` already on the server
+     (step 13); without any of them the two routes answer 503 once switched on. **Add
+     `$CLIENT_ANONYMISE_ENABLED = false;` to the live `config.php` and keep it `false`**
+     (a missing key is also off). **No SQL.** The CMS change (the Anonymise button in the
+     client record) ships in `dist/` with the merge and stays hidden while the server answers
+     404. Do not switch it on until an adviser has confirmed the rules (section 5.4, "Before
+     switching on client anonymisation").
    NOT TESTED against the live host.
 15. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
    deploys the client that expects these server changes.
@@ -337,6 +346,7 @@ Upload all of them, with `.htaccess`:
 _money.php (new)    _ics.php (new)      _like.php (new)     _retention.php (new)
 _templates.php (new) _time.php (new)    _reference.php (new) _erasure.php (new)
 _uploads.php (new)  assets.php (new)    auth.php            client_access.php (new)
+_anonymise.php (new)
 blog.php            bookings.php (new)  briefs.php (new)    clients.php
 comms.php           contact.php         content.php         contracts.php
 design.php          dev.php             feedback.php (new)  files.php
@@ -442,6 +452,13 @@ sets:
 **Since the fifth batch `files.php` no longer stands alone**: it requires `_uploads.php` at
 the top, so upload `_uploads.php` first (section 5.1 step 13).
 
+**Task 26, client anonymisation (2026-10-20, `fc61847..de3c7fa`)** adds `_anonymise.php`,
+changes `privacy.php` (two routes) and adds `$CLIENT_ANONYMISE_ENABLED = false` to
+`config.php.example`. No SQL and no `.htaccess` change (the existing `_*.php` deny covers the
+new include). Upload `_anonymise.php` with `privacy.php`; it needs `_erasure.php`,
+`_retention.php`, `_uploads.php` and `_like.php` already up. Both routes answer 404 while the
+switch is off (section 5.1 step 14, section 5.4).
+
 **The 2026-10-19 sixth journeys batch** (`54d593a..fa88266`, from `git diff --name-only
 54d593a..HEAD -- server`) adds `client_access.php` and a new key in `config.php.example`
 (`$REFERENCE_SIGNIN_ENABLED = false`). `_reference.php` and `schema.sql` changed in comment
@@ -506,6 +523,7 @@ of the document root.
 | `$RETENTION_*` (nine keys, 2026-10-19) | Leave them `null`, or leave them out: a missing key behaves exactly as `null`. Each is a retention period. Seven only change what the read-only retention report **counts**. Two, `$RETENTION_ENQUIRY_MONTHS` and `$RETENTION_DELETED_FILE_DAYS`, are also what `cron.php job=retention_apply` would delete by, **but only with `--apply` and `$RETENTION_APPLY = true` as well**. While the periods are `null` nothing deletes by them, whatever the switch says. The periods are owner and legal decisions (`docs/PRIVACY-READINESS.md` section 6). A value other than a positive whole number is reported as an invalid period and counts and deletes nothing |
 | `$RETENTION_APPLY` (2026-10-19) | **Keep it `false`** (the template value), or leave it out: a missing key is `false`, and only the boolean `true` counts (`1`, `"true"` and `"yes"` do not). It is one of three gates on the retention executor. Turn it on only once the owner and an adviser have agreed the two periods (`docs/STATUS.md` section 5). The super admin's single-enquiry erase does not depend on it |
 
+| `$CLIENT_ANONYMISE_ENABLED` (2026-10-20) | **Keep it `false`** (the template value), or leave it out: a missing key is `false`, and only the boolean `true` turns on the two anonymisation routes of `privacy.php` (`1`, `"true"` and `"yes"` do not). While off, `anonymise_preview` and `anonymise_client` answer 404 before authentication or any read, and `_anonymise.php` is never loaded. K-108 |
 | `$REFERENCE_SIGNIN_ENABLED` (2026-10-19) | **Keep it `false`** (the template value), or leave it out: a missing key is `false`, and only the boolean `true` turns `client_access.php` on (`1` and `"true"` do not). While off, every route of that file answers 404. It also needs `$SMTP_HOST` set and SQL 19 run, or no link is ever sent |
 
 #### Before switching on reference sign-in
@@ -532,6 +550,24 @@ Every one of these must hold before `$REFERENCE_SIGNIN_ENABLED = true` goes into
 Then switch it on, and walk the J02 and J03 rows of `qa/TEST-PLAN.md` on the live host with a
 client account the owner agrees to use. Switching it off again is the same key set back to
 `false`.
+
+#### Before switching on client anonymisation
+
+Every one of these must hold before `$CLIENT_ANONYMISE_ENABLED = true` goes into the live
+`config.php`. None holds today (K-108).
+
+1. **Adviser sign-off.** An adviser has confirmed the field rules and the refusal rules in the
+   header of `server/_anonymise.php`, and the owner has agreed them (`docs/STATUS.md` section
+   5; `docs/PRIVACY-READINESS.md` section 7).
+2. **The includes are up.** `_anonymise.php`, `_erasure.php`, `_retention.php`, `_uploads.php`
+   and `_like.php`, with the new `privacy.php`.
+3. **A rehearsal that is not a real client.** Anonymise a throwaway client on a non-production
+   copy first. There is no staging (CLAUDE.md constraint 8), and anonymising cannot be undone
+   except from a database backup, so take a backup of the live database before the first real
+   run.
+
+Switching it off again is the same key set back to `false`. It does not undo an anonymisation
+already done. NOT TESTED against the live host.
 
 The full key list is in section 5.7.
 
@@ -723,6 +759,7 @@ stubbed (`docs/STATUS.md` section 0.3); not seen on the live host.
 | The new `files.php`, or SQL 18 | No "Client portal" column in Files and no "Shared files" card in the portal |
 | `_reference.php` or SQL 19 | No reference anywhere: the contact thank-you, cards, PDFs and the portal simply omit it |
 | `_erasure.php` or one of its includes, or the new `privacy.php` | "Erase enquiry" shows a quiet "not available yet" toast and closes |
+| `_anonymise.php`, or the new `privacy.php` | Nothing: the Anonymise button is shown only when `anonymise_preview` answers 200, and it answers 404 (or is missing) while the switch is off |
 | The new `support.php` (deletion request) | My account says "Deletion requests open once GAkinz finishes a server update. Until then, email hello@gakinz.com." |
 | `client_access.php` | Nothing: the sign-in page treats the missing file like the switch being off |
 | The new `site.php` | Saving Business details fails with "Business details need the updated site.php on the server."; the public site shows its built-in details |
@@ -858,6 +895,13 @@ the new files.
      mistake: set `$REFERENCE_SIGNIN_ENABLED = false` at once.
    - The sign-in page shows no reference form.
    - Do not switch it on to test it. The gates come first (section 5.4).
+   After the Task 26 upload (`_anonymise.php`, `privacy.php`), while the switch is off:
+   - `https://gakinz.com/_anonymise.php` returns 403.
+   - As a super admin, `GET privacy.php?action=anonymise_preview&id=<any id>` answers 404
+     `{"error":"Not found."}`, and so does a `POST` to `?action=anonymise_client`. A 200, 400,
+     409 or 503 means the switch is on by mistake: set `$CLIENT_ANONYMISE_ENABLED = false` at
+     once. Do not post a real client's id to test it.
+   - A client record in the CMS shows no Anonymise button.
 18. Do **not** test a real payment or a real send. Stripe behaviour is covered by
    `npm run test:server` against a fake provider; a live check needs Stripe test-mode keys on a
    non-production copy.
@@ -893,6 +937,7 @@ breaking the application.
 | `$GITHUB_TOKEN`, `$FIGMA_TOKEN`, `$SLACK_WEBHOOK_URL`, `$CALENDLY_URL` | The four external connectors |
 | `$RETENTION_ENQUIRY_MONTHS`, `$RETENTION_CLIENT_MONTHS`, `$RETENTION_INVOICE_MONTHS`, `$RETENTION_AUDIT_MONTHS`, `$RETENTION_SUPPORT_MONTHS`, `$RETENTION_COMMS_MONTHS`, `$RETENTION_STAFF_MONTHS`, `$RETENTION_CERTIFICATE_MONTHS`, `$RETENTION_DELETED_FILE_DAYS` | What the read-only retention report counts. All `null` in the template; a missing key is the same as `null`. The enquiry and deleted-file periods are also what the gated executor deletes by, only with `$RETENTION_APPLY` and `--apply` too (section 5.4) |
 | `$RETENTION_APPLY` | The retention executor's switch. `false` in the template; keep it `false` (section 5.4) |
+| `$CLIENT_ANONYMISE_ENABLED` | Client anonymisation (`privacy.php`, `_anonymise.php`). `false` in the template; keep it `false` until the gates in section 5.4 hold |
 | `$REFERENCE_SIGNIN_ENABLED` | Client sign-in by reference and email (`client_access.php`). `false` in the template; keep it `false` until the four gates in section 5.4 hold |
 
 **The tracked template carries placeholders, not values.** `DB_NAME`, `DB_USER`,

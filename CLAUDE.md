@@ -194,7 +194,9 @@ Measured on branch `feat/redesign-2026` at `d314833` (stacked on `feat/plan-2026
   every route unless `$REFERENCE_SIGNIN_ENABLED = true`; links in `magic_links`, no SQL; J02 and
   J03 pass locally); consent loader and article ad slots in tracked settings
   (`src/marketing/lib/monetisation.ts`), with a prerender gate that fails on third-party
-  markup. Client anonymisation (Task 26) was **not built**: an owner and adviser decision
+  markup. Client anonymisation (Task 26) was **built 2026-10-20 and switched off**
+  (`$CLIENT_ANONYMISE_ENABLED`, default false; an adviser confirms its rules first;
+  `npm test` 509, `npm run test:server` 519 at `de3c7fa`; live host NOT TESTED). Earlier it was an owner and adviser decision
   (K-108). Measured on the Mac at `fa88266`: `npm test` 499, `npm run test:server` 496
   (ports 5423 and 5424), lint ratchet 33 and 0, 32 pages prerendered, `php -l` over 63 files,
   `tsc -b` and docs check PASS. **Upload `client_access.php` switched off (DEPLOYMENT section
