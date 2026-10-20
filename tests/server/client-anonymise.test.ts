@@ -14,7 +14,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { WORK_DIR } from "./env"
-import { api, createClient, createUser, login, one, PASSWORD, q, resetDb, sql, tokenHash } from "./helpers"
+import { api, createUser, login, one, PASSWORD, q, resetDb, sql, tokenHash } from "./helpers"
 
 const OVERRIDES = path.join(WORK_DIR, "overrides.json")
 const switchOn = () => fs.writeFileSync(OVERRIDES, JSON.stringify({ CLIENT_ANONYMISE_ENABLED: true }))
