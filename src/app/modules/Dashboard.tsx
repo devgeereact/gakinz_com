@@ -1,4 +1,5 @@
-import { useEffect, useEffectEvent, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
+import { useLoader } from "@/hooks/use-load"
 import { Link, useNavigate } from "react-router-dom"
 import {
   Area,
@@ -140,7 +141,6 @@ function lastNWeeks(n: number): string[] {
 
 export default function Dashboard() {
   const navigate = useNavigate()
-  const [loading, setLoading] = useState(true)
   const [errors, setErrors] = useState<string[]>([])
   const role = useAuth((s) => s.user?.role)
   const [todayView, setTodayView] = useState<TodayView>(initialTodayView)
@@ -157,6 +157,8 @@ export default function Dashboard() {
   const [brief, setBrief] = useState<string | null>(null)
   const [briefing, setBriefing] = useState(false)
 
+  // The attention list's own Retry. On open and on Refresh it loads with the
+  // totals below.
   const loadToday = async () => {
     setTodayLoading(true)
     const res = await todayApi.get()
@@ -164,38 +166,38 @@ export default function Dashboard() {
     setTodayLoading(false)
   }
 
-  const load = async () => {
-    setLoading(true)
-    const errs: string[] = []
-    const [[l, c, p, inv, t, tm]] = await Promise.all([
-      Promise.all([leadsApi.list(), clientsApi.list(), projectsApi.list(), invoicesApi.list(), supportApi.list(), timeApi.list()]),
-      loadToday(),
-    ])
-    if (l.ok) setLeads(l.data)
-    else errs.push("leads")
-    if (c.ok) setClientCount(c.data.length)
-    else errs.push("clients")
-    if (p.ok) setProjects(p.data)
-    else errs.push("projects")
-    if (inv.ok) setInvoices(inv.data)
-    else errs.push("invoices")
-    if (t.ok) setTickets(t.data)
-    else errs.push("support")
-    if (tm.ok) setEntries(tm.data)
-    else errs.push("time")
-    setErrors(errs)
-    setLoading(false)
-    announcementsApi.list().then((r) => r.ok && setAnns(r.data.slice(0, 3)))
-  }
-
-  // Load once on open; Refresh and Retry call load and loadToday again. As an
-  // effect event, the first load is not a dependency, so it never re-runs.
-  const loadOnOpen = useEffectEvent(() => {
-    load()
-  })
-  useEffect(() => {
-    loadOnOpen()
-  }, [])
+  // Loads on open; Refresh and Retry load again. The totals and the attention
+  // list are fetched together; the attention list is applied as soon as it
+  // answers (the header shows its time while the totals still load), and the
+  // page waits for both. Announcements follow once the totals are in.
+  const { loading, reload: load } = useLoader(
+    async (active) => {
+      const [lists] = await Promise.all([
+        Promise.all([leadsApi.list(), clientsApi.list(), projectsApi.list(), invoicesApi.list(), supportApi.list(), timeApi.list()]),
+        todayApi.get().then((res) => {
+          if (active()) setTodayView((prev) => applyTodayResult(prev, res))
+        }),
+      ])
+      return lists
+    },
+    ([l, c, p, inv, t, tm]) => {
+      const errs: string[] = []
+      if (l.ok) setLeads(l.data)
+      else errs.push("leads")
+      if (c.ok) setClientCount(c.data.length)
+      else errs.push("clients")
+      if (p.ok) setProjects(p.data)
+      else errs.push("projects")
+      if (inv.ok) setInvoices(inv.data)
+      else errs.push("invoices")
+      if (t.ok) setTickets(t.data)
+      else errs.push("support")
+      if (tm.ok) setEntries(tm.data)
+      else errs.push("time")
+      setErrors(errs)
+      announcementsApi.list().then((r) => r.ok && setAnns(r.data.slice(0, 3)))
+    },
+  )
 
   const stats = useMemo(() => {
     const openLeads = leads.filter((x) => x.status !== "won" && x.status !== "lost").length
