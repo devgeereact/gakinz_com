@@ -115,7 +115,7 @@ export default function Leads() {
   const [openId, setOpenId] = useState<number | null>(null)
 
   // The list loads on open; Refresh, Retry and a save call load again.
-  const { data: items, setData: setItems, error, loading, reload: load } = useLoad(() => leads.list(), [] as Lead[])
+  const { data: items, setData: setItems, error, loading, reload: load } = useLoad<Lead[]>(() => leads.list(), [])
 
   useApplyLink(enquiryMark, !loading && error === null, () => {
     if (link.enquiry !== null && items.some((l) => l.id === link.enquiry)) setOpenId(link.enquiry)

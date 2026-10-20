@@ -77,7 +77,7 @@ const emptyForm: ClientInput = { company: "", contact_name: "", email: "", phone
 
 export default function Clients() {
   // The list loads on open; Refresh, Retry and a save call load again.
-  const { data: items, error, loading, reload: load } = useLoad(() => clients.list(), [] as Client[])
+  const { data: items, error, loading, reload: load } = useLoad<Client[]>(() => clients.list(), [])
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<ClientInput>(emptyForm)
   const [saving, setSaving] = useState(false)

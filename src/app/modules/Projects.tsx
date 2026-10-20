@@ -122,7 +122,7 @@ export default function Projects() {
   }
 
   // The list loads on open; Refresh, Retry, a new project and a failed change load it again.
-  const { data: list, setData: setList, error, loading, reload: loadProjects } = useLoad(() => projects.list(), [] as Project[])
+  const { data: list, setData: setList, error, loading, reload: loadProjects } = useLoad<Project[]>(() => projects.list(), [])
 
   // A deep link is a navigation, so with an unsaved Brief edit the router's
   // blocker has already asked. Asking again here would prompt twice.
@@ -453,9 +453,10 @@ function ProjectBoard({
   /** Changes when the link is re-applied, so the task is scrolled to again. */
   linkRevision?: string
 }) {
-  // The project's tasks, loaded again whenever another project is shown. A
-  // failed load keeps what was shown and shows no error, as before.
-  const { data: items, setData: setItems, loading, reload: load } = useLoad(() => tasksApi.list(project.id), [] as Task[], project.id)
+  // The project's tasks, loaded again whenever another project is shown. The
+  // board shows its skeleton, never the previous project's tasks, until they
+  // answer. A failed reload keeps what was shown and shows no error, as before.
+  const { data: items, setData: setItems, loading, reload: load } = useLoad<Task[]>(() => tasksApi.list(project.id), [], project.id)
   const [newTitle, setNewTitle] = useState("")
   const [adding, setAdding] = useState(false)
 

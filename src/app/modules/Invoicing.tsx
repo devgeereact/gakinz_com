@@ -92,7 +92,7 @@ export default function Invoicing() {
   const [saving, setSaving] = useState(false)
 
   // The list loads on open; Refresh, Retry and a save call load again.
-  const { data: items, setData: setItems, error, loading, reload: load } = useLoad(() => invoices.list(), [] as Invoice[])
+  const { data: items, setData: setItems, error, loading, reload: load } = useLoad<Invoice[]>(() => invoices.list(), [])
 
   useEffect(() => {
     clientsApi.list().then((r) => r.ok && setClientList(r.data))
