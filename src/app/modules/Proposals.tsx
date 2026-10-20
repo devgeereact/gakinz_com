@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useLoad } from "@/hooks/use-load"
 import { useNavigate } from "react-router-dom"
 import { Loader2, Plus, RefreshCw, Trash2, Send, Check, X, Share2, Link2Off, Eye, AlertCircle, FileText } from "lucide-react"
 import { toast } from "sonner"
@@ -83,10 +84,7 @@ const BLANK_QUOTE = { title: "", clientId: "", validUntil: "", notes: "", vatRat
 
 export default function Proposals() {
   const navigate = useNavigate()
-  const [items, setItems] = useState<Proposal[]>([])
   const [clientList, setClientList] = useState<Client[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [acceptError, setAcceptError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
   const [confirming, setConfirming] = useState<Proposal | null>(null)
@@ -101,20 +99,10 @@ export default function Proposals() {
   const [lines, setLines] = useState<DraftItem[]>([{ ...blankItem }])
   const [saving, setSaving] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await proposals.list()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else {
-      setError(res.error)
-    }
-    setLoading(false)
-  }
+  // The list loads on open; Refresh, Retry and a save call load again.
+  const { data: items, setData: setItems, error, loading, reload: load } = useLoad(() => proposals.list(), [] as Proposal[])
 
   useEffect(() => {
-    load()
     clientsApi.list().then((r) => r.ok && setClientList(r.data))
   }, [])
 

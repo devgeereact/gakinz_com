@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useLoad } from "@/hooks/use-load"
 import { cn } from "@/lib/utils"
 import { useLocation, useSearchParams } from "react-router-dom"
 import { LINKED_ROW, invoicingLink, linkMark, linkRevision, recordElementId } from "@/lib/deepLink"
@@ -79,10 +80,7 @@ function fmt(d: string | null) {
 }
 
 export default function Invoicing() {
-  const [items, setItems] = useState<Invoice[]>([])
   const [clientList, setClientList] = useState<Client[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
 
   const [open, setOpen] = useState(false)
@@ -93,20 +91,10 @@ export default function Invoicing() {
   const [lines, setLines] = useState<DraftItem[]>([{ ...blankItem }])
   const [saving, setSaving] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await invoices.list()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else {
-      setError(res.error)
-    }
-    setLoading(false)
-  }
+  // The list loads on open; Refresh, Retry and a save call load again.
+  const { data: items, setData: setItems, error, loading, reload: load } = useLoad(() => invoices.list(), [] as Invoice[])
 
   useEffect(() => {
-    load()
     clientsApi.list().then((r) => r.ok && setClientList(r.data))
   }, [])
 

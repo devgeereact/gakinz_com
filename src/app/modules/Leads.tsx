@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import { useLoad } from "@/hooks/use-load"
 import { leadsLink, linkMark, linkRevision, recordElementId } from "@/lib/deepLink"
 import { useApplyLink, useReveal } from "@/hooks/use-reveal"
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
@@ -83,9 +84,6 @@ export default function Leads() {
   const dueOnly = searchParams.get("due") === "1"
   // The Calls view: every recorded call, inside Enquiries (docs/PRODUCT-SPEC.md 5.5).
   const callsView = searchParams.get("view") === "calls"
-  const [items, setItems] = useState<Lead[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [converting, setConverting] = useState<number | null>(null)
   // A view filter only; nothing is saved.
   const [hotOnly, setHotOnly] = useState(false)
@@ -116,21 +114,9 @@ export default function Leads() {
   const callMark = linkMark({ call: link.call }, location.state)
   const [openId, setOpenId] = useState<number | null>(null)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await leads.list()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else {
-      setError(res.error)
-    }
-    setLoading(false)
-  }
+  // The list loads on open; Refresh, Retry and a save call load again.
+  const { data: items, setData: setItems, error, loading, reload: load } = useLoad(() => leads.list(), [] as Lead[])
 
-  useEffect(() => {
-    load()
-  }, [])
   useApplyLink(enquiryMark, !loading && error === null, () => {
     if (link.enquiry !== null && items.some((l) => l.id === link.enquiry)) setOpenId(link.enquiry)
   })
