@@ -48,7 +48,12 @@ export function AnonymiseClientDialog({ preview, onClose, onDone }: { preview: C
             client&apos;s own data deletion request included, so resolve that request first.
           </DialogDescription>
         </DialogHeader>
-        <div className="max-h-[45vh] space-y-3 overflow-y-auto text-[13px] text-muted-foreground">
+        <div
+          role="region"
+          aria-label="What changes and what is kept"
+          tabIndex={0}
+          className="max-h-[45vh] space-y-3 overflow-y-auto rounded-md text-[13px] text-muted-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30"
+        >
           {blocked && (
             <div role="alert" className="text-destructive">
               <p className="mb-1 font-medium">This client cannot be anonymised yet</p>
