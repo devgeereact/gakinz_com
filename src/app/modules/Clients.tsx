@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { useLocation, useSearchParams } from "react-router-dom"
 import { Loader2, Download, RefreshCw, Plus, Building2, Search, FileJson, UserX } from "lucide-react"
 import { saveAs } from "file-saver"
@@ -45,6 +45,7 @@ import { useAuth } from "@/store/auth.store"
 import { exportOutcome, PRIVACY_NOT_AVAILABLE } from "@/app/modules/privacyToolsModel"
 import { clientsLink, linkMark } from "@/lib/deepLink"
 import { useApplyLink } from "@/hooks/use-reveal"
+import { useLoad } from "@/hooks/use-load"
 
 const TIMELINE_LABEL: Record<ClientDetail["timeline"][number]["type"], string> = {
   enquiry: "Enquiry",
@@ -75,9 +76,8 @@ const TAG_TONE: Record<ClientTag, "acc" | "secondary" | "ok"> = {
 const emptyForm: ClientInput = { company: "", contact_name: "", email: "", phone: "", tag: "one-off", retainer_amount: 0, notes: "" }
 
 export default function Clients() {
-  const [items, setItems] = useState<Client[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // The list loads on open; Refresh, Retry and a save call load again.
+  const { data: items, error, loading, reload: load } = useLoad(() => clients.list(), [] as Client[])
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState<ClientInput>(emptyForm)
   const [saving, setSaving] = useState(false)
@@ -121,22 +121,6 @@ export default function Clients() {
     else toast.error(res.error || "Could not load the client.")
     if (res.ok && canAnonymise) setAnonPreview(anonymiseAvailable(await privacy.anonymisePreview(id)))
   }
-
-  const load = async () => {
-    setLoading(true)
-    const res = await clients.list()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else {
-      setError(res.error)
-    }
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
 
   // ?client=<id> (from the record search) opens that client's detail sheet
   // once the list has loaded, and again whenever the link changes or the
