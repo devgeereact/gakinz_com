@@ -158,6 +158,13 @@ $RETENTION_STAFF_MONTHS        = null; // suspended staff accounts and their lea
 $RETENTION_CERTIFICATE_MONTHS  = null; // certificates, from issue date
 $RETENTION_DELETED_FILE_DAYS   = null; // soft-deleted files, from deletion (in days)
 
+// ── Client anonymisation (privacy.php, _anonymise.php) — off. ───────────────────
+// docs/PRIVACY-READINESS.md section 7. Leave false until the owner and an
+// adviser have confirmed the field rules in the header of _anonymise.php. Only
+// the boolean true turns it on; while false both anonymise routes answer 404,
+// nothing is changed, and the client record shows no anonymise action.
+$CLIENT_ANONYMISE_ENABLED = false;
+
 // ── Connection ────────────────────────────────────────────────────────────────
 $conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 if ($conn->connect_errno) {

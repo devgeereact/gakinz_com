@@ -7,6 +7,9 @@
  *   GET /privacy.php?action=retention_report            super_admin
  *   GET /privacy.php?action=erase_preview&id=N          super_admin
  *   POST /privacy.php?action=erase_enquiry {id, confirm}  super_admin
+ *   GET /privacy.php?action=anonymise_preview&id=N      super_admin, switched off
+ *   POST /privacy.php?action=anonymise_client {id, confirm, keep_company}
+ *                                                       super_admin, switched off
  *
  * ── Subject access export ──────────────────────────────────────────────────
  * Answers a JSON file as an attachment (application/json, Cache-Control:
@@ -66,7 +69,22 @@
  * unknown enquiry, 400 when `confirm` does not match, and 409, changing
  * nothing, for an enquiry that was won, converted, has a call filed against a
  * client, or whose address is also a client's, a user's or a contract
- * signer's. Nothing else in this file deletes, updates or anonymises a row.
+ * signer's.
+ *
+ * ── Anonymising a former client (switched off) ─────────────────────────────
+ * Both anonymise routes answer 404, before anything else is read, unless
+ * config.php sets $CLIENT_ANONYMISE_ENABLED = true (the boolean true). The CMS
+ * shows the client record's anonymise action only when the preview answers,
+ * so while the switch is off nothing new appears. When on, a super admin
+ * types the client's company name as `confirm`; _anonymise.php replaces the
+ * client's contact details, suspends and locks out its portal logins, and
+ * scrubs its addresses from the audit text, in one transaction, keeping every
+ * invoice, payment, quote, contract and project as it was. Its header holds
+ * the field rules, which the owner and an adviser must confirm before the
+ * switch is turned on. One audit row "client_anonymise #id". Answers 404 for
+ * an unknown client, 400 when `confirm` does not match, and 409, changing
+ * nothing, for every refusal _anonymise.php lists. Nothing else in this file
+ * deletes, updates or anonymises a row.
  */
 require __DIR__ . '/_bootstrap.php';
 // pv_rows() tells a missing table or column apart by its exception, so every
@@ -470,6 +488,63 @@ if ($method === 'POST' && $action === 'erase_enquiry') {
   if ($r['status'] === 'mismatch') fail('That does not match this enquiry\'s email address. Nothing was erased.');
   if ($r['status'] === 'blocked') fail($r['message'], 409, ['reason' => $r['problem']]);
   ok(['erased' => true, 'id' => $id, 'bookings' => $r['bookings'], 'booking_events' => $r['booking_events'], 'audit_scrubbed' => $r['audit_scrubbed']]);
+}
+
+/** Loads _anonymise.php and what it needs, or answers 503 when any is not on the server yet. */
+function pv_anonymise_lib(): void {
+  if (!is_file(__DIR__ . '/_anonymise.php')) fail('Not available on this server yet.', 503);
+  pv_erasure_lib();
+  require_once __DIR__ . '/_anonymise.php';
+}
+
+/** The switch, read before anything else: off answers 404 and nothing is read or changed. */
+function pv_anonymise_switch(): void {
+  if (($GLOBALS['CLIENT_ANONYMISE_ENABLED'] ?? false) !== true) fail('Not found.', 404);
+}
+
+// What the anonymise dialog shows first, and the CMS's only sign that the
+// tool is switched on. Read only, super admin only.
+if ($method === 'GET' && $action === 'anonymise_preview') {
+  pv_anonymise_switch();
+  require_auth($conn, ERASE_ROLES);
+  $id = pv_id($_GET['id'] ?? '');
+  if ($id <= 0) fail('Invalid client id.');
+  pv_anonymise_lib();
+  try {
+    $p = ca_preview($conn, $id);
+  } catch (mysqli_sql_exception $e) {
+    error_log('privacy.php anonymise_preview: SQL error ' . $e->getCode() . ': ' . $e->getMessage());
+    fail('Could not check the client.', 500);
+  }
+  if ($p === null) fail('Client not found.', 404);
+  ok($p);
+}
+
+if ($method === 'POST' && $action === 'anonymise_client') {
+  pv_anonymise_switch();
+  $me = require_auth($conn, ERASE_ROLES);
+  $in = body();
+  $rawId = $in['id'] ?? null;
+  $id = is_int($rawId) && $rawId > 0 ? $rawId : (is_string($rawId) ? pv_id($rawId) : 0);
+  if ($id <= 0) fail('Invalid client id.');
+  $confirm = $in['confirm'] ?? null;
+  if (!is_string($confirm) || trim($confirm) === '' || strlen($confirm) > 300) {
+    fail('Type the client\'s company name to confirm.');
+  }
+  $keep = $in['keep_company'] ?? false;
+  if (!is_bool($keep)) fail('keep_company must be true or false.');
+  pv_anonymise_lib();
+  try {
+    $r = ca_anonymise_client($conn, $id, $confirm, $keep, [(int)$me['id'], 'client_anonymise', "#$id"]);
+  } catch (mysqli_sql_exception | RuntimeException $e) {
+    error_log('privacy.php anonymise_client: ' . get_class($e) . ' ' . $e->getCode() . ': ' . $e->getMessage());
+    fail('Could not anonymise the client. Nothing was changed.', 500);
+  }
+  if ($r['status'] === 'not_found') fail('Client not found.', 404);
+  if ($r['status'] === 'mismatch') fail('That does not match this client\'s company name. Nothing was changed.');
+  if ($r['status'] === 'blocked') fail($r['message'], 409, ['reasons' => $r['problems']]);
+  unset($r['status']);
+  ok(['anonymised' => true, 'id' => $id] + $r);
 }
 
 if ($method === 'GET') fail('Unknown action.');
