@@ -126,6 +126,12 @@ or partly open: [KNOWN-ISSUES](KNOWN-ISSUES.md).
 4. **Small batches with a gate.** Each batch ends with tests, build, docs check and a browser
    run, then a push. Push the same day (nine commits sat unpushed until 2026-10-21).
 5. **Evidence over summaries.** Report command output, not an agent's word.
+6. **Keep the code graph current.** `graphify-out/` (untracked, local to each computer) holds
+   the knowledge graph used by the `graphify` MCP. Git hooks installed with `graphify hook
+   install` rebuild the code part after every commit, checkout, merge and rebase. Document
+   changes are not picked up by the hooks: run `/graphify --update` after a documentation
+   batch. Rebuilt in full on 2026-10-21 (2,928 nodes, 7,725 edges, 167 communities; the 24
+   images under `public/` were left out).
 
 ## 6. Where the detail lives
 
