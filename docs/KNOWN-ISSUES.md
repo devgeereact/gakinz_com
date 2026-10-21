@@ -12,7 +12,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | ID | Issue | Severity | Status |
 |---|---|---|---|
 | K-001 | A live super-admin credential is in git history | Critical | **Password rotated 2026-10-12 (owner-reported).** Session revocation and K-015 file check unconfirmed |
-| K-002 | Lint fails | Medium | Open. 33 errors, 0 warnings on 2026-10-19, all `set-state-in-effect`, down from 41 and 1 (2026-10-11) and 60 and 7; ratchet in CI. Not merged |
+| K-002 | Lint fails | Medium | Open. 16 errors, 0 warnings on 2026-10-21 after groups A and B moved onto `useLoad` (15 screens); before that 33 errors, 0 warnings on 2026-10-19, all `set-state-in-effect`, down from 41 and 1 (2026-10-11) and 60 and 7; ratchet in CI. Not merged |
 | K-003 | `config.php.example` named a retired mail host | Medium | Fixed in the template. Server value UNVERIFIED |
 | K-004 | `api.php` accepts an unauthenticated POST | Medium | **Fixed 2026-09-22.** Not uploaded |
 | K-005 | `contact.php` has no spam protection | Medium | **Fixed 2026-09-22.** Not uploaded |

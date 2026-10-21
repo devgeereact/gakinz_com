@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { useLoad } from "@/hooks/use-load"
 import { AlertCircle, Loader2, RefreshCw, Search, Upload, Download, Share2, Trash2, FileIcon } from "lucide-react"
 import { saveAs } from "file-saver"
 import { toast } from "sonner"
@@ -36,31 +37,18 @@ function fmt(d: string) {
 }
 
 export default function Files() {
-  const [items, setItems] = useState<FileRow[]>([])
   const [projectList, setProjectList] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [projectFilter, setProjectFilter] = useState("all")
+  const { data: items, error, loading, reload: load, setData: setItems } = useLoad<FileRow[]>(
+    () => files.list(projectFilter !== "all" ? { project_id: Number(projectFilter) } : undefined),
+    [],
+    projectFilter,
+  )
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [busyId, setBusyId] = useState<number | null>(null)
   const [query, setQuery] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
-
-  const load = async () => {
-    setLoading(true)
-    const res = await files.list(projectFilter !== "all" ? { project_id: Number(projectFilter) } : undefined)
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else setError(res.error)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectFilter])
 
   useEffect(() => {
     projectsApi.list().then((r) => r.ok && setProjectList(r.data))

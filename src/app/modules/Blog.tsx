@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { Loader2, Plus, RefreshCw, Pencil, Trash2, Eye, EyeOff, ExternalLink, AlertCircle, BookOpen } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { blog, type BlogAdminRow, type BlogInput } from "@/lib/api"
 import { isDirty } from "@/lib/dirty-model"
 import { useUnsavedGuard } from "@/hooks/use-unsaved-guard"
+import { useLoad } from "@/hooks/use-load"
 import { UnsavedGuardDialog } from "@/components/unsaved-guard-dialog"
 import {
   Table,
@@ -43,9 +44,7 @@ const blank: BlogInput & { id: number } = {
 }
 
 export default function Blog() {
-  const [items, setItems] = useState<BlogAdminRow[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: items, error, loading, reload: load, setData: setItems } = useLoad<BlogAdminRow[]>(() => blog.listAll(), [])
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(blank)
   // The values last loaded or saved; the form is dirty when it differs from them.
@@ -55,20 +54,6 @@ export default function Blog() {
   // form cannot be saved, so a half-loaded form never overwrites the body.
   const [loadingPost, setLoadingPost] = useState(false)
   const [postError, setPostError] = useState<string | null>(null)
-
-  const load = async () => {
-    setLoading(true)
-    const res = await blog.listAll()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else setError(res.error)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
 
   const guard = useUnsavedGuard(open && !loadingPost && isDirty(form, baseline))
 

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { useLoad } from "@/hooks/use-load"
 import { Loader2, RefreshCw, ExternalLink, Activity, AlertCircle, HeartPulse } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -33,24 +34,8 @@ const host = (url: string) => {
 }
 
 export default function CarePlan() {
-  const [items, setItems] = useState<CarePlanSite[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: items, error, loading, reload: load, setData: setItems } = useLoad<CarePlanSite[]>(() => careplan.list(), [])
   const [busyId, setBusyId] = useState<number | null>(null)
-
-  const load = async () => {
-    setLoading(true)
-    const res = await careplan.list()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else setError(res.error)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
 
   const check = async (s: CarePlanSite) => {
     setBusyId(s.project_id)

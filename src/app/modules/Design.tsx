@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useLoad } from "@/hooks/use-load"
 import { AlertCircle, Loader2, Plus, RefreshCw, ExternalLink, Check, MessageSquare, Trash2, Eye, PenTool } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -39,10 +40,8 @@ const STATUS_LABEL: Record<DesignStatus, string> = {
 }
 
 export default function Design() {
-  const [items, setItems] = useState<DesignReview[]>([])
+  const { data: items, error, loading, reload: load, setData: setItems } = useLoad<DesignReview[]>(() => design.list(), [])
   const [projectList, setProjectList] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
 
   const [open, setOpen] = useState(false)
@@ -73,18 +72,7 @@ export default function Design() {
     else setFigmaErr(res.error)
   }
 
-  const load = async () => {
-    setLoading(true)
-    const res = await design.list()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else setError(res.error)
-    setLoading(false)
-  }
-
   useEffect(() => {
-    load()
     projectsApi.list().then((r) => r.ok && setProjectList(r.data))
   }, [])
 

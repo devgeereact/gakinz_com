@@ -1,4 +1,5 @@
-import { useEffect, useState, type ReactNode } from "react"
+import { useState, type ReactNode } from "react"
+import { useLoad, useLoader } from "@/hooks/use-load"
 import { AlertCircle, Code2, ExternalLink, Github, Loader2, RefreshCw, Rocket, Save } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -59,25 +60,10 @@ function Panel({ title, extra, children, className }: { title: ReactNode; extra?
 }
 
 export default function DevPipeline() {
-  const [rows, setRows] = useState<DevProjectRow[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: rows, error, loading, reload: load } = useLoad<DevProjectRow[]>(() => dev.list(), [])
   const [selected, setSelected] = useState<DevProjectRow | null>(null)
   const [logOpen, setLogOpen] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await dev.list()
-    if (res.ok) {
-      setRows(res.data)
-      setError(null)
-    } else setError(res.error)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
 
   return (
     <div>
@@ -189,7 +175,6 @@ function ProjectPipeline({
 }) {
   const [, setMeta] = useState<DevMeta | null>(null)
   const [deploys, setDeploys] = useState<Deploy[]>([])
-  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
   const [repo, setRepo] = useState("")
@@ -219,10 +204,10 @@ function ProjectPipeline({
     else { setGh(null); setGhError(res.error) }
   }
 
-  const load = async () => {
-    setLoading(true)
-    const res = await dev.get(project.id)
-    if (res.ok) {
+  const { loading, reload: load } = useLoader(
+    () => dev.get(project.id),
+    (res) => {
+      if (!res.ok) return
       setMeta(res.data.meta)
       setDeploys(res.data.deploys)
       setRepo(res.data.meta?.repo_url ?? "")
@@ -235,14 +220,9 @@ function ProjectPipeline({
       }
       if (res.data.meta?.repo_url) loadGithub(res.data.meta.repo_url)
       else setGh(null)
-    }
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [project.id])
+    },
+    project.id,
+  )
 
   const saveMeta = async (nextChecks?: Record<string, boolean>) => {
     setSaving(true)
