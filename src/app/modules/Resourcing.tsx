@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { useLoader } from "@/hooks/use-load"
+import { LOAD_CRASH_ERROR } from "@/lib/loadState"
 import { AlertCircle, Gauge, Loader2, Plus, RefreshCw, Trash2, Plane } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -46,7 +48,6 @@ const initials = (name: string) =>
 export default function Resourcing() {
   const [team, setTeam] = useState<TeamMember[]>([])
   const [leave, setLeave] = useState<LeaveEntry[]>([])
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const [open, setOpen] = useState(false)
@@ -57,20 +58,18 @@ export default function Resourcing() {
   const [note, setNote] = useState("")
   const [saving, setSaving] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await resourcing.get()
-    if (res.ok) {
-      setTeam(res.data.team)
-      setLeave(res.data.leave)
-      setError(null)
-    } else setError(res.error)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
+  const { loading, reload: load } = useLoader(
+    () => resourcing.get(),
+    (res) => {
+      if (res.ok) {
+        setTeam(res.data.team)
+        setLeave(res.data.leave)
+        setError(null)
+      } else setError(res.error)
+    },
+    null,
+    () => setError(LOAD_CRASH_ERROR),
+  )
 
   const addLeave = async () => {
     if (!userId) return toast.error("Pick a team member.")
