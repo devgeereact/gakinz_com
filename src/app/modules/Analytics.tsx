@@ -103,6 +103,9 @@ export default function Analytics() {
       else errs.push("clients")
       setErrors(errs)
     },
+    null,
+    // A load that throws marks every source unavailable rather than leaving zeros (K-031).
+    () => setErrors(["leads", "invoices", "projects", "time", "clients"]),
   )
 
   const kpis = useMemo(() => {

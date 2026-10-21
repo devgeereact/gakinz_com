@@ -197,6 +197,9 @@ export default function Dashboard() {
       setErrors(errs)
       announcementsApi.list().then((r) => r.ok && setAnns(r.data.slice(0, 3)))
     },
+    null,
+    // A load that throws marks every source unavailable rather than leaving zeros (K-031).
+    () => setErrors(["leads", "clients", "projects", "invoices", "support", "time"]),
   )
 
   const stats = useMemo(() => {
