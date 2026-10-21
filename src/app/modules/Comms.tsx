@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { useLoad } from "@/hooks/use-load"
 import { Loader2, RefreshCw, Plus, Send, Archive, ArchiveRestore, MessagesSquare, NotebookPen } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -70,9 +71,7 @@ function timeAgo(iso: string | null) {
 }
 
 export default function Comms() {
-  const [threads, setThreads] = useState<CommThread[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: threads, error, loading, reload: loadThreads } = useLoad<CommThread[]>(() => comms.list(), [])
   const [showArchived, setShowArchived] = useState(false)
 
   const [selectedId, setSelectedId] = useState<number | null>(null)
@@ -100,20 +99,7 @@ export default function Comms() {
   const feedRef = useRef<HTMLDivElement>(null)
   const lastReqId = useRef<number | null>(null) // newest thread requested; guards out-of-order loads
 
-  const loadThreads = async () => {
-    setLoading(true)
-    const res = await comms.list()
-    if (res.ok) {
-      setThreads(res.data)
-      setError(null)
-    } else {
-      setError(res.error)
-    }
-    setLoading(false)
-  }
-
   useEffect(() => {
-    loadThreads()
     clientsApi.list().then((r) => r.ok && setClientList(r.data))
     projectsApi.list().then((r) => r.ok && setProjectList(r.data))
   }, [])
@@ -159,7 +145,7 @@ export default function Comms() {
       toast.success("Conversation started.")
       setForm({ subject: "", client_id: "", project_id: "", channel: "internal", body: "" })
       setOpen(false)
-      await loadThreads()
+      loadThreads()
       loadDetail(res.data.id)
     } else {
       toast.error(res.error || "Could not start the conversation.")

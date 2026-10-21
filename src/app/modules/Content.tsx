@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
+import { useLoad } from "@/hooks/use-load"
 import {
   Loader2,
   Sparkles,
@@ -68,19 +69,7 @@ export default function Content() {
   const [result, setResult] = useState<GenResult | null>(null)
   const [tab, setTab] = useState<string>("blog")
 
-  const [drafts, setDrafts] = useState<ContentDraft[]>([])
-  const [draftsError, setDraftsError] = useState<string | null>(null)
-
-  const loadDrafts = async () => {
-    const res = await content.list()
-    if (res.ok) {
-      setDrafts(res.data)
-      setDraftsError(null)
-    } else setDraftsError(res.error)
-  }
-  useEffect(() => {
-    loadDrafts()
-  }, [])
+  const { data: drafts, error: draftsError, reload: loadDrafts, setData: setDrafts } = useLoad<ContentDraft[]>(() => content.list(), [])
 
   const toggle = (id: PlatformId) =>
     setSelected((xs) => (xs.includes(id) ? xs.filter((x) => x !== id) : [...xs, id]))

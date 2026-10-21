@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { useLoader } from "@/hooks/use-load"
+import { LOAD_CRASH_ERROR } from "@/lib/loadState"
 import { Loader2, Plus, RefreshCw, Search, Pencil, Trash2, BookOpen, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -31,7 +33,6 @@ const blank = { id: 0, title: "", category: "General", audience: "internal", bod
 
 export default function Knowledge() {
   const [items, setItems] = useState<KbSummary[]>([])
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [q, setQ] = useState("")
   const [category, setCategory] = useState("all")
@@ -44,21 +45,19 @@ export default function Knowledge() {
   const [form, setForm] = useState<{ id: number; title: string; category: string; audience: string; body: string }>(blank)
   const [saving, setSaving] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await knowledge.list(q, category === "all" ? "" : category)
-    if (res.ok) {
-      setItems(res.data)
-      setSeen((xs) => Array.from(new Set([...xs, ...res.data.map((i) => i.category)])))
-      setError(null)
-    } else setError(res.error)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category])
+  // A new category loads at once; a new search term loads on Enter or Search.
+  const { loading, reload: load } = useLoader(
+    () => knowledge.list(q, category === "all" ? "" : category),
+    (res) => {
+      if (res.ok) {
+        setItems(res.data)
+        setSeen((xs) => Array.from(new Set([...xs, ...res.data.map((i) => i.category)])))
+        setError(null)
+      } else setError(res.error)
+    },
+    category,
+    () => setError(LOAD_CRASH_ERROR),
+  )
 
   const categories = Array.from(new Set([...seen, ...items.map((i) => i.category)])).sort()
 
