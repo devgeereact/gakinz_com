@@ -18,7 +18,7 @@ work sits on one stack of branches, about 416 commits ahead of `main`:
 PR #19 `design/hero-nav-footer-demo` targets #8 and sits outside the stack.
 
 Last measured on the Mac (2026-10-21, this branch): `npm test` 535 PASS, build with 32
-prerendered pages PASS, `tsc -b` PASS, `npm run docs:check` PASS, lint ratchet 25 errors and 0
+prerendered pages PASS, `tsc -b` PASS, `npm run docs:check` PASS, lint ratchet 16 errors and 0
 warnings (`npm run lint` still fails, K-002). `npm run test:server` last ran at `468b884`: 519
 PASS. Counts and their history: [STATUS section 0](STATUS.md).
 
@@ -30,7 +30,7 @@ PASS. Counts and their history: [STATUS section 0](STATUS.md).
 | D-046 redesign | `feat/redesign-2026` | Public site rebuilt, CMS restyled, Work hero, Site content, `site.php` |
 | Readiness audit | #20 | Security, privacy and public-site fixes, hashed sign-in tokens, SQL 12, labelled owner placeholders |
 | Journeys 1 to 6 | #21 | Payments, acceptance evidence, portal requests, ICS, Today, search, briefs, privacy export, ticket time, shared files, templates, service pages, work references, deletion tooling, reference sign-in and ads (both off), client anonymisation (off). SQL 13 to 19 |
-| Lint, group A | #21 | `useLoad` hook and seven screens moved to it; ratchet 33 to 25 |
+| Lint, groups A and B | #21 | `useLoad` hook and 15 screens moved to it; ratchet 33 to 16; thrown Dashboard and Analytics loads show unavailable (K-031) |
 | Landing motion | `feat/landing-motion-2026-10-21` | GSAP and Lenis scroll polish on the public site (D-051) |
 
 Detail per batch: [STATUS sections 0.2 to 0.4](STATUS.md) and the ledger in
@@ -40,13 +40,14 @@ Detail per batch: [STATUS sections 0.2 to 0.4](STATUS.md) and the ledger in
 
 ### 3a. Engineering (no owner needed)
 
-1. **Lint, K-002.** Group B (Blog, CarePlan, Comms, Content, Design, DevPipeline, Files,
-   Knowledge), then group C (Platform, Resourcing, Support, Testimonials, Time,
-   AccountSecurity, Login), then Contracts, Portal (security review, client isolation) and
-   theme toggle. Then replace `lint:ratchet` with `lint` in CI and close K-002. Lower the
-   ratchet after each group.
-2. **Check the `useLoad` fix round.** A failed Dashboard or Analytics load must show
-   "unavailable", never zero (K-031). Confirm, then browser-check group A on mocked API.
+1. **Lint, K-002.** Groups A and B are done (16 errors left). Next is group C (Platform,
+   Resourcing, Support, Testimonials, Time, AccountSecurity, Login), then Contracts, Portal
+   (security review, client isolation) and theme toggle. Then replace `lint:ratchet` with
+   `lint` in CI and close K-002. Lower the ratchet after each group.
+2. **Analytics shows zero for a single failed source.** A thrown load now marks every source
+   unavailable (K-031, fixed 2026-10-21), but when one request fails Analytics still computes
+   its KPIs from the rest and shows zero for the missing part, under a "Showing what loaded"
+   banner. Decide whether each KPI should say "unavailable" instead.
 3. **Buildable leftovers:** K-069, K-072, K-074, K-077, K-078, K-083, K-061 certificate IDs,
    K-020 strict tsc configs.
 4. **Measure the current public site.** Accessibility and performance were last measured
