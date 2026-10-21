@@ -104,104 +104,18 @@ When this file and the code disagree, the code wins and this file is wrong.
 - The active Tailwind config is `tailwind.config.js`. The `.ts` variant is inert; do not edit
   it.
 
-## Known state, as at 2026-10-14
+## Known state
 
-Measured on branch `feat/redesign-2026` at `d314833` (stacked on `feat/plan-2026-batch-1`, PR
-#8) on the Ubuntu computer. The source for every count is `docs/STATUS.md` section 0.
+The current state, what is left and the order of work are in **`docs/WORKBOOK.md`**. Measured
+counts are in `docs/STATUS.md` section 0. This file does not repeat them, so it cannot drift
+(consolidated 2026-10-21; the earlier text is in git history at `5d5f95b`).
 
-- `npx tsc -b`, `npm run build`, `npm run docs:check` and `php -l` over 47 PHP files PASS;
-  `npm test` 128 unit tests PASS (143 on `perf/prerender-public`, 2026-10-16). `npm run test:server` 140 server integration tests PASS,
-  measured the same day against a throwaway local `*_test` database on MariaDB 10.11.
-- **`npm run lint` fails: 33 errors, 0 warnings** (on `feat/journeys-2026-10-18`, the
-  ceiling in `scripts/lint-ratchet.mjs`). `npm run lint:ratchet` holds that ceiling in
-  CI, so the count must not grow. See `docs/KNOWN-ISSUES.md` K-002.
-- The 2026-10-10 work (batch 1, navigation, My account, enquiry follow-ups, portal messages,
-  public publishing and article format) is on `feat/plan-2026-batch-1`, PR #8. The D-046
-  redesign of 2026-10-12 to 2026-10-14 (public site rebuilt, every CMS screen restyled, Work
-  hero controls, the Site content module and `server/site.php`, Enquiries drag and drop) is on
-  `feat/redesign-2026`, stacked on it and pushed. **Neither is merged or deployed, and no
-  server file is uploaded.** The upload list and operator order are `docs/DEPLOYMENT.md`
-  section 5: SQL 7 and 8, upload `site.php` and `work.php`, publish the real projects and
-  hero in Work, then merge, because merging deploys `dist/`.
-- **The redesign is checked only against mocked API responses** (Playwright at 1440, 1024 and
-  390px, light and dark). Real data, a real sign-in, Enquiries drag and drop, Site content
-  publish and the Work hero on the live API are NOT TESTED (K-044).
-- Deploy waits for CI (`.github/workflows/deploy.yml`, `workflow_run`).
-- **Accessibility and performance were last measured before the D-046 rebuild**
-  (`qa/ACCESSIBILITY-AUDIT.md`, `qa/PERFORMANCE-AUDIT.md`), so no measurement describes the
-  current public site; the CMS and real assistive technology have never been tested (K-045).
-- **The deployed server state is UNVERIFIED.** Which PHP files are uploaded and which
-  migrations have run cannot be known from here.
-- **2026-10-17, readiness audit** on `audit/readiness-2026-10-17`, PR #20 into
-  `feat/redesign-2026`: security, privacy and public-site fixes, hashed sign-in tokens, SQL 12,
-  and labelled placeholders for owner facts on the legal and pricing pages. `npm test` 179 and
-  `npm run test:server` 184 PASS. Not merged, uploaded or deployed. **Upload `_bootstrap.php`
-  with `auth.php`, `oauth.php` and `users.php`, together.** Resume from
-  `.agent/CURRENT-TASK.md`; owner answers are parked in `docs/STATUS.md` section 5.
-- **2026-10-19, client journeys** on `feat/journeys-2026-10-18`, stacked on PR #20, pushed
-  to origin, not merged, deployed or uploaded: manual payment record, quote acceptance evidence, portal update and call requests,
-  project asset checklist, calendar file, client sign-in link, favicon and manifest, lint
-  ceiling 33 errors and 0 warnings. `npm test` 239 and `npm run test:server` 275 PASS on the
-  Mac (ports 5291 and 5292). Not merged, uploaded or deployed. Needs SQL 13 to 15 and the
-  upload list in `docs/DEPLOYMENT.md` section 5.3; **upload `bookings.php` with `_ics.php`.**
-  Summary in `docs/STATUS.md` section 0.2.
-  **Second batch, 2026-10-19** (PR #21, `6789b47..def1909`): the Today attention list
-  (`today.php`), record search (`search.php` with `_like.php`), project brief, measurements
-  and GEE OS handoff (`briefs.php`, SQL 16), subject access export and a read-only retention
-  dry run (`privacy.php`, `_retention.php`, `cron.php`; nine `$RETENTION_*` keys, all null; no
-  deletion), recommendation blocks, record deep links and quiet degradation before upload.
-  Measured on the Mac at `def1909`: `npm test` 355, `npm run test:server` 340 (ports 5309 and
-  5310), lint ratchet 33 and 0, `php -l` over 57 files, build and docs check PASS. Not merged,
-  uploaded or deployed. **Order: upload the PHP and `.htaccess`, run SQL 16, then merge.**
-  Live PHP version UNVERIFIED (8.1 or later expected, K-082). Summary in `docs/STATUS.md`
-  section 0.3; open items K-074 to K-082.
-  **Third batch, 2026-10-19** (`029f867..bdca4aa`, same branch, pushed): IT support time
-  from tickets on a standing "IT support" project (`support.php` `log_time`, `_time.php`,
-  SQL 17), files shared to the client portal (`files.php` `client_share`, `mine`,
-  `mine_download`, SQL 18; security-critical) with hardened downloads for every caller,
-  five project templates (`projects.php` with `_templates.php`), draft protection on six
-  screens, portal sharing in the privacy export, and a server test harness that refuses a
-  busy port and stops every `php -S` worker. Measured on the Mac at `bdca4aa`: `npm test`
-  396, `npm run test:server` 398 (ports 5395 and 5396), lint ratchet 33 and 0, `php -l`
-  over 59 files, `tsc -b` and docs check PASS. Not merged, uploaded or deployed. **Order:
-  upload the PHP (`_time.php` with or before `support.php` and `time.php`, `_templates.php`
-  with `projects.php`), run SQL 17 then 18, then merge.** Browser check on mocked API only.
-  Summary in `docs/STATUS.md` section 0.4; open items K-083 to K-088.
-  **Fourth batch, 2026-10-19** (`8193555..ebcb002`, same branch, pushed): the six service pages
-  from spec 4.3 (Websites and IT support groups), six service choices on the enquiry form,
-  and whole-page services in `site.php` and Site content (D-048). Measured on the Mac at
-  `ebcb002`: `npm test` 415, `npm run test:server` 405 (ports 5399 and 5400), lint ratchet 33
-  and 0, 32 pages prerendered, `php -l` over 59 files, `tsc -b` and docs check PASS. Not
-  merged, uploaded or deployed. **Upload `site.php` before merging (no SQL), then save Site
-  content > Services once.** IT coverage, area and prices are owner inputs (K-090). Browser
-  check on mocked API only. Open items K-090 to K-093.
-  **Fifth batch, 2026-10-19** (`3636373..b0bbf8b`, same branch, pushed): work references
-  `GK-E`/`GK-P` per kind and year (`_reference.php`, SQL 19), shown but never used for lookup
-  or sign-in (D-049); a client's deletion request ticket; a super admin's typed-confirmation
-  erase of one prospect's enquiry (`_erasure.php`); a retention executor
-  (`cron.php job=retention_apply`) that deletes only with `--apply`, `$RETENTION_APPLY = true`
-  and a period (the first code that deletes personal data, **though nothing deletes as
-  shipped**); and
-  Site content > Business details with escaped JSON-LD `sameAs`. Measured on the Mac at
-  `b0bbf8b`: `npm test` 450, `npm run test:server` 455 (ports 5411 and 5412), lint ratchet 33
-  and 0, 32 pages prerendered, `php -l` over 62 files, `tsc -b` and docs check PASS. Not
-  merged, uploaded or deployed. **Follow the ordered upload list in `docs/DEPLOYMENT.md`
-  section 5.1 step 13: `_uploads.php` before `files.php` (or every Files route, public Work
-  images included, fails), `site.php` before the merge, SQL 19 after the PHP; keep
-  `$RETENTION_APPLY = false`.** Browser check on mocked API only. Open items K-094 to K-099.
-  **Sixth batch, 2026-10-19** (`54d593a..fa88266`, same branch, pushed): gated features, both
-  **switched off** (D-050). Client sign-in by reference and email (`client_access.php`, 404 on
-  every route unless `$REFERENCE_SIGNIN_ENABLED = true`; links in `magic_links`, no SQL; J02 and
-  J03 pass locally); consent loader and article ad slots in tracked settings
-  (`src/marketing/lib/monetisation.ts`), with a prerender gate that fails on third-party
-  markup. Client anonymisation (Task 26) was **built 2026-10-20 and switched off**
-  (`$CLIENT_ANONYMISE_ENABLED`, default false; an adviser confirms its rules first;
-  `npm test` 509, `npm run test:server` 519 at `de3c7fa`; live host NOT TESTED). Earlier it was an owner and adviser decision
-  (K-108). Measured on the Mac at `fa88266`: `npm test` 499, `npm run test:server` 496
-  (ports 5423 and 5424), lint ratchet 33 and 0, 32 pages prerendered, `php -l` over 63 files,
-  `tsc -b` and docs check PASS. **Upload `client_access.php` switched off (DEPLOYMENT section
-  5.1 step 14) and do not switch it on before the four gates in section 5.4.** No browser run
-  of either feature. Open items K-100 to K-108.
+- Nothing since 2026-10-10 is merged, uploaded or deployed. The branch stack and merge order
+  are in the workbook, section 1. The deployed server state is UNVERIFIED (K-006).
+- `npm run lint` still fails (K-002). `npm run lint:ratchet` holds the ceiling in
+  `scripts/lint-ratchet.mjs`, and the count must not grow.
+- Anything checked only against mocked API responses is NOT TESTED on real data (K-044).
+- Gated features ship switched off (D-050). Do not switch one on without the named gates.
 - A live super-admin credential was published in an earlier revision of this file and is in
   git history. The owner reports it rotated on 2026-10-12; session revocation is unconfirmed.
   See `docs/KNOWN-ISSUES.md` K-001.

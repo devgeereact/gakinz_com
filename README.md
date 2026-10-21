@@ -94,7 +94,7 @@ once.
 | File | What it holds |
 |---|---|
 | `AGENTS.md` | The contract every agent works to, including the document-sync rule |
-| `CLAUDE.md` | The Claude Code pointer into it, and the known state |
+| `CLAUDE.md` | The Claude Code pointer into it; points to the workbook for current state |
 | `CODEX.md` | The Codex pointer into it |
 | `.agent/PROJECT.yml` | The GEE OS project contract: route, risk and sources |
 | `.agent/CURRENT-TASK.md` | The task in hand, its scope, authority and evidence |

@@ -6,7 +6,7 @@ documents rather than copying them; when this page and a linked document disagre
 document wins and this page is wrong.
 
 **As at:** 2026-10-21, branch `feat/landing-motion-2026-10-21` (from `feat/journeys-2026-10-18`
-at `5d5f95b`). Read this first, then only the linked section you need.
+at `5d5f95b`, both pushed). Read this first, then only the linked section you need.
 
 ## 1. Where things stand
 
@@ -118,13 +118,13 @@ or partly open: [KNOWN-ISSUES](KNOWN-ISSUES.md).
 1. **Shrink the stack before adding to it.** Five unmerged levels make every review harder and
    every fix travel further. Get #8 tested and merged first; new feature work waits until at
    least #8 and the redesign are in `main`.
-2. **One page for status.** Update this workbook and the counts in STATUS section 0. Stop
-   writing batch reports into CLAUDE.md, CURRENT-TASK and STATUS at once; CLAUDE.md should
-   point here instead of keeping its own "known state".
+2. **One page for status.** Update this workbook and the counts in STATUS section 0. Batch
+   reports go into STATUS only; CLAUDE.md and CURRENT-TASK point here and no longer repeat
+   them (consolidated 2026-10-21).
 3. **Owner sessions, not owner interruptions.** Work through 3b in one sitting per step, with
    the checklist open, and record the outcome here.
 4. **Small batches with a gate.** Each batch ends with tests, build, docs check and a browser
-   run, then a push. Push the same day; nine local commits were unpushed on 2026-10-21.
+   run, then a push. Push the same day (nine commits sat unpushed until 2026-10-21).
 5. **Evidence over summaries.** Report command output, not an agent's word.
 
 ## 6. Where the detail lives
