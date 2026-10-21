@@ -17,8 +17,8 @@ work sits on one stack of branches, about 416 commits ahead of `main`:
 
 PR #19 `design/hero-nav-footer-demo` targets #8 and sits outside the stack.
 
-Last measured on the Mac (2026-10-21, this branch): `npm test` 535 PASS, build with 32
-prerendered pages PASS, `tsc -b` PASS, `npm run docs:check` PASS, lint ratchet 16 errors and 0
+Last measured on the Mac (2026-10-21, this branch): `npm test` 540 PASS, build with 32
+prerendered pages PASS, `tsc -b` PASS, `npm run docs:check` PASS, lint ratchet 5 errors and 0
 warnings (`npm run lint` still fails, K-002). `npm run test:server` last ran at `468b884`: 519
 PASS. Counts and their history: [STATUS section 0](STATUS.md).
 
@@ -30,7 +30,7 @@ PASS. Counts and their history: [STATUS section 0](STATUS.md).
 | D-046 redesign | `feat/redesign-2026` | Public site rebuilt, CMS restyled, Work hero, Site content, `site.php` |
 | Readiness audit | #20 | Security, privacy and public-site fixes, hashed sign-in tokens, SQL 12, labelled owner placeholders |
 | Journeys 1 to 6 | #21 | Payments, acceptance evidence, portal requests, ICS, Today, search, briefs, privacy export, ticket time, shared files, templates, service pages, work references, deletion tooling, reference sign-in and ads (both off), client anonymisation (off). SQL 13 to 19 |
-| Lint, groups A and B | #21 | `useLoad` hook and 15 screens moved to it; ratchet 33 to 16; thrown Dashboard and Analytics loads show unavailable (K-031) |
+| Lint, groups A to C | #21 | `useLoad` hook, 22 screens and the sign-in page moved off set-state-in-effect; ratchet 33 to 5; thrown Dashboard and Analytics loads show unavailable (K-031) |
 | Landing motion | `feat/landing-motion-2026-10-21` | GSAP and Lenis scroll polish on the public site (D-051) |
 
 Detail per batch: [STATUS sections 0.2 to 0.4](STATUS.md) and the ledger in
@@ -40,10 +40,9 @@ Detail per batch: [STATUS sections 0.2 to 0.4](STATUS.md) and the ledger in
 
 ### 3a. Engineering (no owner needed)
 
-1. **Lint, K-002.** Groups A and B are done (16 errors left). Next is group C (Platform,
-   Resourcing, Support, Testimonials, Time, AccountSecurity, Login), then Contracts, Portal
-   (security review, client isolation) and theme toggle. Then replace `lint:ratchet` with
-   `lint` in CI and close K-002. Lower the ratchet after each group.
+1. **Lint, K-002.** Groups A to C are done (5 errors left). Last are Contracts, Portal
+   (security review first: its effect handles which client's data a `client` caller sees) and
+   the theme toggle. Then replace `lint:ratchet` with `lint` in CI and close K-002.
 2. **Analytics shows zero for a single failed source.** A thrown load now marks every source
    unavailable (K-031, fixed 2026-10-21), but when one request fails Analytics still computes
    its KPIs from the rest and shows zero for the missing part, under a "Showing what loaded"
