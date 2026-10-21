@@ -147,6 +147,7 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;letter-spacing:.04em;padding:4px 10px;border-radius:999px;border:1px solid var(--line-2);color:var(--mute);white-space:nowrap}
 .gk-site .pill--live{color:var(--ok);border-color:color-mix(in srgb,var(--ok) 45%,transparent)}
 .gk-site .pill--live::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--ok)}
+.gk-site .pill--demo{color:var(--mute);border-color:var(--line-2)}
 .gk-site .pill--build{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 40%,transparent)}
 .gk-site .card__go{width:36px;height:36px;border-radius:50%;border:1px solid var(--line-2);display:grid;place-items:center;transition:background-color .2s,border-color .2s,color .2s}
 .gk-site .card:hover .card__go{background:var(--acc);border-color:var(--acc);color:var(--acc-ink)}
@@ -311,7 +312,7 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .foot__big p.mono{margin-bottom:16px}
 .gk-site .foot__mail{font-family:var(--disp);font-weight:720;font-size:clamp(2.1rem,7vw,6rem);letter-spacing:-.045em;line-height:.95;text-decoration:none;overflow-wrap:anywhere;background-image:linear-gradient(var(--acc),var(--acc));background-size:0 4px;background-repeat:no-repeat;background-position:0 100%;transition:background-size .4s var(--ease)}
 .gk-site .foot__mail:hover{background-size:100% 4px}
-.gk-site .foot__cols{display:grid;grid-template-columns:minmax(0,2fr) repeat(3,minmax(0,1fr));gap:24px;border-top:1px solid var(--line);padding-top:36px}
+.gk-site .foot__cols{display:grid;grid-template-columns:minmax(0,2fr) repeat(4,minmax(0,1fr));gap:24px;border-top:1px solid var(--line);padding-top:36px}
 .gk-site .bizlist{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:8px;color:var(--mute);font-size:.96rem}
 .gk-site .bizlist a{color:inherit;text-underline-offset:3px}
 .gk-site .bizlist a:hover{color:var(--fg)}
@@ -342,11 +343,12 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .svc-list article{grid-template-columns:1fr}
 .gk-site .facts{position:static}
 .gk-site .foot__cols{grid-template-columns:1fr 1fr}
+.gk-site .foot__cols > :first-child{grid-column:1/-1}
 .gk-site .seal{margin:0 auto;max-width:16rem}}
 @media (max-width:560px){.gk-site .grid-work,.gk-site .svc,.gk-site .plans,.gk-site .sectors,.gk-site .quotes{grid-template-columns:1fr}
 .gk-site .steps{grid-template-columns:1fr}
 .gk-site .row2{grid-template-columns:1fr}
-.gk-site .foot__cols{grid-template-columns:1fr}
+.gk-site .foot__cols{grid-template-columns:1fr 1fr;gap:28px 20px}
 .gk-site .hero__bar .js-prev,.gk-site .hero__bar .js-next{display:none}
 .gk-site .nav .btn--main{display:none}
 .gk-site .stage{width:96%}}

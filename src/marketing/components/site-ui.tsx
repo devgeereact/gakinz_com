@@ -27,7 +27,7 @@ export const IMenu = () => svg(<path d="M4 7h16M4 12h16M4 17h16" />)
 // ── Small parts ────────────────────────────────────────────────────────────
 
 export function Pill({ status }: { status: string }) {
-  return <span className={`pill ${status === "Live" ? "pill--live" : "pill--build"}`}>{status}</span>
+  return <span className={`pill ${status === "Live" ? "pill--live" : status === "Demo" ? "pill--demo" : "pill--build"}`}>{status}</span>
 }
 
 export function Ticks({ items }: { items: string[] }) {
@@ -380,6 +380,11 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
                 <li><Link to="/contact">Contact</Link></li>
                 <li className="mute">Already working with us?</li>
                 <li><Link to="/login">Client sign in</Link></li>
+              </ul>
+            </div>
+            <div>
+              <h2>Legal</h2>
+              <ul>
                 <li><Link to="/privacy">Privacy</Link></li>
                 <li><Link to="/terms">Terms</Link></li>
                 <li><Link to="/cookies">Cookies</Link></li>
@@ -392,7 +397,6 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
             <span>
               London <LondonClock />
             </span>
-            <span>The strip at the top is the palette of the work</span>
           </div>
         </div>
       </footer>
