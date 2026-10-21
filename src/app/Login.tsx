@@ -9,23 +9,18 @@ import { isReferenceShape, normaliseReference, readAccessToken, redeemErrorMessa
 import { useAuth } from "@/store/auth.store"
 import { defaultPathForRole } from "@/lib/access"
 import AuthFrame from "@/app/components/AuthFrame"
+import { initialRedirectState } from "@/lib/loginRedirect"
 
-const SSO_ERRORS: Record<string, string> = {
-  cancelled: "Google sign-in was cancelled.",
-  no_account: "No GAkinz account matches that Google email. Ask an admin to create one.",
-  inactive: "That account is suspended.",
-  exchange_failed: "Google sign-in failed. Please try again.",
-  no_email: "Google didn’t return a verified email.",
-  two_factor: "This account uses two-factor authentication. Sign in with your password and code.",
-}
 
 export default function Login() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [code, setCode] = useState("")
   const [needs2fa, setNeeds2fa] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
+  // A sign-in link or Google redirect sets the opening state; the effect below consumes it.
+  const [redirect] = useState(() => initialRedirectState(window.location.hash))
+  const [error, setError] = useState<string | null>(redirect.error)
+  const [busy, setBusy] = useState(redirect.busy)
   const [ssoGoogle, setSsoGoogle] = useState(false)
   const [magicSent, setMagicSent] = useState(false)
   const [showPw, setShowPw] = useState(false)
@@ -76,7 +71,6 @@ export default function Login() {
       // A reference sign-in link. Clear the address bar before anything else,
       // so the one-time token is not left in history or a shared screenshot.
       window.history.replaceState(null, "", window.location.pathname)
-      setBusy(true)
       clientAccess.redeem(access).then((r) => {
         setBusy(false)
         if (r.ok) {
@@ -88,7 +82,6 @@ export default function Login() {
       })
     } else if (magic) {
       window.history.replaceState(null, "", window.location.pathname)
-      setBusy(true)
       auth.magicConsume(magic).then((r) => {
         setBusy(false)
         if (r.ok) {
@@ -99,11 +92,10 @@ export default function Login() {
         }
       })
     } else if (ssoError) {
-      setError(SSO_ERRORS[ssoError] || "Google sign-in failed.")
+      // Its message is already showing (initialRedirectState); only clear the address bar.
       window.history.replaceState(null, "", window.location.pathname)
     } else if (ssoToken) {
       window.history.replaceState(null, "", window.location.pathname)
-      setBusy(true)
       // We have a token but not the user yet — persist the token, fetch /me.
       useAuth.getState().setAuth(ssoToken, useAuth.getState().user as never)
       auth.me().then((r) => {

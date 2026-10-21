@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react"
+import { useLoad } from "@/hooks/use-load"
 import { AlertCircle, FileJson, Loader2, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react"
 import { saveAs } from "file-saver"
 import { toast } from "sonner"
@@ -152,27 +153,12 @@ export default function Platform() {
 
 function TeamTab({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const me = useAuth((s) => s.user)
-  const [items, setItems] = useState<ManagedUser[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: items, error, loading, reload: load, setData: setItems } = useLoad<ManagedUser[]>(() => users.list(), [])
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "employee" as Role, client_id: "" })
   const [clientList, setClientList] = useState<Client[]>([])
   const [saving, setSaving] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await users.list()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else {
-      setError(res.error)
-    }
-    setLoading(false)
-  }
-
   useEffect(() => {
-    load()
     // Needed to bind a `client`-role login to its client record.
     clientsApi.list().then((r) => r.ok && setClientList(r.data))
   }, [])
@@ -447,20 +433,12 @@ function RateCell({ user, onSaved }: { user: ManagedUser; onSaved: (rate: number
 
 // Studio-wide announcements (managers+ post; everyone sees them on the dashboard).
 function AnnouncementsTab() {
-  const [items, setItems] = useState<Announcement[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: items, loading, reload: load, setData: setItems } = useLoad<Announcement[]>(() => announcements.list(), [])
   const [title, setTitle] = useState("")
   const [body, setBody] = useState("")
   const [level, setLevel] = useState("info")
   const [saving, setSaving] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await announcements.list()
-    if (res.ok) setItems(res.data)
-    setLoading(false)
-  }
-  useEffect(() => { load() }, [])
 
   const post = async () => {
     if (!title.trim()) return toast.error("A title is required.")
@@ -564,20 +542,7 @@ const INTEGRATIONS: { key: keyof IntegrationStatus; label: string; note: string 
 ]
 
 function IntegrationsTab() {
-  const [status, setStatus] = useState<IntegrationStatus | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const load = async () => {
-    setLoading(true)
-    const res = await integrations.status()
-    if (res.ok) {
-      setStatus(res.data)
-      setError(null)
-    } else setError(res.error)
-    setLoading(false)
-  }
-  useEffect(() => { load() }, [])
+  const { data: status, error, loading, reload: load } = useLoad<IntegrationStatus | null>(() => integrations.status(), null)
 
   return (
     <div>
@@ -632,25 +597,7 @@ function IntegrationsTab() {
 }
 
 function AuditTab() {
-  const [items, setItems] = useState<AuditEntry[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const load = async () => {
-    setLoading(true)
-    const res = await audit.list()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else {
-      setError(res.error)
-    }
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
+  const { data: items, error, loading, reload: load } = useLoad<AuditEntry[]>(() => audit.list(), [])
 
   return (
     <div>

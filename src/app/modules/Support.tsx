@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
+import { useLoad, useLoader } from "@/hooks/use-load"
 import { useLocation, useSearchParams } from "react-router-dom"
 import { AlertCircle, Clock, Loader2, Plus, RefreshCw, Send } from "lucide-react"
 import { toast } from "sonner"
@@ -55,10 +56,8 @@ function fmt(d: string) {
 }
 
 export default function Support() {
-  const [items, setItems] = useState<Ticket[]>([])
+  const { data: items, error, loading, reload: load } = useLoad<Ticket[]>(() => support.list(), [])
   const [clientList, setClientList] = useState<Client[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [filter, setFilter] = useState<"all" | TicketStatus>("all")
 
@@ -66,20 +65,7 @@ export default function Support() {
   const [form, setForm] = useState({ subject: "", client_id: "", priority: "normal" as TicketPriority, body: "" })
   const [saving, setSaving] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await support.list()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else {
-      setError(res.error)
-    }
-    setLoading(false)
-  }
-
   useEffect(() => {
-    load()
     clientsApi.list().then((r) => r.ok && setClientList(r.data))
   }, [])
 
@@ -295,24 +281,14 @@ export default function Support() {
 
 function TicketPanel({ id, onChanged }: { id: number; onChanged: () => void }) {
   const [ticket, setTicket] = useState<TicketDetail | null>(null)
-  const [loading, setLoading] = useState(true)
   const [reply, setReply] = useState("")
   const [sending, setSending] = useState(false)
-  const reqRef = useRef(0) // newest load; drops out-of-order responses on fast ticket switches
-
-  const load = async () => {
-    const my = ++reqRef.current
-    setLoading(true)
-    const res = await support.get(id)
-    if (reqRef.current !== my) return // a newer ticket was opened — ignore this stale response
-    if (res.ok) setTicket(res.data)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id])
+  // The latest ticket opened wins: a slow answer for an earlier one is dropped.
+  const { loading, reload: load } = useLoader(
+    () => support.get(id),
+    (res) => res.ok && setTicket(res.data),
+    id,
+  )
 
   const changeStatus = async (status: TicketStatus) => {
     if (!ticket) return

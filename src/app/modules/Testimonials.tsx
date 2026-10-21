@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { useLoad } from "@/hooks/use-load"
 import { Loader2, Plus, RefreshCw, Pencil, Trash2, AlertCircle, Quote } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -39,26 +40,11 @@ const blank: TestimonialInput & { id: number } = {
 }
 
 export default function Testimonials() {
-  const [items, setItems] = useState<TestimonialAdmin[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: items, error, loading, reload: load, setData: setItems } = useLoad<TestimonialAdmin[]>(() => testimonials.listAll(), [])
   const [open, setOpen] = useState(false)
   const [form, setForm] = useState(blank)
   const [saving, setSaving] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await testimonials.listAll()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else setError(res.error)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
 
   const startNew = () => {
     setForm(blank)

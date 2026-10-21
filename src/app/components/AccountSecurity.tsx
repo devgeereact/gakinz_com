@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useLoad } from "@/hooks/use-load"
 import { Copy, Loader2, RefreshCw, Monitor, LogOut } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -191,26 +192,9 @@ function deviceLabel(ua: string | null): string {
 
 // The caller's own live sessions, with sign-out for any device but this one.
 export function SessionsPanel() {
-  const [items, setItems] = useState<Session[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: items, error, loading, reload: load, setData: setItems } = useLoad<Session[]>(() => auth.sessions(), [])
   const [busyId, setBusyId] = useState<number | null>(null)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await auth.sessions()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else {
-      setError(res.error)
-    }
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
 
   const revoke = async (s: Session) => {
     setBusyId(s.id)

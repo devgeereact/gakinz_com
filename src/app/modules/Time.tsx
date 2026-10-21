@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { useLoad } from "@/hooks/use-load"
 import { Link } from "react-router-dom"
 import { AlertCircle, Clock, Loader2, Play, Square, Plus, Trash2, RefreshCw, Check, X, Download } from "lucide-react"
 import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/page-kit"
@@ -49,10 +50,8 @@ export default function Time() {
   const canApprove = !!role && APPROVER_ROLES.includes(role)
   // A trainer may log time but has no Support screen, so sees the ticket number without a link.
   const canOpenTickets = canAccess(role, "support")
-  const [entries, setEntries] = useState<TimeEntry[]>([])
+  const { data: entries, error, loading, reload: load, setData: setEntries } = useLoad<TimeEntry[]>(() => time.list(), [])
   const [projectList, setProjectList] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   // Log form
   const [projectId, setProjectId] = useState("")
@@ -66,20 +65,7 @@ export default function Time() {
   const [elapsed, setElapsed] = useState(0) // seconds
   const tick = useRef<number | null>(null)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await time.list()
-    if (res.ok) {
-      setEntries(res.data)
-      setError(null)
-    } else {
-      setError(res.error)
-    }
-    setLoading(false)
-  }
-
   useEffect(() => {
-    load()
     projectsApi.list().then((r) => r.ok && setProjectList(r.data))
     return () => {
       if (tick.current) window.clearInterval(tick.current)
