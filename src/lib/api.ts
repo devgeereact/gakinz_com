@@ -1,9 +1,11 @@
 // Central API helper.
-// Dev → hit the live API on the domain (api.php enables CORS).
-// Production (same domain) → relative path.
+// Every call is a relative path. In production the PHP sits on the same domain;
+// in development the Vite server proxies `/*.php` to the live API
+// (vite.config.ts), so the browser never makes a cross-origin call and the live
+// ALLOWED_ORIGINS list does not need a localhost entry.
 import { getStoredToken, useAuth, type AuthUser, type Role } from "@/store/auth.store"
 
-export const API_BASE = import.meta.env.DEV ? "https://gakinz.com" : ""
+export const API_BASE = ""
 
 export type ApiResult<T> =
   | { ok: true; data: T }
