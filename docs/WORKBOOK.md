@@ -5,15 +5,15 @@ rules from agent memory, and the order of work, in one place. It points to the d
 documents rather than copying them; when this page and a linked document disagree, the linked
 document wins and this page is wrong.
 
-**As at:** 2026-10-21, branch `feat/landing-motion-2026-10-21` (from `feat/journeys-2026-10-18`
-at `5d5f95b`, both pushed). Read this first, then only the linked section you need.
+**As at:** 2026-10-21, branch `feat/journeys-2026-10-18` (PR #21), pushed. The landing-motion
+branch was folded into it and deleted. Read this first, then only the linked section you need.
 
 ## 1. Where things stand
 
 Nothing since 2026-10-10 is merged, uploaded or deployed. `main` is still `c57eb4a`. All the
 work sits on one stack of branches, about 416 commits ahead of `main`:
 
-`main` ← #8 `feat/plan-2026-batch-1` ← `feat/redesign-2026` (no PR) ← #20 `audit/readiness-2026-10-17` ← #21 `feat/journeys-2026-10-18` ← `feat/landing-motion-2026-10-21`
+`main` ← #8 `feat/plan-2026-batch-1` ← `feat/redesign-2026` (no PR) ← #20 `audit/readiness-2026-10-17` ← #21 `feat/journeys-2026-10-18`
 
 PR #19 `design/hero-nav-footer-demo` targets #8 and sits outside the stack.
 
@@ -31,7 +31,7 @@ PASS. Counts and their history: [STATUS section 0](STATUS.md).
 | Readiness audit | #20 | Security, privacy and public-site fixes, hashed sign-in tokens, SQL 12, labelled owner placeholders |
 | Journeys 1 to 6 | #21 | Payments, acceptance evidence, portal requests, ICS, Today, search, briefs, privacy export, ticket time, shared files, templates, service pages, work references, deletion tooling, reference sign-in and ads (both off), client anonymisation (off). SQL 13 to 19 |
 | Lint, groups A to C | #21 | `useLoad` hook, 22 screens and the sign-in page moved off set-state-in-effect; ratchet 33 to 5; thrown Dashboard and Analytics loads show unavailable (K-031) |
-| Landing motion | `feat/landing-motion-2026-10-21` | GSAP and Lenis scroll polish on the public site (D-051) |
+| Landing motion, footer, project status | #21 | GSAP and Lenis scroll polish on the public site (D-051) |
 
 Detail per batch: [STATUS sections 0.2 to 0.4](STATUS.md) and the ledger in
 [CURRENT-TASK](../.agent/CURRENT-TASK.md).
@@ -56,9 +56,9 @@ Detail per batch: [STATUS sections 0.2 to 0.4](STATUS.md) and the ledger in
    K-020 strict tsc configs.
 5. **Measure the current public site.** Accessibility and performance were last measured
    before D-046; run Lighthouse and axe on the built preview, including the new motion.
-6. **Housekeeping:** remove the 11 empty `worktree-agent-*` branches, the 4 spent worktrees
-   and stash `int-wave-lintcheck-x1`. Track the task plan in git (`.superpowers/` is
-   excluded, so Tasks 27 to 30 exist only on the Mac).
+6. **Housekeeping:** done 2026-10-21 for branches, worktrees and the old stash (all
+   already contained in `feat/journeys-2026-10-18`). Still open: track the task plan in git
+   (`.superpowers/` is excluded, so Tasks 27 to 30 exist only on the Mac).
 
 ### 3b. Owner actions, in order
 

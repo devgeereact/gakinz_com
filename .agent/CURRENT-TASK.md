@@ -2,14 +2,14 @@
 
 ## Outcome
 
-The work on `feat/journeys-2026-10-18` (PR #21, six batches, 2026-10-18 to 2026-10-20) and on
-`feat/landing-motion-2026-10-21` (GSAP and Lenis scroll polish, D-051) is built, tested
+The work on `feat/journeys-2026-10-18` (PR #21: six batches, 2026-10-18 to 2026-10-20, then
+on 2026-10-21 the GSAP and Lenis scroll polish (D-051), lint groups A to C, the footer and the
+project status labels, folded in from `feat/landing-motion-2026-10-21`) is built, tested
 locally and pushed. **Not merged, deployed or uploaded.** SQL 13 to 19 have run only on the
 throwaway test database.
 
 The branch stack is: `main` <- `feat/plan-2026-batch-1` (PR #8) <- `feat/redesign-2026` <-
-`audit/readiness-2026-10-17` (PR #20) <- `feat/journeys-2026-10-18` (PR #21) <-
-`feat/landing-motion-2026-10-21`. Merge in that order, and only after the operator steps
+`audit/readiness-2026-10-17` (PR #20) <- `feat/journeys-2026-10-18` (PR #21). Merge in that order, and only after the operator steps
 below, because a merge to `main` deploys `dist/`.
 
 The verdict of `docs/STATUS.md` section 0.1 still stands: **not ready for production.**
