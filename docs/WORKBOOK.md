@@ -22,6 +22,16 @@ prerendered pages PASS, `tsc -b` PASS, `npm run docs:check` PASS, lint ratchet 5
 warnings (`npm run lint` still fails, K-002). `npm run test:server` last ran at `468b884`: 519
 PASS. Counts and their history: [STATUS section 0](STATUS.md).
 
+**Live check, 2026-10-21 19:46 UTC** (unauthenticated GET requests from the Mac, read-only):
+`api.php` answers PHP 8.4.26 with the database reachable, so the PHP version is fine (K-082).
+The live `index.html` dates from 2026-10-09. These files are **not on the server**: the
+site's fallback page answers for them instead of PHP: `site.php`, `today.php`, `search.php`,
+`briefs.php`, `privacy.php`, `assets.php`, `bookings.php`, `feedback.php`, `client_access.php`
+and every include added since (`_uploads`, `_ics`, `_time`, `_templates`, `_reference`,
+`_erasure`, `_retention`, `_anonymise`, `_like`). `work.php` answers with no published
+records. Which SQL has run cannot be seen from outside. So the upload in 3b step 2 has not
+happened, and merging to `main` must wait for it.
+
 ## 2. Done (on branches, not live)
 
 | Batch | Where | What |
