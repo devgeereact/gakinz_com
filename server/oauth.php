@@ -137,12 +137,19 @@ if ($action === 'callback') {
   if ($email === '' || !$verified) { header("Location: $bounce#sso_error=no_email"); exit; }
 
   // Match an existing, active user — never auto-create.
-  $stmt = $conn->prepare('SELECT id, status FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1');
+  $stmt = $conn->prepare('SELECT id, status, totp_enabled FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1');
   $stmt->bind_param('s', $email);
   $stmt->execute();
   $u = $stmt->get_result()->fetch_assoc();
   if (!$u) { header("Location: $bounce#sso_error=no_account"); exit; }
   if ($u['status'] !== 'active') { header("Location: $bounce#sso_error=inactive"); exit; }
+  // Google sign-in must not stand in for this app's two-factor (K-027).
+  // An account with two-factor on signs in with password and code instead.
+  if (!empty($u['totp_enabled'])) {
+    audit($conn, (int)$u['id'], 'login_sso_refused', 'two-factor enabled');
+    header("Location: $bounce#sso_error=two_factor");
+    exit;
+  }
 
   $uid = (int)$u['id'];
   $token = bin2hex(random_bytes(32));
@@ -150,11 +157,13 @@ if ($action === 'callback') {
   $ua = mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255);
   $ip = $_SERVER['REMOTE_ADDR'] ?? '';
   if ($stmt = @$conn->prepare('INSERT INTO auth_tokens (user_id, token, user_agent, ip, last_seen_at, expires_at) VALUES (?, ?, ?, ?, NOW(), ?)')) {
-    $stmt->bind_param('issss', $uid, $token, $ua, $ip, $exp);
+    $stored = token_hash($token);
+    $stmt->bind_param('issss', $uid, $stored, $ua, $ip, $exp);
     $stmt->execute();
   } else {
     $stmt = $conn->prepare('INSERT INTO auth_tokens (user_id, token, expires_at) VALUES (?, ?, ?)');
-    $stmt->bind_param('iss', $uid, $token, $exp);
+    $stored = token_hash($token);
+    $stmt->bind_param('iss', $uid, $stored, $exp);
     $stmt->execute();
   }
   audit($conn, $uid, 'login_sso', $email);

@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react"
-import { Loader2, Plus, RefreshCw, Trash2, Plane } from "lucide-react"
+import { useState } from "react"
+import { useLoader } from "@/hooks/use-load"
+import { LOAD_CRASH_ERROR } from "@/lib/loadState"
+import { AlertCircle, Gauge, Loader2, Plus, RefreshCw, Trash2, Plane } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,14 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
+import { Skeleton } from "@/components/ui/skeleton"
+import { PageHeader } from "@/app/components/page-kit"
 import { resourcing, type TeamMember, type LeaveEntry } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -34,16 +30,24 @@ function fmtDate(d: string) {
   return new Date(d.replace(" ", "T")).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
 }
 
-const leaveClass: Record<LeaveEntry["type"], string> = {
-  holiday: "bg-primary/10 text-primary",
-  sick: "bg-destructive/10 text-destructive",
-  other: "bg-muted text-muted-foreground",
+const LEAVE_LABEL: Record<LeaveEntry["type"], string> = {
+  holiday: "Holiday",
+  sick: "Sick",
+  other: "Other",
 }
+
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase()
 
 export default function Resourcing() {
   const [team, setTeam] = useState<TeamMember[]>([])
   const [leave, setLeave] = useState<LeaveEntry[]>([])
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const [open, setOpen] = useState(false)
@@ -54,20 +58,18 @@ export default function Resourcing() {
   const [note, setNote] = useState("")
   const [saving, setSaving] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await resourcing.get()
-    if (res.ok) {
-      setTeam(res.data.team)
-      setLeave(res.data.leave)
-      setError(null)
-    } else setError(res.error)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
+  const { loading, reload: load } = useLoader(
+    () => resourcing.get(),
+    (res) => {
+      if (res.ok) {
+        setTeam(res.data.team)
+        setLeave(res.data.leave)
+        setError(null)
+      } else setError(res.error)
+    },
+    null,
+    () => setError(LOAD_CRASH_ERROR),
+  )
 
   const addLeave = async () => {
     if (!userId) return toast.error("Pick a team member.")
@@ -96,20 +98,16 @@ export default function Resourcing() {
   const hrs = (min: number) => (min / 60).toFixed(1)
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Resourcing</h1>
-          <p className="text-sm text-muted-foreground">This week’s capacity and who’s on leave — so start dates aren’t over-promised.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={load}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
+    <div>
+      <PageHeader
+        title="Resourcing"
+        subtitle="This week’s capacity and who’s on leave, so start dates aren’t over-promised."
+        actions={
+          <>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" /> Add leave
+              <Button>
+                <Plus /> Add leave
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -118,9 +116,9 @@ export default function Resourcing() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label>Team member</Label>
+                  <Label htmlFor="resourcing-sel1">Team member</Label>
                   <Select value={userId} onValueChange={setUserId}>
-                    <SelectTrigger className="mt-1.5"><SelectValue placeholder="Who?" /></SelectTrigger>
+                    <SelectTrigger id="resourcing-sel1" className="mt-1.5"><SelectValue placeholder="Who?" /></SelectTrigger>
                     <SelectContent>
                       {team.map((m) => (
                         <SelectItem key={m.id} value={String(m.id)}>{m.name}</SelectItem>
@@ -139,9 +137,9 @@ export default function Resourcing() {
                   </div>
                 </div>
                 <div>
-                  <Label>Type</Label>
+                  <Label htmlFor="resourcing-sel2">Type</Label>
                   <Select value={type} onValueChange={setType}>
-                    <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                    <SelectTrigger id="resourcing-sel2" className="mt-1.5"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="holiday">Holiday</SelectItem>
                       <SelectItem value="sick">Sick</SelectItem>
@@ -156,106 +154,129 @@ export default function Resourcing() {
               </div>
               <DialogFooter>
                 <Button onClick={addLeave} disabled={saving}>
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {saving && <Loader2 className="animate-spin" />}
                   Save
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
+          <Button variant="outline" onClick={load}>
+            <RefreshCw /> Refresh
+          </Button>
+          </>
+        }
+      />
 
       {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the resourcing endpoint and DB must be live on the server.
+        <div role="alert" className="mb-4 flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-bad" />
+          <div className="min-w-[min(100%,200px)] flex-1">
+            <p className="font-semibold">Could not load resourcing.</p>
+            <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
+              {error}. The resourcing endpoint and database must be live on the server.
+            </p>
+          </div>
+          <Button variant="outline" onClick={load}>
+            <RefreshCw /> Try again
+          </Button>
         </div>
       )}
 
       {loading ? (
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+        <div role="status" className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+          <Skeleton className="h-[240px] rounded-2xl" />
+          <Skeleton className="h-[240px] rounded-2xl" />
+          <span className="sr-only">Loading…</span>
         </div>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Capacity */}
-          <div className="rounded-xl border border-border bg-card">
-            <div className="border-b border-border px-5 py-3 text-sm font-semibold">Capacity this week</div>
-            {team.length === 0 ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">No active team members.</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Member</TableHead>
-                    <TableHead>Logged</TableHead>
-                    <TableHead>Utilisation</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {team.map((m) => {
-                    const pct = m.capacity_minutes ? Math.round((m.logged_minutes / m.capacity_minutes) * 100) : 0
-                    return (
-                      <TableRow key={m.id}>
-                        <TableCell className="font-medium">
-                          {m.name}
-                          {m.on_leave && (
-                            <span className="ml-2 inline-flex items-center gap-1 rounded bg-amber-500/15 px-1.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
-                              <Plane className="h-3 w-3" /> on leave
+        !error && (
+          <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]">
+            {/* Capacity */}
+            <section className="min-w-0 rounded-2xl border bg-card">
+              <h2 className="px-[18px] pb-3 pt-4 font-display text-[1.05rem] font-semibold tracking-[-0.01em]">This week</h2>
+              <div className="px-[18px] pb-[18px]">
+                {team.length === 0 ? (
+                  <div className="grid place-items-center gap-2.5 rounded-2xl border border-dashed border-line-strong px-5 py-10 text-center">
+                    <span aria-hidden className="grid h-12 w-12 place-items-center rounded-[14px] bg-acc-soft text-acc">
+                      <Gauge className="h-5 w-5" />
+                    </span>
+                    <b className="font-display text-[1.1rem] font-semibold">No active team members</b>
+                    <p className="max-w-[46ch] text-muted-foreground">Add people in Settings to plan capacity.</p>
+                  </div>
+                ) : (
+                  <div>
+                    {team.map((m) => {
+                      const pct = m.capacity_minutes ? Math.round((m.logged_minutes / m.capacity_minutes) * 100) : 0
+                      const over = pct > 100
+                      return (
+                        <div
+                          key={m.id}
+                          className="grid min-w-0 grid-cols-[minmax(0,1fr)_minmax(0,10rem)_4rem] items-center gap-3 border-t py-3 first:border-t-0 max-sm:grid-cols-[minmax(0,1fr)_3.5rem] max-sm:gap-y-2"
+                        >
+                          <span className="flex min-w-0 items-center gap-2.5">
+                            <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-acc-soft text-xs font-bold text-acc">
+                              {initials(m.name)}
                             </span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{hrs(m.logged_minutes)}h / {hrs(m.capacity_minutes)}h</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <div className="h-2 w-24 overflow-hidden rounded-full bg-muted">
-                              <div className={cn("h-full rounded-full", pct > 100 ? "bg-destructive" : "bg-primary")} style={{ width: `${Math.min(100, pct)}%` }} />
-                            </div>
-                            <span className="text-xs text-muted-foreground">{pct}%</span>
+                            <span className="min-w-0">
+                              <b className="block font-semibold [overflow-wrap:anywhere]">{m.name}</b>
+                              <small className="block text-[12.5px] leading-snug text-muted-foreground [overflow-wrap:anywhere]">
+                                <span className="font-mono tabular-nums">{hrs(m.logged_minutes)}h</span> of{" "}
+                                <span className="font-mono tabular-nums">{hrs(m.capacity_minutes)}h</span> logged
+                                {m.on_leave && (
+                                  <span className="ml-1.5 inline-flex items-center gap-1 text-warn">
+                                    <Plane className="h-3 w-3" /> On leave
+                                  </span>
+                                )}
+                              </small>
+                            </span>
+                          </span>
+                          <div
+                            role="progressbar"
+                            aria-valuenow={pct}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                            aria-label={`${m.name} ${pct}% utilised`}
+                            className="h-1.5 overflow-hidden rounded-full border bg-secondary max-sm:order-last max-sm:col-span-2"
+                          >
+                            <i className={cn("block h-full rounded-full", over ? "bg-bad" : "bg-acc")} style={{ width: `${Math.min(100, pct)}%` }} />
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </div>
+                          <span className={cn("text-right font-mono tabular-nums", over && "text-bad")}>{pct}%</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </section>
 
-          {/* Leave */}
-          <div className="rounded-xl border border-border bg-card">
-            <div className="border-b border-border px-5 py-3 text-sm font-semibold">Upcoming &amp; current leave</div>
-            {leave.length === 0 ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">No leave booked.</div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Member</TableHead>
-                    <TableHead>Dates</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {leave.map((l) => (
-                    <TableRow key={l.id}>
-                      <TableCell className="font-medium">{l.user_name}</TableCell>
-                      <TableCell className="text-muted-foreground">{fmtDate(l.start_date)} – {fmtDate(l.end_date)}</TableCell>
-                      <TableCell>
-                        <span className={cn("rounded px-2 py-0.5 text-xs font-medium", leaveClass[l.type])}>{l.type}</span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeLeave(l.id)} aria-label="Delete leave">
-                          <Trash2 className="h-3.5 w-3.5" />
+            {/* Leave */}
+            <section className="min-w-0 rounded-2xl border bg-card">
+              <h2 className="px-[18px] pb-3 pt-4 font-display text-[1.05rem] font-semibold tracking-[-0.01em]">Upcoming and current leave</h2>
+              <div className="px-[18px] pb-[18px]">
+                {leave.length === 0 ? (
+                  <p className="py-3 text-muted-foreground">No leave booked.</p>
+                ) : (
+                  <div>
+                    {leave.map((l) => (
+                      <div key={l.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t py-3 first:border-t-0">
+                        <span className="min-w-0">
+                          <b className="block font-semibold [overflow-wrap:anywhere]">{l.user_name}</b>
+                          <span className="block text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
+                            {LEAVE_LABEL[l.type]} · {fmtDate(l.start_date)} to {fmtDate(l.end_date)}
+                            {l.note ? ` · ${l.note}` : ""}
+                          </span>
+                        </span>
+                        <Button variant="ghost" size="sm" onClick={() => removeLeave(l.id)} aria-label={`Remove leave for ${l.user_name}`}>
+                          <Trash2 /> Remove
                         </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
-        </div>
+        )
       )}
     </div>
   )

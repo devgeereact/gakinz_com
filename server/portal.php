@@ -6,6 +6,15 @@
  *
  *   GET /portal.php?client_id=N → { client, projects[], invoices[], tickets[] }
  *
+ * A project with kind 'it_support' (the standing IT support project, SQL 17)
+ * is named "IT support" and carries no task counts. Time entries are never
+ * returned here.
+ *
+ * Work references (SQL 19): each project carries `reference` and each invoice
+ * `project_reference`, the GK-P-YYYY-NNNN of a project of this same client.
+ * Null before SQL 19. The client is still chosen only as below; a reference
+ * is never read from the request.
+ *
  * Phase 2: a `client`-role user is linked to a client and only sees their own;
  * for now staff pass the client_id to preview the portal.
  */
@@ -39,13 +48,46 @@ $client = $stmt->get_result()->fetch_assoc();
 if (!$client) fail('Client not found.', 404);
 $client['id'] = (int)$client['id'];
 
-// Projects with task progress
+/**
+ * True once SQL 17 has added projects.kind. Kept here rather than shared, so
+ * this security-critical file depends on nothing but _bootstrap.php.
+ */
+function portal_kind_ready(mysqli $conn): bool {
+  try {
+    // LIMIT 0 reads no rows; it only proves the column is there.
+    return $conn->query('SELECT kind FROM projects LIMIT 0') !== false;
+  } catch (mysqli_sql_exception $e) {
+    if ($e->getCode() !== 1054) throw $e; // ER_BAD_FIELD_ERROR only
+    return false;
+  }
+}
+
+// Projects with task progress. The standing IT support project (SQL 17,
+// projects.kind = 'it_support') is listed as "IT support" with no task
+// counts: it holds ticket time, which a client never sees, not delivery work.
+// Before SQL 17 there is no kind column, so every project reads as kind NULL.
+/**
+ * True once SQL 19 has added projects.reference. Kept here for the same
+ * reason as portal_kind_ready().
+ */
+function portal_ref_ready(mysqli $conn): bool {
+  try {
+    return $conn->query('SELECT reference FROM projects LIMIT 0') !== false;
+  } catch (mysqli_sql_exception $e) {
+    if ($e->getCode() !== 1054) throw $e; // ER_BAD_FIELD_ERROR only
+    return false;
+  }
+}
+
+$kindCol = portal_kind_ready($conn) ? 'p.kind' : 'NULL AS kind';
+$refReady = portal_ref_ready($conn);
+$refCol = $refReady ? 'p.reference' : 'NULL AS reference';
 $projects = [];
 $stmt = $conn->prepare(
-  'SELECT p.id, p.name, p.status, p.due_date,
+  "SELECT p.id, p.name, p.status, p.due_date, $kindCol, $refCol,
           (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL) AS task_count,
-          (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL AND t.status = "done") AS done_count
-   FROM projects p WHERE p.client_id = ? AND p.deleted_at IS NULL ORDER BY p.id DESC'
+          (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id AND t.deleted_at IS NULL AND t.status = 'done') AS done_count
+   FROM projects p WHERE p.client_id = ? AND p.deleted_at IS NULL ORDER BY p.id DESC"
 );
 $stmt->bind_param('i', $clientId);
 $stmt->execute();
@@ -54,15 +96,26 @@ while ($r = $res->fetch_assoc()) {
   $r['id'] = (int)$r['id'];
   $r['task_count'] = (int)$r['task_count'];
   $r['done_count'] = (int)$r['done_count'];
+  if ($r['kind'] === 'it_support') {
+    $r['name'] = 'IT support';
+    $r['task_count'] = 0;
+    $r['done_count'] = 0;
+  } else {
+    $r['kind'] = null; // only the IT support marker is ever shown to a client
+  }
   $projects[] = $r;
 }
 
 // Invoices with totals
 $invoices = [];
+// The project join also requires the same client, so an invoice wrongly
+// linked to another client's project never shows that project's reference.
+$invRef = $refReady ? 'pj.reference AS project_reference' : 'NULL AS project_reference';
+$invJoin = $refReady ? ' LEFT JOIN projects pj ON pj.id = i.project_id AND pj.client_id = i.client_id AND pj.deleted_at IS NULL' : '';
 $stmt = $conn->prepare(
-  'SELECT i.id, i.number, i.status, i.vat_rate, i.issued_at, i.due_at,
+  "SELECT i.id, i.number, i.status, i.vat_rate, i.issued_at, i.due_at, $invRef,
           (SELECT COALESCE(SUM(qty * unit_price), 0) FROM invoice_items it WHERE it.invoice_id = i.id) AS subtotal
-   FROM invoices i WHERE i.client_id = ? AND i.deleted_at IS NULL ORDER BY i.id DESC'
+   FROM invoices i$invJoin WHERE i.client_id = ? AND i.deleted_at IS NULL ORDER BY i.id DESC"
 );
 $stmt->bind_param('i', $clientId);
 $stmt->execute();

@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react"
 import { blog, type BlogSummary, type BlogPost } from "@/lib/api"
 import { insights, type Insight } from "./site"
+import { resolveList, resolveOne } from "./cmsResult"
+import { seedFromFallback } from "./seed"
 
 /**
  * One normalised shape the writing pages render, whether a post comes from the
- * CMS Blog module (live) or the curated static fallback in site.ts (pre-deploy).
+ * CMS Blog module (live) or the curated static fallback in site.ts (used only
+ * when the CMS request fails).
  *
  * TWO FIELDS WERE REMOVED IN THE 2026-09-22 RELAUNCH.
  *
@@ -48,12 +51,23 @@ function fromStatic(p: Insight): MarketingPost {
   }
 }
 
+/**
+ * The CMS sends MySQL time ("2026-05-12 10:00:00"). The pages, the <time>
+ * element and the Article JSON-LD all expect an ISO date, which the static
+ * posts already use, and Safari will not parse the MySQL form. Anything else
+ * becomes "", which the pages treat as no date.
+ */
+export function isoDate(value: string | null | undefined): string {
+  const m = /^(\d{4}-\d{2}-\d{2})(?:[ T].*)?$/.exec((value ?? "").trim())
+  return m ? m[1] : ""
+}
+
 function fromSummary(p: BlogSummary): MarketingPost {
   return {
     slug: p.slug,
     title: p.title,
     excerpt: p.excerpt ?? "",
-    date: p.published_at ?? "",
+    date: isoDate(p.published_at),
     category: p.category,
     bodyParas: [],
   }
@@ -68,22 +82,36 @@ function fromPost(p: BlogPost): MarketingPost {
 
 const staticPosts = insights.map(fromStatic)
 
-// List hook: CMS posts when available, otherwise the curated fallback.
+/*
+ * Publishing is real. The CMS answer decides what is shown, including an empty
+ * answer, so an unpublished post disappears from the site. The curated static
+ * posts appear only when the request fails; see ./cmsResult.ts.
+ *
+ * In the browser nothing is rendered from the static list before the request
+ * settles. Showing it first would flash a post that may have been unpublished,
+ * then remove it, so the pages show a loading line instead. The exception is
+ * the build-time prerender and the hydration of its markup (./seed.ts): a
+ * prerendered page has to carry real content, so it carries the static posts
+ * until the CMS answer replaces them.
+ */
+
+// List hook: CMS posts when the CMS answers, otherwise the curated fallback.
 export function useMarketingBlog() {
-  const [posts, setPosts] = useState<MarketingPost[]>(staticPosts)
-  const [loading, setLoading] = useState(true)
+  // Seeded only for the prerender and the hydration of its markup (./seed.ts).
+  const [posts, setPosts] = useState<MarketingPost[]>(() => (seedFromFallback() ? staticPosts : []))
+  const [loading, setLoading] = useState(() => !seedFromFallback())
   const [fromCms, setFromCms] = useState(false)
 
   useEffect(() => {
     let alive = true
     blog
       .list()
+      .catch(() => null)
       .then((res) => {
         if (!alive) return
-        if (res.ok && res.data.length > 0) {
-          setPosts(res.data.map(fromSummary))
-          setFromCms(true)
-        }
+        const { items, fromCms } = resolveList(res, fromSummary, staticPosts)
+        setPosts(items)
+        setFromCms(fromCms)
       })
       .finally(() => alive && setLoading(false))
     return () => {
@@ -94,29 +122,30 @@ export function useMarketingBlog() {
   return { posts, loading, fromCms }
 }
 
-// Single-post hook: CMS post by slug, falling back to a static insight.
+// Single-post hook: the CMS post by slug. A 404 is a real not-found; the static
+// insight with that slug is used only when the request fails. The result is
+// keyed by slug, so moving to another article never shows the previous one
+// while the next loads.
 export function useMarketingPost(slug: string | undefined) {
-  const fallback = staticPosts.find((p) => p.slug === slug) ?? null
-  const [post, setPost] = useState<MarketingPost | null>(fallback)
-  const [loading, setLoading] = useState(true)
+  const [result, setResult] = useState<{ slug: string; post: MarketingPost | null } | null>(() =>
+    slug && seedFromFallback() ? { slug, post: staticPosts.find((p) => p.slug === slug) ?? null } : null,
+  )
 
   useEffect(() => {
+    if (!slug) return
     let alive = true
-    if (!slug) {
-      setLoading(false)
-      return
-    }
     blog
       .get(slug)
+      .catch(() => null)
       .then((res) => {
         if (!alive) return
-        if (res.ok && res.data?.slug) setPost(fromPost(res.data))
+        setResult({ slug, post: resolveOne(res, fromPost, staticPosts.find((p) => p.slug === slug) ?? null) })
       })
-      .finally(() => alive && setLoading(false))
     return () => {
       alive = false
     }
   }, [slug])
 
-  return { post, loading }
+  const current = slug && result?.slug === slug ? result : null
+  return { post: current ? current.post : null, loading: Boolean(slug) && !current }
 }

@@ -1,7 +1,9 @@
-import { useEffect, useState } from "react"
-import { Loader2, RefreshCw, ExternalLink, Activity, ShieldCheck, ShieldAlert } from "lucide-react"
+import { useState } from "react"
+import { useLoad } from "@/hooks/use-load"
+import { Loader2, RefreshCw, ExternalLink, Activity, AlertCircle, HeartPulse } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import {
   Table,
   TableBody,
@@ -11,40 +13,29 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { careplan, type CarePlanSite } from "@/lib/api"
-import { cn } from "@/lib/utils"
+import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/page-kit"
+import { EmptyState } from "@/app/components/EmptyState"
+import { TableSkeleton } from "@/app/components/TableSkeleton"
 
 const gbp = (n: number) => new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(n)
 
 function fmt(d: string | null) {
-  if (!d) return "never"
+  if (!d) return "Never"
   return new Date(d.replace(" ", "T")).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
 }
 
-function upState(code: number | null): { label: string; cls: string } {
-  if (code === null) return { label: "unknown", cls: "bg-muted text-muted-foreground" }
-  if (code >= 200 && code < 400) return { label: `up · ${code}`, cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" }
-  return { label: `down · ${code}`, cls: "bg-destructive/10 text-destructive" }
+const isDown = (code: number | null) => code !== null && (code < 200 || code >= 400)
+const host = (url: string) => {
+  try {
+    return new URL(url).host
+  } catch {
+    return url
+  }
 }
 
 export default function CarePlan() {
-  const [items, setItems] = useState<CarePlanSite[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: items, error, loading, reload: load, setData: setItems } = useLoad<CarePlanSite[]>(() => careplan.list(), [])
   const [busyId, setBusyId] = useState<number | null>(null)
-
-  const load = async () => {
-    setLoading(true)
-    const res = await careplan.list()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else setError(res.error)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
 
   const check = async (s: CarePlanSite) => {
     setBusyId(s.project_id)
@@ -59,102 +50,138 @@ export default function CarePlan() {
   }
 
   const mrr = items.reduce((s, x) => s + (x.retainer_amount || 0), 0)
-  const down = items.filter((x) => x.last_http_status !== null && (x.last_http_status < 200 || x.last_http_status >= 400)).length
-  const expiringSoon = items.filter((x) => x.ssl_days_left !== null && x.ssl_days_left <= 30).length
+  const downSites = items.filter((x) => isDown(x.last_http_status))
+  const expiringSites = items.filter((x) => x.ssl_days_left !== null && x.ssl_days_left <= 30)
+  const names = (xs: CarePlanSite[]) => (xs.length ? xs.map((x) => host(x.prod_url)).join(", ") : "None")
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Care Plan</h1>
-          <p className="text-sm text-muted-foreground">Sites under management — uptime, SSL expiry and recurring revenue.</p>
-        </div>
-        <Button variant="outline" size="sm" onClick={load}>
-          <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-        </Button>
-      </div>
+    <div>
+      <PageHeader
+        title="Care Plan"
+        subtitle="Sites under management: uptime, SSL expiry and recurring revenue."
+        actions={
+          <Button variant="outline" onClick={load}>
+            <RefreshCw /> Refresh
+          </Button>
+        }
+      />
 
-      {/* Summary */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {[
-          { label: "Sites managed", value: String(items.length) },
-          { label: "Care-plan MRR", value: gbp(mrr) },
-          { label: "Down now", value: String(down) },
-          { label: "SSL ≤ 30 days", value: String(expiringSoon) },
-        ].map((s) => (
-          <div key={s.label} className="gk-app-card p-5">
-            <div className="text-2xl font-semibold text-primary">{s.value}</div>
-            <div className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{s.label}</div>
+      <div className="space-y-4">
+        {error && (
+          <div role="alert" className="flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
+            <AlertCircle className="mt-0.5 size-5 shrink-0 text-bad" aria-hidden="true" />
+            <div className="min-w-[min(100%,200px)] flex-1">
+              <p className="font-semibold">Managed sites could not be loaded</p>
+              <p className="mt-1 text-sm text-muted-foreground">{error}. The care plan endpoint and database must be live on the server.</p>
+            </div>
+            <Button variant="outline" onClick={load}>
+              <RefreshCw /> Try again
+            </Button>
           </div>
-        ))}
-      </div>
+        )}
 
-      {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the careplan endpoint and DB must be live on the server.
-        </div>
-      )}
+        {!loading && !error && (
+          <StatGrid className="mb-0">
+            <StatTile label="Sites managed" value={String(items.length)} />
+            <StatTile label="Care-plan MRR" value={gbp(mrr)} note="Per month" tone={mrr > 0 ? "up" : undefined} />
+            <StatTile
+              label="Down now"
+              value={String(downSites.length)}
+              note={<span className="block truncate">{names(downSites)}</span>}
+              tone={downSites.length ? "down" : undefined}
+            />
+            <StatTile label="SSL ≤ 30 days" value={String(expiringSites.length)} note={<span className="block truncate">{names(expiringSites)}</span>} />
+          </StatGrid>
+        )}
 
-      <div className="rounded-xl border border-border bg-card">
         {loading ? (
-          <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading sites…
+          <div className="overflow-hidden rounded-[14px] border bg-card">
+            <TableSkeleton rows={4} cols={5} />
           </div>
-        ) : items.length === 0 ? (
-          <div className="p-10 text-center text-sm text-muted-foreground">
-            No managed sites yet. Add a production URL to a project in Dev Pipeline to track it here.
-          </div>
+        ) : error ? null : items.length === 0 ? (
+          <EmptyState
+            icon={HeartPulse}
+            title="No managed sites yet"
+            description="Add a production URL to a project in Dev Pipeline to track it here."
+            className="rounded-2xl border border-dashed border-line-strong bg-card py-14"
+          />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Site</TableHead>
-                <TableHead>Uptime</TableHead>
-                <TableHead>SSL</TableHead>
-                <TableHead>Retainer</TableHead>
-                <TableHead>Last checked</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((s) => {
-                const up = upState(s.last_http_status)
-                const sslWarn = s.ssl_days_left !== null && s.ssl_days_left <= 30
-                return (
-                  <TableRow key={s.project_id}>
-                    <TableCell className="font-medium">
-                      {s.project_name}
-                      <a href={s.prod_url} target="_blank" rel="noopener noreferrer" className="ml-2 inline-flex items-center gap-1 text-xs text-primary hover:underline">
-                        visit <ExternalLink className="h-3 w-3" />
-                      </a>
-                      <p className="text-xs text-muted-foreground">{s.client_company || "Internal"}</p>
-                    </TableCell>
-                    <TableCell>
-                      <span className={cn("rounded px-2 py-0.5 text-xs font-medium", up.cls)}>{up.label}</span>
-                    </TableCell>
-                    <TableCell>
-                      {s.ssl_days_left === null ? (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      ) : (
-                        <span className={cn("inline-flex items-center gap-1 text-xs", sslWarn ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground")}>
-                          {sslWarn ? <ShieldAlert className="h-3.5 w-3.5" /> : <ShieldCheck className="h-3.5 w-3.5" />}
-                          {s.ssl_days_left}d
+          <div className="overflow-hidden rounded-[14px] border bg-card">
+            <Table className="min-w-[860px]">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Site</TableHead>
+                  <TableHead>Uptime</TableHead>
+                  <TableHead>SSL</TableHead>
+                  <TableHead className="text-right">Retainer</TableHead>
+                  <TableHead>Last checked</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((s) => {
+                  const code = s.last_http_status
+                  return (
+                    <TableRow key={s.project_id}>
+                      <TableCell className="min-w-[13rem] max-w-[20rem]">
+                        <a
+                          href={s.prod_url}
+                          title={s.prod_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex max-w-full items-center gap-1.5 font-mono font-semibold hover:text-acc hover:underline"
+                        >
+                          <span className="truncate">{host(s.prod_url)}</span>
+                          <ExternalLink className="size-3.5 shrink-0" aria-hidden="true" />
+                          <span className="sr-only">(opens in a new tab)</span>
+                        </a>
+                        <span className="block text-[12.5px] text-muted-foreground [overflow-wrap:anywhere]">
+                          {s.project_name} · {s.client_company || "Internal"}
                         </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground">{s.retainer_amount > 0 ? `${gbp(s.retainer_amount)}/mo` : "—"}</TableCell>
-                    <TableCell className="text-muted-foreground">{fmt(s.last_checked_at)}</TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" disabled={busyId === s.project_id} onClick={() => check(s)}>
-                        {busyId === s.project_id ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Activity className="mr-1 h-3.5 w-3.5" />}
-                        Check now
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {code === null ? (
+                          <Badge variant="secondary">Not checked</Badge>
+                        ) : (
+                          <>
+                            <StatusBadge status={isDown(code) ? "failed" : "healthy"} />
+                            <span className="ml-2 font-mono text-xs tabular-nums text-muted-foreground">{code}</span>
+                          </>
+                        )}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap">
+                        {s.ssl_days_left === null ? (
+                          <span className="text-muted-foreground">Unknown</span>
+                        ) : (
+                          <>
+                            <StatusBadge status={s.ssl_days_left <= 30 ? "expiring" : "in date"} />
+                            <span className="ml-2 font-mono text-xs tabular-nums text-muted-foreground">{s.ssl_days_left} days</span>
+                          </>
+                        )}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-right font-mono tabular-nums">
+                        {s.retainer_amount > 0 ? (
+                          <>
+                            {gbp(s.retainer_amount)}
+                            <span className="font-sans text-xs text-muted-foreground"> /mo</span>
+                          </>
+                        ) : (
+                          <span className="text-muted-foreground">None</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="whitespace-nowrap text-muted-foreground">{fmt(s.last_checked_at)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm" disabled={busyId === s.project_id} onClick={() => check(s)}>
+                          {busyId === s.project_id ? <Loader2 className="animate-spin" /> : <Activity />}
+                          Check now
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
     </div>

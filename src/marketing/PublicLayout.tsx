@@ -1,39 +1,61 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { Outlet, useLocation } from "react-router-dom"
-import PublicNavbar from "./components/PublicNavbar"
-import PublicFooter from "./components/PublicFooter"
+import { SiteChrome } from "./components/site-ui"
+import { useProjects } from "./data/showcase"
+import ConsentLoader from "./components/ConsentLoader"
+import { monetisation } from "./lib/monetisation"
+import { revealPage, scrollToTop, startSiteMotion } from "./lib/motion"
+import "./site.css"
 
+/**
+ * The public site frame (D-046): navigation, page, footer, all inside the
+ * `.gk-site` scope so its styles never reach GAkinzOS.
+ *
+ * On a route change the window returns to the top and focus moves to the new
+ * page's heading, so a keyboard or screen reader user lands on the content
+ * rather than on the link they just used. The first load is left alone. The
+ * new page's entrances are set up at the same moment.
+ */
 export default function PublicLayout() {
   const { pathname } = useLocation()
+  const { projects } = useProjects()
+  const last = useRef(pathname)
+
+  // Smooth scrolling and section entrances (D-051); public site only.
+  useEffect(() => startSiteMotion(), [])
+
   useEffect(() => {
-    window.scrollTo(0, 0)
+    scrollToTop()
+    revealPage()
+    // Compare paths rather than counting runs, so StrictMode's double effect in
+    // development does not move focus on the first load.
+    if (last.current === pathname) return
+    last.current = pathname
+    const h = document.querySelector<HTMLElement>("#main h1")
+    if (h) {
+      h.setAttribute("tabindex", "-1")
+      h.focus({ preventScroll: true })
+    }
   }, [pathname])
 
-  // The public site is ALWAYS the light brand theme. A staff user who left the
-  // CMS in dark mode carries `html.dark`, which keeps the page body dark and
-  // washes out the public surface. We mark <html> with `gk-force-light` (CSS
-  // re-asserts the light tokens, see index.css) rather than removing `dark`,
-  // so next-themes — which owns the `dark` class — cannot race us by re-adding it.
+  // The page behind the site is dark too, so overscroll never flashes white.
   useEffect(() => {
-    document.documentElement.classList.add("gk-force-light")
-    return () => document.documentElement.classList.remove("gk-force-light")
+    document.documentElement.classList.add("gk-site-root")
+    return () => document.documentElement.classList.remove("gk-site-root")
   }, [])
 
   return (
-    <div className="gk-public flex min-h-screen flex-col bg-gk-paper font-ui text-gk-ink">
-      {/* WCAG 2.4.1 Bypass Blocks. Visually hidden until focused, then it sits
-          above the masthead so it is not obscured (2.4.11). */}
-      <a
-        href="#main"
-        className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:bg-gk-ink focus:px-4 focus:py-3 focus:text-gk-paper"
-      >
+    <div className="gk-site">
+      <a className="skip" href="#main">
         Skip to content
       </a>
-      <PublicNavbar />
-      <main id="main" tabIndex={-1} className="flex-1">
-        <Outlet />
-      </main>
-      <PublicFooter />
+      {/* Task 25: absent unless a CMP is configured; renders nothing either way. */}
+      {monetisation().consent && <ConsentLoader />}
+      <SiteChrome projects={projects}>
+        <main id="main" tabIndex={-1}>
+          <Outlet />
+        </main>
+      </SiteChrome>
     </div>
   )
 }

@@ -108,6 +108,13 @@ $GOOGLE_CLIENT_SECRET = '';
 $GOOGLE_REDIRECT      = 'https://gakinz.com/oauth.php?action=callback';
 $APP_URL              = 'https://gakinz.com'; // SPA origin the SSO callback returns to
 
+// ── Client sign-in by reference and email (client_access.php) — off. ───────────
+// docs/PRODUCT-SPEC.md 6.1. Leave false until the owner confirms the client
+// sign-in policy. Only the boolean true turns it on; while false every route of
+// client_access.php answers 404 and the sign-in page shows nothing new. Needs
+// $SMTP_HOST (links are never sent through PHP mail()) and SQL 19 (references).
+$REFERENCE_SIGNIN_ENABLED = false;
+
 // ── Scheduled jobs (cron.php) — optional. ───────────────────────────────────────
 // Set a long random $CRON_KEY, then add a cPanel cron entry, e.g. daily:
 //   wget -qO- "https://gakinz.com/cron.php?key=YOUR_CRON_KEY&job=all"
@@ -119,6 +126,7 @@ $REPORT_RECIPIENTS = '';  // e.g. 'founder@gakinz.com, ops@gakinz.com'
 $PAYPAL_CLIENT_ID  = '';
 $PAYPAL_SECRET     = '';
 $PAYPAL_MODE       = 'live';  // 'sandbox' | 'live'
+$PAYPAL_ENABLED    = false;   // keep false: no PayPal webhook yet, see payments.php (K-026)
 // ── WhatsApp via Twilio (reuses $TWILIO_SID/$TWILIO_TOKEN). Sender in whatsapp: form.
 $TWILIO_WHATSAPP_FROM = '';   // e.g. 'whatsapp:+14155238886'
 
@@ -127,6 +135,35 @@ $GITHUB_TOKEN      = '';  // GitHub PAT — only needed for private repos / rate
 $FIGMA_TOKEN       = '';  // Figma personal access token — required for the Design Figma preview
 $SLACK_WEBHOOK_URL = '';  // Slack Incoming Webhook — announcements broadcast here
 $CALENDLY_URL      = '';  // e.g. 'https://calendly.com/gakinz/discovery' — discovery-call booking
+
+// ── Retention periods (_retention.php) — owner and legal decisions. ─────────────
+// docs/PRIVACY-READINESS.md section 6. null means "not decided, nothing happens":
+// the retention report says "period not set" for that rule. A whole number
+// changes what the report COUNTS. Only two periods can ever delete anything,
+// and only through the executor below: $RETENTION_ENQUIRY_MONTHS (enquiries
+// that never became a client) and $RETENTION_DELETED_FILE_DAYS (soft-deleted
+// files). Every other period is report only.
+//   php cron.php job=retention_report      (command line, read only)
+//   php cron.php job=retention_apply       (command line, dry run: lists what would go)
+//   php cron.php job=retention_apply --apply   deletes only if $RETENTION_APPLY is true
+// Leave $RETENTION_APPLY false until the owner and an adviser agree the periods.
+$RETENTION_APPLY               = false; // true lets job=retention_apply --apply delete by the two rules above
+$RETENTION_ENQUIRY_MONTHS      = null; // enquiries that did not become a client, from last change
+$RETENTION_CLIENT_MONTHS       = null; // clients with no activity on them, their projects, invoices or messages
+$RETENTION_INVOICE_MONTHS      = null; // invoices and their payment events, from issue date (HMRC rules apply)
+$RETENTION_AUDIT_MONTHS        = null; // audit log entries, from entry date
+$RETENTION_SUPPORT_MONTHS      = null; // portal messages and feedback, from last change
+$RETENTION_COMMS_MONTHS        = null; // Comms conversations and their messages, from last message
+$RETENTION_STAFF_MONTHS        = null; // suspended staff accounts and their leave, from last change
+$RETENTION_CERTIFICATE_MONTHS  = null; // certificates, from issue date
+$RETENTION_DELETED_FILE_DAYS   = null; // soft-deleted files, from deletion (in days)
+
+// ── Client anonymisation (privacy.php, _anonymise.php): off. ────────────────────
+// docs/PRIVACY-READINESS.md section 7. Leave false until the owner and an
+// adviser have confirmed the field rules in the header of _anonymise.php. Only
+// the boolean true turns it on; while false both anonymise routes answer 404,
+// nothing is changed, and the client record shows no anonymise action.
+$CLIENT_ANONYMISE_ENABLED = false;
 
 // ── Connection ────────────────────────────────────────────────────────────────
 $conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);

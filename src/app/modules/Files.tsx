@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState } from "react"
-import { Loader2, RefreshCw, Upload, Download, Share2, Trash2, FileIcon } from "lucide-react"
+import { useLoad } from "@/hooks/use-load"
+import { AlertCircle, Loader2, RefreshCw, Search, Upload, Download, Share2, Trash2, FileIcon } from "lucide-react"
 import { saveAs } from "file-saver"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { PageHeader } from "@/app/components/page-kit"
+import { TableSkeleton } from "@/app/components/TableSkeleton"
 import {
   Select,
   SelectContent,
@@ -33,30 +37,18 @@ function fmt(d: string) {
 }
 
 export default function Files() {
-  const [items, setItems] = useState<FileRow[]>([])
   const [projectList, setProjectList] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [projectFilter, setProjectFilter] = useState("all")
+  const { data: items, error, loading, reload: load, setData: setItems } = useLoad<FileRow[]>(
+    () => files.list(projectFilter !== "all" ? { project_id: Number(projectFilter) } : undefined),
+    [],
+    projectFilter,
+  )
   const [uploading, setUploading] = useState(false)
   const [dragOver, setDragOver] = useState(false)
   const [busyId, setBusyId] = useState<number | null>(null)
+  const [query, setQuery] = useState("")
   const inputRef = useRef<HTMLInputElement>(null)
-
-  const load = async () => {
-    setLoading(true)
-    const res = await files.list(projectFilter !== "all" ? { project_id: Number(projectFilter) } : undefined)
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else setError(res.error)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectFilter])
 
   useEffect(() => {
     projectsApi.list().then((r) => r.ok && setProjectList(r.data))
@@ -106,102 +98,182 @@ export default function Files() {
     } else toast.error(res.error || "Could not create a link.")
   }
 
+  // Show or hide a file in its client's portal (SQL 18).
+  const setClientVisible = async (f: FileRow, visible: boolean) => {
+    setBusyId(f.id)
+    const res = await files.clientShare(f.id, visible)
+    setBusyId(null)
+    if (res.ok) {
+      setItems((xs) => xs.map((x) => (x.id === f.id ? { ...x, client_visible: res.data.client_visible, shared_at: res.data.shared_at } : x)))
+      toast.success(visible ? "Visible in the client portal." : "Hidden from the client portal.")
+    } else toast.error(res.error || "Could not change what the client sees.")
+  }
+
   const remove = async (f: FileRow) => {
     const res = await files.remove(f.id)
     if (res.ok) setItems((xs) => xs.filter((x) => x.id !== f.id))
     else toast.error(res.error || "Could not delete.")
   }
 
+  const q = query.trim().toLowerCase()
+  const shown = q ? items.filter((f) => `${f.name} ${f.project_name ?? ""} ${f.client_company ?? ""}`.toLowerCase().includes(q)) : items
+  const pick = () => inputRef.current?.click()
+  // An older server, or one before SQL 18, sends no flag: the column stays hidden.
+  const portalReady = items.some((f) => typeof f.client_visible === "boolean")
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Files</h1>
-          <p className="text-sm text-muted-foreground">Project &amp; client documents, with expiring share links.</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="w-44">
-            <Label className="sr-only">Project filter</Label>
-            <Select value={projectFilter} onValueChange={setProjectFilter}>
-              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All projects</SelectItem>
-                {projectList.map((p) => (
-                  <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <Button variant="outline" size="sm" onClick={load}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        title="Files"
+        subtitle="Project and client documents, with expiring share links."
+        actions={
+          <>
+            <Button onClick={pick} disabled={uploading}>
+              {uploading ? <Loader2 className="animate-spin" /> : <Upload />} Upload
+            </Button>
+            <Button variant="outline" onClick={load}>
+              <RefreshCw /> Refresh
+            </Button>
+          </>
+        }
+      />
 
-      {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the files endpoint and DB must be live on the server.
-        </div>
-      )}
-
-      {/* Drop zone */}
+      {/* Drop zone, the prototype's dashed `.empty` box */}
       <div
+        role="button"
+        tabIndex={0}
+        aria-label="Upload files"
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => { e.preventDefault(); setDragOver(false); doUpload(e.dataTransfer.files) }}
-        onClick={() => inputRef.current?.click()}
+        onClick={pick}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick() } }}
         className={cn(
-          "flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-8 text-center transition-colors",
-          dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/40",
+          "mb-4 grid cursor-pointer place-items-center gap-2.5 rounded-2xl border border-dashed bg-card p-7 text-center transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30",
+          dragOver ? "border-acc bg-acc-soft" : "border-line-strong hover:border-muted-foreground",
         )}
       >
-        {uploading ? <Loader2 className="h-6 w-6 animate-spin text-primary" /> : <Upload className="h-6 w-6 text-muted-foreground" />}
-        <p className="text-sm text-muted-foreground">
-          {projectFilter !== "all" ? "Drop files here, or click to upload to this project" : "Drop files here, or click to upload"} (20 MB max)
-        </p>
+        <span aria-hidden className="grid h-12 w-12 place-items-center rounded-[14px] bg-acc-soft text-acc">
+          {uploading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Upload className="h-5 w-5" />}
+        </span>
+        <b className="font-semibold">
+          {projectFilter !== "all" ? "Drop files here, or click to upload to this project" : "Drop files here, or click to upload"}
+        </b>
+        <span className="text-[13px] text-muted-foreground">Up to 20 MB each. Files stay private until you share a link or make one visible to its client.</span>
         <input ref={inputRef} type="file" multiple className="hidden" onChange={(e) => doUpload(e.target.files)} />
       </div>
 
-      <div className="rounded-xl border border-border bg-card">
-        {loading ? (
-          <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading files…
+      <div className="mb-3.5 flex flex-wrap items-center gap-2">
+        <div className="flex min-h-10 w-full min-w-0 max-w-[280px] items-center gap-2 rounded-[10px] border bg-card pl-3 focus-within:border-acc focus-within:shadow-[0_0_0_3px_hsl(var(--os-acc-soft))]">
+          <span className="shrink-0 text-muted-foreground" aria-hidden>Project</span>
+          <Select value={projectFilter} onValueChange={setProjectFilter}>
+            <SelectTrigger aria-label="Project filter" className="h-[38px] min-w-0 flex-1 border-0 bg-transparent focus:shadow-none">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All projects</SelectItem>
+              {projectList.map((p) => (
+                <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <label className="flex min-h-10 min-w-0 max-w-[340px] flex-1 basis-[200px] items-center gap-2 rounded-[10px] border bg-card px-3 focus-within:border-acc focus-within:shadow-[0_0_0_3px_hsl(var(--os-acc-soft))]">
+          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <span className="sr-only">Search files</span>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search files…"
+            className="min-h-[38px] w-full min-w-0 border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          />
+        </label>
+      </div>
+
+      {error && (
+        <div role="alert" className="mb-4 flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-bad" />
+          <div className="min-w-[min(100%,200px)] flex-1">
+            <p className="font-semibold">Could not load files.</p>
+            <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
+              {error}. The files endpoint and database must be live on the server.
+            </p>
           </div>
-        ) : items.length === 0 ? (
-          <div className="p-10 text-center text-sm text-muted-foreground">No files yet. Upload one above.</div>
-        ) : (
+          <Button variant="outline" onClick={load}>
+            <RefreshCw /> Try again
+          </Button>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="overflow-hidden rounded-[14px] border bg-card">
+          <TableSkeleton rows={4} cols={4} />
+        </div>
+      ) : items.length === 0 ? (
+        !error && <p className="rounded-[14px] border bg-card px-5 py-10 text-center text-muted-foreground">No files yet. Upload one above.</p>
+      ) : shown.length === 0 ? (
+        <p className="rounded-[14px] border bg-card px-5 py-10 text-center text-muted-foreground">No files match “{query}”.</p>
+      ) : (
+        <div className="overflow-hidden rounded-[14px] border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Project</TableHead>
-                <TableHead>Size</TableHead>
+                {portalReady && <TableHead>Client portal</TableHead>}
+                <TableHead className="text-right">Size</TableHead>
                 <TableHead>Uploaded</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>
+                  <span className="sr-only">Actions</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((f) => (
+              {shown.map((f) => (
                 <TableRow key={f.id}>
-                  <TableCell className="font-medium">
-                    <span className="flex items-center gap-2">
-                      <FileIcon className="h-4 w-4 text-muted-foreground" /> {f.name}
-                      {f.share_token && <Share2 className="h-3 w-3 text-primary" aria-label="Shared" />}
+                  <TableCell className="min-w-[220px]">
+                    <span className="flex min-w-0 items-center gap-2.5">
+                      <FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <b className="min-w-0 font-semibold [overflow-wrap:anywhere]">{f.name}</b>
+                      {f.share_token && <Badge variant="acc">Shared</Badge>}
                     </span>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{f.project_name || f.client_company || "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{humanSize(f.size)}</TableCell>
-                  <TableCell className="text-muted-foreground">{fmt(f.created_at)}{f.uploaded_by_name ? ` · ${f.uploaded_by_name}` : ""}</TableCell>
+                  <TableCell className="min-w-[140px]">{f.project_name || f.client_company || <span className="text-muted-foreground">None</span>}</TableCell>
+                  {portalReady && (
+                    <TableCell className="min-w-[150px]">
+                      {typeof f.client_visible === "boolean" && (f.project_id != null || f.client_id != null) ? (
+                        <span className="flex items-center gap-2">
+                          <Switch
+                            id={`client-visible-${f.id}`}
+                            checked={f.client_visible}
+                            disabled={busyId === f.id}
+                            onCheckedChange={(on) => setClientVisible(f, on)}
+                          />
+                          <label htmlFor={`client-visible-${f.id}`} className="text-[13px]">
+                            Visible to client<span className="sr-only">: {f.name}</span>
+                          </label>
+                        </span>
+                      ) : (
+                        <span className="text-[13px] text-muted-foreground">No client</span>
+                      )}
+                    </TableCell>
+                  )}
+                  <TableCell className="whitespace-nowrap text-right font-mono">{humanSize(f.size)}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {fmt(f.created_at)}
+                    {f.uploaded_by_name && <span className="text-muted-foreground"> · {f.uploaded_by_name}</span>}
+                  </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" disabled={busyId === f.id} onClick={() => download(f)} aria-label="Download" title="Download">
-                        <Download className="h-3.5 w-3.5" />
+                      <Button variant="ghost" size="sm" disabled={busyId === f.id} onClick={() => share(f)}>
+                        <Share2 /> Copy share link
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" disabled={busyId === f.id} onClick={() => share(f)} aria-label="Share link" title="Copy share link">
-                        <Share2 className="h-3.5 w-3.5" />
+                      <Button variant="ghost" size="icon" className="h-9 w-9" disabled={busyId === f.id} onClick={() => download(f)} aria-label="Download" title="Download">
+                        <Download />
                       </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(f)} aria-label="Delete" title="Delete">
-                        <Trash2 className="h-3.5 w-3.5" />
+                      <Button variant="ghost" size="icon" className="h-9 w-9 text-bad" onClick={() => remove(f)} aria-label="Delete" title="Delete">
+                        <Trash2 />
                       </Button>
                     </div>
                   </TableCell>
@@ -209,8 +281,8 @@ export default function Files() {
               ))}
             </TableBody>
           </Table>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

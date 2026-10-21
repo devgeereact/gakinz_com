@@ -9,22 +9,26 @@
  * `<script>`, so it renders in place. That is valid — structured data may sit
  * anywhere in the document.
  *
- * NOTE ON CRAWLERS: this is a client-rendered SPA with no prerender step, so a
- * crawler that does not execute JavaScript sees none of this. Recorded in
- * docs/KNOWN-ISSUES.md. Googlebot renders; most social scrapers and LLM
- * crawlers do not.
+ * CRAWLERS: the public pages are prerendered at build time
+ * (scripts/prerender.mjs), which moves these tags into the head of each page's
+ * HTML, so a crawler that never runs JavaScript reads them too. In the browser,
+ * React adopts the tags already in the head when it hydrates. A path that is
+ * not prerendered (a CMS-only record, /verify/:id) still gets them only once
+ * JavaScript runs.
+ *
+ * The site constants (SITE_URL, SITE_NAME, OG_IMAGE) and the JSON-LD builders
+ * (personSchema, websiteSchema) live in seo-schema.ts, so this file exports
+ * only the component (react-refresh). Import them from there.
  */
 
-export const SITE_URL = "https://gakinz.com"
-export const SITE_NAME = "Gideon Akinlotan"
-export const OG_IMAGE = `${SITE_URL}/og.png`
+import { jsonLdString, OG_IMAGE, SITE_NAME, SITE_URL } from "@/marketing/components/seo-schema"
 
 type SeoProps = {
   /** Page title, without the site suffix. Omit on the home page. */
   title?: string
   /** 50–160 characters. One sentence, specific, no marketing register. */
   description: string
-  /** Path only, e.g. "/work". Joined to SITE_URL for the canonical. */
+  /** Path only, e.g. "/work". Joined to SITE_URL (seo-schema.ts) for the canonical. */
   path: string
   /** "website" for pages, "article" for a post or a work record. */
   type?: "website" | "article"
@@ -65,6 +69,9 @@ export default function Seo({
       <meta property="og:description" content={description} />
       <meta property="og:url" content={url} />
       <meta property="og:image" content={image} />
+      {image === OG_IMAGE && <meta property="og:image:width" content="1200" />}
+      {image === OG_IMAGE && <meta property="og:image:height" content="630" />}
+      {image === OG_IMAGE && <meta property="og:image:alt" content="Gideon Akinlotan, designer and developer, London" />}
 
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content={fullTitle} />
@@ -75,44 +82,9 @@ export default function Seo({
         <script
           key={i}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(block) }}
+          dangerouslySetInnerHTML={{ __html: jsonLdString(block) }}
         />
       ))}
     </>
   )
-}
-
-/**
- * The Person record for the site owner.
- *
- * Only fields with a real value belong here. `sameAs` is deliberately built
- * from whatever real profile URLs exist and is omitted entirely when there are
- * none — a sameAs pointing at https://github.com/ rather than at a profile is
- * a false statement about identity, and structured data is read by machines
- * that cannot tell the difference.
- */
-export function personSchema(opts: { sameAs?: string[]; jobTitle: string; description: string }) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "Person",
-    "@id": `${SITE_URL}/#person`,
-    name: SITE_NAME,
-    url: SITE_URL,
-    jobTitle: opts.jobTitle,
-    description: opts.description,
-    address: { "@type": "PostalAddress", addressLocality: "London", addressCountry: "GB" },
-    ...(opts.sameAs && opts.sameAs.length ? { sameAs: opts.sameAs } : {}),
-  }
-}
-
-export function websiteSchema() {
-  return {
-    "@context": "https://schema.org",
-    "@type": "WebSite",
-    "@id": `${SITE_URL}/#website`,
-    url: SITE_URL,
-    name: SITE_NAME,
-    inLanguage: "en-GB",
-    publisher: { "@id": `${SITE_URL}/#person` },
-  }
 }

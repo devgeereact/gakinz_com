@@ -1,14 +1,99 @@
 // Central API helper.
-// Dev → hit the live API on the domain (api.php enables CORS).
-// Production (same domain) → relative path.
+// Every call is a relative path. In production the PHP sits on the same domain;
+// in development the Vite server proxies `/*.php` to the live API
+// (vite.config.ts), so the browser never makes a cross-origin call and the live
+// ALLOWED_ORIGINS list does not need a localhost entry.
 import { getStoredToken, useAuth, type AuthUser, type Role } from "@/store/auth.store"
 
-export const API_BASE = import.meta.env.DEV ? "https://gakinz.com" : ""
+export const API_BASE = ""
 
 export type ApiResult<T> =
   | { ok: true; data: T }
   // `details` carries the full parsed error body (e.g. { two_factor_required }).
   | { ok: false; error: string; status?: number; details?: Record<string, unknown> }
+
+// Plain-language failures. The browser's own messages ("Failed to fetch",
+// "Unexpected token '<'") are shown on screen as they are, so they never reach
+// a visitor or the CMS directly.
+export const NETWORK_ERROR = "Could not reach the server. Check your connection and try again."
+export const DOWNLOAD_NOT_READY = "The server is not ready for this download yet."
+export const BAD_REPLY_ERROR = "The server sent a reply this page could not read. Try again in a moment."
+
+/** Parses a JSON body; anything else (an HTML error page, a PHP notice) is undefined. */
+export function parseJsonBody(text: string): unknown {
+  if (!text) return null
+  try {
+    return JSON.parse(text)
+  } catch {
+    return undefined
+  }
+}
+
+/** The message for a failed response with no usable `error` field. */
+export function statusError(status: number, verb = "Request"): string {
+  if (status === 403) return "You do not have access to this."
+  if (status === 404) return "That could not be found. It may have been removed."
+  if (status === 429) return "Too many attempts. Wait a minute and try again."
+  if (status >= 500) return `${verb} failed on the server. Try again in a moment.`
+  return `${verb} failed (${status}).`
+}
+
+/**
+ * A name a download may be saved under, or null: any path is stripped, and
+ * only letters, digits, spaces and `_ . ( ) -` are allowed, up to 200
+ * characters, never only dots.
+ */
+function safeFileName(raw: string): string | null {
+  const base = (raw.split(/[\\/]/).pop() ?? "").trim()
+  return /^[\p{L}\p{M}\p{N}_.() -]{1,200}$/u.test(base) && !/^\.+$/.test(base) ? base : null
+}
+
+/**
+ * The file name from a Content-Disposition header, or null. The UTF-8
+ * `filename*=UTF-8''...` form wins when it decodes to a safe name; otherwise
+ * the plain `filename="..."` or `filename=...` is read. Either way the name
+ * goes through safeFileName(), so a reply can never steer where the browser
+ * saves the file.
+ */
+export function filenameFromDisposition(header: string | null): string | null {
+  if (!header) return null
+  const star = header.match(/filename\*\s*=\s*UTF-8''([^;\s]+)/i)
+  if (star) {
+    try {
+      const name = safeFileName(decodeURIComponent(star[1]))
+      if (name) return name
+    } catch {
+      // A malformed encoding: fall back to the plain name.
+    }
+  }
+  const m = header.match(/filename\s*=\s*(?:"([^"]*)"|([^;\s]+))/i)
+  return safeFileName(m?.[1] ?? m?.[2] ?? "")
+}
+
+/**
+ * True for the type of a reply that can be a stored file, given lower case
+ * with no parameters, as download() passes it. Refuses no type at all and the
+ * two a non-file reply arrives as: JSON (an error or an older server) and HTML
+ * (the app shell or the host's own page). files.php never sends either for a
+ * stored file: its upload allowlist has no JSON or HTML type.
+ */
+export function isFileReply(type: string): boolean {
+  if (type === "") return false
+  if (type === "application/json" || type.endsWith("+json")) return false
+  if (type === "text/html" || type === "application/xhtml+xml") return false
+  return true
+}
+
+/** The name the server gave a download, or `fallback`. */
+export function downloadName(blob: Blob, fallback: string): string {
+  return typeof File !== "undefined" && blob instanceof File && blob.name ? blob.name : fallback
+}
+
+/** Error text from a parsed body, if it carries one. */
+const bodyError = (body: unknown): string | undefined =>
+  body && typeof body === "object" && typeof (body as { error?: unknown }).error === "string"
+    ? (body as { error: string }).error
+    : undefined
 
 async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
   try {
@@ -22,18 +107,25 @@ async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T
       ...init,
     })
     const text = await res.text()
-    const body = text ? JSON.parse(text) : null
+    const parsed = parseJsonBody(text)
+    const body = (parsed ?? null) as Record<string, unknown> | null
     if (!res.ok) {
       // Self-healing session expiry: a 401 means the token is gone/expired, so
       // purge auth — RequireAuth then redirects to /login instead of leaving the
       // user stuck on a module that keeps erroring. (No-op pre-login.) Exception:
       // a 2FA-required 401 during login must NOT clear (there's nothing to clear).
-      if (res.status === 401 && body?.two_factor_required !== true) useAuth.getState().clear()
-      return { ok: false, error: (body && body.error) || `Request failed (${res.status})`, status: res.status, details: body || undefined }
+      // Also exception: a 401 from the login call itself means wrong credentials,
+      // not an expired session. On the lock screen that must show an error, not
+      // sign the user out of the session they are unlocking.
+      if (res.status === 401 && body?.two_factor_required !== true && !path.startsWith("/auth.php?action=login")) {
+        useAuth.getState().clear()
+      }
+      return { ok: false, error: bodyError(body) || statusError(res.status), status: res.status, details: body || undefined }
     }
+    if (parsed === undefined) return { ok: false, error: BAD_REPLY_ERROR, status: res.status }
     return { ok: true, data: body as T }
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message : "Network error" }
+  } catch {
+    return { ok: false, error: NETWORK_ERROR }
   }
 }
 
@@ -52,23 +144,48 @@ export const api = {
         body: form,
       })
       const text = await res.text()
-      const body = text ? JSON.parse(text) : null
+      const parsed = parseJsonBody(text)
+      const body = parsed ?? null
       if (!res.ok) {
         if (res.status === 401) useAuth.getState().clear()
-        return { ok: false, error: (body && body.error) || `Upload failed (${res.status})`, status: res.status }
+        return { ok: false, error: bodyError(body) || statusError(res.status, "Upload"), status: res.status }
       }
+      if (parsed === undefined) return { ok: false, error: BAD_REPLY_ERROR, status: res.status }
       return { ok: true, data: body as T }
-    } catch (e) {
-      return { ok: false, error: e instanceof Error ? e.message : "Network error" }
+    } catch {
+      return { ok: false, error: NETWORK_ERROR }
     }
   },
-}
-
-// Smoke-test endpoint (build order step 1): GET returns rows, POST inserts one.
-export type Item = { id: number; name: string; created_at: string }
-export const smoke = {
-  list: () => api.get<Item[]>("/api.php"),
-  add: (name: string) => api.post<Item>("/api.php", { name }),
+  // An authenticated file (a calendar file, for example). A plain link cannot
+  // carry the bearer token, so the file is fetched here and handed back as a
+  // Blob for the page to save. Errors arrive as JSON, as everywhere else. A
+  // 200 of any other type (an older server answering JSON) is refused, so it is
+  // never saved under the file's name. `expectedType` is one exact type, or a
+  // check on the reply's type for a file whose type varies (see isFileReply).
+  download: async (path: string, expectedType: string | ((type: string) => boolean)): Promise<ApiResult<Blob>> => {
+    try {
+      const token = getStoredToken()
+      const res = await fetch(`${API_BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      if (!res.ok) {
+        if (res.status === 401) useAuth.getState().clear()
+        const body = parseJsonBody(await res.text())
+        // `details` is the JSON error body, when there is one, so a JSON 404
+        // ("Client not found.") can be told apart from the host's own page.
+        const details = body && typeof body === "object" && !Array.isArray(body) ? (body as Record<string, unknown>) : undefined
+        return { ok: false, error: bodyError(body) || statusError(res.status, "Download"), status: res.status, details }
+      }
+      const type = (res.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase()
+      const expected = typeof expectedType === "string" ? type === expectedType.toLowerCase() : expectedType(type)
+      if (!expected) return { ok: false, error: DOWNLOAD_NOT_READY, status: res.status }
+      const blob = await res.blob()
+      // When the server names the file, hand back a File (still a Blob) so the
+      // page can save it under that name; see downloadName().
+      const name = filenameFromDisposition(res.headers.get("Content-Disposition"))
+      return { ok: true, data: name ? new File([blob], name, { type: blob.type }) : blob }
+    } catch {
+      return { ok: false, error: NETWORK_ERROR }
+    }
+  },
 }
 
 // Public contact enquiry (corporate site → leads pipeline).
@@ -81,7 +198,8 @@ export type EnquiryPayload = {
   message: string
 }
 export const contact = {
-  send: (payload: EnquiryPayload) => api.post<{ id: number }>("/contact.php", payload),
+  // `reference` is the enquiry's GK-E-YYYY-NNNN (SQL 19); null before that step has run.
+  send: (payload: EnquiryPayload) => api.post<{ id: number; reference?: string | null }>("/contact.php", payload),
 }
 
 // Leads (§6 Leads). Enquiries captured by the public form, managed in the CMS.
@@ -100,13 +218,30 @@ export type Lead = {
   score: number // 0 unscored | 1 cold | 2 warm | 3 hot
   lost_reason: string | null
   created_at: string
+  // Work reference GK-E-YYYY-NNNN (SQL 19). Null before that step has run.
+  reference?: string | null
+  // Owner's follow-up (2026-10-10 schema step). Absent until that ALTER has run.
+  next_action_at?: string | null // YYYY-MM-DD
+  next_action_note?: string | null
+  priority?: LeadPriority
 }
+export type LeadPriority = 0 | 1 | 2 | 3 // 0 none | 1 low | 2 normal | 3 high
 export const leads = {
   list: () => api.get<Lead[]>("/leads.php"),
   setStatus: (id: number, status: LeadStage, lost_reason?: string) =>
     api.post<{ ok: boolean }>("/leads.php?action=status", { id, status, ...(lost_reason ? { lost_reason } : {}) }),
-  setMeta: (id: number, payload: { tags?: string; score?: number }) =>
-    api.post<{ ok: boolean }>("/leads.php?action=meta", { id, ...payload }),
+  setMeta: (
+    id: number,
+    payload: {
+      tags?: string
+      score?: number
+      next_action_at?: string | null
+      next_action_note?: string | null
+      priority?: LeadPriority
+    },
+  ) =>
+    // `followup` is false when the server has not had the follow-up columns added yet.
+    api.post<{ ok: boolean; followup?: boolean }>("/leads.php?action=meta", { id, ...payload }),
 }
 
 // Clients / CRM (§6 Clients).
@@ -134,7 +269,7 @@ export type ClientInput = {
 }
 // Client detail: lifetime value + a merged, newest-first history.
 export type ClientTimelineItem = {
-  type: "proposal" | "project" | "invoice" | "ticket"
+  type: "enquiry" | "call" | "proposal" | "project" | "invoice" | "ticket" | "conversation" | "feedback"
   id: number
   label: string
   status: string
@@ -145,6 +280,8 @@ export type ClientDetail = {
   client: Client
   stats: { ltv: number; outstanding: number; projects: number; proposals: number; open_tickets: number }
   timeline: ClientTimelineItem[]
+  // Record types left out because their tables are not there yet (2026-10-16 SQL).
+  unavailable?: Array<"calls" | "feedback">
 }
 export const clients = {
   list: () => api.get<Client[]>("/clients.php"),
@@ -154,6 +291,120 @@ export const clients = {
     api.post<{ ok: boolean }>("/clients.php?action=update", { id, ...payload }),
   convertLead: (leadId: number) =>
     api.post<{ id: number; existing?: boolean }>("/clients.php?action=convert", { lead_id: leadId }),
+}
+
+// Call bookings inside Enquiries (bookings.php, staff only). Recorded by hand;
+// a request is never confirmed until the owner says so. `starts_at` is UTC with
+// a trailing Z; `start_local` is the agreed wall-clock time in `timezone`.
+export type BookingStatus = "requested" | "confirmed" | "completed" | "cancelled"
+export type NotifyStatus = "sending" | "sent" | "failed"
+export type BookingEvent = {
+  id: number
+  kind: "created" | "rescheduled" | "status"
+  from_status: BookingStatus | null
+  to_status: BookingStatus | null
+  from_starts_at: string | null
+  from_timezone: string | null
+  to_starts_at: string | null
+  to_timezone: string | null
+  notify_status: NotifyStatus | null
+  notify_to: string | null
+  notify_attempts: number
+  notify_error: string | null
+  notified_at: string | null
+  by: string | null
+  created_at: string
+}
+export type Booking = {
+  id: number
+  enquiry_id: number | null
+  client_id: number | null
+  enquiry_name: string | null
+  enquiry_company: string | null
+  client_company: string | null
+  starts_at: string
+  start_local: string // YYYY-MM-DDTHH:MM in `timezone`
+  timezone: string
+  duration_min: number
+  location: string | null
+  status: BookingStatus
+  notes: string | null
+  outcome: string | null
+  created_at: string
+  updated_at: string
+  history: BookingEvent[] // newest first
+}
+export type BookingInput = {
+  enquiry_id?: number | null
+  client_id?: number | null
+  start_local: string
+  timezone: string
+  duration_min?: number
+  location?: string | null
+  status?: "requested" | "confirmed"
+  notes?: string | null
+}
+export type BookingNotice = { status: NotifyStatus; error: string | null; to: string | null }
+export type BookingChange = { booking: Booking; notice: BookingNotice | null }
+export const bookings = {
+  list: (filter?: { enquiry_id?: number; client_id?: number }) => {
+    const qs = filter?.enquiry_id ? `?enquiry_id=${filter.enquiry_id}` : filter?.client_id ? `?client_id=${filter.client_id}` : ""
+    return api.get<Booking[]>(`/bookings.php${qs}`)
+  },
+  create: (payload: BookingInput) => api.post<Booking>("/bookings.php?action=create", payload),
+  update: (id: number, payload: { location?: string | null; notes?: string | null; outcome?: string | null }) =>
+    api.post<Booking>("/bookings.php?action=update", { id, ...payload }),
+  reschedule: (id: number, payload: { start_local: string; timezone: string; duration_min?: number; notify?: boolean }) =>
+    api.post<BookingChange>("/bookings.php?action=reschedule", { id, ...payload }),
+  setStatus: (id: number, status: BookingStatus, extra: { outcome?: string | null; notify?: boolean } = {}) =>
+    api.post<BookingChange>("/bookings.php?action=status", { id, status, ...extra }),
+  retryNotice: (eventId: number) =>
+    api.post<{ notice: BookingNotice }>("/bookings.php?action=notify", { event_id: eventId }),
+  // RFC 5545 file for a confirmed call; any other status answers 404.
+  calendarFile: (id: number) => api.download(`/bookings.php?action=ics&id=${id}`, "text/calendar"),
+}
+
+// Private delivery feedback (feedback.php). Staff read and manage it; a client
+// can only send it, and the server never returns feedback to a client.
+export type FeedbackFollowUp = "new" | "following_up" | "closed"
+export type Feedback = {
+  id: number
+  client_id: number
+  client_company: string
+  project_id: number | null
+  project_name: string | null
+  source: "portal" | "owner"
+  rating: number | null
+  went_well: string | null
+  could_improve: string | null
+  follow_up_ok: boolean
+  may_publish: boolean
+  attribution: string | null
+  follow_up: FeedbackFollowUp
+  owner_note: string | null
+  submitted_by: string | null
+  created_at: string
+  updated_at: string
+}
+export type FeedbackInput = {
+  project_id?: number | null
+  rating?: number | null
+  went_well?: string | null
+  could_improve?: string | null
+  follow_up_ok?: boolean
+  may_publish?: boolean
+  attribution?: string | null
+}
+export const FEEDBACK_TEXT_MAX = 5000
+export const feedback = {
+  list: (clientId?: number) => api.get<Feedback[]>(`/feedback.php${clientId ? `?client_id=${clientId}` : ""}`),
+  // Staff recording feedback received another way, for a named client.
+  record: (clientId: number, payload: FeedbackInput) =>
+    api.post<{ id: number; duplicate?: boolean }>("/feedback.php?action=create", { client_id: clientId, ...payload }),
+  // A client's own submission: the server takes the client from the token.
+  send: (payload: FeedbackInput) => api.post<{ ok: boolean; duplicate?: boolean }>("/feedback.php?action=create", payload),
+  update: (id: number, payload: { follow_up?: FeedbackFollowUp; owner_note?: string | null; may_publish?: boolean }) =>
+    api.post<Feedback>("/feedback.php?action=update", { id, ...payload }),
 }
 
 // Projects & Tasks (§6 Projects & Tasks).
@@ -171,11 +422,41 @@ export type Project = {
   task_count: number
   done_count: number
   created_at: string
+  reference?: string | null // GK-P-YYYY-NNNN (SQL 19); null before that step has run
+}
+// Project templates (server/_templates.php): code, not a table, one per work
+// type in docs/PRODUCT-SPEC.md 6.4. Read with projects.templates(); an older
+// projects.php answers that route with the project list instead, which
+// parseTemplates() in projectTemplateModel.ts rejects.
+export type ProjectTemplateKey = "business_website" | "ecommerce" | "website_care" | "it_support" | "it_consultancy"
+export type ProjectTemplate = {
+  key: ProjectTemplateKey
+  name: string
+  summary: string
+  tasks: { title: string; offset_days: number }[]
+  assets: { label: string; note: string }[]
+  brief: { deliverables: string; exclusions: string; measurements: { label: string; target: string; method: string }[] }
+}
+/** projects.php?action=create. `created` and `skipped` come back only when a template was applied. */
+export type ProjectCreated = {
+  id: number
+  template?: ProjectTemplateKey
+  include_client_checklist?: boolean
+  created?: { tasks: number; assets: number; measurements: number }
+  skipped?: { table: string; note: string }[]
 }
 export const projects = {
   list: () => api.get<Project[]>("/projects.php"),
-  create: (payload: { name: string; client_id?: number | null; due_date?: string }) =>
-    api.post<{ id: number }>("/projects.php?action=create", payload),
+  templates: () => api.get<unknown>("/projects.php?action=templates"),
+  create: (payload: {
+    name: string
+    client_id?: number | null
+    due_date?: string
+    template?: ProjectTemplateKey
+    // Template asset items show in the client's portal at once, so they are opt-in (default false).
+    include_client_checklist?: boolean
+  }) =>
+    api.post<ProjectCreated>("/projects.php?action=create", payload),
   setStatus: (id: number, status: ProjectStatus) =>
     api.post<{ ok: boolean }>("/projects.php?action=status", { id, status }),
   setStage: (id: number, stage: ProjectStage) =>
@@ -218,7 +499,21 @@ export type Proposal = {
   client_company: string | null
   total: number // ex VAT (line-item sum)
   created_at: string
+  // Acceptance evidence (SQL 14). All null until a quote is accepted, and on
+  // every quote until SQL 14 has run on the server (evidence_ready false).
+  evidence_ready: boolean
+  accepted_at: string | null
+  accepted_by: number | null
+  accepted_by_name: string | null
+  acceptance_method: AcceptanceMethod | null
+  acceptance_reference: string | null
+  acceptance_received_on: string | null
+  accepted_terms_sha256: string | null
+  project_reference?: string | null // the accepted project's GK-P-YYYY-NNNN (SQL 19)
 }
+// How the client's acceptance reached us.
+export type AcceptanceMethod = "email" | "letter" | "in_person" | "phone" | "other"
+export type AcceptanceEvidence = { method: AcceptanceMethod; reference: string; received_on: string }
 // Public read-only proposal (by share token) — no auth.
 export type PublicProposal = {
   id: number
@@ -229,6 +524,8 @@ export type PublicProposal = {
   notes: string | null
   valid_until: string | null
   client_company: string | null
+  accepted_on: string | null // the day the client's acceptance was received; nothing else of the evidence
+  project_reference?: string | null // once accepted: the project's GK-P-YYYY-NNNN (SQL 19)
   items: { description: string; qty: number; unit_price: number }[]
 }
 // One leg of the 40/30/30 schedule auto-created when a proposal is accepted.
@@ -245,12 +542,19 @@ export const proposals = {
   }) => api.post<{ id: number }>("/proposals.php?action=create", payload),
   setStatus: (id: number, status: "draft" | "sent" | "declined") =>
     api.post<{ ok: boolean }>("/proposals.php?action=status", { id, status }),
-  accept: (id: number) =>
-    api.post<{ ok: boolean; project_id: number; existing?: boolean; invoices?: ScheduledInvoice[] }>(
-      "/proposals.php?action=accept",
-      { id },
-    ),
+  // Evidence is required once SQL 14 has run; before that the server ignores it.
+  accept: (id: number, evidence: AcceptanceEvidence) =>
+    api.post<{
+      ok: boolean
+      project_id: number
+      existing?: boolean
+      invoices?: ScheduledInvoice[]
+      evidence_recorded?: boolean
+      accepted_terms_sha256?: string | null
+      project_reference?: string | null
+    }>("/proposals.php?action=accept", { id, ...evidence }),
   share: (id: number) => api.post<{ token: string }>("/proposals.php?action=share", { id }),
+  unshare: (id: number) => api.post<{ ok: boolean }>("/proposals.php?action=unshare", { id }),
   // Public, no-auth read-only fetch by share token (records a view server-side).
   publicView: (token: string) => api.get<PublicProposal>(`/proposals.php?token=${encodeURIComponent(token)}`),
 }
@@ -272,12 +576,27 @@ export type Invoice = {
   vat_amount: number
   total: number // payable, inc VAT (= subtotal when vat_rate is 0)
   overdue: boolean
+  // A payment recorded by hand (record_payment, SQL 13). All null when none is
+  // recorded, when it was paid another way, or before SQL 13 has run.
+  paid_method: PaymentMethod | null
+  paid_reference: string | null
+  paid_amount_pence: number | null
+  paid_recorded_by: number | null // users.id, staff only
+}
+export type PaymentMethod = "bank_transfer" | "cash" | "cheque" | "other"
+export type RecordPaymentInput = {
+  id: number
+  method: PaymentMethod
+  reference?: string // required for bank_transfer and cheque, at most 100 characters
+  paid_on: string // YYYY-MM-DD, not in the future and not before issued_at
+  amount: string // POUNDS as a decimal with at most two places, e.g. "119.99"; must equal `total`
 }
 export type InvoiceLine = { id: number; description: string; qty: number; unit_price: number }
 export type InvoiceDetail = Invoice & {
   notes: string | null
   client_email: string | null
   project_id: number | null
+  project_reference?: string | null // the project's GK-P-YYYY-NNNN (SQL 19), for the PDF
   items: InvoiceLine[]
 }
 export const invoices = {
@@ -300,6 +619,18 @@ export const invoices = {
   // PayPal: create an order and return the approve URL (capture happens on return).
   paypalLink: (invoice_id: number) =>
     api.post<{ url: string; order_id: string }>("/payments.php?action=paypal_link", { invoice_id }),
+  // Record a bank transfer, cash or cheque payment on a sent invoice. 503 until
+  // SQL 13 has run; 409 when it is already paid or no longer sent.
+  recordPayment: (payload: RecordPaymentInput) =>
+    api.post<{
+      ok: boolean
+      id: number
+      status: "paid"
+      paid_at: string
+      paid_method: PaymentMethod
+      paid_reference: string | null
+      paid_amount_pence: number
+    }>("/invoices.php?action=record_payment", payload),
   // Email the client a payment reminder for an unpaid invoice (needs SMTP).
   chase: (id: number) => api.post<{ ok: boolean; sent_to: string }>("/invoices.php?action=chase", { id }),
 }
@@ -330,6 +661,8 @@ export type TimeEntry = {
   entry_date: string
   user_name: string | null
   user_id: number | null
+  /** The support ticket this IT support time is for (SQL 17); null for other time, or from an older server. */
+  ticket_id?: number | null
 }
 export const time = {
   list: () => api.get<TimeEntry[]>("/time.php"),
@@ -361,7 +694,23 @@ export type Ticket = {
   created_at: string
 }
 export type TicketReply = { id: number; body: string; created_at: string; author: string | null }
-export type TicketDetail = Ticket & { body: string | null; replies: TicketReply[] }
+/** One IT support time entry logged from a ticket (SQL 17). Staff only. */
+export type TicketTimeEntry = {
+  id: number
+  minutes: number
+  description: string | null
+  billable: boolean
+  status: TimeStatus
+  entry_date: string
+  user_name: string | null
+}
+export type TicketTime = { total_minutes: number; entries: TicketTimeEntry[] }
+export type TicketDetail = Ticket & {
+  body: string | null
+  replies: TicketReply[]
+  /** Logged time; null before SQL 17, missing from an older server. */
+  time?: TicketTime | null
+}
 export const support = {
   list: () => api.get<Ticket[]>("/support.php"),
   get: (id: number) => api.get<TicketDetail>(`/support.php?id=${id}`),
@@ -372,13 +721,228 @@ export const support = {
   setPriority: (id: number, priority: TicketPriority) =>
     api.post<{ ok: boolean }>("/support.php?action=priority", { id, priority }),
   reply: (id: number, body: string) => api.post<{ id: number }>("/support.php?action=reply", { id, body }),
+  // IT support time onto the client's standing "IT support" project (SQL 17).
+  // New route: an older server or a missing SQL 17 answers as notAvailableYet().
+  logTime: (payload: { id: number; minutes: number; description?: string; billable?: boolean; entry_date?: string }) =>
+    api.post<{ id: number; project_id: number; project_created: boolean }>("/support.php?action=log_time", payload),
+}
+
+// A `client`-role user's own messages: the client branch of support.php. The
+// server derives the client from the token, so none of these take a client id,
+// and it refuses status, priority and assignment for this role.
+export const MESSAGE_SUBJECT_MAX = 200
+export const MESSAGE_BODY_MAX = 5000
+export type ClientMessageReply = {
+  id: number
+  body: string
+  created_at: string
+  author: string | null
+  from_client: boolean
+}
+export type ClientThread = {
+  id: number
+  subject: string
+  body: string | null
+  status: TicketStatus
+  created_at: string
+  last_activity: string
+  replies: ClientMessageReply[]
+}
+export const clientMessages = {
+  list: () => api.get<ClientThread[]>("/support.php"),
+  get: (id: number) => api.get<ClientThread>(`/support.php?id=${id}`),
+  start: (subject: string, body: string) =>
+    api.post<{ id: number }>("/support.php?action=create", { subject, body }),
+  reply: (id: number, body: string) => api.post<{ id: number }>("/support.php?action=reply", { id, body }),
+}
+
+// Portal requests from a `client`-role user (docs/PRODUCT-SPEC.md 6.2). An
+// update request is a support ticket the server prefixes "Update request:"; a
+// call request is a requested booking the owner confirms in Enquiries, Calls.
+// Neither takes a client id: the server derives it from the token.
+export const CALL_TOPIC_MAX = 200
+export const CALL_SLOTS_MAX = 3
+export type CallSlot = { date: string; time: string } // YYYY-MM-DD and HH:MM in `timezone`
+export type CallRequestInput = { topic: string; timezone: string; slots: CallSlot[] }
+export type PortalCallRequest = {
+  id: number
+  status: BookingStatus
+  starts_at: string // UTC, trailing Z
+  start_local: string // YYYY-MM-DDTHH:MM in `timezone`
+  timezone: string
+  duration_min: number
+  created_at: string
+}
+export const portalRequests = {
+  askUpdate: (question: string, projectId: number | null) =>
+    api.post<{ id: number; subject: string }>("/support.php?action=update_request", {
+      question,
+      ...(projectId != null ? { project_id: projectId } : {}),
+    }),
+  requestCall: (payload: CallRequestInput) => api.post<PortalCallRequest>("/bookings.php?action=request", payload),
+  calls: () => api.get<PortalCallRequest[]>("/bookings.php?action=mine"),
+  // The calendar file for one of the client's own confirmed calls, else 404.
+  calendarFile: (id: number) => api.download(`/bookings.php?action=mine_ics&id=${id}`, "text/calendar"),
+}
+
+// Project asset checklist (assets.php, SQL 15): what a client must send for a
+// project. Staff manage items per project; a client lists the items on their
+// own projects and marks one supplied. The client routes take no client id:
+// the server derives it from the token. Until SQL 15 runs, every call is 503.
+export const ASSET_LABEL_MAX = 160
+export const ASSET_NOTE_MAX = 1000
+export type AssetStatus = "requested" | "supplied" | "accepted"
+type AssetCommon = {
+  id: number
+  project_id: number
+  label: string
+  note: string | null // owner guidance, shown to the client
+  status: AssetStatus
+  client_note: string | null
+  supplied_at: string | null
+  accepted_at: string | null
+  created_at: string
+  updated_at: string
+}
+export type ProjectAsset = AssetCommon & { file_id: number | null; file_name: string | null; requested_by: string | null }
+export type PortalAsset = AssetCommon & { project_name: string }
+export const projectAssets = {
+  list: (projectId: number) => api.get<ProjectAsset[]>(`/assets.php?project_id=${projectId}`),
+  create: (projectId: number, label: string, note: string | null) =>
+    api.post<ProjectAsset>("/assets.php?action=create", { project_id: projectId, label, note }),
+  update: (id: number, patch: { label?: string; note?: string | null; file_id?: number | null }) =>
+    api.post<ProjectAsset>("/assets.php?action=update", { id, ...patch }),
+  accept: (id: number) => api.post<ProjectAsset>("/assets.php?action=accept", { id }),
+  reopen: (id: number) => api.post<ProjectAsset>("/assets.php?action=reopen", { id }),
+  remove: (id: number) => api.post<{ ok: boolean }>("/assets.php?action=delete", { id }),
+  mine: () => api.get<PortalAsset[]>("/assets.php?action=mine"),
+  supply: (id: number, note: string | null) => api.post<PortalAsset>("/assets.php?action=supply", { id, note }),
+}
+
+// Project brief and agreed measurements (briefs.php, SQL 16; docs/PRODUCT-SPEC.md
+// 6.4 and 6.5). Staff only. Saving sends only the fields that changed: a field
+// left out keeps its value, and null clears it. A measurement is addressed by
+// its id and its project id together. The handoff is a sanitised Markdown file
+// for the GEE OS workflow on the owner's computer. Until SQL 16 runs, every
+// call is 503.
+export const BRIEF_FIELD_MAX = {
+  problem: 2000,
+  intended_users: 1000,
+  agreed_outcome: 2000,
+  deliverables: 4000,
+  exclusions: 2000,
+  quote_reference: 120,
+  milestones_note: 2000,
+  next_action: 500,
+  open_decisions: 2000,
+  handover_checklist: 4000,
+  support_boundaries: 2000,
+  completion_ack_note: 1000,
+} as const
+export type BriefTextField = keyof typeof BRIEF_FIELD_MAX
+export type ProjectBrief = Record<BriefTextField, string | null> & { completion_ack_on: string | null; updated_at: string }
+export type BriefPatch = Partial<Record<BriefTextField | "completion_ack_on", string | null>>
+export const MEASUREMENT_RESULTS = ["PASS", "FAIL", "PARTIAL", "NOT TESTED"] as const
+export type MeasurementResult = (typeof MEASUREMENT_RESULTS)[number]
+export type MeasurementKind = "technical" | "business"
+export const MEASURE_LABEL_MAX = 200
+export const MEASURE_FIELD_MAX = {
+  target: 500,
+  baseline: 500,
+  actual: 500,
+  environment: 200,
+  method: 1000,
+  evidence_location: 500,
+  observation_window: 200,
+} as const
+export type MeasureTextField = keyof typeof MEASURE_FIELD_MAX
+export type Measurement = Record<MeasureTextField, string | null> & {
+  id: number
+  project_id: number
+  label: string
+  result: MeasurementResult
+  measured_on: string | null
+  kind: MeasurementKind
+  created_at: string
+  updated_at: string
+}
+export type MeasurementInput = Partial<Record<MeasureTextField | "measured_on", string | null>> & {
+  label?: string
+  result?: MeasurementResult
+  kind?: MeasurementKind
+}
+export type BriefView = {
+  project: { id: number; name: string; client_id: number | null }
+  brief: ProjectBrief | null
+  measurements: Measurement[]
+}
+export const projectBriefs = {
+  get: (projectId: number) => api.get<BriefView>(`/briefs.php?project_id=${projectId}`),
+  save: (projectId: number, patch: BriefPatch) => api.post<ProjectBrief>("/briefs.php?action=save", { project_id: projectId, ...patch }),
+  createMeasurement: (projectId: number, input: MeasurementInput) =>
+    api.post<Measurement>("/briefs.php?action=measure_create", { ...input, project_id: projectId }),
+  updateMeasurement: (projectId: number, id: number, input: MeasurementInput) =>
+    api.post<Measurement>("/briefs.php?action=measure_update", { ...input, id, project_id: projectId }),
+  removeMeasurement: (projectId: number, id: number) =>
+    api.post<{ ok: boolean }>("/briefs.php?action=measure_delete", { id, project_id: projectId }),
+  // The sanitised GEE OS handoff (Markdown). See server/briefs.php for what it leaves out.
+  handoff: (projectId: number) => api.download(`/briefs.php?action=handoff&project_id=${projectId}`, "text/markdown"),
+}
+
+// Today attention list (server/today.php). Staff only. A section the caller's
+// role cannot read is absent from `sections`; a section whose source failed is
+// `unavailable` with a null count, never an empty zero.
+export const TODAY_SECTION_KEYS = [
+  "new_enquiries",
+  "follow_ups_due",
+  "calls",
+  "overdue_tasks",
+  "waiting_material",
+  "unpaid_invoices",
+] as const
+export type TodaySectionKey = (typeof TODAY_SECTION_KEYS)[number]
+export type TodayItem = {
+  type: "enquiry" | "booking" | "task" | "asset" | "invoice"
+  id: number
+  title: string
+  reason: string
+  at: string | null // UTC ISO time ("...Z"), or a plain YYYY-MM-DD due date
+  route: string // the CMS screen that holds the record
+}
+export type TodaySection =
+  | { status: "ok"; count: number; items: TodayItem[] }
+  | { status: "unavailable"; count: null; items: TodayItem[] }
+export type TodayData = { generated_at: string; sections: Partial<Record<TodaySectionKey, TodaySection>> }
+export const today = {
+  get: () => api.get<TodayData>("/today.php"),
+}
+
+// Record search (server/search.php). Staff only. Each type mirrors the role
+// constant of the endpoint that owns it; a type the caller cannot read is
+// absent from `types`. A result carries no note, message or amount.
+export const RECORD_TYPES = ["client", "project", "enquiry", "invoice", "quote"] as const
+export type RecordType = (typeof RECORD_TYPES)[number]
+export const RECORD_QUERY_MIN = 2
+export const RECORD_QUERY_MAX = 80
+export const RECORD_RESULTS_PER_TYPE = 8
+export type RecordResult = { type: RecordType; id: number; title: string; secondary: string; route: string }
+export type RecordSearchData = {
+  query: string
+  types: Partial<Record<RecordType, "ok" | "unavailable">>
+  results: RecordResult[]
+}
+export const recordSearch = {
+  find: (query: string, signal?: AbortSignal) =>
+    request<RecordSearchData>(`/search.php?q=${encodeURIComponent(query)}`, { signal }),
 }
 
 // Client portal (§6 Client Portal). Aggregated client-facing view.
 export type PortalData = {
   client: { id: number; company: string; contact_name: string | null; email: string | null }
-  projects: { id: number; name: string; status: string; due_date: string | null; task_count: number; done_count: number }[]
-  invoices: { id: number; number: string | null; status: string; issued_at: string; due_at: string | null; subtotal: number; vat_rate: number; vat_amount: number; total: number }[]
+  /** kind "it_support" is the standing IT support project (SQL 17): no task progress to show. */
+  /** `reference` is the project's GK-P-YYYY-NNNN (SQL 19), null before that step has run. */
+  projects: { id: number; name: string; status: string; due_date: string | null; task_count: number; done_count: number; kind?: "it_support" | null; reference?: string | null }[]
+  invoices: { id: number; number: string | null; status: string; issued_at: string; due_at: string | null; subtotal: number; vat_rate: number; vat_amount: number; total: number; project_reference?: string | null }[]
   tickets: { id: number; subject: string; status: string; priority: string; created_at: string }[]
 }
 export const portal = {
@@ -490,6 +1054,81 @@ export const audit = {
   list: () => api.get<AuditEntry[]>("/audit.php"),
 }
 
+// Privacy tools (privacy.php). The export is a JSON attachment for super_admin
+// and admin; the retention report is super_admin only and read only: it counts
+// what each proposed rule would affect and never deletes or changes a row.
+export type RetentionRule = {
+  key: string
+  label: string
+  config_key: string
+  unit: "month" | "day"
+  starts_from: string
+  period: number | null
+  status: "period_not_set" | "invalid_period" | "counted"
+  /** Table name to row count; a null count means that table is not there yet. */
+  counts: Record<string, number | null> | null
+}
+export type RetentionReport = { dry_run: true; generated_at: string; rules: RetentionRule[] }
+export const privacy = {
+  exportClient: (clientId: number) =>
+    api.download(`/privacy.php?action=export&client_id=${clientId}`, "application/json"),
+  exportEnquiryEmail: (email: string) =>
+    api.download(`/privacy.php?action=export&enquiry_email=${encodeURIComponent(email)}`, "application/json"),
+  retentionReport: () => api.get<RetentionReport>("/privacy.php?action=retention_report"),
+  // Super admin only. Hard-deletes ONE enquiry that never became a client, its
+  // calls and their history, and scrubs its email and name from the audit
+  // text. `confirm` must be the enquiry's email address. The server answers
+  // 409, changing nothing, for anything linked to a client. New route.
+  // What the erase dialog shows first: other enquiries on the same address and
+  // whether the erasure would be refused. Read only. New route.
+  erasePreview: (id: number) => api.get<EnquiryErasePreview>(`/privacy.php?action=erase_preview&id=${id}`),
+  eraseEnquiry: (id: number, confirm: string) =>
+    api.post<EnquiryErasure>("/privacy.php?action=erase_enquiry", { id, confirm }),
+  // A `client`-role user asks for their data to be deleted: one support ticket
+  // with fixed text, at most one open per client. Nothing is deleted. New route.
+  requestDeletion: () => api.post<{ id: number; subject: string }>("/support.php?action=deletion_request", {}),
+  // Client anonymisation, super admin only and SWITCHED OFF by default: while
+  // $CLIENT_ANONYMISE_ENABLED is not true both routes answer 404, so the
+  // client record shows nothing. The preview is the only sign it is on. New routes.
+  anonymisePreview: (clientId: number) => api.get<ClientAnonymisePreview>(`/privacy.php?action=anonymise_preview&id=${clientId}`),
+  anonymiseClient: (clientId: number, confirm: string, keepCompany: boolean) =>
+    api.post<ClientAnonymisation>("/privacy.php?action=anonymise_client", { id: clientId, confirm, keep_company: keepCompany }),
+}
+export type ClientAnonymisePreview = {
+  id: number
+  company: string
+  placeholder: string
+  logins: number
+  source_enquiry: boolean
+  other_enquiries: number
+  problems: Array<{ reason: string; message: string }>
+  kept: string[]
+}
+export type ClientAnonymisation = {
+  anonymised: true
+  id: number
+  logins: number
+  sessions: number
+  magic_links: number
+  password_resets: number
+  enquiry: number
+  feedback: number
+  booking_events: number
+  audit_scrubbed: number
+}
+export type EnquiryErasePreview = { id: number; other_enquiries: number; blocked: string | null; message: string | null }
+export type EnquiryErasure = { erased: true; id: number; bookings: number; booking_events: number; audit_scrubbed: number }
+
+// Client sign-in by reference and email (client_access.php, spec 6.1). Switched
+// off on the server by default: every route answers 404 and the sign-in page
+// shows nothing. The token goes in the POST body, never in a URL.
+export const clientAccess = {
+  status: () => api.get<{ enabled?: unknown }>("/client_access.php?action=status"),
+  request: (reference: string, email: string) =>
+    api.post<{ ok: boolean; message: string }>("/client_access.php?action=request", { reference, email }),
+  redeem: (token: string) => api.post<LoginResponse>("/client_access.php?action=redeem", { token }),
+}
+
 // Auth (§6.1). Token + user persisted in the auth store; api attaches the bearer.
 export type LoginResponse = { token: string; expires: string; user: AuthUser }
 export const auth = {
@@ -505,8 +1144,28 @@ export const auth = {
   magicRequest: (email: string) => api.post<{ ok: boolean }>("/auth.php?action=magic_request", { email }),
   magicConsume: (token: string) => api.post<LoginResponse>("/auth.php?action=magic_consume", { token }),
   ssoStatus: () => api.get<{ google: boolean }>("/oauth.php?action=status"),
-  me: () => api.get<{ user: AuthUser }>("/auth.php?action=me"),
+  // totp_enabled is the caller's own two-factor state; absent on a server that
+  // predates it, null on a DB without the totp columns.
+  me: () => api.get<{ user: AuthUser; totp_enabled?: boolean | null }>("/auth.php?action=me"),
   logout: () => api.post<{ ok: boolean }>("/auth.php?action=logout", {}),
+  // Revokes a token other than the stored one (K-033: the token held before the
+  // lock screen was unlocked). Sends that token explicitly and, unlike
+  // `request`, never clears the stored session, which belongs to the new token.
+  revokeToken: async (token: string): Promise<ApiResult<{ ok: boolean }>> => {
+    try {
+      const res = await fetch(`${API_BASE}/auth.php?action=logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: "{}",
+      })
+      const text = await res.text()
+      const body = parseJsonBody(text) ?? null
+      if (!res.ok) return { ok: false, error: bodyError(body) || statusError(res.status), status: res.status }
+      return { ok: true, data: body as { ok: boolean } }
+    } catch {
+      return { ok: false, error: NETWORK_ERROR }
+    }
+  },
   forgot: (email: string) => api.post<{ ok: boolean }>("/auth.php?action=forgot", { email }),
   reset: (token: string, password: string) =>
     api.post<{ ok: boolean }>("/auth.php?action=reset", { token, password }),
@@ -631,6 +1290,7 @@ export type Contract = {
   created_at: string
   client_company: string | null
   project_name: string | null
+  project_reference?: string | null // the project's GK-P-YYYY-NNNN (SQL 19); null before that step has run
 }
 export type ContractDetail = Contract & {
   body: string | null
@@ -693,6 +1353,9 @@ export type FileRow = {
   client_company: string | null
   project_name: string | null
   uploaded_by_name: string | null
+  /** Shown in the client's portal (SQL 18). null (or absent on an older server) until SQL 18 runs. */
+  client_visible?: boolean | null
+  shared_at?: string | null
 }
 export const files = {
   list: (params?: { project_id?: number; client_id?: number }) => {
@@ -710,11 +1373,31 @@ export const files = {
     return api.upload<{ id: number }>("/files.php?action=upload", form)
   },
   share: (id: number, days = 7) => api.post<{ token: string; expires_at: string }>("/files.php?action=share", { id, days }),
+  // Show or hide a file in its client's portal (SQL 18; 503 until it runs).
+  clientShare: (id: number, visible: boolean) =>
+    api.post<{ id: number; client_visible: boolean; shared_at: string | null }>("/files.php?action=client_share", { id, visible }),
   remove: (id: number) => api.post<{ ok: boolean }>("/files.php?action=delete", { id }),
   // Authenticated download URL (token is attached by the browser via the page,
   // so for direct links prefer a share link). Returns the absolute API path.
   downloadUrl: (id: number) => `${API_BASE}/files.php?download=${id}`,
   shareUrl: (token: string) => `${API_BASE}/files.php?token=${token}`,
+}
+
+// Files the studio shared with the signed-in client (files.php client routes,
+// SQL 18). No client id is sent: the server derives it from the token. A file
+// may be any allowed type, so the download accepts any file reply and refuses
+// only a JSON or HTML one (an error or the app shell).
+export type PortalFile = {
+  id: number
+  name: string
+  mime: string
+  size: number
+  shared_at: string | null
+  project_name: string | null
+}
+export const portalFiles = {
+  list: () => api.get<PortalFile[]>("/files.php?action=mine"),
+  download: (id: number) => api.download(`/files.php?action=mine_download&id=${id}`, isFileReply),
 }
 
 // Announcements / broadcasts.
@@ -905,6 +1588,9 @@ export const blog = {
   list: () => api.get<BlogSummary[]>("/blog.php"),
   get: (slug: string) => api.get<BlogPost>(`/blog.php?slug=${encodeURIComponent(slug)}`),
   listAll: () => api.get<BlogAdminRow[]>("/blog.php?all=1"),
+  // Editors: one post by id, any status, with excerpt and body, for the edit form.
+  getForEdit: (id: number) =>
+    api.get<BlogAdminRow & { excerpt: string | null; body: string | null }>(`/blog.php?id=${id}`),
   create: (p: BlogInput) => api.post<{ id: number; slug: string }>("/blog.php?action=create", p),
   update: (id: number, p: BlogInput) => api.post<{ ok: boolean; slug: string }>("/blog.php?action=update", { id, ...p }),
   publish: (id: number, status: string) => api.post<{ ok: boolean }>("/blog.php?action=publish", { id, status }),
@@ -987,6 +1673,16 @@ export type WorkCover = {
   mime: string | null
 }
 
+// A homepage hero screenshot, folded the same way as the cover. Served publicly
+// at /files.php?token=<share_token>; work.php issues a permanent token when one
+// is attached, and alt text is required for it.
+export type WorkHeroShot = {
+  file_id: number
+  alt: string
+  share_token: string | null
+  mime: string | null
+}
+
 export type WorkImage = {
   id: number
   file_id: number
@@ -1017,6 +1713,15 @@ type WorkBase = {
   created_at: string
   updated_at: string
   cover: WorkCover | null
+  // Homepage hero (2026-10-14). All null until the schema step has run.
+  // `hero_order` is 1..5 while the record is in the hero, otherwise null.
+  hero_order: number | null
+  brand_colour: string | null // #RRGGBB
+  hero_word: string | null // one or two words finishing "I design and build websites for …"
+  hero_desktop_file_id: number | null
+  hero_mobile_file_id: number | null
+  hero_desktop: WorkHeroShot | null
+  hero_mobile: WorkHeroShot | null
 }
 
 // Public rows: `client_consent` is removed, and `client_name` is OMITTED
@@ -1032,6 +1737,26 @@ export type WorkDetail = WorkSummary & {
 // `?action=listAll` keeps the client name and the consent flag, but does NOT
 // select problem/built/outcome — only the public `get` returns those.
 export type WorkAdminRow = WorkBase & { client_name: string; client_consent: number }
+
+// `?action=hero`: published records in the hero, in hero order, at most five.
+// Only the fields the hero renders; `client_name` follows the same consent rule
+// as the public list (key absent without consent).
+export type WorkHeroRow = {
+  id: number
+  slug: string
+  kind: WorkKind
+  title: string
+  client_name?: string
+  sector: string | null
+  summary: string | null
+  live_url: string | null
+  status: "published"
+  hero_order: number
+  brand_colour: string | null
+  hero_word: string | null
+  hero_desktop: WorkHeroShot | null
+  hero_mobile: WorkHeroShot | null
+}
 
 export type WorkInput = {
   title: string
@@ -1053,6 +1778,15 @@ export type WorkInput = {
   cover_file_id?: number | null
   featured?: boolean
   sort_order?: number
+  // Hero presentation. Each is written only when its key is sent, so leaving
+  // them out keeps what is stored; null or "" clears. A screenshot file id must
+  // be sent with its alt text, and clearing the file clears the alt.
+  brand_colour?: string | null
+  hero_word?: string | null
+  hero_desktop_file_id?: number | null
+  hero_desktop_alt?: string | null
+  hero_mobile_file_id?: number | null
+  hero_mobile_alt?: string | null
 }
 
 export type WorkImageInput = {
@@ -1078,10 +1812,13 @@ export const work = {
   get: (slug: string) => api.get<WorkDetail>(`/work.php?action=get&slug=${encodeURIComponent(slug)}`),
   listAll: () => api.get<WorkAdminRow[]>("/work.php?action=listAll"),
   create: (p: WorkInput) => api.post<{ id: number; slug: string }>("/work.php?action=create", p),
-  update: (id: number, p: WorkInput) => api.post<{ ok: boolean; slug: string }>("/work.php?action=update", { id, ...p }),
+  // `hero_removed` is true when saving the record as a draft took it out of the hero.
+  update: (id: number, p: WorkInput) =>
+    api.post<{ ok: boolean; slug: string; hero_removed: boolean }>("/work.php?action=update", { id, ...p }),
   // Re-reads the STORED row, so a 409 here means consent is missing on the record.
+  // Unpublishing also takes the record out of the hero (`hero_removed`).
   publish: (id: number, status: WorkStatus) =>
-    api.post<{ ok: boolean; status: WorkStatus }>("/work.php?action=publish", { id, status }),
+    api.post<{ ok: boolean; status: WorkStatus; hero_removed: boolean }>("/work.php?action=publish", { id, status }),
   remove: (id: number) => api.post<{ ok: boolean }>("/work.php?action=remove", { id }),
   reorder: (ids: number[]) => api.post<{ ok: boolean; count: number }>("/work.php?action=reorder", { ids }),
   // Alt text is mandatory server-side; an empty string is a 400. Attaching also
@@ -1089,4 +1826,89 @@ export const work = {
   // previous Files share had set), so the image cannot quietly 404 later.
   addImage: (p: WorkImageInput) => api.post<WorkAddImageResult>("/work.php?action=addImage", p),
   removeImage: (id: number) => api.post<{ ok: boolean }>("/work.php?action=removeImage", { id }),
+  // Public. An empty list before the schema step has run.
+  hero: () => api.get<WorkHeroRow[]>("/work.php?action=hero"),
+  // 409 when the record is not published, or when switching on a sixth; 503
+  // before the schema step. Switching off closes the gap in the order.
+  setHero: (id: number, on: boolean) =>
+    api.post<{ ok: boolean; hero_order: number | null }>("/work.php?action=setHero", { id, on }),
+  // `ids` must be exactly the records currently in the hero, in the new order.
+  heroOrder: (ids: number[]) => api.post<{ ok: boolean; count: number }>("/work.php?action=heroOrder", { ids }),
+}
+
+// ── Site content (public-site copy, edited in the CMS) ───────────────────────
+// Mirrors server/site.php. Each section is saved as a draft and goes public only
+// when published. `get` is public and returns published sections only (a
+// section never published is absent); `draft`, `save` and `publish` are for
+// super_admin, admin, manager and editor. The server validates every shape
+// strictly: unknown keys, empty required text, over-long text (300 for short
+// fields, 1200 for long ones) and lists over 12 rows are refused, not trimmed.
+export type SiteHero = { status: string; lead: string; cta1: string; cta2: string; secs: number } // secs 4..10
+// A service row. Rows saved before 2026-10-19 hold only title and summary; the
+// other fields are optional, but site.php takes them all or none of slug,
+// group, hook, needs, deliverables, exclusions and price_basis, so a published
+// service is either a whole page or an edit of a built-in one.
+export type SiteServiceGroup = "websites" | "it"
+export type SiteService = {
+  title: string
+  summary: string
+  slug?: string
+  group?: SiteServiceGroup
+  hook?: string
+  detail?: string
+  needs?: string[]
+  deliverables?: string[]
+  exclusions?: string[]
+  price_basis?: string
+}
+export type SiteProcessStep = { title: string; detail: string }
+export type SitePackage = { name: string; price: string; best: string; featured?: boolean }
+export type SiteAddon = { name: string; price: string }
+export type SiteTerm = { stage: string; share: string }
+export type SiteFaq = { q: string; a: string }
+export type SiteContact = { email: string; reply: string; footer: string }
+// Business and social links: every field optional; a left-out field falls back
+// to the website's built-in value. A profile is a listed platform and an https
+// address (server/site.php 'business').
+export const SOCIAL_PLATFORMS = ["linkedin", "instagram", "facebook", "x", "youtube", "tiktok", "github"] as const
+export type SiteSocialPlatform = (typeof SOCIAL_PLATFORMS)[number]
+export type SiteSocial = { platform: SiteSocialPlatform; url: string; label?: string }
+export type SiteBusiness = { email?: string; phone?: string; address?: string[]; hours?: string; social?: SiteSocial[] }
+
+export type SiteContent = {
+  hero: SiteHero
+  services: SiteService[]
+  process: SiteProcessStep[]
+  packages: SitePackage[]
+  addons: SiteAddon[]
+  terms: SiteTerm[]
+  faqs: SiteFaq[]
+  contact: SiteContact
+  business: SiteBusiness
+}
+export type SiteSection = keyof SiteContent
+export const SITE_SECTIONS: SiteSection[] = ["hero", "services", "process", "packages", "addons", "terms", "faqs", "contact", "business"]
+
+// One section as the CMS sees it. `draft` equal to `published` means no
+// unpublished changes. Names are null when the user has since been removed.
+export type SiteSectionState<S extends SiteSection = SiteSection> = {
+  draft: SiteContent[S] | null
+  published: SiteContent[S] | null
+  updated_at: string | null
+  updated_by_name: string | null
+  published_at: string | null
+  published_by_name: string | null
+}
+export type SiteDrafts = { [S in SiteSection]: SiteSectionState<S> }
+
+export const siteContent = {
+  // Public. `{}` when nothing is published or the table does not exist yet, so
+  // the public site keeps its built-in copy. Never includes a draft.
+  get: () => api.get<Partial<SiteContent>>("/site.php?action=get"),
+  draft: () => api.get<SiteDrafts>("/site.php?action=draft"),
+  save: <S extends SiteSection>(section: S, data: SiteContent[S]) =>
+    api.post<{ ok: boolean; section: S; draft: SiteContent[S] }>("/site.php?action=save", { section, data }),
+  // Omit `sections` to publish every section that has a saved draft.
+  publish: (sections?: SiteSection[]) =>
+    api.post<{ ok: boolean; published: SiteSection[] }>("/site.php?action=publish", sections ? { sections } : {}),
 }

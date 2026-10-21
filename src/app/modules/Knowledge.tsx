@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react"
-import { Loader2, Plus, RefreshCw, Search, Pencil, Trash2, BookOpen } from "lucide-react"
+import { useState } from "react"
+import { useLoader } from "@/hooks/use-load"
+import { LOAD_CRASH_ERROR } from "@/lib/loadState"
+import { Loader2, Plus, RefreshCw, Search, Pencil, Trash2, BookOpen, AlertCircle } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,15 +23,20 @@ import {
 } from "@/components/ui/select"
 import { knowledge, type KbSummary, type KbArticle } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import { Skeleton } from "@/components/ui/skeleton"
+import { PageHeader } from "@/app/components/page-kit"
+import { EmptyState } from "@/app/components/EmptyState"
+
+const AUDIENCE: Record<string, string> = { internal: "Internal", client: "Client-facing" }
 
 const blank = { id: 0, title: "", category: "General", audience: "internal", body: "" }
 
 export default function Knowledge() {
   const [items, setItems] = useState<KbSummary[]>([])
-  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [q, setQ] = useState("")
   const [category, setCategory] = useState("all")
+  const [seen, setSeen] = useState<string[]>([])
 
   const [selected, setSelected] = useState<KbArticle | null>(null)
   const [viewLoading, setViewLoading] = useState(false)
@@ -38,22 +45,21 @@ export default function Knowledge() {
   const [form, setForm] = useState<{ id: number; title: string; category: string; audience: string; body: string }>(blank)
   const [saving, setSaving] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await knowledge.list(q, category === "all" ? "" : category)
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else setError(res.error)
-    setLoading(false)
-  }
+  // A new category loads at once; a new search term loads on Enter or Search.
+  const { loading, reload: load } = useLoader(
+    () => knowledge.list(q, category === "all" ? "" : category),
+    (res) => {
+      if (res.ok) {
+        setItems(res.data)
+        setSeen((xs) => Array.from(new Set([...xs, ...res.data.map((i) => i.category)])))
+        setError(null)
+      } else setError(res.error)
+    },
+    category,
+    () => setError(LOAD_CRASH_ERROR),
+  )
 
-  useEffect(() => {
-    load()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category])
-
-  const categories = Array.from(new Set(items.map((i) => i.category))).sort()
+  const categories = Array.from(new Set([...seen, ...items.map((i) => i.category)])).sort()
 
   const openArticle = async (id: number) => {
     setViewLoading(true)
@@ -96,113 +102,130 @@ export default function Knowledge() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Knowledge</h1>
-          <p className="text-sm text-muted-foreground">SOPs, runbooks and help articles — the studio made repeatable.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={load}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
-          <Button size="sm" onClick={startNew}>
-            <Plus className="mr-2 h-4 w-4" /> New article
-          </Button>
-        </div>
-      </div>
+    <div>
+      <PageHeader
+        title="Knowledge"
+        subtitle="SOPs, runbooks and help articles: the studio made repeatable."
+        actions={
+          <>
+            <Button onClick={startNew}>
+              <Plus /> New article
+            </Button>
+            <Button variant="outline" onClick={load}>
+              <RefreshCw /> Refresh
+            </Button>
+          </>
+        }
+      />
 
-      {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the knowledge endpoint and DB must be live on the server.
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <label className="flex min-h-10 min-w-0 max-w-[340px] flex-1 basis-[200px] items-center gap-2 rounded-[10px] border bg-card px-3 text-muted-foreground focus-within:border-acc focus-within:shadow-[0_0_0_3px_hsl(var(--os-acc-soft))]">
+            <Search className="size-4 shrink-0" aria-hidden="true" />
+            <span className="sr-only">Search titles</span>
+            <input
+              type="search"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && load()}
+              placeholder="Search titles…"
+              className="w-full min-w-0 border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+            />
+          </label>
+          {["all", ...categories].map((c) => (
+            <button
+              key={c}
+              type="button"
+              aria-pressed={category === c}
+              onClick={() => setCategory(c)}
+              className="inline-flex min-h-[34px] max-w-full items-center whitespace-nowrap rounded-full border bg-card px-3 text-[13px] font-medium transition-colors hover:border-line-strong aria-pressed:border-foreground aria-pressed:bg-foreground aria-pressed:text-background"
+            >
+              <span className="truncate">{c === "all" ? "All" : c}</span>
+            </button>
+          ))}
         </div>
-      )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* List */}
-        <div className="space-y-3 lg:col-span-1">
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && load()} placeholder="Search titles…" className="pl-8" />
+        {error && (
+          <div role="alert" className="flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
+            <AlertCircle className="mt-0.5 size-5 shrink-0 text-bad" aria-hidden="true" />
+            <div className="min-w-[min(100%,200px)] flex-1">
+              <p className="font-semibold">Articles could not be loaded</p>
+              <p className="mt-1 text-sm text-muted-foreground">{error}. The knowledge endpoint and database must be live on the server.</p>
             </div>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All</SelectItem>
-                {categories.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Button variant="outline" onClick={load}>
+              <RefreshCw /> Try again
+            </Button>
           </div>
+        )}
 
-          <div className="rounded-xl border border-border bg-card">
-            {loading ? (
-              <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-              </div>
-            ) : items.length === 0 ? (
-              <div className="p-8 text-center text-sm text-muted-foreground">No articles. Write the first one.</div>
-            ) : (
-              <ul className="divide-y">
-                {items.map((a) => (
-                  <li key={a.id}>
-                    <button
-                      onClick={() => openArticle(a.id)}
-                      className={cn(
-                        "flex w-full flex-col gap-0.5 px-4 py-3 text-left hover:bg-muted/50",
-                        selected?.id === a.id && "bg-muted/60",
-                      )}
-                    >
-                      <span className="text-sm font-medium">{a.title}</span>
-                      <span className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span className="rounded bg-muted px-1.5 py-0.5">{a.category}</span>
-                        <span className={a.audience === "client" ? "text-primary" : ""}>{a.audience}</span>
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
-
-        {/* Viewer */}
-        <div className="lg:col-span-2">
-          <div className="min-h-[20rem] rounded-xl border border-border bg-card p-6">
-            {viewLoading ? (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> Loading article…
-              </div>
-            ) : !selected ? (
-              <div className="flex h-64 flex-col items-center justify-center text-center text-sm text-muted-foreground">
-                <BookOpen className="mb-2 h-8 w-8 opacity-40" />
-                Pick an article to read, or write a new one.
-              </div>
-            ) : (
-              <article>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h2 className="text-xl font-bold">{selected.title}</h2>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {selected.category} · {selected.audience} · {selected.author || "—"}
-                    </p>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => startEdit(selected)}>
-                      <Pencil className="mr-1 h-3.5 w-3.5" /> Edit
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(selected)} aria-label="Delete article">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
+        {!error && (
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
+            {/* List */}
+            <div className="min-w-0 self-start rounded-2xl border bg-card p-1.5">
+              {loading ? (
+                <div className="space-y-2 p-2" aria-busy="true" aria-label="Loading articles">
+                  {[0, 1, 2, 3].map((i) => (
+                    <Skeleton key={i} className="h-11" />
+                  ))}
                 </div>
-                <div className="mt-4 whitespace-pre-wrap text-sm leading-relaxed">{selected.body || "—"}</div>
-              </article>
-            )}
+              ) : items.length === 0 ? (
+                <EmptyState icon={BookOpen} title="No articles" description="Write the first one." className="py-10" />
+              ) : (
+                <ul>
+                  {items.map((a) => (
+                    <li key={a.id}>
+                      <button
+                        type="button"
+                        onClick={() => openArticle(a.id)}
+                        aria-current={selected?.id === a.id ? "true" : undefined}
+                        className={cn(
+                          "flex min-h-10 w-full flex-col items-start gap-0.5 rounded-[10px] px-2.5 py-2 text-left hover:bg-secondary focus-visible:bg-secondary focus-visible:outline-none",
+                          selected?.id === a.id && "bg-secondary",
+                        )}
+                      >
+                        <b className="font-semibold [overflow-wrap:anywhere]">{a.title}</b>
+                        <span className="text-[12.5px] text-muted-foreground">
+                          {a.category} · {AUDIENCE[a.audience] ?? a.audience}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Reader */}
+            <article className="min-h-[20rem] min-w-0 rounded-2xl border bg-card p-[18px]">
+              {viewLoading ? (
+                <div className="space-y-3" aria-busy="true" aria-label="Loading article">
+                  <Skeleton className="h-3 w-40" />
+                  <Skeleton className="h-7 w-2/3" />
+                  <Skeleton className="h-3" />
+                  <Skeleton className="h-3" />
+                  <Skeleton className="h-3 w-4/5" />
+                </div>
+              ) : !selected ? (
+                <EmptyState icon={BookOpen} title="Nothing open" description="Pick an article to read, or write a new one." className="py-14" />
+              ) : (
+                <>
+                  <p className="font-mono text-[11.5px] uppercase tracking-[.06em] text-muted-foreground [overflow-wrap:anywhere]">
+                    {selected.category} · {AUDIENCE[selected.audience] ?? selected.audience} · {selected.author || "Unknown author"}
+                  </p>
+                  <h2 className="mb-3.5 mt-1.5 font-display text-[1.5rem] font-semibold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">{selected.title}</h2>
+                  <div className="max-w-[62ch] whitespace-pre-wrap leading-relaxed [overflow-wrap:anywhere]">{selected.body || "This article has no body yet."}</div>
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    <Button variant="outline" onClick={() => startEdit(selected)}>
+                      <Pencil /> Edit
+                    </Button>
+                    <Button variant="destructive" onClick={() => remove(selected)}>
+                      <Trash2 /> Delete
+                    </Button>
+                  </div>
+                </>
+              )}
+            </article>
           </div>
-        </div>
+        )}
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
@@ -222,9 +245,9 @@ export default function Knowledge() {
               </div>
             </div>
             <div>
-              <Label>Audience</Label>
+              <Label htmlFor="knowledge-sel1">Audience</Label>
               <Select value={form.audience} onValueChange={(v) => setForm((f) => ({ ...f, audience: v }))}>
-                <SelectTrigger className="mt-1.5 w-48"><SelectValue /></SelectTrigger>
+                <SelectTrigger id="knowledge-sel1" className="mt-1.5 w-48"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="internal">Internal</SelectItem>
                   <SelectItem value="client">Client-facing</SelectItem>
@@ -237,6 +260,9 @@ export default function Knowledge() {
             </div>
           </div>
           <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
             <Button onClick={save} disabled={saving}>
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {form.id ? "Save changes" : "Create article"}

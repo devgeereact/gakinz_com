@@ -1,31 +1,38 @@
 import { useEffect, useState } from "react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
-import { Loader2 } from "lucide-react"
+import { ArrowRight, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { auth, API_BASE } from "@/lib/api"
+import { auth, clientAccess, API_BASE } from "@/lib/api"
+import { isReferenceShape, normaliseReference, readAccessToken, redeemErrorMessage, referenceSignInEnabled } from "@/lib/clientAccess"
 import { useAuth } from "@/store/auth.store"
 import { defaultPathForRole } from "@/lib/access"
-import BrandMark from "@/marketing/components/BrandMark"
+import AuthFrame from "@/app/components/AuthFrame"
+import { initialRedirectState } from "@/lib/loginRedirect"
 
-const SSO_ERRORS: Record<string, string> = {
-  cancelled: "Google sign-in was cancelled.",
-  no_account: "No GAkinz account matches that Google email. Ask an admin to create one.",
-  inactive: "That account is suspended.",
-  exchange_failed: "Google sign-in failed. Please try again.",
-  no_email: "Google didn’t return a verified email.",
-}
 
 export default function Login() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [code, setCode] = useState("")
   const [needs2fa, setNeeds2fa] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [busy, setBusy] = useState(false)
+  // A sign-in link or Google redirect sets the opening state; the effect below consumes it.
+  const [redirect] = useState(() => initialRedirectState(window.location.hash))
+  const [error, setError] = useState<string | null>(redirect.error)
+  const [busy, setBusy] = useState(redirect.busy)
   const [ssoGoogle, setSsoGoogle] = useState(false)
   const [magicSent, setMagicSent] = useState(false)
+  const [showPw, setShowPw] = useState(false)
+  // Sign-in by work reference and email: shown only when the server says it
+  // is switched on (client_access.php answers 404 while off).
+  const [refEnabled, setRefEnabled] = useState(false)
+  const [refOpen, setRefOpen] = useState(false)
+  const [reference, setReference] = useState("")
+  const [refEmail, setRefEmail] = useState("")
+  const [refBusy, setRefBusy] = useState(false)
+  const [refError, setRefError] = useState<string | null>(null)
+  const [refSent, setRefSent] = useState<string | null>(null)
   const setAuth = useAuth((s) => s.setAuth)
   const setUser = useAuth((s) => s.setUser)
   const token = useAuth((s) => s.token)
@@ -46,6 +53,10 @@ export default function Login() {
     auth.ssoStatus().then((r) => r.ok && setSsoGoogle(r.data.google))
   }, [])
 
+  useEffect(() => {
+    clientAccess.status().then((r) => setRefEnabled(referenceSignInEnabled(r)))
+  }, [])
+
   // OAuth bounce-back: the SSO callback redirects to /login#sso_token=… (or
   // #sso_error=…). Consume the hash, establish the session, then clean the URL.
   useEffect(() => {
@@ -55,9 +66,22 @@ export default function Login() {
     const ssoToken = params.get("sso_token")
     const ssoError = params.get("sso_error")
     const magic = params.get("magic")
-    if (magic) {
+    const access = readAccessToken(hash)
+    if (access) {
+      // A reference sign-in link. Clear the address bar before anything else,
+      // so the one-time token is not left in history or a shared screenshot.
       window.history.replaceState(null, "", window.location.pathname)
-      setBusy(true)
+      clientAccess.redeem(access).then((r) => {
+        setBusy(false)
+        if (r.ok) {
+          setAuth(r.data.token, r.data.user)
+          navigate(defaultPathForRole(r.data.user.role), { replace: true })
+        } else {
+          setError(redeemErrorMessage(r))
+        }
+      })
+    } else if (magic) {
+      window.history.replaceState(null, "", window.location.pathname)
       auth.magicConsume(magic).then((r) => {
         setBusy(false)
         if (r.ok) {
@@ -68,11 +92,10 @@ export default function Login() {
         }
       })
     } else if (ssoError) {
-      setError(SSO_ERRORS[ssoError] || "Google sign-in failed.")
+      // Its message is already showing (initialRedirectState); only clear the address bar.
       window.history.replaceState(null, "", window.location.pathname)
     } else if (ssoToken) {
       window.history.replaceState(null, "", window.location.pathname)
-      setBusy(true)
       // We have a token but not the user yet — persist the token, fetch /me.
       useAuth.getState().setAuth(ssoToken, useAuth.getState().user as never)
       auth.me().then((r) => {
@@ -86,14 +109,7 @@ export default function Login() {
         }
       })
     }
-  }, [navigate, setUser])
-
-  // Login screen is the light brand theme too — assert it via the same marker
-  // the public layout uses (CSS re-asserts light tokens; next-themes keeps `dark`).
-  useEffect(() => {
-    document.documentElement.classList.add("gk-force-light")
-    return () => document.documentElement.classList.remove("gk-force-light")
-  }, [])
+  }, [navigate, setAuth, setUser])
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -125,122 +141,192 @@ export default function Login() {
     setMagicSent(true)
   }
 
+  const sendReference = async (e: React.FormEvent) => {
+    e.preventDefault()
+    const ref = normaliseReference(reference)
+    if (!isReferenceShape(ref)) {
+      setRefError("Enter the reference as it appears on your documents, for example GK-P-2026-0001.")
+      return
+    }
+    if (!refEmail.trim()) {
+      setRefError("Enter the email address we have for you.")
+      return
+    }
+    setRefError(null)
+    setRefBusy(true)
+    const r = await clientAccess.request(ref, refEmail.trim())
+    setRefBusy(false)
+    if (r.ok) setRefSent(r.data.message)
+    else setRefError(r.error)
+  }
+
+  // The approved sign-in screen (D-046) follows the light or dark theme like
+  // the rest of GAkinzOS; its left panel is graphite in both.
   return (
-    <div className="gk-public relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-12">
-      <div className="gk-aurora" aria-hidden />
-      <div className="absolute inset-0 gk-grid" aria-hidden />
-      <div className="relative w-full max-w-sm">
-        <Link to="/" className="mb-8 flex items-center justify-center gap-2" aria-label="GAkinz home">
-          <BrandMark className="h-9 w-9" />
-          <span className="text-xl font-extrabold tracking-tight">
-            GAkin<span className="text-primary">z</span>
-          </span>
-        </Link>
+    <AuthFrame>
+      <h2 className="font-display text-[1.8rem] font-semibold tracking-[-0.025em]">Sign in</h2>
+      <p className="mb-6 mt-2 text-muted-foreground">Use the email address your invitation was sent to.</p>
 
-        <div className="gk-ring p-6 shadow-xl shadow-primary/10 sm:p-8">
-          <h1 className="font-serif text-2xl font-bold tracking-tight">
-            Member <span className="gk-grad-text">sign in</span>
-          </h1>
-          <p className="mt-1.5 text-sm text-muted-foreground">Access the GAkinz platform.</p>
-
-          <form onSubmit={onSubmit} noValidate className="mt-6 space-y-4">
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="mt-1.5"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="mt-1.5"
-                required
-              />
-            </div>
-
-            {needs2fa && (
-              <div>
-                <Label htmlFor="code">Authenticator code</Label>
-                <Input
-                  id="code"
-                  type="text"
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  className="mt-1.5 tracking-[0.4em]"
-                  placeholder="123456"
-                  maxLength={6}
-                  autoFocus
-                  required
-                />
-                <p className="mt-1.5 text-xs text-muted-foreground">Enter the 6-digit code from your authenticator app.</p>
-              </div>
-            )}
-
-            {error && (
-              <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-                {error}
-              </div>
-            )}
-
-            <Button type="submit" className="gk-shine w-full shadow-md shadow-primary/20" disabled={busy}>
-              {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {busy ? "Signing in…" : needs2fa ? "Verify & sign in" : "Sign in"}
-            </Button>
-          </form>
-
-          {ssoGoogle && !needs2fa && (
-            <>
-              <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => { window.location.href = `${API_BASE}/oauth.php?action=start` }}
-              >
-                Continue with Google
-              </Button>
-            </>
-          )}
-
-          {!needs2fa && (
-            magicSent ? (
-              <p className="mt-4 text-center text-sm text-muted-foreground">
-                If that email has an account, a sign-in link is on its way. Check your inbox.
-              </p>
-            ) : (
-              <button
-                type="button"
-                onClick={sendMagic}
-                disabled={busy}
-                className="mt-4 w-full text-center text-sm text-muted-foreground hover:text-foreground"
-              >
-                Email me a sign-in link instead
-              </button>
-            )
-          )}
+      <form onSubmit={onSubmit} noValidate className="grid gap-3.5">
+        <div className="grid gap-1.5">
+          <Label htmlFor="email">Email</Label>
+          <Input
+            id="email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+        <div className="grid gap-1.5">
+          <Label htmlFor="password">Password</Label>
+          <div className="relative">
+            <Input
+              id="password"
+              type={showPw ? "text" : "password"}
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="pr-16"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw((v) => !v)}
+              aria-pressed={showPw}
+              aria-label={showPw ? "Hide password" : "Show password"}
+              className="absolute right-1.5 top-1/2 h-8 -translate-y-1/2 rounded-lg px-2.5 text-[13px] font-semibold text-acc"
+            >
+              {showPw ? "Hide" : "Show"}
+            </button>
+          </div>
         </div>
 
-        <p className="mt-6 text-center text-sm text-muted-foreground">
-          <Link to="/" className="hover:text-foreground">
-            ← Back to gakinz.com
-          </Link>
-        </p>
-      </div>
-    </div>
+        {needs2fa && (
+          <div className="grid gap-1.5">
+            <Label htmlFor="code">Authenticator code</Label>
+            <Input
+              id="code"
+              type="text"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              className="tracking-[0.4em]"
+              placeholder="123456"
+              maxLength={6}
+              autoFocus
+              required
+            />
+            <p className="text-xs text-muted-foreground">Enter the 6-digit code from your authenticator app.</p>
+          </div>
+        )}
+
+        {error && (
+          <div role="alert" className="gk-os-wrap rounded-[10px] border border-bad/30 bg-bad-soft px-3 py-2 text-sm text-foreground">
+            {error}
+          </div>
+        )}
+
+        <Button type="submit" size="lg" className="w-full" disabled={busy}>
+          {busy && <Loader2 className="h-4 w-4 animate-spin" />}
+          {busy ? "Signing in…" : needs2fa ? "Verify & sign in" : "Sign in"}
+          {!busy && <ArrowRight aria-hidden />}
+        </Button>
+      </form>
+
+      {ssoGoogle && !needs2fa && (
+        <>
+          <div className="my-4 flex items-center gap-3 text-xs text-muted-foreground">
+            <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="w-full"
+            onClick={() => { window.location.href = `${API_BASE}/oauth.php?action=start` }}
+          >
+            Continue with Google
+          </Button>
+        </>
+      )}
+
+      {!needs2fa && (
+        magicSent ? (
+          <p className="mt-4 text-center text-sm text-muted-foreground">
+            If that email has an account, a sign-in link is on its way. Check your inbox.
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={sendMagic}
+            disabled={busy}
+            className="mt-4 w-full rounded-[10px] text-center text-sm text-muted-foreground hover:text-foreground"
+          >
+            Client? Email me a sign-in link instead
+          </button>
+        )
+      )}
+
+      {refEnabled && !needs2fa && (
+        refSent ? (
+          <p role="status" className="mt-4 text-center text-sm text-muted-foreground">{refSent}</p>
+        ) : refOpen ? (
+          <form onSubmit={sendReference} noValidate className="mt-5 grid gap-3.5 border-t border-border pt-5">
+            <p className="text-sm text-muted-foreground">
+              Client? Enter a project or enquiry reference and the email address we have for you. We will email you a
+              link that signs you in once.
+            </p>
+            <div className="grid gap-1.5">
+              <Label htmlFor="reference">Reference</Label>
+              <Input
+                id="reference"
+                autoComplete="off"
+                spellCheck={false}
+                placeholder="GK-P-2026-0001"
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                required
+              />
+            </div>
+            <div className="grid gap-1.5">
+              <Label htmlFor="ref-email">Email</Label>
+              <Input
+                id="ref-email"
+                type="email"
+                autoComplete="email"
+                value={refEmail}
+                onChange={(e) => setRefEmail(e.target.value)}
+                required
+              />
+            </div>
+            {refError && (
+              <div role="alert" className="gk-os-wrap rounded-[10px] border border-bad/30 bg-bad-soft px-3 py-2 text-sm text-foreground">
+                {refError}
+              </div>
+            )}
+            <Button type="submit" variant="outline" className="w-full" disabled={refBusy}>
+              {refBusy && <Loader2 className="h-4 w-4 animate-spin" />}
+              {refBusy ? "Sending…" : "Email me a sign-in link"}
+            </Button>
+          </form>
+        ) : (
+          <button
+            type="button"
+            onClick={() => { setRefOpen(true); setRefEmail((v) => v || email) }}
+            className="mt-2 w-full rounded-[10px] text-center text-sm text-muted-foreground hover:text-foreground"
+          >
+            Use your reference
+          </button>
+        )
+      )}
+
+      <p className="mt-6 text-center text-sm text-muted-foreground">
+        <Link to="/" className="rounded-[6px] hover:text-foreground">
+          ← Back to gakinz.com
+        </Link>
+      </p>
+    </AuthFrame>
   )
 }

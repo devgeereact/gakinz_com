@@ -8,6 +8,7 @@
  *
  * STAFF (require_auth EDITORS):
  *   GET  /blog.php?all=1        → every post incl. drafts (no body)
+ *   GET  /blog.php?id=7         → one post incl. drafts, with body (editors), for the edit form
  *   POST /blog.php?action=create {title, slug?, excerpt?, body?, category?, cover?, read_mins?, status?}
  *   POST /blog.php?action=update {id, ...}
  *   POST /blog.php?action=publish {id, status}      -- draft | published
@@ -50,6 +51,23 @@ if ($method === 'GET' && isset($_GET['slug'])) {
      WHERE p.slug = ? AND p.status = "published" AND p.deleted_at IS NULL LIMIT 1'
   );
   $stmt->bind_param('s', $slug);
+  $stmt->execute();
+  $p = $stmt->get_result()->fetch_assoc();
+  if (!$p) fail('Post not found.', 404);
+  $p['id'] = (int)$p['id'];
+  $p['read_mins'] = (int)$p['read_mins'];
+  ok($p);
+}
+
+// ── Staff: one post by id, any status, with body (the edit form loads this) ──
+if ($method === 'GET' && isset($_GET['id'])) {
+  require_auth($conn, EDITORS);
+  $id = (int)$_GET['id'];
+  $stmt = $conn->prepare(
+    'SELECT id, slug, title, excerpt, body, category, cover, read_mins, status, published_at, updated_at
+     FROM posts WHERE id = ? AND deleted_at IS NULL LIMIT 1'
+  );
+  $stmt->bind_param('i', $id);
   $stmt->execute();
   $p = $stmt->get_result()->fetch_assoc();
   if (!$p) fail('Post not found.', 404);
@@ -118,12 +136,22 @@ if ($method === 'POST' && ($action === 'create' || $action === 'update')) {
     );
     $stmt->bind_param('ssssssisss', $slug, $title, $excerpt, $bodyText, $category, $cover, $readMins, $status, $uid, $pub);
     if (!$stmt->execute()) fail('Could not create the post.', 500);
+    $newId = $conn->insert_id; // read before audit(), which inserts its own row
     audit($conn, $uid, 'blog_create', $title);
-    ok(['id' => $conn->insert_id, 'slug' => $slug], 201);
+    ok(['id' => $newId, 'slug' => $slug], 201);
   } else {
     $id = (int)($in['id'] ?? 0);
     if ($id <= 0) fail('A post id is required.');
     $slug = unique_slug($conn, slugify($slugIn !== '' ? $slugIn : $title), $id);
+    // An update that does not send excerpt or body keeps what is stored, so a
+    // form that never loaded them cannot wipe them (K-016).
+    $cur = $conn->prepare('SELECT excerpt, body FROM posts WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+    $cur->bind_param('i', $id);
+    $cur->execute();
+    $stored = $cur->get_result()->fetch_assoc();
+    if (!$stored) fail('Post not found.', 404);
+    if (!array_key_exists('excerpt', $in)) $excerpt = (string)$stored['excerpt'];
+    if (!array_key_exists('body', $in)) $bodyText = (string)$stored['body'];
     // Stamp published_at the first time it goes live.
     $stmt = $conn->prepare(
       'UPDATE posts

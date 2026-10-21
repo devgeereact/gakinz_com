@@ -7,7 +7,7 @@ project:
 defaults:
   mode: "existing-application"
   workflows:
-    - "existing-app-recovery"
+    - "existing-application"   # ~/.agents/gee-os/workflows/EXISTING-APPLICATION.md
   specialists:
     - "typescript-react"
     - "php-mysql-api"
@@ -22,8 +22,9 @@ exclusions:
   - "git history rewriting"
 
 sources_of_truth:
-  product: "GAkinzOS.html (summarised in docs/PRODUCT-SPEC.md)"
-  public_copy: "src/marketing/data/site.ts"
+  product: "docs/PRODUCT-SPEC.md (approved 2026-10-10, docs/DECISIONS.md D-043)"
+  content_and_growth: "docs/CONTENT-AND-GROWTH.md"
+  public_copy: "src/marketing/data/site.ts (defaults); published Site content via server/site.php overrides its sections (D-046)"
   routes: "src/routes/index.tsx"
   client_api_boundary: "src/lib/api.ts"
   server_boundary: "server/_bootstrap.php"
@@ -38,11 +39,28 @@ sources_of_truth:
   open_problems: "docs/KNOWN-ISSUES.md"
   completion_standard: "AGENTS.md and qa/RELEASE-CHECKLIST.md"
 
+# Retired 2026-10-10 with git rm (docs/DECISIONS.md D-044). Each is readable at commit c57eb4a.
 superseded:
   - path: "DESIGN-SYSTEM.md"
     reason: "Forest Editorial direction, built June 2026 then replaced by the mono and duo rebrand"
     replaced_by: "docs/DESIGN-SYSTEM.md"
-    recorded_in: "docs/DECISIONS.md D-006"
+    recorded_in: "docs/DECISIONS.md D-006, D-044"
+  - path: "GAkinzOS.html"
+    reason: "original product brief; no longer the scope authority"
+    replaced_by: "docs/PRODUCT-SPEC.md (Appendix B holds all 175 features with dispositions)"
+    recorded_in: "docs/DECISIONS.md D-043, D-044"
+  - path: "docs/adoption/"
+    reason: "completed 2026-09-04 GEE OS adoption records"
+    replaced_by: "docs/DECISIONS.md D-006 and D-019 to D-022; docs/KNOWN-ISSUES.md K-001 to K-003"
+    recorded_in: "docs/DECISIONS.md D-044"
+  - path: "docs/design/"
+    reason: "2026-09-22 content brief and direction note, superseded by D-037 and D-039"
+    replaced_by: "docs/DECISIONS.md D-023 (decision trail); docs/PRODUCT-SPEC.md section 3"
+    recorded_in: "docs/DECISIONS.md D-044"
+  - path: "docs/superpowers/specs/2026-09-22-public-relaunch-design.md"
+    reason: "completed relaunch specification, merged as f67f05b"
+    replaced_by: "docs/DECISIONS.md D-023 to D-032; docs/STATUS.md section 6"
+    recorded_in: "docs/DECISIONS.md D-044"
 
 not_owned_here:
   - "hosting and cPanel account configuration"
@@ -50,5 +68,11 @@ not_owned_here:
   - "TLS certificates"
   - "mail server hostnames and mailbox credentials"
   - "the dev-server port registry (this repository states only that its own port is 5102)"
+
+machines:
+  primary: mac-primary        # owns env files and secrets, including server/config.php
+  secondary: ubuntu-build     # builds and tests published branches
+  code_transport: github      # small focused commits, pushed per verified batch
+  env_files: primary-only     # never committed, never copied between computers
 
 mcp_profile: ".agent/MCP-PROFILE.yml"

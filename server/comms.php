@@ -150,11 +150,12 @@ if ($method === 'POST' && $action === 'post') {
   $stmt->bind_param('iiss', $threadId, $uid, $direction, $bodyText);
   if (!$stmt->execute()) fail('Could not post the message.', 500);
   // Touch the thread so it sorts to the top and reopens if archived.
+  $newId = $conn->insert_id; // read now: the UPDATE and audit() below change insert_id
   $touch = $conn->prepare("UPDATE comm_threads SET last_message_at = NOW(), status = 'open' WHERE id = ?");
   $touch->bind_param('i', $threadId);
   $touch->execute();
   audit($conn, $user['id'], 'comm_message_post', "#$threadId ($direction)");
-  ok(['id' => $conn->insert_id], 201);
+  ok(['id' => $newId], 201);
 }
 
 // ── Deliver a message on a thread (records AND sends) ───────────────────────
@@ -215,11 +216,12 @@ if ($method === 'POST' && $action === 'send') {
   $stmt = $conn->prepare('INSERT INTO comm_messages (thread_id, user_id, direction, body) VALUES (?, ?, ?, ?)');
   $stmt->bind_param('iiss', $threadId, $uid, $dir, $bodyText);
   if (!$stmt->execute()) fail('Message sent, but could not record it.', 500);
+  $newId = $conn->insert_id; // read now: the UPDATE and audit() below change insert_id
   $touch = $conn->prepare("UPDATE comm_threads SET last_message_at = NOW(), status = 'open' WHERE id = ?");
   $touch->bind_param('i', $threadId);
   $touch->execute();
   audit($conn, $user['id'], 'comm_send', "#$threadId ($channel) → $sentTo");
-  ok(['id' => $conn->insert_id, 'sent_to' => $sentTo, 'channel' => $channel], 201);
+  ok(['id' => $newId, 'sent_to' => $sentTo, 'channel' => $channel], 201);
 }
 
 // ── Archive / reopen a thread ───────────────────────────────────────────────

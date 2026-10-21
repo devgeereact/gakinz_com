@@ -1,9 +1,14 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 import { useParams } from "react-router-dom"
 import { proposals, type PublicProposal } from "@/lib/api"
 import Seo from "@/marketing/components/Seo"
 import BrandMark from "@/marketing/components/BrandMark"
-import { Measure } from "../components/primitives"
+import { cn } from "@/lib/utils"
+
+/** The page's centred column. Kept local when the D-037 primitives were removed, same classes. */
+function Measure({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn("mx-auto w-full max-w-[76rem] px-4 sm:px-8 lg:px-12", className)}>{children}</div>
+}
 
 const gbp = (n: number, ccy = "GBP") =>
   new Intl.NumberFormat("en-GB", { style: "currency", currency: ccy }).format(n)
@@ -86,8 +91,23 @@ export default function ProposalView() {
                     )}
                     <span className="font-data text-label uppercase text-gk-ink-mute">
                       Status · {p.status}
+                      {p.project_reference && <> · Project {p.project_reference}</>}
                     </span>
                   </div>
+
+                  {/* The only part of the acceptance evidence a client sees: the date. */}
+                  {p.status === "accepted" && p.accepted_on && (
+                    <p className="mt-5 font-data text-label uppercase text-gk-ink-mute">
+                      Accepted on{" "}
+                      <time dateTime={p.accepted_on}>
+                        {new Date(`${p.accepted_on.slice(0, 10)}T00:00:00`).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </time>
+                    </p>
+                  )}
 
                   <table className="mt-8 w-full text-body">
                     <caption className="sr-only">Priced items in this proposal</caption>

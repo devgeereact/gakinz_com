@@ -35,7 +35,7 @@ export function downloadInvoicePdf(inv: InvoiceDetail) {
 
   // Meta
   doc.setTextColor(...INK)
-  let y = 130
+  const y = 130
   doc.setFontSize(10)
   doc.setFont("helvetica", "bold")
   doc.text("Billed to", M, y)
@@ -51,6 +51,13 @@ export function downloadInvoicePdf(inv: InvoiceDetail) {
   doc.text(inv.issued_at || "—", W - M, y, { align: "right" })
   doc.text(inv.due_at || "—", W - M, y + 16, { align: "right" })
   doc.text(inv.status.toUpperCase(), W - M, y + 32, { align: "right" })
+  // The project's work reference (SQL 19), so the invoice names the work it bills.
+  if (inv.project_reference) {
+    doc.setFont("helvetica", "bold")
+    doc.text("Project", W - M - 140, y + 48)
+    doc.setFont("helvetica", "normal")
+    doc.text(inv.project_reference, W - M, y + 48, { align: "right" })
+  }
 
   // Items table. Prefer server-computed VAT figures; fall back to the line sum
   // for older invoices that predate the VAT fields.

@@ -1,0 +1,310 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { BAD_REPLY_ERROR, NETWORK_ERROR, type ApiResult, type RecordResult, type RecordSearchData } from "@/lib/api"
+import {
+  RECORD_SEARCH_DEBOUNCE_MS,
+  autoSelectRecord,
+  canSearchRecords,
+  isSelectionKey,
+  recordItemValue,
+  createRecordSearcher,
+  mergeRecords,
+  recordRoute,
+  searchQuery,
+  searchableTypes,
+  stateFromReply,
+  type RecordSearchState,
+} from "./recordSearchModel"
+
+const res = (type: RecordResult["type"], id: number, route = ""): RecordResult => ({
+  type,
+  id,
+  title: `${type} ${id}`,
+  secondary: "",
+  route,
+})
+const reply = (results: unknown[], types: RecordSearchData["types"] = {}): RecordSearchData =>
+  ({ query: "q", types, results }) as RecordSearchData
+
+describe("searchableTypes", () => {
+  it("mirrors each owning module's role list", () => {
+    expect(searchableTypes("super_admin")).toEqual(["client", "project", "enquiry", "invoice", "quote"])
+    expect(searchableTypes("manager")).toEqual(["client", "project", "enquiry", "invoice", "quote"])
+    expect(searchableTypes("editor")).toEqual(["client", "project", "enquiry", "quote"])
+    expect(searchableTypes("employee")).toEqual(["project"])
+    expect(searchableTypes("trainer")).toEqual([])
+    expect(searchableTypes("client")).toEqual([])
+    expect(searchableTypes(undefined)).toEqual([])
+  })
+
+  it("lets only roles with at least one type search", () => {
+    expect(canSearchRecords("employee")).toBe(true)
+    expect(canSearchRecords("trainer")).toBe(false)
+    expect(canSearchRecords("client")).toBe(false)
+  })
+})
+
+describe("searchQuery", () => {
+  it("trims and accepts 2 to 80 characters", () => {
+    expect(searchQuery("  ac ")).toBe("ac")
+    expect(searchQuery("a")).toBeNull()
+    expect(searchQuery("   ")).toBeNull()
+    expect(searchQuery("x".repeat(80))).toBe("x".repeat(80))
+    expect(searchQuery("x".repeat(81))).toBeNull()
+  })
+
+  it("counts a character outside the basic plane once, as the server does", () => {
+    expect(searchQuery("😀".repeat(80))).toBe("😀".repeat(80))
+    expect(searchQuery("😀")).toBeNull()
+  })
+})
+
+describe("recordRoute", () => {
+  it("keeps a deep link on the screen that owns the type", () => {
+    expect(recordRoute({ type: "project", route: "/app/projects?project=12" })).toBe("/app/projects?project=12")
+    expect(recordRoute({ type: "enquiry", route: "/app/leads?enquiry=3" })).toBe("/app/leads?enquiry=3")
+    expect(recordRoute({ type: "invoice", route: "/app/invoicing?invoice=9" })).toBe("/app/invoicing?invoice=9")
+  })
+
+  it("falls back to the type's screen for a route elsewhere, off site or malformed", () => {
+    expect(recordRoute({ type: "invoice", route: "/app/clients" })).toBe("/app/invoicing")
+    expect(recordRoute({ type: "client", route: "https://evil.example/app/clients" })).toBe("/app/clients")
+    expect(recordRoute({ type: "client", route: "//evil.example" })).toBe("/app/clients")
+    expect(recordRoute({ type: "client", route: "/app/clients?client=12" })).toBe("/app/clients?client=12")
+    expect(recordRoute({ type: "quote", route: "/app/clients?client=12" })).toBe("/app/proposals")
+    expect(recordRoute({ type: "quote", route: "/app/proposals?x=<script>" })).toBe("/app/proposals")
+    expect(recordRoute({ type: "quote", route: "" })).toBe("/app/proposals")
+  })
+})
+
+describe("mergeRecords", () => {
+  it("groups in a fixed type order whatever order the reply uses", () => {
+    const groups = mergeRecords(reply([res("quote", 1), res("client", 2), res("project", 3)]), "admin")
+    expect(groups.map((g) => [g.type, g.label, g.items.map((i) => i.id)])).toEqual([
+      ["client", "Client", [2]],
+      ["project", "Project", [3]],
+      ["quote", "Quote", [1]],
+    ])
+  })
+
+  it("drops types the role cannot read, duplicates, malformed rows and anything past 8 per type", () => {
+    const many = Array.from({ length: 10 }, (_, i) => res("project", i + 1))
+    const groups = mergeRecords(
+      reply([res("invoice", 1), res("client", 5), ...many, res("project", 1), { type: "project", id: "x" }, null, { type: "task", id: 4 }]),
+      "editor",
+    )
+    expect(groups.map((g) => g.type)).toEqual(["client", "project"])
+    expect(groups[1].items.map((i) => i.id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8])
+    expect(mergeRecords(reply([res("client", 5)]), "employee")).toEqual([])
+  })
+
+  it("strips fields the result type does not declare and checks each route", () => {
+    const extra = { ...res("client", 1, "/app/invoicing"), notes: "Private" }
+    const [g] = mergeRecords(reply([extra]), "admin")
+    expect(g.items[0]).toEqual({ type: "client", id: 1, title: "client 1", secondary: "", route: "/app/clients" })
+  })
+})
+
+describe("stateFromReply", () => {
+  it("hides the group when search.php is missing (host 404 page, no JSON body)", () => {
+    expect(stateFromReply("ac", { ok: false, error: "x", status: 404 }, "admin")).toEqual({ status: "hidden" })
+  })
+
+  it("hides the group when the old .htaccess answers the missing file with the SPA shell (HTML 200)", () => {
+    expect(stateFromReply("ac", { ok: false, error: BAD_REPLY_ERROR, status: 200 }, "admin")).toEqual({ status: "hidden" })
+  })
+
+  it("hides the group on a 503 or a 405, the other not-yet-set-up answers", () => {
+    expect(stateFromReply("ac", { ok: false, error: "Not set up.", status: 503, details: { error: "Not set up." } }, "admin")).toEqual({ status: "hidden" })
+    expect(stateFromReply("ac", { ok: false, error: "Method not allowed.", status: 405 }, "admin")).toEqual({ status: "hidden" })
+  })
+
+  it("hides the group on the role gate's bare refusal, which an older file gives", () => {
+    const res = { ok: false as const, error: "Not allowed.", status: 403, details: { error: "Not allowed." } }
+    expect(stateFromReply("ac", res, "admin")).toEqual({ status: "hidden" })
+  })
+
+  it("shows any other 403, and a 404 with a JSON error, as a failure", () => {
+    const inactive = { ok: false as const, error: "Account is not active.", status: 403, details: { error: "Account is not active." } }
+    expect(stateFromReply("ac", inactive, "admin")).toEqual({ status: "failed", query: "ac", error: "Account is not active." })
+    const missing = { ok: false as const, error: "Unknown action.", status: 404, details: { error: "Unknown action." } }
+    expect(stateFromReply("ac", missing, "admin")).toMatchObject({ status: "failed", error: "Unknown action." })
+  })
+
+  it("reports a network or server failure as failed with its message", () => {
+    expect(stateFromReply("ac", { ok: false, error: NETWORK_ERROR }, "admin")).toEqual({ status: "failed", query: "ac", error: NETWORK_ERROR })
+    expect(stateFromReply("ac", { ok: false, error: "Boom", status: 500 }, "admin")).toMatchObject({ status: "failed", error: "Boom" })
+  })
+
+  it("treats a reply without a results list as unreadable", () => {
+    const bad = { ok: true, data: { query: "ac" } } as unknown as ApiResult<RecordSearchData>
+    expect(stateFromReply("ac", bad, "admin")).toEqual({ status: "failed", query: "ac", error: BAD_REPLY_ERROR })
+  })
+
+  it("marks the list partial when any searched type was unavailable", () => {
+    const ok = stateFromReply("ac", { ok: true, data: reply([res("client", 1)], { client: "ok", invoice: "unavailable" }) }, "admin")
+    expect(ok).toMatchObject({ status: "ok", query: "ac", partial: true })
+    const full = stateFromReply("ac", { ok: true, data: reply([], { client: "ok" }) }, "admin")
+    expect(full).toEqual({ status: "ok", query: "ac", groups: [], partial: false })
+  })
+})
+
+describe("autoSelectRecord", () => {
+  const ok = (results: RecordResult[]): RecordSearchState => ({
+    status: "ok",
+    query: "ac",
+    groups: mergeRecords(reply(results), "admin"),
+    partial: false,
+  })
+
+  it("selects the first record in group order when results arrive", () => {
+    expect(autoSelectRecord(ok([res("quote", 4), res("client", 9)]), false)).toBe(recordItemValue({ type: "client", id: 9 }))
+    expect(recordItemValue({ type: "client", id: 9 })).toBe("record-client-9")
+  })
+
+  it("leaves the selection alone after the user moved it, with no results, or while loading", () => {
+    expect(autoSelectRecord(ok([res("client", 9)]), true)).toBeNull()
+    expect(autoSelectRecord(ok([]), false)).toBeNull()
+    expect(autoSelectRecord({ status: "loading", query: "ac" }, false)).toBeNull()
+    expect(autoSelectRecord({ status: "failed", query: "ac", error: "x" }, false)).toBeNull()
+  })
+
+  it("knows which keys move the selection", () => {
+    expect(isSelectionKey({ key: "ArrowDown", ctrlKey: false })).toBe(true)
+    expect(isSelectionKey({ key: "n", ctrlKey: true })).toBe(true)
+    expect(isSelectionKey({ key: "n", ctrlKey: false })).toBe(false)
+    expect(isSelectionKey({ key: "Enter", ctrlKey: false })).toBe(false)
+  })
+})
+
+describe("createRecordSearcher", () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  type Call = { query: string; signal: AbortSignal; resolve: (r: ApiResult<RecordSearchData>) => void }
+  function setup(role: Parameters<typeof canSearchRecords>[0] = "admin") {
+    const calls: Call[] = []
+    const states: RecordSearchState[] = []
+    const searcher = createRecordSearcher({
+      role,
+      find: (query, signal) => new Promise((resolve) => calls.push({ query, signal, resolve })),
+      onState: (s) => states.push(s),
+    })
+    return { calls, states, searcher }
+  }
+
+  it("waits 250ms after the last keystroke and sends only the final query", async () => {
+    const { calls, states, searcher } = setup()
+    searcher.update("ac")
+    await vi.advanceTimersByTimeAsync(100)
+    searcher.update("acm")
+    await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS - 1)
+    expect(calls).toHaveLength(0)
+    expect(states.at(-1)).toEqual({ status: "loading", query: "acm" })
+    await vi.advanceTimersByTimeAsync(1)
+    expect(calls.map((c) => c.query)).toEqual(["acm"])
+  })
+
+  it("aborts the request in flight and ignores its late reply", async () => {
+    const { calls, states, searcher } = setup()
+    searcher.update("ac")
+    await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
+    searcher.update("acme")
+    expect(calls[0].signal.aborted).toBe(true)
+    await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
+    calls[1].resolve({ ok: true, data: reply([res("client", 2)]) })
+    calls[0].resolve({ ok: true, data: reply([res("client", 1)]) })
+    await vi.advanceTimersByTimeAsync(0)
+    const last = states.at(-1)
+    expect(last).toMatchObject({ status: "ok", query: "acme" })
+    expect(last?.status === "ok" && last.groups[0].items.map((i) => i.id)).toEqual([2])
+    expect(states.filter((s) => s.status === "ok")).toHaveLength(1)
+  })
+
+  it("goes idle without a request for a query that is too short, and cancels a pending one", async () => {
+    const { calls, states, searcher } = setup()
+    searcher.update("ac")
+    searcher.update("a")
+    await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS * 2)
+    expect(calls).toHaveLength(0)
+    expect(states.at(-1)).toEqual({ status: "idle" })
+  })
+
+  it("stays hidden for the session after a 404, without further requests", async () => {
+    const { calls, states, searcher } = setup()
+    searcher.update("ac")
+    await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
+    calls[0].resolve({ ok: false, error: "Not found", status: 404 })
+    await vi.advanceTimersByTimeAsync(0)
+    searcher.update("acme")
+    await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
+    expect(calls).toHaveLength(1)
+    expect(states.at(-1)).toEqual({ status: "hidden" })
+  })
+
+  it("selects the first record on arrival unless the user moved since the query changed", async () => {
+    const calls: Call[] = []
+    const picks: string[] = []
+    const searcher = createRecordSearcher({
+      role: "admin",
+      find: (query, signal) => new Promise((resolve) => calls.push({ query, signal, resolve })),
+      onState: () => {},
+      onSelect: (v) => picks.push(v),
+    })
+    searcher.update("ac")
+    await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
+    calls[0].resolve({ ok: true, data: reply([res("project", 3), res("client", 7)]) })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(picks).toEqual(["record-client-7"])
+
+    searcher.update("acm")
+    searcher.markMoved()
+    await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
+    calls[1].resolve({ ok: true, data: reply([res("client", 8)]) })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(picks).toEqual(["record-client-7"])
+
+    // A new query clears the "moved" mark.
+    searcher.update("acme")
+    await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
+    calls[2].resolve({ ok: true, data: reply([res("client", 9)]) })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(picks).toEqual(["record-client-7", "record-client-9"])
+  })
+
+  it("warns on a 403 that is not the role gate's, shows it as failed and keeps searching", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      const { calls, states, searcher } = setup()
+      searcher.update("ac")
+      await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
+      calls[0].resolve({ ok: false, error: "Account is not active.", status: 403, details: { error: "Account is not active." } })
+      await vi.advanceTimersByTimeAsync(0)
+      expect(warn).toHaveBeenCalledTimes(1)
+      expect(states.at(-1)).toEqual({ status: "failed", query: "ac", error: "Account is not active." })
+      searcher.update("acme")
+      await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
+      expect(calls).toHaveLength(2)
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it("never asks the server for a role with no searchable type", async () => {
+    const { calls, states, searcher } = setup("trainer")
+    searcher.update("acme")
+    await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
+    expect(calls).toHaveLength(0)
+    expect(states).toEqual([{ status: "hidden" }])
+  })
+
+  it("dispose cancels the pending timer and the request in flight", async () => {
+    const { calls, searcher } = setup()
+    searcher.update("ac")
+    await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
+    searcher.update("acme")
+    searcher.dispose()
+    await vi.advanceTimersByTimeAsync(RECORD_SEARCH_DEBOUNCE_MS)
+    expect(calls).toHaveLength(1)
+    expect(calls[0].signal.aborted).toBe(true)
+  })
+})

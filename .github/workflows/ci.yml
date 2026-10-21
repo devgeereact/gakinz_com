@@ -4,9 +4,10 @@ name: CI
 # so the first thing to notice a broken build was the live site. Nothing ran on
 # a pull request at all.
 
+# Every pull request is checked, including PRs stacked on another feature
+# branch, so each section is verified before it reaches main.
 on:
   pull_request:
-    branches: [main]
   push:
     branches: [main]
 
@@ -21,12 +22,14 @@ permissions:
 
 jobs:
   verify:
-    name: typecheck + lint + build
+    name: typecheck + lint + docs + unit tests + build
     runs-on: ubuntu-latest
     steps:
+      # Full history, so the docs check can diff a pull request against its base.
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+          fetch-depth: 0
 
       - uses: actions/setup-node@v5
         with:
@@ -42,15 +45,67 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      # Lint is ADVISORY for now. The tree currently has 60 errors (mostly
-      # unused-imports), so making this blocking today would paint main red and
-      # teach everyone to ignore the badge. Clear the backlog, then delete this
-      # line — a lint gate nobody trusts is worse than no lint gate.
-      - name: Lint (advisory)
-        run: npm run lint
-        continue-on-error: true
+      # Lint is a RATCHET: the existing backlog (the limits in
+      # scripts/lint-ratchet.mjs) is tolerated, but any new problem fails the
+      # build. Lower the limits as the backlog falls, then switch this step to
+      # `npm run lint` once it reaches zero.
+      - name: Lint (ratchet)
+        run: npm run lint:ratchet
+
+      # Documents stay current (AGENTS.md, "Keeping documents current"): links
+      # resolve, and on a pull request a server or schema change must update
+      # the documents that record it. The base ref goes through env, not
+      # straight into the script.
+      - name: Docs check (pull request)
+        if: github.event_name == 'pull_request'
+        run: npm run docs:check -- --base "origin/$BASE_REF"
+        env:
+          BASE_REF: ${{ github.base_ref }}
+
+      - name: Docs check
+        if: github.event_name != 'pull_request'
+        run: npm run docs:check
+
+      - name: Unit tests
+        run: npm test
 
       # The build is a real gate: deploy.yml ships whatever `vite build`
       # produces, so a build that fails here is a deploy that would have shipped
       # a broken site.
       - run: npm run build
+
+  server:
+    name: PHP syntax + server integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mysqli, curl, mbstring
+          coverage: none
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: PHP syntax
+        run: find server -name '*.php' -print0 | xargs -0 -n1 php -l
+
+      # The runner's own MySQL, started here. Synthetic data only; the tests
+      # refuse any non-local host and any database not named *_test.
+      - name: Start MySQL
+        run: sudo systemctl start mysql.service
+
+      - name: Server integration tests
+        run: npm run test:server
+        env:
+          GK_TEST_DB_HOST: 127.0.0.1
+          GK_TEST_DB_USER: root
+          GK_TEST_DB_PASS: root

@@ -68,8 +68,9 @@ if ($method === 'POST' && $action === 'create') {
   $stmt = $conn->prepare('INSERT INTO design_reviews (project_id, title, figma_url, round, created_by) VALUES (?, ?, ?, ?, ?)');
   $stmt->bind_param('issii', $projectId, $title, $figma, $round, $uid);
   if (!$stmt->execute()) fail('Could not create the review.', 500);
+  $newId = $conn->insert_id; // read before audit(), which inserts its own row
   audit($conn, $uid, 'design_review_create', "project #$projectId round $round");
-  ok(['id' => $conn->insert_id, 'round' => $round], 201);
+  ok(['id' => $newId, 'round' => $round], 201);
 }
 
 if ($method === 'POST' && $action === 'status') {

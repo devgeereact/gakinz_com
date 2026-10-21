@@ -10,8 +10,19 @@
  *   POST /contracts.php?action=status {id, status}            status: draft | sent | void
  *   POST /contracts.php?action=sign   {id, signed_name}       records typed e-signature → status signed
  *   POST /contracts.php?action=delete {id}
+ *
+ * A contract is an agreed document (docs/PRODUCT-SPEC.md 6.1), so the list
+ * and the single contract carry `project_reference`, the GK-P-YYYY-NNNN of its
+ * project (SQL 19), for the screen and the PDF. Null with no project, before
+ * SQL 19, or while _reference.php is not on the server.
  */
 require __DIR__ . '/_bootstrap.php';
+if (is_file(__DIR__ . '/_reference.php')) require_once __DIR__ . '/_reference.php';
+
+/** The project reference column for a SELECT joining projects as `pr`: the contract's own client's live project only. */
+function ct_ref_col(mysqli $conn): string {
+  return function_exists('gk_ref_col') ? gk_ref_col($conn, 'pr', 'project_reference') : 'NULL AS project_reference';
+}
 
 const STAFF = ['super_admin', 'admin', 'manager'];
 
@@ -24,10 +35,11 @@ if ($method === 'GET' && isset($_GET['id'])) {
   $stmt = $conn->prepare(
     'SELECT k.id, k.client_id, k.project_id, k.kind, k.title, k.body, k.status, k.nda_triage,
             k.signer_name, k.signer_email, k.signed_name, k.signed_ip, k.signed_at, k.created_at,
-            c.company AS client_company, p.name AS project_name
+            c.company AS client_company, p.name AS project_name, ' . ct_ref_col($conn) . '
      FROM contracts k
      LEFT JOIN clients c ON c.id = k.client_id
      LEFT JOIN projects p ON p.id = k.project_id
+     LEFT JOIN projects pr ON pr.id = k.project_id AND pr.client_id <=> k.client_id AND pr.deleted_at IS NULL
      WHERE k.id = ? AND k.deleted_at IS NULL LIMIT 1'
   );
   $stmt->bind_param('i', $id);
@@ -45,10 +57,11 @@ if ($method === 'GET') {
   $rows = [];
   $sql = 'SELECT k.id, k.client_id, k.project_id, k.kind, k.title, k.status, k.nda_triage,
                  k.signer_name, k.signed_at, k.created_at,
-                 c.company AS client_company, p.name AS project_name
+                 c.company AS client_company, p.name AS project_name, ' . ct_ref_col($conn) . '
           FROM contracts k
           LEFT JOIN clients c ON c.id = k.client_id
           LEFT JOIN projects p ON p.id = k.project_id
+          LEFT JOIN projects pr ON pr.id = k.project_id AND pr.client_id <=> k.client_id AND pr.deleted_at IS NULL
           WHERE k.deleted_at IS NULL ORDER BY k.id DESC LIMIT 500';
   if ($res = $conn->query($sql)) {
     while ($r = $res->fetch_assoc()) {
@@ -80,8 +93,9 @@ if ($method === 'POST' && $action === 'create') {
   $stmt = $conn->prepare('INSERT INTO contracts (client_id, project_id, kind, title, body, nda_triage, signer_name, signer_email, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
   $stmt->bind_param('iissssssi', $clientId, $projectId, $kind, $title, $body, $triage, $signerName, $signerEmail, $uid);
   if (!$stmt->execute()) fail('Could not create the contract.', 500);
+  $newId = $conn->insert_id; // read before audit(), which inserts its own row
   audit($conn, $uid, 'contract_create', $title);
-  ok(['id' => $conn->insert_id], 201);
+  ok(['id' => $newId], 201);
 }
 
 if ($method === 'POST' && $action === 'status') {

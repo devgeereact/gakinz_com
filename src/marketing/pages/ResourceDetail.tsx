@@ -1,7 +1,14 @@
 import { Link, useParams } from "react-router-dom"
-import Seo, { SITE_URL } from "@/marketing/components/Seo"
+import Seo from "@/marketing/components/Seo"
+import { SITE_URL } from "@/marketing/components/seo-schema"
+import { Crumbs, CtaBand, IPrev } from "@/marketing/components/site-ui"
+import { delay } from "@/marketing/components/site-helpers"
 import { useMarketingPost } from "@/marketing/data/blog"
-import { Action, Label, Measure, Section } from "../components/primitives"
+import { useProjects } from "@/marketing/data/showcase"
+import { ArticleBody } from "@/marketing/components/ArticleBody"
+import { parseArticle } from "@/marketing/lib/articleFormat"
+import AdSlot from "@/marketing/components/AdSlot"
+import { adsConfigured } from "@/marketing/lib/monetisation"
 import NotFound from "./NotFound"
 
 /**
@@ -14,45 +21,55 @@ import NotFound from "./NotFound"
  * any heading the author wrote in the body rendered as a heading rather than
  * printed as literal "## " text.
  *
- * WHAT WAS NOT DONE: no headings were invented. src/marketing/data/blog.ts
- * splits a post body on blank lines, so a CMS author who writes "## Why this
- * matters" previously got those two hashes on the page. Those now become an
- * h2 or h3 at the level written. The three static fallback pieces contain no
- * such markers, so they render exactly as before, as prose under the title.
+ * WHAT WAS NOT DONE: no headings were invented. A CMS author who writes
+ * "## Why this matters" gets an h2 at the level written, and nothing else.
+ *
+ * The body is read by src/marketing/lib/articleFormat.ts, a small safe format:
+ * paragraphs, ## and ### headings, bullet and numbered lists, **bold**, and
+ * links restricted to https, http and mailto. It is rendered here as React
+ * elements, never as HTML. A link off the site opens in a new tab, says so
+ * to a screen reader, and carries rel="noopener noreferrer"; one written with
+ * {sponsored} also carries rel="sponsored". A :::recommend block renders as a
+ * labelled card (ArticleBody.tsx), with a visible Affiliate link label and
+ * rel="sponsored nofollow" when marked affiliate. The three static fallback pieces
+ * contain no such markers, so they render exactly as before.
  *
  * Structured data: an Article, carrying only fields that are true of the post.
  * No image, no wordCount, no dateModified. The post record holds none of
  * them, and structured data is a machine-readable claim.
  *
+ * D-046: the page uses the public design system in src/marketing/site.css.
+ * The body sits in `.article` typography, which styles the headings, lists,
+ * bold and links that the format produces.
+ *
  * The generated SVG wireframe that stood in for a cover image is gone with
  * SiteMockup. An article does not need a picture of a pretend website.
+ *
+ * Ad slots (Task 25): only when src/marketing/lib/monetisation.ts configures
+ * AdSense and a CMP is the slot passed at all, after the third and eighth
+ * paragraphs (ArticleBody slotPositions). Each renders nothing until the
+ * visitor consents. With the shipped settings the page is unchanged.
  */
 
 function formatDate(iso: string) {
   if (!iso) return ""
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return ""
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
-}
-
-/** `## Heading` / `### Heading` written by a CMS author, or plain prose. */
-function blockOf(para: string): { level: 2 | 3; text: string } | null {
-  const m = /^(#{2,3})\s+(.+)$/.exec(para)
-  if (!m) return null
-  return { level: m[1].length === 2 ? 2 : 3, text: m[2].trim() }
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
 }
 
 export default function ResourceDetail() {
   const { slug } = useParams()
   const { post, loading } = useMarketingPost(slug)
+  const { projects } = useProjects()
 
   if (loading && !post) {
     return (
-      <Measure className="py-24">
-        <p aria-live="polite" className="text-lede text-gk-ink-soft">
+      <header className="phead wrap" style={{ minHeight: "50vh" }}>
+        <p aria-live="polite" className="lede">
           Loading the piece…
         </p>
-      </Measure>
+      </header>
     )
   }
 
@@ -83,88 +100,46 @@ export default function ResourceDetail() {
       />
 
       <article>
-        <header className="border-b border-gk-edge">
-          <Measure className="pb-12 pt-12 sm:pb-16 sm:pt-20">
-            <nav aria-label="Breadcrumb" className="mb-8">
-              <ol className="flex items-center gap-2 font-data text-label uppercase text-gk-ink-mute">
-                <li>
-                  <Link to="/" className="hover:text-gk-ink">
-                    Home
-                  </Link>
-                </li>
-                <li aria-hidden>/</li>
-                <li>
-                  <Link to="/resources" className="hover:text-gk-ink">
-                    Writing
-                  </Link>
-                </li>
-                <li aria-hidden>/</li>
-                <li aria-current="page" className="text-gk-ink">
-                  {post.title}
-                </li>
-              </ol>
-            </nav>
-
-            <Label>{post.category || "Writing"}</Label>
-            <h1 className="mt-5 max-w-4xl font-display text-t2 font-normal text-gk-ink lg:text-t1">
-              {post.title}
-            </h1>
-            {post.excerpt && <p className="mt-6 max-w-2xl text-lede text-gk-ink-soft">{post.excerpt}</p>}
+        <header className="phead wrap">
+          <Crumbs items={[["/resources", "Writing"], [null, post.title]]} />
+          <p className="mono mute" style={{ marginBottom: 16 }}>
+            {post.category || "Writing"}
             {published && (
-              <p className="mt-8 border-t border-gk-rule pt-4 font-data text-label uppercase text-gk-ink-mute">
+              <>
+                {" · "}
                 Published <time dateTime={post.date}>{published}</time>
-              </p>
+              </>
             )}
-          </Measure>
+          </p>
+          <h1 className="h-l rise" style={{ maxWidth: "22ch" }}>
+            {post.title}
+          </h1>
+          {post.excerpt && (
+            <p className="lede rise" style={delay(80)}>
+              {post.excerpt}
+            </p>
+          )}
         </header>
 
-        <Section>
-          <div className="max-w-2xl">
-            {post.bodyParas.map((para, i) => {
-              const block = blockOf(para)
-              if (block?.level === 2) {
-                return (
-                  <h2 key={i} className="mt-12 font-display text-t3 text-gk-ink first:mt-0">
-                    {block.text}
-                  </h2>
-                )
-              }
-              if (block?.level === 3) {
-                return (
-                  <h3 key={i} className="mt-10 font-display text-t4 text-gk-ink first:mt-0">
-                    {block.text}
-                  </h3>
-                )
-              }
-              return (
-                <p key={i} className="mt-6 text-lede text-gk-ink first:mt-0">
-                  {para}
-                </p>
-              )
-            })}
-          </div>
-        </Section>
-      </article>
-
-      <Section tone="sunk">
-        <div className="grid max-w-4xl gap-6 md:grid-cols-[1fr_auto] md:items-end">
-          <div>
-            <h2 className="font-display text-t3 text-gk-ink">Working on something similar?</h2>
-            <p className="mt-4 max-w-xl text-body text-gk-ink-soft">
-              Tell me what the site has to do. A paragraph is enough, and if it is not something I
-              should take on I will say so.
+        <section className="sec wrap" style={{ paddingTop: 56 }}>
+          <div className="article">
+            <ArticleBody blocks={parseArticle(post.bodyParas.join("\n\n"))} slot={adsConfigured() ? () => <AdSlot /> : undefined} />
+            <p style={{ marginTop: 40 }}>
+              <Link className="link" to="/resources">
+                <IPrev /> All writing
+              </Link>
             </p>
           </div>
-          <Action to="/contact" variant="strong">
-            Start a project
-          </Action>
-        </div>
-        <p className="mt-10 border-t border-gk-edge pt-6">
-          <Link to="/resources" className="text-body text-gk-ink-soft hover:text-gk-ink hover:underline">
-            All writing
-          </Link>
-        </p>
-      </Section>
+        </section>
+      </article>
+
+      <section className="sec wrap">
+        <CtaBand
+          projects={projects}
+          title="Working on something similar?"
+          intro="Tell me what the site has to do. A paragraph is enough, and if it is not something I should take on I will say so."
+        />
+      </section>
     </>
   )
 }

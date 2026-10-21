@@ -1,22 +1,8 @@
 import type { ComponentType } from "react"
 import { createBrowserRouter } from "react-router-dom"
 
-// 🌐 PUBLIC CORPORATE SITE — eager (first paint, light bundle)
-import PublicLayout from "@/marketing/PublicLayout"
-import Home from "@/marketing/pages/Home"
-import About from "@/marketing/pages/About"
-import ServicesPage from "@/marketing/pages/Services"
-import ServiceDetail from "@/marketing/pages/ServiceDetail"
-import Pricing from "@/marketing/pages/Pricing"
-import Sectors from "@/marketing/pages/Sectors"
-import Work from "@/marketing/pages/Work"
-import WorkDetail from "@/marketing/pages/WorkDetail"
-import Resources from "@/marketing/pages/Resources"
-import ResourceDetail from "@/marketing/pages/ResourceDetail"
-import Contact from "@/marketing/pages/Contact"
-import { Privacy, Terms, Cookies } from "@/marketing/pages/Legal"
-import Verify from "@/marketing/pages/Verify"
-import PublicNotFound from "@/marketing/pages/NotFound"
+// 🌐 PUBLIC CORPORATE SITE: eager, and shared with the build-time prerender
+import { publicRoute } from "./public"
 
 // 🔐 AUTH — eager only for the route guard + error boundary (both tiny). The
 // login/register/cover/error PAGES are lazy (see below) so a marketing visitor
@@ -43,30 +29,8 @@ export const router = createBrowserRouter([
   // 🔑 Set / reset password (invite + forgot flows) — standalone, lazy
   { path: "set-password", lazy: lz(() => import("@/app/SetPassword")) },
 
-  // 🌐 PUBLIC CORPORATE SITE (gakinz.com)
-  {
-    element: <PublicLayout />,
-    errorElement: <ErrorPage />,
-    children: [
-      { index: true, element: <Home /> },
-      { path: "about", element: <About /> },
-      { path: "services", element: <ServicesPage /> },
-      { path: "services/:slug", element: <ServiceDetail /> },
-      { path: "pricing", element: <Pricing /> },
-      { path: "sectors", element: <Sectors /> },
-      { path: "work", element: <Work /> },
-      // The one public route this relaunch adds.
-      { path: "work/:slug", element: <WorkDetail /> },
-      { path: "resources", element: <Resources /> },
-      { path: "resources/:slug", element: <ResourceDetail /> },
-      { path: "contact", element: <Contact /> },
-      { path: "privacy", element: <Privacy /> },
-      { path: "terms", element: <Terms /> },
-      { path: "cookies", element: <Cookies /> },
-      { path: "verify/:id", element: <Verify /> },
-      { path: "*", element: <PublicNotFound /> },
-    ],
-  },
+  // 🌐 PUBLIC CORPORATE SITE (gakinz.com), prerendered at build time
+  publicRoute,
 
   // 📊 APP ROUTES (CMS) — guarded by RequireAuth, mounted under /app, all lazy
   {
@@ -100,9 +64,12 @@ export const router = createBrowserRouter([
       { path: "blog", lazy: lz(() => import("@/app/modules/Blog")) },
       { path: "testimonials", lazy: lz(() => import("@/app/modules/Testimonials")) },
       { path: "work", lazy: lz(() => import("@/app/modules/Work")) },
+      { path: "site", lazy: lz(() => import("@/app/modules/Site")) },
       { path: "files", lazy: lz(() => import("@/app/modules/Files")) },
       { path: "careplan", lazy: lz(() => import("@/app/modules/CarePlan")) },
       { path: "platform", lazy: lz(() => import("@/app/modules/Platform")) },
+      // My account: every signed-in role, client included (K-023, K-024).
+      { path: "account", lazy: lz(() => import("@/app/modules/Account")) },
 
       // ✅ 404 HANDLER
           { path: "*", lazy: lz(() => import("@/pages/NotFound")) },

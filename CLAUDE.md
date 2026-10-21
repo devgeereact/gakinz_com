@@ -14,9 +14,11 @@ This project follows GEE OS. The project contract is `.agent/PROJECT.yml`, the t
 One Vite application, two surfaces, one build:
 
 - **Public site** at `/`, source in `src/marketing/`, eager.
-- **GAkinzOS CMS** at `/app/*`, source in `src/app/`, 23 modules, lazy and role gated.
+- **GAkinzOS CMS** at `/app/*`, source in `src/app/`: lazy, role-gated modules grouped into
+  seven navigation destinations, plus My account for every role.
 
-Behind it, 44 PHP endpoints in `server/` over MySQL on the same cPanel host.
+Behind it, PHP endpoints and `_`-prefixed shared includes in `server/` over MySQL on the same
+cPanel host. Counts are in `docs/STATUS.md` section 0.
 
 ```
 Browser (React 19 + TS) -> fetch JSON -> server/*.php -> _bootstrap.php -> mysqli -> MySQL
@@ -31,8 +33,10 @@ through `src/lib/api.ts`.
 |---|---|
 | Install | `npm install` |
 | Develop | `npm run dev` (port 5102, `strictPort`) |
-| Test | `npm test` |
-| Type check and build | `npm run build` (runs `tsc -b` first) |
+| Test | `npm test` (unit), `npm run test:server` (needs local MySQL or MariaDB) |
+| Lint ratchet | `npm run lint:ratchet` |
+| Documentation check | `npm run docs:check` |
+| Type check, build and prerender | `npm run build` (`tsc -b`, `vite build`, the SSR build, then `scripts/prerender.mjs`; no network) |
 | Lint | `npm run lint` |
 | PHP syntax gate | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` |
 
@@ -42,13 +46,13 @@ When this file and the code disagree, the code wins and this file is wrong.
 
 | Fact | Authority |
 |---|---|
-| Product scope | `GAkinzOS.html`, summarised in `docs/PRODUCT-SPEC.md` |
+| Product scope | `docs/PRODUCT-SPEC.md` (approved 2026-10-10, D-043) |
 | Routes | `src/routes/index.tsx` |
 | Client API boundary | `src/lib/api.ts` |
 | Server boundary and auth | `server/_bootstrap.php` |
 | Role access | the per-endpoint constants in `server/*.php`, mirrored in `src/lib/access.ts` |
 | Data model | `server/schema.sql` |
-| Design tokens | `src/index.css` and `tailwind.config.js` |
+| Design tokens | CMS: `src/index.css` and `tailwind.config.js`. Public site: `src/marketing/site.css` (D-046) |
 | Server configuration keys | `server/config.php.example` |
 | Client deploy | `.github/workflows/deploy.yml` |
 | Server deploy and outstanding work | `docs/DEPLOYMENT.md` |
@@ -61,11 +65,12 @@ When this file and the code disagree, the code wins and this file is wrong.
    gitignored. That includes documents and commit messages.
 2. **`src/lib/access.ts` is not a security boundary.** It hides navigation. Every endpoint
    must independently call `require_auth($conn, ...)`, in read branches as well as writes.
-3. **A `client`-role caller must never see another client's data.** `portal.php` derives the
-   client identifier from the token and ignores any parameter for that role. Treat any change
-   to that file as security-critical.
+3. **A `client`-role caller must never see another client's data.** `portal.php` and the
+   client branch of `support.php` derive the client identifier from the token and ignore any
+   parameter for that role. Treat any change to either file as security-critical.
 4. **The deploy ships `dist/` only.** Everything under `server/` is uploaded by hand. A server
-   change is committed but not live, so record it in `docs/DEPLOYMENT.md` in the same change.
+   change is committed but not live, so record it in `docs/DEPLOYMENT.md` section 5 in the
+   same change.
 5. **There is no migration runner.** A schema change goes at the foot of `server/schema.sql`
    as a commented `ALTER TABLE` and into `docs/DEPLOYMENT.md`. It is not applied until someone
    runs it.
@@ -79,30 +84,41 @@ When this file and the code disagree, the code wins and this file is wrong.
 
 ## Working agreements
 
+- Keep documents current as `AGENTS.md`, "Keeping documents current", requires: read
+  `docs/STATUS.md` and `docs/KNOWN-ISSUES.md` before starting, update the affected documents in
+  the same pull request, and run `npm run docs:check`.
+
 - TypeScript throughout. `npm run build` runs `tsc -b`, so a type error blocks the build and
   the deploy.
-- Public pages render inside the `.gk-public` wrapper and stay light regardless of the
-  operating system setting. The CMS is theme aware.
+- Public pages render inside the `.gk-site` wrapper (`src/marketing/site.css`, D-046) on a
+  fixed graphite design regardless of the operating system setting. The CMS is light or dark
+  through `next-themes`. `.gk-public` survives only for the shared proposal page.
 - A new CMS module needs five wirings: `src/routes/index.tsx`, `src/lib/access.ts`,
-  `src/components/app-sidebar.tsx`, `src/components/global-search.tsx` and `src/lib/api.ts`,
+  `src/components/nav-groups.ts` (read by `app-sidebar.tsx`), `src/components/global-search.tsx`
+  and `src/lib/api.ts`,
   plus the endpoint.
 - Keep integrations degrading gracefully: an unconfigured key returns 503 and the interface
   hides the feature.
-- `.gk-fadein` is visible by default and animates in only when motion is allowed. Never gate a
-  marketing entrance on JavaScript.
+- Public entrances (`.rise` in `src/marketing/site.css`) are visible at rest and animate only
+  when motion is allowed. Never gate a marketing entrance on JavaScript.
 - The active Tailwind config is `tailwind.config.js`. The `.ts` variant is inert; do not edit
   it.
 
-## Known state, as at 2026-09-04
+## Known state
 
-- `npm run build`, `npm test` (11 tests) and `php -l` all pass.
-- **`npm run lint` fails: 60 errors, 7 warnings, 42 files.** It does not block, but the count
-  must not grow. See `docs/KNOWN-ISSUES.md` K-002.
-- **Accessibility is NOT TESTED.** An earlier zero-violations claim has been withdrawn.
-- **The deployed server state is UNVERIFIED.** Which PHP files are uploaded and which
-  migrations have run cannot be known from here.
+The current state, what is left and the order of work are in **`docs/WORKBOOK.md`**. Measured
+counts are in `docs/STATUS.md` section 0. This file does not repeat them, so it cannot drift
+(consolidated 2026-10-21; the earlier text is in git history at `5d5f95b`).
+
+- Nothing since 2026-10-10 is merged, uploaded or deployed. The branch stack and merge order
+  are in the workbook, section 1. The deployed server state is UNVERIFIED (K-006).
+- `npm run lint` still fails (K-002). `npm run lint:ratchet` holds the ceiling in
+  `scripts/lint-ratchet.mjs`, and the count must not grow.
+- Anything checked only against mocked API responses is NOT TESTED on real data (K-044).
+- Gated features ship switched off (D-050). Do not switch one on without the named gates.
 - A live super-admin credential was published in an earlier revision of this file and is in
-  git history. See `docs/KNOWN-ISSUES.md` K-001.
+  git history. The owner reports it rotated on 2026-10-12; session revocation is unconfirmed.
+  See `docs/KNOWN-ISSUES.md` K-001.
 
 Do not describe this project as clean, deployed, accessible or secure. Say what was checked
 and how, and mark the rest NOT TESTED or UNVERIFIED.

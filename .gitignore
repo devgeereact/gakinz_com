@@ -38,3 +38,6 @@ server/uploads/
 .env
 .env.*
 !.env.example
+
+# Agent worktrees created by Claude Code sessions (local only).
+.claude/worktrees/

@@ -69,8 +69,9 @@ if ($method === 'POST' && ($action === 'create' || $action === 'update')) {
     $stmt = $conn->prepare('INSERT INTO kb_articles (title, category, audience, body, author_id) VALUES (?, ?, ?, ?, ?)');
     $stmt->bind_param('ssssi', $title, $category, $audience, $bodyText, $uid);
     if (!$stmt->execute()) fail('Could not create the article.', 500);
+    $newId = $conn->insert_id; // read before audit(), which inserts its own row
     audit($conn, $uid, 'kb_create', $title);
-    ok(['id' => $conn->insert_id], 201);
+    ok(['id' => $newId], 201);
   } else {
     $id = (int)($in['id'] ?? 0);
     if ($id <= 0) fail('An article id is required.');

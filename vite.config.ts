@@ -11,6 +11,12 @@ export default defineConfig({
   server: {
     port: 5102,
     strictPort: true,
+    // Development calls the live API (there is no staging). Proxying the PHP
+    // endpoints keeps those calls same-origin, so sign-in works on localhost
+    // whether or not the live config.php lists this port in ALLOWED_ORIGINS.
+    proxy: {
+      "^/[A-Za-z0-9_-]+\\.php": { target: "https://gakinz.com", changeOrigin: true, secure: true },
+    },
   },
   preview: {
     port: 5102,

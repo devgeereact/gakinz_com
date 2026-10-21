@@ -20,83 +20,117 @@ var config = {
         },
         extend: {
             // ── Type scale ───────────────────────────────────────────────
-            // Nine values, perfect fourth (1.333), for the PUBLIC surface.
-            // No size outside this scale is permitted on a public page. The
-            // site it replaced used eight arbitrary heading sizes, which was
-            // the clearest single signal that it had been assembled rather
-            // than designed.
+            // Nine values for the PUBLIC surface, closed (D-024): no size
+            // outside this scale ships on a public page, and the semantic
+            // names mean there is no `text-[2.6rem]` to reach for.
             //
-            // The names are semantic on purpose: there is no `text-[2.6rem]`
-            // to reach for, and a reviewer can see at a glance whether a page
-            // has invented a size.
+            // The values follow the D-037 reference (DESIGN-REFERENCE-
+            // MASTERCARD.md section 3): hero 64px at 1:1, section 36/44,
+            // card title 24 at 1.2, body 16 at 1.4, eyebrow 14 with +4%,
+            // and -2% tracking on every heading step. The names keep their
+            // roles, so a page's `text-t2` still means "section heading".
             //
             // The CMS keeps Tailwind's default sizes; these are additions.
             fontSize: {
-                label: ['0.75rem', { lineHeight: '1.4', letterSpacing: '0.08em' }],   // 12px
-                body: ['1rem', { lineHeight: '1.6' }],                                 // 16px
-                lede: ['1.333rem', { lineHeight: '1.5' }],                             // 21px
-                t4: ['1.777rem', { lineHeight: '1.25', letterSpacing: '-0.01em' }],    // 28px
-                t3: ['2.369rem', { lineHeight: '1.18', letterSpacing: '-0.015em' }],   // 38px
-                t2: ['3.157rem', { lineHeight: '1.1', letterSpacing: '-0.02em' }],     // 51px
-                t1: ['4.209rem', { lineHeight: '1.04', letterSpacing: '-0.025em' }],   // 67px
-                display: ['5.61rem', { lineHeight: '1.0', letterSpacing: '-0.03em' }], // 90px
-                hero: ['7.478rem', { lineHeight: '0.95', letterSpacing: '-0.035em' }], // 120px
+                label: ['0.875rem', { lineHeight: '1.3', letterSpacing: '0.04em' }],   // 14px eyebrow
+                body: ['1rem', { lineHeight: '1.4' }],                                  // 16px
+                lede: ['1.25rem', { lineHeight: '1.4' }],                               // 20px
+                t4: ['1.5rem', { lineHeight: '1.2', letterSpacing: '-0.02em' }],        // 24px card title
+                t3: ['1.75rem', { lineHeight: '1.2', letterSpacing: '-0.02em' }],       // 28px
+                t2: ['2.25rem', { lineHeight: '1.22', letterSpacing: '-0.02em' }],      // 36px section
+                t1: ['3rem', { lineHeight: '1.05', letterSpacing: '-0.02em' }],         // 48px tablet hero
+                display: ['4rem', { lineHeight: '1', letterSpacing: '-0.02em' }],       // 64px hero
+                hero: ['5rem', { lineHeight: '1', letterSpacing: '-0.02em' }],          // 80px, unused
             },
+            // Spacing needs no extension: the reference's 8, 16, 24, 32, 48,
+            // 64, 96 and 128 are Tailwind's 2, 4, 6, 8, 12, 16, 24 and 32.
             borderRadius: {
+                // The reference radius scale, public surface: 20px actions,
+                // 40px media frames. Pills and circles use `rounded-full`.
+                action: '1.25rem',
+                media: '2.5rem',
                 lg: 'var(--radius)',
                 md: 'calc(var(--radius) - 2px)',
                 sm: 'calc(var(--radius) - 4px)'
             },
+            // Reference elevation levels 1 and 2: atmospheric, never hard.
+            boxShadow: {
+                // The CMS's one elevation, for popovers, drawers and toasts.
+                os: 'var(--os-shadow)',
+                float: '0 4px 24px 0 rgba(0, 0, 0, 0.04)',
+                lifted: '0 24px 48px 0 rgba(0, 0, 0, 0.08)',
+            },
             fontFamily: {
-                // CMS families. Unchanged — the public rebrand does not
-                // propagate into GAkinzOS.
-                sans: ['Manrope', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                mono: ['JetBrains Mono', 'ui-monospace', 'monospace'],
-                // `serif` previously mapped to Space Grotesk, a sans-serif
-                // face with no serif fallback, which meant `font-serif`
-                // silently rendered a sans. It now names an actual serif.
-                serif: ['Newsreader', 'ui-serif', 'Georgia', 'serif'],
-                // Public-surface families.
-                // Newsreader carries both 120px and 21px from one family by
-                // way of its optical-size axis, so the page needs no second
-                // display voice. IBM Plex Mono is confined to record data,
-                // where tabular figures matter.
-                display: ['Newsreader', 'ui-serif', 'Georgia', 'serif'],
-                ui: ['"Instrument Sans"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
-                data: ['"IBM Plex Mono"', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+                // D-046: one type system for both surfaces, self-hosted from
+                // @fontsource-variable (src/main.tsx). Bricolage Grotesque for
+                // display, Hanken Grotesk for text, JetBrains Mono for figures
+                // and labels. `sans` is the CMS body face.
+                sans: ['"Hanken Grotesk Variable"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                mono: ['"JetBrains Mono Variable"', '"JetBrains Mono"', 'ui-monospace', 'Menlo', 'monospace'],
+                // No serif face ships. `font-serif` maps to the display face
+                // so the few headings that still name it read as display.
+                serif: ['"Bricolage Grotesque Variable"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                display: ['"Bricolage Grotesque Variable"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                ui: ['"Hanken Grotesk Variable"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                data: ['"JetBrains Mono Variable"', '"JetBrains Mono"', 'ui-monospace', 'Menlo', 'monospace'],
             },
             colors: {
                 // ── Public brand ─────────────────────────────────────────
-                // Direction C with direction A's colour, per
-                // docs/design/2026-09-22-directions/direction-approved.md.
+                // D-037, the reference palette in DESIGN-REFERENCE-
+                // MASTERCARD.md, kept in step with the HSL list on
+                // `.gk-public` in src/index.css. Edit both together.
                 //
-                // The two chromatics carry meaning rather than decoration:
-                // `set` marks a record whose material is settled, `come`
-                // marks one still waiting for real material. Do not use
-                // either as an ornament.
+                // Names are unchanged so the pages need no edits: `paper` is
+                // canvas cream, `sunk` is now lifted cream (the alternate
+                // band), `set` is the warm-black primary action, `come`
+                // still marks "awaiting material", now in clay.
                 //
-                // Contrast against paper #F6F3ED, computed not estimated:
-                //   ink 15.69:1 · inkSoft 7.70:1 · inkMute 5.28:1
-                //   set 11.11:1 · come 6.48:1 · edge 3.29:1 (non-text, AA)
-                // The retired lavender #7F77DD and rose #D4537E could hold
-                // neither a flat block nor white text, which is why the old
-                // site could only ever wash them into a gradient.
+                // Contrast on canvas cream #F3F0EE, computed:
+                //   ink 16.25 · ink-soft 6.57 · ink-mute 4.84 · come 6.20
+                //   edge 3.21 (non-text) · signal 4.11 (non-text dots only)
+                // The Mastercard mark colours #EB001B and #F79E1B are never
+                // used (DESIGN-SYSTEM 10.2).
                 gk: {
-                    paper: '#F6F3ED',
-                    sunk: '#EFEBE2',
-                    ink: '#1C1A16',
-                    'ink-soft': '#514C42',
-                    'ink-mute': '#6B6459',
-                    set: '#2A3160',
-                    come: '#933C2F',
-                    rule: '#D8D2C6',      // decorative hairline only
-                    edge: '#8E8577',      // structural rule and form borders, 3.29:1
-                    'on-dark': '#F6F3ED',
-                    'on-dark-soft': '#C3BCAE',   // 9.20:1 on ink
-                    'set-on-dark': '#9FA8D8',    // 7.50:1 on ink
-                    'come-on-dark': '#E8A598',   // 8.49:1 on ink
+                    paper: '#F3F0EE',
+                    sunk: '#FCFBFA',
+                    white: '#FFFFFF',
+                    ink: '#141413',
+                    'ink-soft': '#555555',
+                    'ink-mute': '#696969',
+                    set: '#141413',
+                    come: '#9A3A0A',
+                    rule: '#D1CDC7',      // decorative hairline only
+                    edge: '#8C857C',      // structural rule and form borders, 3.21:1
+                    orange: '#F37338',    // decorative orbit, never text
+                    signal: '#CF4500',    // eyebrow dots only
+                    'on-dark': '#F3F0EE',
+                    'on-dark-soft': '#B8B2AA',   // 8.77:1 on ink
+                    'set-on-dark': '#F3F0EE',    // 16.25:1 on ink
+                    'come-on-dark': '#F37338',   // 6.43:1 on ink
                 },
-                // ── CMS tokens. Unchanged. ───────────────────────────────
+                // ── CMS tokens (D-046), values in src/index.css ─────────
+                // The prototype's single accent and its soft semantic tones.
+                acc: {
+                    DEFAULT: 'hsl(var(--os-acc))',
+                    soft: 'hsl(var(--os-acc-soft))',
+                    foreground: 'hsl(var(--os-on-acc))'
+                },
+                ok: {
+                    DEFAULT: 'hsl(var(--os-ok))',
+                    soft: 'hsl(var(--os-ok-soft))'
+                },
+                warn: {
+                    DEFAULT: 'hsl(var(--os-warn))',
+                    soft: 'hsl(var(--os-warn-soft))'
+                },
+                bad: {
+                    DEFAULT: 'hsl(var(--os-bad))',
+                    soft: 'hsl(var(--os-bad-soft))'
+                },
+                line: {
+                    DEFAULT: 'hsl(var(--border))',
+                    strong: 'hsl(var(--os-line-2))'
+                },
                 background: 'hsl(var(--background))',
                 foreground: 'hsl(var(--foreground))',
                 card: {
@@ -145,7 +179,8 @@ var config = {
                     accent: 'hsl(var(--sidebar-accent))',
                     'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
                     border: 'hsl(var(--sidebar-border))',
-                    ring: 'hsl(var(--sidebar-ring))'
+                    ring: 'hsl(var(--sidebar-ring))',
+                    muted: 'hsl(var(--os-side-mute))'
                 }
             }
         }

@@ -51,8 +51,9 @@ if ($method === 'POST' && $action === 'create') {
   $stmt = $conn->prepare('INSERT INTO tasks (project_id, title, assignee, due_date) VALUES (?, ?, ?, ?)');
   $stmt->bind_param('isss', $projectId, $title, $assignee, $due);
   if (!$stmt->execute()) fail('Could not create the task.', 500);
+  $newId = $conn->insert_id; // read before audit(), which inserts its own row
   audit($conn, $user['id'], 'task_create', $title);
-  ok(['id' => $conn->insert_id], 201);
+  ok(['id' => $newId], 201);
 }
 
 if ($method === 'POST' && $action === 'status') {

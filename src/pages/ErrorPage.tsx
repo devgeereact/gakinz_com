@@ -8,7 +8,7 @@ const COPY: Record<number, { title: string; message: string }> = {
   400: { title: "Bad request", message: "Something about that request wasn’t quite right. Try again." },
   403: { title: "No access", message: "You don’t have permission to view this. Ask an admin if you think that’s wrong." },
   404: { title: "Page not found", message: "That page doesn’t exist or has moved." },
-  500: { title: "Something broke", message: "An unexpected error occurred on our side. Please try again shortly." },
+  500: { title: "Something broke", message: "This page hit a problem while loading. Try again in a moment." },
   503: { title: "Temporarily unavailable", message: "The service is down for maintenance or overloaded. Please try again soon." },
 }
 
@@ -21,12 +21,14 @@ export default function ErrorPage() {
   if (isRouteErrorResponse(error)) {
     status = error.status
     detail = error.statusText || ""
-  } else if (error instanceof Error) {
-    detail = error.message
+  } else {
+    // A thrown exception's message is for the developer, not the visitor: it can
+    // name files, fields or server replies. It goes to the console only.
+    console.error(error)
   }
 
   const known = COPY[status]
-  const copy = known ?? { title: "Something went wrong", message: detail || "Unexpected error" }
+  const copy = known ?? { title: "Something went wrong", message: "This page hit a problem. Try again in a moment." }
 
   return (
     <div className="flex h-screen flex-col items-center justify-center px-6 text-center">

@@ -1,7 +1,12 @@
 <?php
 /**
- * Scheduled jobs runner (GAkinzOS — automation). NOT user-authenticated: it is
- * gated by a shared secret so it can be triggered by a cPanel cron entry, e.g.
+ * Scheduled jobs runner (GAkinzOS — automation). NOT user-authenticated. Run it
+ * from a cPanel cron entry on the command line, which needs no key and keeps
+ * the key out of web access logs (K-061):
+ *
+ *   php /home/ACCOUNT/public_html/cron.php job=all
+ *
+ * Over the web it is still gated by the shared secret:
  *
  *   wget -qO- "https://gakinz.com/cron.php?key=YOUR_CRON_KEY&job=all"
  *
@@ -9,28 +14,111 @@
  *   ?job=billing  raise this month's invoice for each retainer/care-plan client
  *   ?job=digest   email a KPI digest to $REPORT_RECIPIENTS
  *   ?job=uptime   ping every care-plan prod URL, record HTTP + SSL-expiry
+ *   ?job=prune    delete sessions, magic links and reset links a day past expiry
  *   ?job=all      run them all (default)
+ *
+ *   job=retention_report   command line only, and not part of `all`: prints a
+ *                plain summary of the rows each proposed retention rule would
+ *                affect (_retention.php). It counts and never changes a row.
+ *
+ *   job=retention_apply [--dry-run | --apply]   command line only, and not
+ *                part of `all`: the retention executor (_erasure.php). It acts
+ *                on two rules only, enquiries that never became a client and
+ *                soft-deleted files, and lists what would go. It deletes only
+ *                when --apply is passed AND $RETENTION_APPLY = true AND that
+ *                rule's period is set. --dry-run is the default.
  *
  * Config (config.php): $CRON_KEY (required), $REPORT_RECIPIENTS (comma list).
  * Every job degrades quietly if its dependency (SMTP, columns) is absent.
  */
 require __DIR__ . '/_bootstrap.php';
 
-$key = $_GET['key'] ?? '';
-$expected = $GLOBALS['CRON_KEY'] ?? '';
-if ($expected === '' || !hash_equals((string)$expected, (string)$key)) fail('Forbidden.', 403);
+if (PHP_SAPI === 'cli') {
+  // `php cron.php job=prune`. Only someone with shell or cron access to the
+  // account can run PHP this way, so no key is needed.
+  parse_str(implode('&', array_slice($argv ?? [], 1)), $cli);
+  $job = (string)($cli['job'] ?? 'all');
+} else {
+  $key = $_GET['key'] ?? '';
+  $expected = $GLOBALS['CRON_KEY'] ?? '';
+  if ($expected === '' || !hash_equals((string)$expected, (string)$key)) fail('Forbidden.', 403);
+  $job = $_GET['job'] ?? 'all';
+}
+// Retention dry run: command line only, plain text, read only. Over the web it
+// is refused even with the key, so the report never lands in an access log.
+if ($job === 'retention_report') {
+  if (PHP_SAPI !== 'cli') fail('retention_report runs from the command line only.', 400);
+  if (!is_file(__DIR__ . '/_retention.php')) {
+    fwrite(STDERR, "retention_report is not available on this server yet: _retention.php is missing.\n");
+    exit(1);
+  }
+  require_once __DIR__ . '/_retention.php';
+  header_remove('Content-Type');
+  try {
+    echo retention_report_text(retention_report($conn));
+  } catch (mysqli_sql_exception $e) {
+    fwrite(STDERR, 'Retention report failed: SQL error ' . $e->getCode() . "\n");
+    exit(1);
+  }
+  exit(0);
+}
+// Retention executor (_erasure.php): command line only, never part of `all`,
+// and refused over the web even with the key. A dry run unless --apply is
+// passed AND config.php sets $RETENTION_APPLY = true; it acts only on rules
+// whose period is set, and only on enquiries and soft-deleted files.
+if ($job === 'retention_apply') {
+  if (PHP_SAPI !== 'cli') fail('retention_apply runs from the command line only.', 400);
+  header_remove('Content-Type');
+  $flags = array_values(array_filter(array_slice($argv ?? [], 1), fn($a) => strncmp((string)$a, '--', 2) === 0));
+  $unknown = array_diff($flags, ['--apply', '--dry-run']);
+  if ($unknown || (in_array('--apply', $flags, true) && in_array('--dry-run', $flags, true))) {
+    fwrite(STDERR, "Usage: php cron.php job=retention_apply [--dry-run | --apply]. Nothing was deleted.\n");
+    exit(2);
+  }
+  foreach (['_erasure.php', '_retention.php', '_uploads.php', '_like.php'] as $f) {
+    if (!is_file(__DIR__ . '/' . $f)) {
+      fwrite(STDERR, "retention_apply is not available on this server yet: $f is missing. Nothing was deleted.\n");
+      exit(1);
+    }
+  }
+  require_once __DIR__ . '/_erasure.php';
+  try {
+    echo retention_apply_text(retention_apply_run($conn, in_array('--apply', $flags, true)));
+  } catch (Throwable $e) {
+    $what = $e instanceof mysqli_sql_exception ? 'SQL error ' . $e->getCode() : get_class($e);
+    fwrite(STDERR, "Retention apply stopped: $what. The current item was rolled back; anything deleted before it is counted in the retention_apply audit row.\n");
+    exit(1);
+  }
+  exit(0);
+}
 
-$job = $_GET['job'] ?? 'all';
 $out = [];
 
 if ($job === 'all' || $job === 'chase')   $out['chase']   = cron_chase($conn);
 if ($job === 'all' || $job === 'billing') $out['billing'] = cron_billing($conn);
 if ($job === 'all' || $job === 'uptime')  $out['uptime']  = cron_uptime($conn);
 if ($job === 'all' || $job === 'digest')  $out['digest']  = cron_digest($conn);
+if ($job === 'all' || $job === 'prune')   $out['prune']   = cron_prune($conn);
 
 ok(['ran' => $out]);
 
 // ── Jobs ─────────────────────────────────────────────────────────────────────
+/**
+ * Removes sign-in credentials that can no longer be used: sessions, magic
+ * links and reset links more than a day past their expiry. A day's grace keeps
+ * a just-expired row readable while someone investigates a sign-in problem.
+ * Nothing here is a business record (docs/PRIVACY-READINESS.md section 6).
+ */
+function cron_prune(mysqli $conn): array {
+  $out = [];
+  foreach (['auth_tokens', 'magic_links', 'password_resets'] as $table) {
+    $ok = $conn->query("DELETE FROM $table WHERE expires_at < (NOW() - INTERVAL 1 DAY)");
+    $out[$table] = $ok ? $conn->affected_rows : 'failed';
+  }
+  if (array_sum(array_filter($out, 'is_int')) > 0) audit($conn, null, 'cron_prune', json_encode($out));
+  return $out;
+}
+
 function cron_chase(mysqli $conn): array {
   if (empty($GLOBALS['SMTP_HOST'])) return ['skipped' => 'no smtp'];
   require_once __DIR__ . '/_smtp.php';

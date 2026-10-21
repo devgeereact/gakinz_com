@@ -1,46 +1,211 @@
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react"
 import { Link } from "react-router-dom"
-import Seo, { personSchema, websiteSchema } from "@/marketing/components/Seo"
-import { Action, Label, Measure, Placeholder, Section } from "@/marketing/components/primitives"
-import Ledger from "@/marketing/components/Ledger"
-import Testimonials from "@/marketing/components/Testimonials"
-import FadeIn from "@/marketing/components/FadeIn"
-import { site, services, howIWork } from "@/marketing/data/site"
-import { useWork } from "@/marketing/data/work"
+import Seo from "@/marketing/components/Seo"
+import { personSchema, sameAsFrom, websiteSchema } from "@/marketing/components/seo-schema"
+import { CtaBand, Devices, IArrow, INext, IPause, IPlay, IPrev, LondonClock, ProjectCard } from "@/marketing/components/site-ui"
+import { useNavTone } from "@/marketing/components/site-helpers"
+import { kindName, onColour, useProjects, type Project } from "@/marketing/data/showcase"
+import { groupServices, useSiteCopy } from "@/marketing/data/content"
+import { howIWork, site } from "@/marketing/data/site"
 import { useMarketingBlog } from "@/marketing/data/blog"
+import Testimonials from "@/marketing/components/Testimonials"
 
-/**
- * The home page.
- *
- * Direction C: the page is a document. The first screen carries the person,
- * one claim with a point of view, and a numbered contents list in place of a
- * navigation bar.
- *
- * Gone from this page, and not coming back without evidence: the aurora hero,
- * the animated gradient headline, the marquee, the ghost numerals, the bento
- * grid, and the CountUp statistic reading "100% Accessible, WCAG 2.1 AA" —
- * a figure the project's own docs/DECISIONS.md D-020 records as withdrawn.
- */
-
-/** "2026-05-12" becomes "12 May 2026". An ISO date on a public page is a date
- *  written for a machine. Returns the input unchanged if it will not parse. */
+/** "2026-05-12" becomes "12 May 2026". Returns the input unchanged if it will not parse. */
 function readableDate(iso: string): string {
   const d = new Date(iso)
   if (Number.isNaN(d.getTime())) return iso
-  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
 }
 
-const CONTENTS = [
-  { href: "#work", title: "Selected work", note: "Three records" },
-  { href: "#services", title: "What I do", note: "Four things" },
-  { href: "#how", title: "How I work", note: "One idea" },
-  { href: "#writing", title: "Writing" },
-  { href: "#contact", title: "Contact" },
-]
+const pad = (n: number) => String(n).padStart(2, "0")
+const reduced = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches
+const onMotionChange = (fn: () => void) => {
+  const q = window.matchMedia("(prefers-reduced-motion: reduce)")
+  q.addEventListener("change", fn)
+  return () => q.removeEventListener("change", fn)
+}
+
+/**
+ * The brand-colour hero (D-046). One full screen; the background, the last
+ * word of the headline and the device frames all change together for each of
+ * up to five projects chosen in the CMS. It pauses on hover and focus, can be
+ * paused outright, answers the arrow keys, and stays still for anyone who has
+ * asked for reduced motion.
+ */
+function Hero({ list }: { list: Project[] }) {
+  const copy = useSiteCopy().hero
+  const ms = Math.round(copy.secs * 1000)
+  const [i, setI] = useState(0)
+  const [prev, setPrev] = useState(-1)
+  const [shown, setShown] = useState(0)
+  const [out, setOut] = useState(false)
+  // Playing in the prerendered markup and in the render that hydrates it, so
+  // both match; a reduced-motion preference then pauses it at once. Once the
+  // visitor presses play or pause, their choice wins.
+  const stillByDefault = useSyncExternalStore(onMotionChange, reduced, () => false)
+  const [chosen, setChosen] = useState<boolean | null>(null)
+  const paused = chosen ?? stillByDefault
+  const [hold, setHold] = useState(false)
+  const [cycle, setCycle] = useState(0)
+  const [hidden, setHidden] = useState(false)
+  const stage = useRef<HTMLDivElement>(null)
+  const n = list.length
+  const p = list[i] ?? list[0]
+  const on = onColour(p.colour)
+
+  useNavTone(on, p.colour)
+
+  const swap = useRef<number | undefined>(undefined)
+  useEffect(() => () => window.clearTimeout(swap.current), [])
+
+  const go = useCallback(
+    (to: number) => {
+      const next = ((to % n) + n) % n
+      setPrev(i)
+      setI(next)
+      setCycle((c) => c + 1)
+      // Caption fades out, swaps, fades back in; instantly under reduced motion.
+      window.clearTimeout(swap.current)
+      if (reduced()) return setShown(next)
+      setOut(true)
+      swap.current = window.setTimeout(() => {
+        setShown(next)
+        setOut(false)
+      }, 240)
+    },
+    [i, n],
+  )
+
+  useEffect(() => {
+    const v = () => setHidden(document.hidden)
+    document.addEventListener("visibilitychange", v)
+    return () => document.removeEventListener("visibilitychange", v)
+  }, [])
+
+  const running = !paused && !hold && !hidden && n > 1
+  useEffect(() => {
+    if (!running) return
+    const t = window.setTimeout(() => go(i + 1), ms)
+    return () => window.clearTimeout(t)
+  }, [running, i, ms, go, cycle])
+
+  const move = (e: React.PointerEvent) => {
+    if (reduced() || e.pointerType !== "mouse" || !stage.current) return
+    const r = e.currentTarget.getBoundingClientRect()
+    const x = (e.clientX - r.left) / r.width - 0.5
+    const y = (e.clientY - r.top) / r.height - 0.5
+    stage.current.style.setProperty("--px", `${(-x * 14).toFixed(1)}px`)
+    stage.current.style.setProperty("--py", `${(-y * 10).toFixed(1)}px`)
+  }
+
+  const c = list[shown] ?? p
+  const style = { "--slide-bg": p.colour, "--slide-on": on, "--ms": `${ms}ms` } as CSSProperties
+
+  return (
+    <section
+      className="hero"
+      style={style}
+      role="region"
+      aria-roledescription="carousel"
+      aria-label="Recent projects"
+      onPointerEnter={(e) => e.pointerType === "mouse" && setHold(true)}
+      onPointerLeave={() => setHold(false)}
+      onFocus={() => setHold(true)}
+      onBlur={(e) => !e.currentTarget.contains(e.relatedTarget as Node) && setHold(false)}
+      onPointerMove={move}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowRight") go(i + 1)
+        if (e.key === "ArrowLeft") go(i - 1)
+      }}
+    >
+      <div className="wrap hero__in">
+        <div>
+          <p className="hero__status mono">
+            <span>
+              <i aria-hidden="true" />
+              {copy.status}
+            </span>
+            <span>
+              London <LondonClock />
+            </span>
+          </p>
+          <h1>
+            <span className="sr">
+              {copy.lead} small businesses: {list.map((x) => x.who).join(", ")}.
+            </span>
+            <span aria-hidden="true">
+              {copy.lead}{" "}
+              <span className="swap">
+                {list.map((x, k) => (
+                  <span key={x.slug} data-s={k === i ? "on" : k === prev ? "prev" : "next"}>
+                    {x.who}.
+                  </span>
+                ))}
+              </span>
+            </span>
+          </h1>
+          <div className={`hero__case ${out ? "out" : ""}`} aria-live={paused ? "polite" : "off"}>
+            <p className="mono">
+              {pad(shown + 1)} · {kindName(c.kind)} · {c.sector}
+            </p>
+            <h2>{c.name}</h2>
+            <p>{c.line}</p>
+            <Link to={`/work/${c.slug}`}>
+              Read the write-up <IArrow />
+            </Link>
+          </div>
+          <div className="hero__actions">
+            <Link className="btn btn--main" to="/contact">
+              {copy.cta1} <IArrow />
+            </Link>
+            <Link className="btn" to="/work">
+              {copy.cta2}
+            </Link>
+          </div>
+        </div>
+        <div className="stage" ref={stage} aria-hidden="true">
+          <Devices list={list} active={i} />
+        </div>
+      </div>
+      {n > 1 && (
+        /* On light brand colours the slide text is dark, but the bar sits on the
+           dark bottom shading, so it takes light text there (K-051, 6.73:1). */
+        <div className="wrap hero__bar" style={on === "#FFFFFF" ? undefined : { color: "#ECE9E2" }}>
+          <button className="ctrl js-prev" type="button" aria-label="Previous project" onClick={() => go(i - 1)}>
+            <IPrev />
+          </button>
+          <div className="segs">
+            {list.map((x, k) => (
+              <button key={x.slug} className="seg" type="button" aria-label={`Show ${x.name}`} aria-current={k === i} onClick={() => go(k)}>
+                <i
+                  key={k === i ? `run-${cycle}` : "idle"}
+                  className={k === i && running ? "run" : ""}
+                  style={{ transform: k < i || (k === i && !running) ? "scaleX(1)" : undefined }}
+                />
+                <span>{x.name}</span>
+              </button>
+            ))}
+          </div>
+          <span className="count">
+            {pad(i + 1)} / {pad(n)}
+          </span>
+          <button className="ctrl" type="button" aria-label={paused ? "Play slideshow" : "Pause slideshow"} onClick={() => setChosen(!paused)}>
+            {paused ? <IPlay /> : <IPause />}
+          </button>
+          <button className="ctrl js-next" type="button" aria-label="Next project" onClick={() => go(i + 1)}>
+            <INext />
+          </button>
+        </div>
+      )}
+    </section>
+  )
+}
 
 export default function Home() {
-  const { records } = useWork()
+  const { projects, hero } = useProjects()
+  const copy = useSiteCopy()
   const { posts } = useMarketingBlog()
-  const recent = posts.slice(0, 3)
+  const [a, b, ...rest] = projects
 
   return (
     <>
@@ -48,202 +213,122 @@ export default function Home() {
         description={site.line}
         path="/"
         jsonLd={[
-          personSchema({
-            jobTitle: `${site.role}, ${site.location}`,
-            description: site.line,
-            sameAs: site.social.map((s) => s.url),
-          }),
+          personSchema({ jobTitle: `${site.role}, ${site.location}`, description: site.line, sameAs: sameAsFrom(copy.business.social) }),
           websiteSchema(),
         ]}
       />
 
-      {/* ── Masthead ─────────────────────────────────────────────────── */}
-      <div className="border-b border-gk-edge">
-        <Measure className="pb-14 pt-14 sm:pb-20 sm:pt-24">
-          <div className="grid gap-12 lg:grid-cols-[1fr_20rem] lg:gap-16">
-            <div className="min-w-0">
-              <Label>
-                {site.role} · {site.location}
-              </Label>
-              <h1 className="mt-6 max-w-[16ch] font-display text-t2 font-normal text-gk-ink sm:text-t1 lg:text-display">
-                A website is part of how a business runs, not a brochure it keeps.
-              </h1>
-              <p className="mt-8 max-w-2xl text-lede text-gk-ink-soft">
-                I am {site.name}. I draw the thing and then I build it, so nothing is lost explaining
-                one to the other, and I stay on afterwards so it keeps working. {site.studio.note}
-              </p>
-              <div className="mt-10 flex flex-wrap gap-4">
-                <Action to="/contact" variant="strong">
-                  Start a project
-                </Action>
-                <Action href="#work">See selected work</Action>
-              </div>
-            </div>
+      <Hero list={hero} />
 
-            <div className="lg:pt-2">
-              {site.images.portrait ? (
-                <img
-                  src={site.images.portrait.src}
-                  alt={site.images.portrait.alt}
-                  className="w-full"
-                  width={800}
-                  height={1000}
-                />
-              ) : (
-                <Placeholder
-                  label="Portrait, to supply"
-                  detail="A photograph of Gideon. No stock photograph of a stranger stands in for the person whose site this is."
-                />
-              )}
+      <section className="sec wrap">
+        <div className="sec__head">
+          <div>
+            <p className="eyebrow mono">Selected work</p>
+            <h2 className="h-l">Real businesses, and products I run myself.</h2>
+          </div>
+          <p className="lede">
+            Care staffing, healthcare training, an author's bookstore, a tailor in Lagos. Each card opens the write-up: what the job was, what got built, and where it stands now. Demo builds are marked as demos.
+          </p>
+        </div>
+        <div className="grid-work">
+          {a && <ProjectCard p={a} wide />}
+          {b && <ProjectCard p={b} wide />}
+          {rest.slice(0, 3).map((p) => (
+            <ProjectCard key={p.slug} p={p} />
+          ))}
+        </div>
+        <p style={{ marginTop: 28 }}>
+          <Link className="link" to="/work">
+            All the work <IArrow />
+          </Link>
+        </p>
+      </section>
+
+      <section className="sec wrap">
+        <div className="sec__head">
+          <div>
+            <p className="eyebrow mono">What I do</p>
+            <h2 className="h-l">Websites, and everyday IT support.</h2>
+          </div>
+          <p className="lede">One person does all of it. If a job needs something outside this list I will say so and point you at someone who does it for a living.</p>
+        </div>
+        {groupServices(copy.services).map((g) => (
+          <div key={g.key} className="svc-group" role="group" aria-labelledby={`home-grp-${g.key}`}>
+            <p className="eyebrow mono" id={`home-grp-${g.key}`}>
+              {g.label}
+            </p>
+            <div className={g.items.length === 2 ? "svc svc--2" : "svc"}>
+              {g.items.map((s) => (
+                <Link key={s.slug} to={`/services/${s.slug}`}>
+                  <h3>{s.title}</h3>
+                  <p>{s.summary}</p>
+                  <span className="link">
+                    Read more <IArrow />
+                  </span>
+                </Link>
+              ))}
             </div>
           </div>
-        </Measure>
-      </div>
+        ))}
+      </section>
 
-      {/* ── Contents ─────────────────────────────────────────────────── */}
-      <Section className="!py-12">
-        <nav aria-label="Contents">
-          <ol className="border-t border-gk-edge">
-            {CONTENTS.map((item, i) => (
-              <li key={item.href} className="border-b border-gk-edge">
-                <a
-                  href={item.href}
-                  className="group grid min-h-[3.5rem] grid-cols-[2.5rem_1fr] items-center gap-4 py-3 hover:bg-gk-sunk sm:grid-cols-[3.5rem_1fr_auto] sm:gap-6"
-                >
-                  <span className="font-data text-label text-gk-ink-mute">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                  <span className="font-display text-t4 text-gk-ink group-hover:underline">
-                    {item.title}
-                  </span>
-                  {item.note && (
-                    <span className="hidden font-data text-label uppercase text-gk-ink-mute sm:block">
-                      {item.note}
-                    </span>
-                  )}
-                </a>
-              </li>
+      <section className="sec wrap">
+        <div className="how">
+          <div>
+            <p className="eyebrow mono">How I work</p>
+            <h2 className="h-l">{howIWork.claim}</h2>
+            <p className="lede" style={{ marginTop: 20 }}>
+              {howIWork.detail}
+            </p>
+          </div>
+          <dl className="rows">
+            {howIWork.rows.map((r) => (
+              <div key={r.q}>
+                <dt>{r.q}</dt>
+                <dd>{r.a}</dd>
+              </div>
             ))}
-          </ol>
-        </nav>
-      </Section>
-
-      {/* ── Selected work ────────────────────────────────────────────── */}
-      <Section id="work">
-        <div className="grid gap-6 pb-10 md:grid-cols-[1fr_24rem] md:items-end">
-          <h2 className="font-display text-t2 text-gk-ink">Selected work</h2>
-          <p className="text-body text-gk-ink-soft">
-            Records of four kinds: client work, things I built and own, experiments, and writing.
-            Where a field is not mine to state yet, it says so rather than guessing.
-          </p>
+          </dl>
         </div>
-        <Ledger records={records.slice(0, 3)} headingLevel="h3" />
-        <div className="mt-10">
-          <Action to="/work">All work</Action>
-        </div>
-      </Section>
-
-      {/* ── What I do ────────────────────────────────────────────────── */}
-      <Section id="services" tone="sunk">
-        <div className="grid gap-6 pb-10 md:grid-cols-[1fr_24rem] md:items-end">
-          <h2 className="font-display text-t2 text-gk-ink">What I do</h2>
-          <p className="text-body text-gk-ink-soft">
-            Four things. Not six, and not a grid padded out to look busier. If a job needs something
-            outside this list I will say so and point you at someone who does it for a living.
-          </p>
-        </div>
-        <ol className="grid gap-x-10 gap-y-10 border-t border-gk-edge pt-10 sm:grid-cols-2 lg:grid-cols-4">
-          {services.map((s, i) => (
-            <li key={s.slug}>
-              <span className="font-data text-label text-gk-ink-mute">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <h3 className="mt-3 font-display text-t4 text-gk-ink">
-                <Link to={`/services/${s.slug}`} className="hover:underline">
-                  {s.title}
-                </Link>
-              </h3>
-              <p className="mt-3 text-body text-gk-ink-soft">{s.summary}</p>
+        <ol className="steps">
+          {copy.process.map((s) => (
+            <li key={s.title}>
+              <h3>{s.title}</h3>
+              <p>{s.detail}</p>
             </li>
           ))}
         </ol>
-      </Section>
+      </section>
 
-      {/* ── How I work ───────────────────────────────────────────────── */}
-      <Section id="how">
-        <FadeIn>
-          <div className="grid gap-10 lg:grid-cols-[1fr_24rem] lg:gap-16">
-            <div className="max-w-2xl">
-              <Label>How I work</Label>
-              <h2 className="mt-5 font-display text-t2 text-gk-ink">{howIWork.claim}</h2>
-              <p className="mt-6 text-lede text-gk-ink-soft">{howIWork.detail}</p>
+      {posts.length > 0 && (
+        <section className="sec wrap">
+          <div className="sec__head">
+            <div>
+              <p className="eyebrow mono">Writing</p>
+              <h2 className="h-l">Notes from the build.</h2>
             </div>
-            <dl className="self-end font-data text-label">
-              {howIWork.rows.map((r) => (
-                <div
-                  key={r.q}
-                  className="flex items-baseline justify-between gap-6 border-b border-gk-rule py-3"
-                >
-                  <dt className="uppercase text-gk-ink-mute">{r.q}</dt>
-                  <dd className="text-right text-gk-ink">{r.a}</dd>
-                </div>
-              ))}
-            </dl>
+            <p className="lede">Mostly about the parts of a project nobody demonstrates.</p>
           </div>
-        </FadeIn>
-      </Section>
-
-      {/* Testimonials render only when the CMS holds approved ones. The
-          component returns null when empty, which is the correct behaviour:
-          an empty quote band is better than an invented quote. */}
-      <Testimonials />
-
-      {/* ── Writing ──────────────────────────────────────────────────── */}
-      {recent.length > 0 && (
-        <Section id="writing" tone="sunk">
-          <div className="grid gap-6 pb-10 md:grid-cols-[1fr_24rem] md:items-end">
-            <h2 className="font-display text-t2 text-gk-ink">Writing</h2>
-            <p className="text-body text-gk-ink-soft">Mostly about the parts of a build nobody demonstrates.</p>
-          </div>
-          <ul className="border-t border-gk-edge">
-            {recent.map((p) => (
-              <li key={p.slug} className="border-b border-gk-edge">
-                <Link to={`/resources/${p.slug}`} className="block py-6 hover:bg-gk-paper">
-                  <div className="grid gap-2 sm:grid-cols-[1fr_8rem] sm:gap-8">
-                    <div className="min-w-0">
-                      <h3 className="font-display text-t4 text-gk-ink">{p.title}</h3>
-                      <p className="mt-2 max-w-2xl text-body text-gk-ink-soft">{p.excerpt}</p>
-                    </div>
-                    <time
-                      dateTime={p.date}
-                      className="font-data text-label uppercase text-gk-ink-mute sm:text-right"
-                    >
-                      {readableDate(p.date)}
-                    </time>
-                  </div>
-                </Link>
-              </li>
+          <div className="posts">
+            {posts.slice(0, 3).map((p) => (
+              <Link key={p.slug} className="post" to={`/resources/${p.slug}`}>
+                <span className="mono mute">{readableDate(p.date)}</span>
+                <h3>{p.title}</h3>
+                <p>{p.excerpt}</p>
+                <span className="link">
+                  Read <IArrow />
+                </span>
+              </Link>
             ))}
-          </ul>
-        </Section>
+          </div>
+        </section>
       )}
 
-      {/* ── Contact ──────────────────────────────────────────────────── */}
-      <section id="contact" className="bg-gk-ink text-gk-on-dark">
-        <Measure className="py-16 sm:py-24">
-          <div className="grid gap-10 md:grid-cols-[1fr_auto] md:items-end">
-            <div className="max-w-2xl">
-              <h2 className="font-display text-t2 text-gk-on-dark">Tell me what the site has to do.</h2>
-              <p className="mt-5 text-lede text-gk-on-dark-soft">
-                A paragraph is enough. If it is not something I should take on, I will say so and point
-                you somewhere better. {site.contact.replyIntent}
-              </p>
-            </div>
-            <Action to="/contact" variant="strong" onDark>
-              Start a project
-            </Action>
-          </div>
-        </Measure>
+      {/* Approved quotes from the CMS. Renders nothing until a client has approved one. */}
+      <Testimonials />
+
+      <section className="sec wrap">
+        <CtaBand projects={projects} />
       </section>
     </>
   )

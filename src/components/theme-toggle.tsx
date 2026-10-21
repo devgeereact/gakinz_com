@@ -1,68 +1,29 @@
-"use client"
-
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useEffect, useState } from "react"
-import { Button } from "@/components/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import { useUIThemeStore } from "@/store/ui-theme.store"
 
+// Light or dark, nothing else (D-046). Shows the sun while dark and the moon
+// while light, as the prototype does, and switches to the other one.
 export function ThemeToggle() {
-  const { theme, setTheme } = useTheme()
-  const { setTheme: setCustomTheme } = useUIThemeStore()   // ✅ ADD THIS
-
+  const { resolvedTheme, setTheme } = useTheme()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
-  if (!mounted) {
-    return (
-      <Button variant="ghost" size="icon"
-       className="rounded-full opacity-0">
-        <Sun />
-      </Button>
-    )
-  }
-
-  const isDark = theme === "dark"
+  const isDark = mounted && resolvedTheme === "dark"
+  const label = isDark ? "Switch to light theme" : "Switch to dark theme"
 
   return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="relative rounded-full [&_svg]:size-5 h-10 w-10 p-0"
-            onClick={() => {
-              setCustomTheme("")              // ✅ REMOVE custom theme
-              setTheme(isDark ? "light" : "dark") // ✅ APPLY system theme
-            }}
-            aria-label="Toggle theme"
-          >
-            <Sun
-              className={`transition-all ${
-                isDark ? "rotate-90 scale-0" : "rotate-0 scale-100"
-              }`}
-            />
-            <Moon
-              className={`absolute transition-all ${
-                isDark ? "rotate-0 scale-100" : "-rotate-90 scale-0"
-              }`}
-            />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">
-          {isDark ? "Switch to light mode" : "Switch to dark mode"}
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
+    <button
+      type="button"
+      onClick={() => setTheme(isDark ? "light" : "dark")}
+      aria-label={label}
+      title={label}
+      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] border border-border bg-card text-foreground hover:border-line-strong [&_svg]:size-[18px]"
+    >
+      {isDark ? <Sun aria-hidden /> : <Moon aria-hidden />}
+    </button>
   )
 }

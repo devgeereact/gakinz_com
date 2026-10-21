@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { auth } from "@/lib/api"
+import { revokePreviousToken } from "@/lib/session-revoke"
 import { useAuth } from "@/store/auth.store"
 import BrandMark from "@/marketing/components/BrandMark"
 
@@ -12,9 +13,13 @@ const KEY = "gk-locked"
 
 // Privacy lock: after a spell of inactivity an overlay covers the CMS and the
 // signed-in user must re-enter their password (and 2FA code, if enabled) to
-// resume. Re-uses the normal login flow so it can't be bypassed client-side.
+// resume. It is not a sign-out: the session stays open behind the overlay.
+// Unlocking re-uses the normal login flow so it can't be bypassed client-side.
+// That login issues a new token, so the token held before the lock is then
+// revoked on the server (K-033) rather than left valid until it expires.
 export default function LockScreen() {
   const user = useAuth((s) => s.user)
+  const currentToken = useAuth((s) => s.token)
   const setAuth = useAuth((s) => s.setAuth)
   const [locked, setLocked] = useState(() => sessionStorage.getItem(KEY) === "1")
   const [pw, setPw] = useState("")
@@ -50,10 +55,14 @@ export default function LockScreen() {
     e.preventDefault()
     setError(null)
     setBusy(true)
+    const previousToken = currentToken
     const res = await auth.login(user.email, pw, needs2fa ? code.trim() : undefined)
     setBusy(false)
     if (res.ok) {
       setAuth(res.data.token, res.data.user)
+      // Not awaited: the user is back in straight away. A failed revoke is
+      // retried and logged inside revokePreviousToken, never thrown.
+      void revokePreviousToken(previousToken, res.data.token, auth.revokeToken)
       sessionStorage.removeItem(KEY)
       setPw("")
       setCode("")
@@ -73,7 +82,7 @@ export default function LockScreen() {
         <div className="flex flex-col items-center gap-2">
           <BrandMark className="h-9 w-9" />
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Lock className="h-4 w-4" /> Locked — {user.name}
+            <Lock className="h-4 w-4" /> Locked: {user.name}
           </div>
         </div>
         <div className="text-left">

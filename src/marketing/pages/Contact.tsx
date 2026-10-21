@@ -1,412 +1,262 @@
 import { useEffect, useRef, useState } from "react"
-import Seo from "@/marketing/components/Seo"
-import { Action, PageHero, Section } from "@/marketing/components/primitives"
-import { site, whatHappensNext } from "@/marketing/data/site"
+import { Link, useSearchParams } from "react-router-dom"
 import { contact, booking, type EnquiryPayload } from "@/lib/api"
-import { cn } from "@/lib/utils"
+import Seo from "@/marketing/components/Seo"
+import { IArrow, PageHead } from "@/marketing/components/site-ui"
+import { enquiryServiceOptions, useSiteCopy } from "@/marketing/data/content"
+import { whatHappensNext } from "@/marketing/data/site"
 
 /**
- * /contact: the enquiry form.
+ * Contact (D-046). The request shape sent to contact.send() is unchanged; the
+ * enquiry lands in the CMS Enquiries board as before. Errors show under each
+ * field and focus moves to the first one (WCAG 3.3.1, 2.4.3).
  *
- * This was the worst page in the static accessibility audit, and the fixes are
- * the point of the rebuild rather than a tidy-up after it:
- *
- *   - every error is now owned by an id, pointed at by the field's
- *     `aria-describedby`, and repeated in a `role="alert"` summary, so a
- *     screen-reader user hears what is wrong rather than only that something
- *     is (WCAG 3.3.1, 3.3.3).
- *   - the three fields validate() actually requires now carry `required` and a
- *     visible "Required" marker, and the ten-character minimum on the message
- *     is stated in a hint before submission rather than only after it
- *     (WCAG 3.3.2).
- *   - "Project type" and "Budget" are native selects, so their labels have a
- *     real `htmlFor` target. A Radix SelectTrigger is a button and cannot be
- *     one (WCAG 1.3.1, 4.1.2).
- *   - name, email and company carry autocomplete tokens (WCAG 1.3.5).
- *   - headings run h1 → h2 → h3 with no skip (WCAG 1.3.1).
- *   - a failed submission moves focus to the first invalid field (WCAG 2.4.3).
- *
- * The request shape sent to contact.send() is unchanged.
- *
- * Gone with the relaunch: the shadow-xl card, the gk-shine sweep on the submit
- * button, the violet icon set, the generated SiteMockup wireframe, and the
- * ghost numerals in "What happens next".
+ * The optional service choice offers the website's own service names plus
+ * "Something else" (spec 7), and fills the enquiry's existing projectType
+ * field, as a package carried from Pricing does. The budget bands are the
+ * owner's to change and are left as they are.
  */
 
-const PROJECT_TYPES = ["New website", "Redesign", "Ecommerce", "Care and support", "Something else"]
-const BUDGETS = ["Under £5k", "£5k to £10k", "£10k to £25k", "£25k and above", "Not sure yet"]
-
-/** The fields validate() enforces, in the order they appear in the form. */
-const REQUIRED_ORDER = ["name", "email", "message"] as const
-type RequiredField = (typeof REQUIRED_ORDER)[number]
-
-const LABELS: Record<RequiredField, string> = {
-  name: "Name",
-  email: "Email",
-  message: "About the project",
+const BUDGETS = ["Under £1,500", "£1,500 to £3,500", "£3,500 to £6,000", "Over £6,000"]
+const ORDER = ["name", "email", "message"] as const
+type Field = (typeof ORDER)[number]
+const EMPTY: EnquiryPayload = { name: "", email: "", company: "", budget: "", projectType: "", message: "" }
+const RULES: Record<Field, (v: string) => boolean> = {
+  name: (v) => v.trim().length > 1,
+  email: (v) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.trim()),
+  message: (v) => v.trim().length >= 10,
 }
-
-const EMPTY: EnquiryPayload = {
-  name: "",
-  email: "",
-  company: "",
-  budget: "",
-  projectType: "",
-  message: "",
-}
-
-/** One control style for every input, select and textarea on the page. */
-const CONTROL =
-  "mt-2 block w-full min-h-[2.75rem] border bg-gk-paper px-3 py-2 text-body text-gk-ink placeholder:text-gk-ink-mute"
-
-function edge(invalid: boolean) {
-  return invalid ? "border-gk-come" : "border-gk-edge"
-}
-
-/** Marks a field's status in the label. Metadata, so it takes the mute, not the oxide. */
-function Marker({ children }: { children: string }) {
-  return <span className="font-data text-label uppercase text-gk-ink-mute">{children}</span>
+const MSG: Record<Field, string> = {
+  name: "Add your name so I know who to reply to.",
+  email: "Add an email address I can reply to, like name@business.co.uk.",
+  message: "Write a sentence or two about the business and what you need.",
 }
 
 export default function Contact() {
+  const copy = useSiteCopy()
   const [form, setForm] = useState<EnquiryPayload>(EMPTY)
+  const [errors, setErrors] = useState<Partial<Record<Field, boolean>>>({})
   const [sending, setSending] = useState(false)
-  const [errors, setErrors] = useState<Partial<Record<RequiredField, string>>>({})
   const [sendError, setSendError] = useState("")
-  const [sent, setSent] = useState(false)
+  const [sentTo, setSentTo] = useState("")
+  // The enquiry's work reference (SQL 19), shown once so the visitor can quote it.
+  const [sentRef, setSentRef] = useState("")
   const [bookUrl, setBookUrl] = useState("")
-
+  const [copied, setCopied] = useState("Copy")
   const nameRef = useRef<HTMLInputElement>(null)
   const emailRef = useRef<HTMLInputElement>(null)
   const messageRef = useRef<HTMLTextAreaElement>(null)
-  const refs = { name: nameRef, email: emailRef, message: messageRef }
+  const code = useRef<HTMLElement>(null)
 
-  // Discovery-call booking link. Shown only when the server has one configured;
-  // an unconfigured integration answers 503 and the block simply never appears.
+  // A pricing button links here with ?package=Name. Only a real package name is
+  // accepted; it fills the enquiry's existing projectType field. Set after the
+  // first render so the prerendered page and the hydrated one match.
+  // A service page links here with ?service=slug the same way, and the choice
+  // becomes that service's name.
+  const [params] = useSearchParams()
+  const pkg = params.get("package") ?? ""
+  const svc = params.get("service") ?? ""
+  // The package name carried from Pricing, if that is where the choice came
+  // from. "Ecommerce" is both a package and a service, so the source decides
+  // which note shows, not the value.
+  const [fromPackage, setFromPackage] = useState("")
+  useEffect(() => {
+    // Deliberately after mount: reading the query during render would make the
+    // prerendered HTML and the first client render differ (a hydration error).
+    const service = copy.services.find((s) => s.slug === svc)?.title
+    const chosen = service ?? (copy.packages.some((p) => p.name === pkg) ? pkg : "")
+    if (!chosen) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setForm((f) => (f.projectType ? f : { ...f, projectType: chosen }))
+    setFromPackage((p) => p || (service ? "" : chosen))
+  }, [pkg, svc, copy.packages, copy.services])
+  const serviceOptions = enquiryServiceOptions(copy.services)
+  const chosenType = form.projectType ?? ""
+  const isPackage = chosenType !== "" && (chosenType === fromPackage || !serviceOptions.includes(chosenType))
+
+  // Discovery-call link: shown only when the server has one configured.
   useEffect(() => {
     booking.url().then((r) => r.ok && r.data.url && setBookUrl(r.data.url))
   }, [])
 
   const set = (k: keyof EnquiryPayload, v: string) => setForm((f) => ({ ...f, [k]: v }))
+  const blur = (k: Field) => setErrors((e) => ({ ...e, [k]: form[k] !== "" && !RULES[k](String(form[k])) }))
 
-  const validate = () => {
-    const e: Partial<Record<RequiredField, string>> = {}
-    if (!form.name.trim()) e.name = "Tell me your name."
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email)) e.email = "Enter an email address I can reply to."
-    if (form.message.trim().length < 10) e.message = "Tell me a little about the project, in ten characters or more."
-    setErrors(e)
-    return e
-  }
-
-  const onSubmit = async (ev: React.FormEvent) => {
+  const submit = async (ev: React.FormEvent) => {
     ev.preventDefault()
     setSendError("")
-    setSent(false)
-
-    const found = validate()
-    const firstInvalid = REQUIRED_ORDER.find((k) => found[k])
-    if (firstInvalid) {
-      // WCAG 2.4.3. Without this the user is left at the submit button with no
-      // idea which field the complaint belongs to.
-      refs[firstInvalid].current?.focus()
-      return
-    }
-
+    const found = Object.fromEntries(ORDER.map((k) => [k, !RULES[k](String(form[k]))])) as Record<Field, boolean>
+    setErrors(found)
+    const first = ORDER.find((k) => found[k])
+    if (first) return ({ name: nameRef, email: emailRef, message: messageRef })[first].current?.focus()
     setSending(true)
     const res = await contact.send(form)
     setSending(false)
     if (res.ok) {
-      setSent(true)
+      setSentTo(form.name.trim().split(/\s+/)[0])
+      setSentRef(res.data.reference ?? "")
       setForm(EMPTY)
+      setFromPackage("")
     } else {
-      setSendError(res.error || "I could not send that just now. Email me directly and it will reach me.")
+      // A 4xx carries the server's own reason (a field it rejected, too many
+      // tries). A 5xx or no reply at all gets the way round: email directly.
+      const own = res.status !== undefined && res.status >= 400 && res.status < 500 ? res.error : ""
+      setSendError(own || "I could not send that just now. Email me directly and it will reach me.")
     }
   }
 
-  const listed = REQUIRED_ORDER.filter((k) => errors[k])
+  const copyEmail = () => {
+    const pick = () => {
+      if (code.current) window.getSelection()?.selectAllChildren(code.current)
+      setCopied("Selected")
+    }
+    try {
+      navigator.clipboard.writeText(copy.contact.email).then(() => setCopied("Copied"), pick)
+    } catch {
+      pick()
+    }
+  }
+
+  const field = (k: Field, label: string, input: React.ReactNode) => (
+    <div className="field" id={`f-${k}`} data-err={errors[k] ? "" : undefined}>
+      <label htmlFor={k}>{label}</label>
+      {input}
+      <span className="err" id={`e-${k}`}>
+        {MSG[k]}
+      </span>
+    </div>
+  )
 
   return (
     <>
-      <Seo
-        title="Contact"
-        description="Send me a few lines about your project. I read every enquiry myself and aim to reply the next working day."
-        path="/contact"
+      <Seo title="Contact" description="Send a few lines about your project. I read every enquiry myself and aim to reply the next working day." path="/contact" />
+      <PageHead
+        crumbs={[[null, "Contact"]]}
+        title={
+          <>
+            Tell me what the
+            <br />
+            site has to do.
+          </>
+        }
+        lede="A paragraph is enough. If it is not something I should take on, I will say so and point you somewhere better."
       />
-
-      <PageHero
-        eyebrow="Contact"
-        breadcrumb="Contact"
-        title="Tell me what the site has to do."
-        intro="A paragraph about the business and what you need from it is enough to start. If it is not a job I should take on, I will say so and point you somewhere better."
-      />
-
-      <Section>
-        <div className="grid gap-12 lg:grid-cols-[22rem_1fr] lg:gap-16">
-          {/* ── Details ──────────────────────────────────────────────── */}
-          <div className="min-w-0">
-            <h2 className="font-display text-t3 text-gk-ink">How to reach me</h2>
-
-            {/* Only real values appear. The previous site printed a telephone
-                number of +44 20 0000 0000; site.contact.phone is null until a
-                real one exists, and a null renders nothing at all. */}
-            <dl className="mt-8 border-t border-gk-edge">
-              <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-gk-edge py-4">
-                <dt className="font-data text-label uppercase text-gk-ink-mute">Email</dt>
-                <dd className="text-body text-gk-ink">
-                  <a className="hover:underline" href={`mailto:${site.contact.email}`}>
-                    {site.contact.email}
-                  </a>
-                </dd>
-              </div>
-              {site.contact.phone && (
-                <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-gk-edge py-4">
-                  <dt className="font-data text-label uppercase text-gk-ink-mute">Telephone</dt>
-                  <dd className="text-body text-gk-ink">
-                    <a className="hover:underline" href={`tel:${site.contact.phone.replace(/\s+/g, "")}`}>
-                      {site.contact.phone}
-                    </a>
-                  </dd>
-                </div>
-              )}
-              <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b border-gk-edge py-4">
-                <dt className="font-data text-label uppercase text-gk-ink-mute">Where</dt>
-                <dd className="text-body text-gk-ink">{site.contact.place}</dd>
-              </div>
-            </dl>
-
-            <p className="mt-6 max-w-prose text-body text-gk-ink-soft">{site.contact.replyIntent}</p>
-            <p className="mt-4 max-w-prose text-body text-gk-ink-soft">
-              {site.studio.note} Either way, the person who answers your first message is the person who
-              does the work.
-            </p>
-
-            {bookUrl && (
-              <div className="mt-10 border-t border-gk-edge pt-8">
-                <h3 className="font-display text-t4 text-gk-ink">Rather talk it through?</h3>
-                <p className="mt-3 text-body text-gk-ink-soft">
-                  Twenty minutes on the business, what the site has to do, and who it is for. No charge,
-                  and no obligation afterwards.
+      <section className="sec wrap" style={{ paddingTop: 56 }}>
+        <div className="contact">
+          <div>
+            {sentTo ? (
+              <div className="done" role="status">
+                <p className="mono" style={{ color: "var(--ok)", marginBottom: 10 }}>
+                  Sent
                 </p>
-                <div className="mt-5">
-                  <Action href={bookUrl}>Book a call</Action>
-                </div>
+                <h2 className="h-m">Thanks, {sentTo}.</h2>
+                <p className="mute" style={{ marginTop: 10 }}>
+                  Your message is with me. {copy.contact.reply}
+                </p>
+                {sentRef && (
+                  <p className="mute" style={{ marginTop: 10 }}>
+                    Your reference is <b className="mono">{sentRef}</b>. Mention it if you write to me about this.
+                  </p>
+                )}
               </div>
-            )}
-          </div>
-
-          {/* ── Form ─────────────────────────────────────────────────── */}
-          <div className="min-w-0">
-            <h2 className="font-display text-t3 text-gk-ink">Send an enquiry</h2>
-            <p className="mt-4 max-w-prose text-body text-gk-ink-soft">
-              Fields marked <Marker>Required</Marker> have to be filled in. The rest help me answer
-              properly, and you can leave them alone.
-            </p>
-
-            <form onSubmit={onSubmit} noValidate aria-busy={sending} className="mt-8">
-              {/* Assertive region. Rendered on every pass so the announcement
-                  fires on the content change, not on the node insertion. */}
-              <div role="alert">
-                {listed.length > 0 && (
-                  <div className="mb-8 border border-gk-come p-5">
-                    <h3 className="font-display text-t4 text-gk-ink">There is a problem</h3>
-                    <ul className="mt-3 space-y-2">
-                      {listed.map((k) => (
-                        <li key={k}>
-                          <a className="text-body text-gk-come underline" href={`#${k}`}>
-                            {LABELS[k]}: {errors[k]}
-                          </a>
-                        </li>
-                      ))}
-                    </ul>
+            ) : (
+              <form className="form" onSubmit={submit} noValidate>
+                <div className="row2">
+                  {field("name", "Your name", <input id="name" ref={nameRef} autoComplete="name" required aria-invalid={errors.name || undefined} aria-describedby={errors.name ? "e-name" : undefined} value={form.name} onChange={(e) => set("name", e.target.value)} onBlur={() => blur("name")} />)}
+                  {field("email", "Email", <input id="email" ref={emailRef} type="email" autoComplete="email" required aria-invalid={errors.email || undefined} aria-describedby={errors.email ? "e-email" : undefined} value={form.email} onChange={(e) => set("email", e.target.value)} onBlur={() => blur("email")} />)}
+                </div>
+                <div className="row2">
+                  <div className="field">
+                    <label htmlFor="biz">
+                      Business <span>(optional)</span>
+                    </label>
+                    <input id="biz" autoComplete="organization" value={form.company} onChange={(e) => set("company", e.target.value)} />
                   </div>
+                  <div className="field">
+                    <label htmlFor="budget">
+                      Rough budget <span>(optional)</span>
+                    </label>
+                    <select id="budget" value={form.budget} onChange={(e) => set("budget", e.target.value)}>
+                      <option value="">Not sure yet</option>
+                      {BUDGETS.map((b) => (
+                        <option key={b}>{b}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="field">
+                  <label htmlFor="service">
+                    Service <span>(optional)</span>
+                  </label>
+                  <select id="service" value={isPackage ? "" : chosenType} onChange={(e) => {
+                      setFromPackage("")
+                      set("projectType", e.target.value)
+                    }}>
+                    <option value="">{isPackage ? "As the package below" : "Not sure yet"}</option>
+                    {serviceOptions.map((o) => (
+                      <option key={o}>{o}</option>
+                    ))}
+                  </select>
+                </div>
+                {field("message", "What do you need?", <textarea id="message" ref={messageRef} required maxLength={5000} aria-invalid={errors.message || undefined} aria-describedby={errors.message ? "e-message" : undefined} value={form.message} onChange={(e) => set("message", e.target.value)} onBlur={() => blur("message")} />)}
+                {isPackage && (
+                  <p className="mute">
+                    About the {form.projectType} package.{" "}
+                    <button type="button" className="link" style={{ background: "none", border: 0, padding: 0, font: "inherit", cursor: "pointer" }} onClick={() => {
+                        setFromPackage("")
+                        set("projectType", "")
+                      }}>
+                      Not that one
+                    </button>
+                  </p>
                 )}
                 {sendError && (
-                  <p className="mb-8 border border-gk-come p-5 text-body text-gk-come">{sendError}</p>
-                )}
-              </div>
-
-              {/* Polite region for the outcome. A toast alone is transient and
-                  easy to miss; this stays on the page. */}
-              <div role="status">
-                {sent && (
-                  <p className="mb-8 border border-gk-set p-5 text-body text-gk-ink">
-                    Thank you, your message is with me. {site.contact.replyIntent}
+                  <p role="alert" style={{ color: "#FFA3A3" }}>
+                    {sendError}
                   </p>
                 )}
-              </div>
-
-              <div className="grid gap-6 sm:grid-cols-2">
                 <div>
-                  <label htmlFor="name" className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="text-body font-medium text-gk-ink">Name</span>
-                    <Marker>Required</Marker>
-                  </label>
-                  <input
-                    id="name"
-                    ref={nameRef}
-                    type="text"
-                    required
-                    autoComplete="name"
-                    value={form.name}
-                    onChange={(e) => set("name", e.target.value)}
-                    aria-invalid={!!errors.name}
-                    aria-describedby={errors.name ? "name-error" : undefined}
-                    className={cn(CONTROL, edge(!!errors.name))}
-                  />
-                  {errors.name && (
-                    <p id="name-error" className="mt-2 text-body text-gk-come">
-                      {errors.name}
-                    </p>
-                  )}
+                  <button className="btn btn--main" type="submit" disabled={sending}>
+                    {sending ? "Sending…" : "Send enquiry"} {!sending && <IArrow />}
+                  </button>
                 </div>
-
-                <div>
-                  <label htmlFor="email" className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="text-body font-medium text-gk-ink">Email</span>
-                    <Marker>Required</Marker>
-                  </label>
-                  <input
-                    id="email"
-                    ref={emailRef}
-                    type="email"
-                    required
-                    autoComplete="email"
-                    value={form.email}
-                    onChange={(e) => set("email", e.target.value)}
-                    aria-invalid={!!errors.email}
-                    aria-describedby={errors.email ? "email-hint email-error" : "email-hint"}
-                    className={cn(CONTROL, edge(!!errors.email))}
-                  />
-                  <p id="email-hint" className="mt-2 text-body text-gk-ink-mute">
-                    This is the only way I have to reply.
-                  </p>
-                  {errors.email && (
-                    <p id="email-error" className="mt-2 text-body text-gk-come">
-                      {errors.email}
-                    </p>
-                  )}
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label htmlFor="company" className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="text-body font-medium text-gk-ink">Company</span>
-                    <Marker>Optional</Marker>
-                  </label>
-                  <input
-                    id="company"
-                    type="text"
-                    autoComplete="organization"
-                    value={form.company}
-                    onChange={(e) => set("company", e.target.value)}
-                    className={cn(CONTROL, edge(false))}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="projectType" className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="text-body font-medium text-gk-ink">Project type</span>
-                    <Marker>Optional</Marker>
-                  </label>
-                  <select
-                    id="projectType"
-                    value={form.projectType}
-                    onChange={(e) => set("projectType", e.target.value)}
-                    className={cn(CONTROL, edge(false))}
-                  >
-                    <option value="">No preference yet</option>
-                    {PROJECT_TYPES.map((t) => (
-                      <option key={t} value={t}>
-                        {t}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div>
-                  <label htmlFor="budget" className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="text-body font-medium text-gk-ink">Budget</span>
-                    <Marker>Optional</Marker>
-                  </label>
-                  <select
-                    id="budget"
-                    value={form.budget}
-                    onChange={(e) => set("budget", e.target.value)}
-                    className={cn(CONTROL, edge(false))}
-                  >
-                    <option value="">Not sure yet</option>
-                    {BUDGETS.map((b) => (
-                      <option key={b} value={b}>
-                        {b}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="sm:col-span-2">
-                  <label htmlFor="message" className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                    <span className="text-body font-medium text-gk-ink">About the project</span>
-                    <Marker>Required</Marker>
-                  </label>
-                  <textarea
-                    id="message"
-                    ref={messageRef}
-                    rows={6}
-                    required
-                    minLength={10}
-                    value={form.message}
-                    onChange={(e) => set("message", e.target.value)}
-                    aria-invalid={!!errors.message}
-                    aria-describedby={errors.message ? "message-hint message-error" : "message-hint"}
-                    className={cn(CONTROL, edge(!!errors.message))}
-                  />
-                  <p id="message-hint" className="mt-2 text-body text-gk-ink-mute">
-                    Ten characters at the very least, though a sentence or two about what the site has to
-                    do is far more use to me.
-                  </p>
-                  {errors.message && (
-                    <p id="message-error" className="mt-2 text-body text-gk-come">
-                      {errors.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-8 flex flex-wrap items-center gap-6">
-                <button
-                  type="submit"
-                  disabled={sending}
-                  className="inline-flex min-h-[2.75rem] items-center gap-2 bg-gk-set px-5 py-2.5 text-body font-medium text-gk-paper transition-colors hover:bg-gk-ink disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {sending ? "Sending" : "Send enquiry"}
-                </button>
-                <p className="text-body text-gk-ink-soft">No follow-up sequence. One reply, from me.</p>
-              </div>
-            </form>
+                {/* Just-in-time notice at the point of collection (ICO, right to be informed). */}
+                <p className="mute" style={{ fontSize: 14, maxWidth: "60ch" }}>
+                  I use these details only to reply to you, and record the address the message came from to stop spam. More in the{" "}
+                  <Link to="/privacy" style={{ textDecoration: "underline" }}>privacy policy</Link>.
+                </p>
+              </form>
+            )}
+          </div>
+          <div>
+            <p className="eyebrow mono">What happens next</p>
+            <ol className="next-steps">
+              {whatHappensNext.map((s) => (
+                <li key={s.title}>
+                  <b>{s.title}</b>
+                  <span>{s.detail}</span>
+                </li>
+              ))}
+            </ol>
+            {bookUrl && (
+              <p style={{ marginTop: 20 }}>
+                <a className="link" href={bookUrl} target="_blank" rel="noreferrer noopener">
+                  Or book a short call <IArrow />
+                </a>
+              </p>
+            )}
+            <p className="mute" style={{ marginTop: 28 }}>
+              Prefer email? Copy the address:
+            </p>
+            <div className="copy">
+              <code ref={code}>{copy.contact.email}</code>
+              <button className="btn" type="button" onClick={copyEmail}>
+                {copied}
+              </button>
+            </div>
           </div>
         </div>
-      </Section>
-
-      {/* ── What happens next ──────────────────────────────────────────── */}
-      <Section tone="sunk">
-        <div className="grid gap-6 pb-10 md:grid-cols-[1fr_24rem] md:items-end">
-          <h2 className="font-display text-t2 text-gk-ink">What happens next</h2>
-          <p className="text-body text-gk-ink-soft">
-            Three steps, all of them mine to keep. No queue, no account manager, and no work begins
-            before you have a number in writing.
-          </p>
-        </div>
-        <ol className="grid gap-x-10 gap-y-10 border-t border-gk-edge pt-10 sm:grid-cols-3">
-          {whatHappensNext.map((step, i) => (
-            <li key={step.title}>
-              <span className="font-data text-label text-gk-ink-mute">
-                {String(i + 1).padStart(2, "0")}
-              </span>
-              <h3 className="mt-3 font-display text-t4 text-gk-ink">{step.title}</h3>
-              <p className="mt-3 text-body text-gk-ink-soft">{step.detail}</p>
-            </li>
-          ))}
-        </ol>
-      </Section>
+      </section>
     </>
   )
 }

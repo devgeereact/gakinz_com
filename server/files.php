@@ -1,5 +1,8 @@
 <?php
 /**
+ * Upload _uploads.php before this file. This file requires it on every route,
+ * the public Work image share links included.
+ *
  * Files & Documents (GAkinzOS — Files). Protected.
  * Per-project / per-client file storage. Binary lives on disk under uploads/;
  * the DB row is metadata + an optional expiring public share token.
@@ -9,13 +12,26 @@
  *   GET  /files.php?token=XYZ           → stream via a public share link (no auth, checks expiry)
  *   POST /files.php?action=upload       (multipart: file=<binary>, project_id?, client_id?)
  *   POST /files.php?action=share        {id, days?}   → issue/refresh a public link
+ *   POST /files.php?action=client_share {id, visible} → show or hide it in the client's portal (SQL 18)
  *   POST /files.php?action=delete       {id}
+ *
+ * Client (role `client` only, SQL 18):
+ *   GET  /files.php?action=mine                 → the client's shared files
+ *   GET  /files.php?action=mine_download&id=N   → stream one of them
+ *
+ * Client isolation: the client comes from the token and nothing else. A file
+ * reaches a client only when staff made it visible, it is not deleted, and it
+ * belongs to that client: attached to one of their live projects (and, if it
+ * also names a client, naming the same one), or attached to them directly with
+ * no project. Anything else, including another client's file, answers 404
+ * exactly as a missing one does. A client never sees the stored file name, the
+ * share token, the uploader or the client id.
  */
 require __DIR__ . '/_bootstrap.php';
+require __DIR__ . '/_uploads.php'; // UPLOAD_DIR and stored_path()
 
 const STAFF = ['super_admin', 'admin', 'manager', 'editor', 'employee'];
 const MAX_BYTES = 20 * 1024 * 1024; // 20 MB
-const UPLOAD_DIR = __DIR__ . '/uploads';
 
 // Upload allowlist. Extension → the MIME types finfo may report for it. An
 // upload must satisfy both: a known extension, and a sniffed type that belongs
@@ -46,6 +62,49 @@ const ALLOWED_UPLOADS = [
   'odp'  => ['application/vnd.oasis.opendocument.presentation', 'application/zip'],
 ];
 
+const CLIENT_SHARE_MIGRATION = 'Sharing files to the portal needs the 2026-10-19 database update (SQL 18) first.';
+
+// The files a client may see: visible, live, and theirs (see the header). Bind
+// the client id three times. `p` is the file's project, when it has one.
+const CLIENT_FILE_FROM = ' FROM files f
+  LEFT JOIN projects p ON p.id = f.project_id
+  WHERE f.client_visible = 1 AND f.deleted_at IS NULL AND (
+    (f.project_id IS NULL AND f.client_id = ?)
+    OR (f.project_id IS NOT NULL AND p.deleted_at IS NULL AND p.client_id = ? AND (f.client_id IS NULL OR f.client_id = ?))
+  )';
+
+/**
+ * True once SQL 18 has run: files.client_visible and files.shared_at exist.
+ * Cached for the request. Until then the client routes and client_share answer
+ * 503 and the staff list reports client_visible as null.
+ */
+function fl_client_share_ready(mysqli $conn): bool {
+  static $ready = null;
+  if ($ready !== null) return $ready;
+  try {
+    // LIMIT 0 reads no rows; it only proves both columns are there.
+    $ready = $conn->query('SELECT client_visible, shared_at FROM files LIMIT 0') !== false;
+  } catch (mysqli_sql_exception $e) {
+    if ($e->getCode() !== 1054) throw $e; // ER_BAD_FIELD_ERROR only
+    $ready = false;
+  }
+  return $ready;
+}
+
+/**
+ * True once SQL 17 has added projects.kind. Probed here, as portal.php does,
+ * so the client routes depend on nothing but _bootstrap.php.
+ */
+function fl_kind_ready(mysqli $conn): bool {
+  try {
+    // LIMIT 0 reads no rows; it only proves the column is there.
+    return $conn->query('SELECT kind FROM projects LIMIT 0') !== false;
+  } catch (mysqli_sql_exception $e) {
+    if ($e->getCode() !== 1054) throw $e; // ER_BAD_FIELD_ERROR only
+    return false;
+  }
+}
+
 // Every MIME any allowed extension may resolve to. A download only ever sends
 // a type from this set, so a stored row can never dictate an arbitrary header.
 function allowed_mimes(): array {
@@ -67,23 +126,61 @@ function ensure_upload_dir(): void {
   if (!file_exists($ht)) @file_put_contents($ht, "Require all denied\nDeny from all\n");
 }
 
+// ── Client branch (SQL 18) ───────────────────────────────────────────────────
+// Only these two routes accept a client, and they accept nobody else. Both
+// always end the request, so a client never reaches the staff code below, and
+// every staff route below refuses a client with 403.
+if ($method === 'GET' && ($action === 'mine' || $action === 'mine_download')) {
+  $user = require_auth($conn, ['client']);
+  $clientId = (int)($user['client_id'] ?? 0);
+  if ($clientId <= 0) fail('Your account is not linked to a client.', 403);
+  $c = $conn->prepare('SELECT id FROM clients WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+  $c->bind_param('i', $clientId);
+  $c->execute();
+  if (!$c->get_result()->fetch_assoc()) fail('Client not found.', 404);
+  if (!fl_client_share_ready($conn)) fail(CLIENT_SHARE_MIGRATION, 503);
+
+  if ($action === 'mine') {
+    // The standing IT support project (SQL 17) is named to a client as the
+    // portal names it, whatever staff have called it internally.
+    $kindCol = fl_kind_ready($conn) ? 'p.kind' : 'NULL';
+    $stmt = $conn->prepare("SELECT f.id, f.name, f.mime, f.size, f.shared_at, p.name AS project_name, $kindCol AS project_kind" . CLIENT_FILE_FROM .
+      ' ORDER BY f.shared_at DESC, f.id DESC LIMIT 500');
+    $stmt->bind_param('iii', $clientId, $clientId, $clientId);
+    $stmt->execute();
+    ok(array_map('fl_client_shape', $stmt->get_result()->fetch_all(MYSQLI_ASSOC)));
+  }
+
+  $id = (int)($_GET['id'] ?? 0);
+  if ($id <= 0) fail('File not found.', 404);
+  $stmt = $conn->prepare('SELECT f.name, f.`stored`, f.mime' . CLIENT_FILE_FROM . ' AND f.id = ? LIMIT 1');
+  $stmt->bind_param('iiii', $clientId, $clientId, $clientId, $id);
+  $stmt->execute();
+  $f = $stmt->get_result()->fetch_assoc();
+  if (!$f) fail('File not found.', 404); // another client's file answers as a missing one
+  stream_file($f);
+}
+
 // ── Public share-link download (no auth) ─────────────────────────────────────
 if ($method === 'GET' && isset($_GET['token'])) {
   $token = preg_replace('/[^a-f0-9]/', '', (string)$_GET['token']);
   if ($token === '') fail('Invalid link.', 404);
-  $stmt = $conn->prepare('SELECT name, stored, mime FROM files WHERE share_token = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > NOW()) LIMIT 1');
+  $stmt = $conn->prepare('SELECT name, `stored`, mime, expires_at FROM files WHERE share_token = ? AND deleted_at IS NULL AND (expires_at IS NULL OR expires_at > NOW()) LIMIT 1');
   $stmt->bind_param('s', $token);
   $stmt->execute();
   $f = $stmt->get_result()->fetch_assoc();
   if (!$f) fail('This link is invalid or has expired.', 404);
-  stream_file($f);
+  // A link that never expires is what every public Work image and hero shot
+  // uses, so a browser may keep it for a day. A link with an expiry stays
+  // uncached, so it stops working the moment it lapses.
+  stream_file($f, $f['expires_at'] === null ? 'public, max-age=86400' : 'private, no-store');
 }
 
 // ── Authenticated download ───────────────────────────────────────────────────
 if ($method === 'GET' && isset($_GET['download'])) {
   require_auth($conn, STAFF);
   $id = (int)$_GET['download'];
-  $stmt = $conn->prepare('SELECT name, stored, mime FROM files WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+  $stmt = $conn->prepare('SELECT name, `stored`, mime FROM files WHERE id = ? AND deleted_at IS NULL LIMIT 1');
   $stmt->bind_param('i', $id);
   $stmt->execute();
   $f = $stmt->get_result()->fetch_assoc();
@@ -102,8 +199,11 @@ if ($method === 'GET') {
   if (isset($_GET['project_id'])) { $where .= ' AND f.project_id = ?'; $types .= 'i'; $args[] = (int)$_GET['project_id']; }
   if (isset($_GET['client_id']))  { $where .= ' AND f.client_id = ?';  $types .= 'i'; $args[] = (int)$_GET['client_id']; }
   $rows = [];
+  // Before SQL 18 the sharing columns are absent: report them as null, so the
+  // Files screen knows to hide the "Visible to client" switch.
+  $shareCols = fl_client_share_ready($conn) ? 'f.client_visible, f.shared_at' : 'NULL AS client_visible, NULL AS shared_at';
   $sql = "SELECT f.id, f.client_id, f.project_id, f.name, f.mime, f.size, f.share_token, f.expires_at, f.created_at,
-                 c.company AS client_company, p.name AS project_name, u.name AS uploaded_by_name
+                 $shareCols, c.company AS client_company, p.name AS project_name, u.name AS uploaded_by_name
           FROM files f
           LEFT JOIN clients c ON c.id = f.client_id
           LEFT JOIN projects p ON p.id = f.project_id
@@ -119,6 +219,7 @@ if ($method === 'GET') {
       $r['client_id'] = $r['client_id'] !== null ? (int)$r['client_id'] : null;
       $r['project_id'] = $r['project_id'] !== null ? (int)$r['project_id'] : null;
       $r['size'] = (int)$r['size'];
+      $r['client_visible'] = $r['client_visible'] !== null ? (int)$r['client_visible'] === 1 : null;
       $rows[] = $r;
     }
   }
@@ -159,12 +260,13 @@ if ($method === 'POST' && $action === 'upload') {
   $uid = $user['id'];
 
   // Columns: client_id(i) project_id(i) name(s) stored(s) mime(s) size(i) uploaded_by(i)
-  $stmt = $conn->prepare('INSERT INTO files (client_id, project_id, name, stored, mime, size, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  $stmt = $conn->prepare('INSERT INTO files (client_id, project_id, name, `stored`, mime, size, uploaded_by) VALUES (?, ?, ?, ?, ?, ?, ?)');
   if (!$stmt) { @unlink($dest); fail('Could not record the file.', 500); }
   $stmt->bind_param('iisssii', $clientId, $projectId, $orig, $stored, $mime, $size, $uid);
   if (!$stmt->execute()) { @unlink($dest); fail('Could not record the file.', 500); }
+  $newId = $conn->insert_id; // read before audit(), which inserts its own row
   audit($conn, $uid, 'file_upload', $orig);
-  ok(['id' => $conn->insert_id], 201);
+  ok(['id' => $newId], 201);
 }
 
 if ($method === 'POST' && $action === 'share') {
@@ -183,6 +285,63 @@ if ($method === 'POST' && $action === 'share') {
   ok(['token' => $token, 'expires_at' => $expires]);
 }
 
+// Show or hide a file in its client's portal. Only a file that resolves to one
+// client can be shown: attached to a live project of a client (and naming no
+// other client), or attached to a client directly. Hiding always works.
+if ($method === 'POST' && $action === 'client_share') {
+  $user = require_auth($conn, STAFF);
+  if (!fl_client_share_ready($conn)) fail(CLIENT_SHARE_MIGRATION, 503);
+  $in = body();
+  $id = (int)($in['id'] ?? 0);
+  if ($id <= 0) fail('A file id is required.');
+  $raw = $in['visible'] ?? null;
+  if (!is_bool($raw) && $raw !== 0 && $raw !== 1) fail('Say whether the file is visible to the client (true or false).');
+  $visible = $raw ? 1 : 0;
+
+  $stmt = $conn->prepare('SELECT f.id, f.client_id, f.project_id, f.client_visible, p.client_id AS project_client_id, p.deleted_at AS project_deleted_at
+    FROM files f LEFT JOIN projects p ON p.id = f.project_id WHERE f.id = ? AND f.deleted_at IS NULL LIMIT 1');
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  $f = $stmt->get_result()->fetch_assoc();
+  if (!$f) fail('File not found.', 404);
+
+  if ($visible === 1) {
+    if ($f['project_id'] !== null) {
+      if ($f['project_deleted_at'] !== null) fail('This file’s project was removed, so there is nobody to share it with.', 409);
+      $owner = $f['project_client_id'] !== null ? (int)$f['project_client_id'] : 0;
+      if ($owner <= 0) fail('This file’s project has no client, so there is nobody to share it with.', 409);
+      if ($f['client_id'] !== null && (int)$f['client_id'] !== $owner) {
+        fail('This file names a different client from its project. Fix that before sharing it.', 409);
+      }
+    } elseif ($f['client_id'] === null) {
+      fail('Attach this file to a project or a client before sharing it.', 409);
+    }
+  }
+
+  // Neither assignment reads the other column, so the result does not hang on
+  // the order MySQL applies them in. Showing touches only a file that is not
+  // yet shown (or has no shared_at), so a file that is already visible keeps
+  // its original shared_at and changes no row. Hiding clears both.
+  if ($visible === 1) {
+    $stmt = $conn->prepare('UPDATE files SET client_visible = 1, shared_at = NOW()
+      WHERE id = ? AND deleted_at IS NULL AND (NOT (client_visible <=> 1) OR shared_at IS NULL)');
+  } else {
+    $stmt = $conn->prepare('UPDATE files SET client_visible = 0, shared_at = NULL WHERE id = ? AND deleted_at IS NULL');
+  }
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  // Audit what the write actually changed: no row changes when the file was
+  // already in that state (or a concurrent request got there first).
+  if ($stmt->affected_rows > 0) {
+    audit($conn, $user['id'], 'file_client_share', "#$id " . ($visible ? 'visible to client' : 'hidden from client'));
+  }
+  $stmt = $conn->prepare('SELECT client_visible, shared_at FROM files WHERE id = ? LIMIT 1');
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  $now = $stmt->get_result()->fetch_assoc();
+  ok(['id' => $id, 'client_visible' => (int)$now['client_visible'] === 1, 'shared_at' => $now['shared_at']]);
+}
+
 if ($method === 'POST' && $action === 'delete') {
   $user = require_auth($conn, STAFF);
   $id = (int)(body()['id'] ?? 0);
@@ -197,10 +356,43 @@ if ($method === 'POST' && $action === 'delete') {
 
 fail('Method not allowed.', 405);
 
-// ── Helper ───────────────────────────────────────────────────────────────────
-function stream_file(array $f): void {
-  $path = UPLOAD_DIR . '/' . $f['stored'];
-  if (!is_file($path)) fail('File is missing on disk.', 404);
+// ── Helpers ──────────────────────────────────────────────────────────────────
+
+/** The fields a client may read about one of their shared files. */
+function fl_client_shape(array $r): array {
+  $mime = (string)($r['mime'] ?? '');
+  return [
+    'id' => (int)$r['id'],
+    'name' => (string)$r['name'],
+    // The type the download is sent as (see stream_file).
+    'mime' => isset(allowed_mimes()[$mime]) ? $mime : 'application/octet-stream',
+    'size' => (int)$r['size'],
+    'shared_at' => $r['shared_at'],
+    'project_name' => ($r['project_kind'] ?? null) === 'it_support' ? 'IT support' : ($r['project_name'] ?? null),
+  ];
+}
+
+/**
+ * The Content-Disposition value for a download (RFC 6266). Control characters
+ * are dropped so the name can never break the header (upload strips line
+ * breaks; older rows may not have). `filename` is an ASCII-only fallback, with
+ * any other byte, quote or backslash replaced by `_`; `filename*` carries the
+ * real UTF-8 name, percent-encoded.
+ */
+function attachment_disposition(string $name): string {
+  $name = (string)preg_replace('/[\x00-\x1F\x7F]+/', '', $name);
+  // One `_` per character when the name is valid UTF-8, else one per byte.
+  $ascii = preg_replace('/[^\x20-\x7E]|["\\\\]/u', '_', $name) ?? (string)preg_replace('/[^\x20-\x7E]|["\\\\]/', '_', $name);
+  return 'attachment; filename="' . $ascii . '"; filename*=UTF-8\'\'' . rawurlencode($name);
+}
+
+/**
+ * Stream a stored file and end the request. Every route sends the same
+ * download headers; only the caching differs (see the share-link route).
+ */
+function stream_file(array $f, string $cacheControl = 'private, no-store'): void {
+  $path = stored_path((string)($f['stored'] ?? ''));
+  if ($path === null) fail('File is missing on disk.', 404);
   // Override the JSON content-type set in _bootstrap. Only a type on the
   // allowlist is ever echoed back: rows predating the upload allowlist hold
   // whatever the uploader's browser claimed, and the share link serves them
@@ -208,9 +400,10 @@ function stream_file(array $f): void {
   $mime = (string)($f['mime'] ?? '');
   if (!isset(allowed_mimes()[$mime])) $mime = 'application/octet-stream';
   header('Content-Type: ' . $mime);
-  header('Content-Disposition: attachment; filename="' . addslashes($f['name']) . '"');
+  header('Content-Disposition: ' . attachment_disposition((string)$f['name']));
   header('Content-Length: ' . filesize($path));
   header('X-Content-Type-Options: nosniff');
+  header('Cache-Control: ' . $cacheControl);
   readfile($path);
   exit;
 }

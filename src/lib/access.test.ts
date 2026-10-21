@@ -11,10 +11,11 @@ describe("canAccess", () => {
     }
   })
 
-  it("lets a client into the portal ONLY", () => {
+  it("lets a client into the portal and My account ONLY", () => {
     expect(canAccess("client", "portal")).toBe(true)
+    expect(canAccess("client", "account")).toBe(true)
     for (const key of Object.keys(MODULE_ROLES)) {
-      if (key === "portal") continue
+      if (key === "portal" || key === "account") continue
       expect(canAccess("client", key)).toBe(false)
     }
   })
@@ -80,6 +81,20 @@ describe("work (the 24th module)", () => {
   it("maps /app/work (and deeper segments) to the work module", () => {
     expect(moduleKeyForPath("/app/work")).toBe("work")
     expect(moduleKeyForPath("/app/work/42")).toBe("work")
+  })
+})
+
+describe("site content", () => {
+  it("mirrors the EDITORS list in server/site.php", () => {
+    expect(MODULE_ROLES.site).toEqual(["super_admin", "admin", "manager", "editor"])
+  })
+
+  it("keeps trainer, employee and client out, and maps /app/site", () => {
+    for (const role of ["trainer", "employee", "client"] as Role[]) {
+      expect(canAccess(role, "site")).toBe(false)
+    }
+    expect(canAccess("editor", "site")).toBe(true)
+    expect(moduleKeyForPath("/app/site")).toBe("site")
   })
 })
 
@@ -162,5 +177,31 @@ describe("portal is narrowed to match server/portal.php", () => {
     // they are locked out of the product entirely.
     expect(defaultPathForRole("client")).toBe("/app/portal")
     expect(canAccess("client", "portal")).toBe(true)
+  })
+})
+
+describe("My account (K-023, K-024)", () => {
+  // auth.php's sessions, revoke and twofa_* actions take no role list and act
+  // only on the caller's own user id, so every signed-in role gets the screen.
+  it("opens for every signed-in role, client included", () => {
+    for (const role of [...STAFF_ROLES, "client" as Role]) {
+      expect(canAccess(role, "account"), `${role} should reach My account`).toBe(true)
+    }
+  })
+
+  it("stays closed when nobody is signed in", () => {
+    expect(canAccess(undefined, "account")).toBe(false)
+  })
+
+  it("maps /app/account (and deeper segments) to the account module", () => {
+    expect(moduleKeyForPath("/app/account")).toBe("account")
+    expect(moduleKeyForPath("/app/account/")).toBe("account")
+    expect(moduleKeyForPath("/app/account/security")).toBe("account")
+  })
+
+  it("does not widen Settings (Platform) beyond the admins", () => {
+    for (const role of ["manager", "trainer", "editor", "employee", "client"] as Role[]) {
+      expect(canAccess(role, "platform")).toBe(false)
+    }
   })
 })

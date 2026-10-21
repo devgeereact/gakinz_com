@@ -53,6 +53,8 @@ export const MODULE_ROLES: Record<string, Role[]> = {
   testimonials: ["super_admin", "admin", "manager", "editor"],
   // work.php EDITORS — the portfolio record type behind the public /work pages
   work: ["super_admin", "admin", "manager", "editor"],
+  // site.php EDITORS, labelled "Site content": the public site's editable copy
+  site: ["super_admin", "admin", "manager", "editor"],
   // files.php STAFF — no `trainer`; the server list omits it, so showing the
   // nav item only walked a trainer into a 403.
   files: ["super_admin", "admin", "manager", "editor", "employee"],
@@ -70,10 +72,14 @@ export const MODULE_ROLES: Record<string, Role[]> = {
   // The client branch is unchanged and remains the security boundary: it
   // derives the client id from the token and ignores any supplied parameter.
   portal: ["super_admin", "admin", "manager", "client"],
+  // My account: every signed-in role, client included. auth.php's sessions,
+  // revoke and twofa_* actions call require_auth($conn) with no role list and
+  // act only on the caller's own user id, so this mirrors the server.
+  account: [...ALL_STAFF, "client"],
 }
 
 // Map a /app/* pathname to its module key. Returns null for paths with no
-// module gate (e.g. account settings, which any authenticated user may open).
+// module gate.
 export function moduleKeyForPath(pathname: string): string | null {
   const p = pathname.replace(/^\/+/, "") // strip leading slash(es)
   // "/app" index → dashboard
@@ -101,9 +107,11 @@ export function moduleKeyForPath(pathname: string): string | null {
     blog: "blog",
     testimonials: "testimonials",
     work: "work",
+    site: "site",
     files: "files",
     careplan: "careplan",
     platform: "platform",
+    account: "account",
   }
   return map[seg] ?? null
 }
@@ -115,8 +123,8 @@ export function canAccess(role: Role | undefined, moduleKey: string): boolean {
   // a MODULE_ROLES entry was reachable by every signed-in user, `client`
   // included. Now a missing entry hides the module until someone maps it.
   // (moduleKeyForPath returns null — never an unmapped key — for a genuinely
-  // ungated path such as account settings, and RequireAuth skips the gate on
-  // null, so ungated pages are unaffected.)
+  // ungated path, and RequireAuth skips the gate on null, so ungated pages are
+  // unaffected.)
   if (!allowed) return false
   return allowed.includes(role)
 }

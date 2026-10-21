@@ -1,118 +1,133 @@
-"use client"
+import { useEffect, useState } from "react"
+import { LogOut, UserRound } from "lucide-react"
+import { Link, useLocation, useNavigate } from "react-router-dom"
 
-import {
-  LayoutDashboard,
-  Inbox,
-  Users,
-  FolderKanban,
-  FileText,
-  Receipt,
-  PanelsTopLeft,
-  Clock,
-  LifeBuoy,
-  MessagesSquare,
-  Mail,
-  BarChart3,
-  Settings,
-  Palette,
-  GitBranch,
-  CalendarRange,
-  FileSignature,
-  BookOpen,
-  Newspaper,
-  Quote,
-  Briefcase,
-  Sparkles,
-  FolderOpen,
-  HeartPulse,
-} from "lucide-react"
-
-import { Link } from "react-router-dom"
 import { NavMain } from "@/components/nav-main"
-import { NavUser } from "@/components/nav-user"
+import { NAV_GROUPS } from "@/components/nav-groups"
 import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
+  SidebarMenu,
   SidebarMenuButton,
+  SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import BrandMark from "@/marketing/components/BrandMark"
-import { useAuth } from "@/store/auth.store"
+import { useSidebar } from "@/components/ui/sidebar-context"
+import { auth, leads as leadsApi, support as supportApi } from "@/lib/api"
 import { canAccess } from "@/lib/access"
+import { useAuth, type Role } from "@/store/auth.store"
 
-// GAkinzOS modules (GAkinzOS.html). Each maps to a /app/* route. `key` ties the
-// item to its role gate in src/lib/access.ts so the nav only shows modules the
-// signed-in role can actually open (server enforces the same lists).
-const navMain = [
-  { key: "dashboard", title: "Dashboard", url: "app", icon: LayoutDashboard },
-  { key: "leads", title: "Leads", url: "app/leads", icon: Inbox },
-  { key: "clients", title: "Clients", url: "app/clients", icon: Users },
-  { key: "projects", title: "Projects", url: "app/projects", icon: FolderKanban },
-  { key: "design", title: "Design", url: "app/design", icon: Palette },
-  { key: "devpipeline", title: "Dev Pipeline", url: "app/devpipeline", icon: GitBranch },
-  { key: "proposals", title: "Proposals", url: "app/proposals", icon: FileText },
-  { key: "contracts", title: "Contracts", url: "app/contracts", icon: FileSignature },
-  { key: "invoicing", title: "Invoicing", url: "app/invoicing", icon: Receipt },
-  { key: "portal", title: "Client Portal", url: "app/portal", icon: PanelsTopLeft },
-  { key: "time", title: "Time", url: "app/time", icon: Clock },
-  { key: "resourcing", title: "Resourcing", url: "app/resourcing", icon: CalendarRange },
-  { key: "careplan", title: "Care Plan", url: "app/careplan", icon: HeartPulse },
-  { key: "support", title: "Support", url: "app/support", icon: LifeBuoy },
-  { key: "comms", title: "Comms", url: "app/comms", icon: MessagesSquare },
-  { key: "mailbox", title: "Mailbox", url: "app/mailbox", icon: Mail },
-  { key: "knowledge", title: "Knowledge", url: "app/knowledge", icon: BookOpen },
-  { key: "content", title: "Content Hub", url: "app/content", icon: Sparkles },
-  { key: "blog", title: "Blog", url: "app/blog", icon: Newspaper },
-  { key: "testimonials", title: "Testimonials", url: "app/testimonials", icon: Quote },
-  { key: "work", title: "Work", url: "app/work", icon: Briefcase },
-  { key: "files", title: "Files", url: "app/files", icon: FolderOpen },
-  { key: "analytics", title: "Analytics", url: "app/analytics", icon: BarChart3 },
-  { key: "platform", title: "Platform", url: "app/platform", icon: Settings },
-]
+// Count pills: new enquiries and open support tickets, read once when the
+// shell mounts and only for a role that can open the module. Read-only GETs
+// on endpoints the modules already call; a failure just shows no pill.
+function useNavCounts(role: Role | undefined) {
+  const [counts, setCounts] = useState<Record<string, number>>({})
+  useEffect(() => {
+    if (!role) return
+    let alive = true
+    const want = {
+      leads: canAccess(role, "leads"),
+      support: canAccess(role, "support"),
+    }
+    Promise.allSettled([
+      want.leads ? leadsApi.list() : Promise.resolve(null),
+      want.support ? supportApi.list() : Promise.resolve(null),
+    ]).then(([l, s]) => {
+      if (!alive) return
+      const next: Record<string, number> = {}
+      if (l.status === "fulfilled" && l.value && l.value.ok && Array.isArray(l.value.data)) {
+        next.leads = l.value.data.filter((x) => x.status === "new").length
+      }
+      if (s.status === "fulfilled" && s.value && s.value.ok && Array.isArray(s.value.data)) {
+        next.support = s.value.data.filter((t) => t.status !== "resolved").length
+      }
+      setCounts(next)
+    })
+    return () => {
+      alive = false
+    }
+  }, [role])
+  return counts
+}
 
 type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
   onHoverChange?: (value: boolean) => void
 }
 
+// The prototype's graphite sidebar (D-046): brand tile, collapsible groups,
+// and a footer with My account and Sign out. Collapses to a 72px icon rail.
 export function AppSidebar({ onHoverChange, ...props }: AppSidebarProps) {
   const user = useAuth((s) => s.user)
-  const navUser = {
-    name: user?.name ?? "Member",
-    email: user?.email ?? "",
-    avatar: "",
-    role: user?.role,
+  const clear = useAuth((s) => s.clear)
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { setOpenMobile } = useSidebar()
+  const counts = useNavCounts(user?.role)
+
+  // Only show modules the signed-in role can open (server enforces the same),
+  // and drop a heading once none of its modules are left.
+  const visibleGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items
+      .filter((item) => canAccess(user?.role, item.key))
+      .map((item) => ({ ...item, count: counts[item.key] })),
+  })).filter((group) => group.items.length > 0)
+
+  // Close the phone drawer after navigating.
+  useEffect(() => {
+    setOpenMobile(false)
+  }, [location.pathname, setOpenMobile])
+
+  const onLogout = async () => {
+    await auth.logout() // best-effort: the server deletes the token
+    clear() // drop the local session regardless
+    navigate("/login", { replace: true })
   }
-  // Only show modules the signed-in role can open (server enforces the same).
-  const visibleNav = navMain.filter((item) => canAccess(user?.role, item.key))
+
+  const accountActive = location.pathname.replace(/\/+$/, "") === "/app/account"
 
   return (
-    <div
-      onMouseEnter={() => onHoverChange?.(true)}
-      onMouseLeave={() => onHoverChange?.(false)}
-    >
+    <div onMouseEnter={() => onHoverChange?.(true)} onMouseLeave={() => onHoverChange?.(false)}>
       <Sidebar collapsible="icon" {...props}>
-        <SidebarHeader className="border-b h-16">
-          <SidebarMenuButton size="lg" asChild className="px-2 py-3">
-            <Link to="/app">
-              <div className="flex aspect-square size-8 items-center justify-center rounded-lg">
-                <BrandMark className="size-8" />
-              </div>
-              <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="gk-app-grad truncate font-bold">GAkinzOS</span>
-                <span className="truncate text-xs text-muted-foreground">Studio platform</span>
-              </div>
-            </Link>
-          </SidebarMenuButton>
+        <SidebarHeader className="min-h-16 justify-center px-4 pb-3 pt-4 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-0">
+          <Link to="/app" className="flex items-center gap-2.5 rounded-[10px]" aria-label="GAkinzOS, go to Today">
+            <span className="gk-os-mark" aria-hidden>G</span>
+            <span className="whitespace-nowrap font-display text-[1.05rem] font-semibold leading-tight tracking-[-0.02em] group-data-[collapsible=icon]:hidden">
+              GAkinzOS
+              <small className="block font-mono text-[10px] font-normal uppercase tracking-[.08em] text-sidebar-muted">
+                Studio platform
+              </small>
+            </span>
+          </Link>
         </SidebarHeader>
 
-        <SidebarContent>
-          <NavMain items={visibleNav} />
+        <SidebarContent className="gap-0 px-2.5 pb-4 pt-2 group-data-[collapsible=icon]:overflow-y-auto group-data-[collapsible=icon]:px-4">
+          <nav aria-label="Main">
+            {visibleGroups.map((group) => (
+              <NavMain key={group.label} label={group.label} items={group.items} />
+            ))}
+          </nav>
         </SidebarContent>
 
-        <SidebarFooter className="border-t h-16 justify-center">
-          <NavUser user={navUser} />
+        <SidebarFooter className="gap-0 border-t border-sidebar-border px-2.5 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-3 group-data-[collapsible=icon]:px-4">
+          <SidebarMenu className="gap-0">
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild tooltip="My account" isActive={accountActive}>
+                <Link to="/app/account" aria-current={accountActive ? "page" : undefined}>
+                  <UserRound aria-hidden />
+                  <span>My account</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+              <SidebarMenuButton tooltip="Sign out" onClick={onLogout}>
+                <LogOut aria-hidden />
+                <span>Sign out</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarFooter>
 
         <SidebarRail />

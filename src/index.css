@@ -2,505 +2,402 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Fonts are imported here, deliberately, and this was measured both ways.
-
-   Linking them from index.html with preconnect is the textbook advice, and it
-   does start the request earlier. It also took Cumulative Layout Shift on the
-   home page from 0.00 to 0.151, past the 0.1 threshold, because the text then
-   paints in a fallback face and reflows when Newsreader arrives. On a site
-   whose entire argument is its typography that is the wrong trade.
-
-   Keeping the @import holds CLS at 0.00. `preconnect` in index.html still
-   shortens the handshake. Moving the link out properly needs `size-adjust`
-   fallback metrics so the swap does not move anything, and that is recorded as
-   remaining work in qa/PERFORMANCE-AUDIT.md rather than half done here.
-
-   PUBLIC SURFACE: Newsreader for display, exploiting its optical-size axis so
-   one family carries both 120px and 21px without a second display voice;
-   Instrument Sans for interface text; IBM Plex Mono confined to record data,
-   where tabular figures matter.
-   CMS: Manrope and JetBrains Mono, unchanged. The public rebrand does not
-   propagate into GAkinzOS.
-   Space Grotesk is gone. It was mapped to `font-serif`, so `font-serif`
-   silently rendered a sans-serif with no serif fallback. */
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+/* Fonts. Every family is self-hosted from @fontsource-variable and imported
+   once in src/main.tsx, so nothing is fetched from a third party: Bricolage
+   Grotesque for display, Hanken Grotesk for text, JetBrains Mono for figures
+   and labels. The Google Fonts import for Manrope and Newsreader was removed
+   with the GAkinzOS restyle (D-046). */
 
 @layer base {
-  /* GAkinz brand — LIGHT skin (white bg / near-black ink / lavender accent).
-     Base + CMS light mode. Swatch hex → shadcn HSL triplets.
-     Palette: primary #0A0A0A, accent1 #D4537E (rose), accent2 #7F77DD (lavender), bg #FFFFFF. */
+  /* ── GAkinzOS tokens, D-046 ───────────────────────────────────────────
+     The approved CMS prototype in direction A: a graphite sidebar that stays
+     dark in both themes, a light or dark working canvas, one blue accent and
+     soft semantic tones. Hex values from the prototype, written as the HSL
+     triplets the shadcn tokens expect.
+
+     The primary action is ink on canvas (`.btn--p`), and turns blue on hover.
+     `--accent` is the soft blue tint used for selected and hovered menu rows;
+     `--ring` is the solid blue.
+
+     The extra tokens carry an `--os-` prefix because the public site
+     (src/marketing/site.css) defines its own `--acc`, `--line` and so on as
+     hex values on `.gk-site`, and the two must never collide. */
   :root {
-    --background: 0 0% 100%;         /* #FFFFFF */
-    --foreground: 0 0% 4%;           /* #0A0A0A — 19.8:1 on bg (AAA) */
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 4%;
+    --background: 220 15.8% 96.3%;     /* #F4F5F7 canvas */
+    --foreground: 216 29.4% 10%;       /* #121821 ink */
+    --card: 0 0% 100%;                 /* #FFFFFF surface */
+    --card-foreground: 216 29.4% 10%;
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 4%;
-    --primary: 0 0% 4%;              /* #0A0A0A — THE action color */
-    --primary-foreground: 0 0% 100%; /* white on black: 19.8:1 (AAA) */
-    --secondary: 240 8% 96%;         /* near-white neutral */
-    --secondary-foreground: 0 0% 4%;
-    --muted: 240 8% 96%;
-    --muted-foreground: 240 4% 36%;  /* #58585e — 6.9:1 on white (AA+) */
-    --accent: 245 65% 96%;           /* very light lavender wash for hover surfaces */
-    --accent-foreground: 245 40% 28%;/* deep indigo text on lavender wash */
-    --destructive: 0 72% 48%;        /* clean red */
+    --popover-foreground: 216 29.4% 10%;
+    --primary: 216 29.4% 10%;          /* ink action */
+    --primary-foreground: 220 15.8% 96.3%;
+    --secondary: 220 27.3% 97.8%;      /* #F8F9FB surface-2 */
+    --secondary-foreground: 216 29.4% 10%;
+    --muted: 220 27.3% 97.8%;
+    --muted-foreground: 216.5 11.2% 40.2%; /* #5B6472 */
+    --accent: 217.1 72.4% 94.3%;       /* #E6EEFB acc-soft */
+    --accent-foreground: 216 29.4% 10%;
+    --destructive: 2.6 61.4% 44.7%;    /* #B8322C */
     --destructive-foreground: 0 0% 100%;
-    --border: 240 6% 88%;            /* hairline */
-    --input: 240 6% 88%;
-    --ring: 245 56% 60%;             /* accent2 lavender focus */
-    --chart-1: 245 56% 60%;          /* accent2 lavender */
-    --chart-2: 340 58% 55%;          /* accent1 rose */
-    --chart-3: 0 0% 4%;              /* black */
-    --chart-4: 245 56% 75%;          /* light lavender */
-    --chart-5: 340 58% 75%;          /* light rose */
-    --radius: 0.75rem;               /* 12px cards; md=10, sm=8 */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 4%;
-    --sidebar-primary: 0 0% 4%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 245 65% 96%;
-    --sidebar-accent-foreground: 245 40% 28%;
-    --sidebar-border: 240 6% 88%;
-    --sidebar-ring: 245 56% 60%;
-    /* Raw brand tokens (legacy var names kept so existing utilities keep working;
-       values remapped to the new palette: accent2 = lavender, accent1 = rose). */
-    --gk-violet: #7F77DD;            /* accent2 lavender (was sage) */
+    --border: 217.5 16% 90.2%;         /* #E2E5EA line */
+    --input: 216.9 14.9% 82.9%;        /* #CDD2DA line-2, form borders */
+    --ring: 217 67.1% 47.5%;           /* #2866CA blue */
+    --chart-1: 217 67.1% 51.2%;
+    --chart-2: 152.7 63.9% 30.4%;
+    --chart-3: 38.2 100% 28%;
+    --chart-4: 2.6 61.4% 44.7%;
+    --chart-5: 216.5 11.2% 40.2%;
+    --radius: 0.625rem;                /* 10px controls; cards use 16px */
+
+    /* Sidebar: graphite in both themes. */
+    --sidebar-background: 214.3 31.8% 8.6%;   /* #0F151D */
+    --sidebar-foreground: 42 20.8% 90.6%;     /* #ECE9E2 */
+    --sidebar-primary: 210.8 100% 77.8%;      /* #8EC5FF sky, the active bar */
+    --sidebar-primary-foreground: 214.3 31.8% 8.6%;
+    --sidebar-accent: 211.4 32.3% 12.7%;      /* #16202B side-2 */
+    --sidebar-accent-foreground: 42 20.8% 90.6%;
+    --sidebar-border: 212.7 24.4% 17.6%;      /* #222C38 */
+    --sidebar-ring: 210.8 100% 77.8%;
+    --os-side-mute: 215 11.7% 59.6%;          /* #8C96A4 */
+
+    /* Accent and semantic tones. */
+    --os-acc: 217 67.1% 47.5%;         /* #2866CA: 4.68:1 on acc-soft, 5.01:1 on the canvas (K-045 audit; was #2F6FD6 at 4.12:1) */
+    --os-acc-soft: 217.1 72.4% 94.3%;  /* #E6EEFB */
+    --os-on-acc: 0 0% 100%;
+    --os-line-2: 216.9 14.9% 82.9%;    /* #CDD2DA */
+    --os-ok: 152.7 63.9% 28.5%;        /* #1A774D: 4.82:1 on ok-soft (K-045 audit; was #1C7F52 at 4.34:1) */
+    --os-ok-soft: 146.3 40% 92.2%;     /* #E3F3EA */
+    --os-warn: 38.2 100% 28%;          /* #8F5B00 */
+    --os-warn-soft: 40 80.5% 92%;      /* #FBF0DA */
+    --os-bad: 2.6 61.4% 44.7%;         /* #B8322C */
+    --os-bad-soft: 5.5 73.3% 94.1%;    /* #FBE7E5 */
+    --os-shadow: 0 1px 2px rgba(16, 24, 40, .05), 0 12px 32px -18px rgba(16, 24, 40, .18);
   }
 
-  /* Public corporate site always renders in the designed light brand theme,
-     regardless of the visitor's OS dark-mode preference. Re-declaring the
-     tokens on the wrapper overrides any inherited .dark values for its subtree. */
-  /* Public corporate site palette — LIGHT skin: white bg, near-black ink,
-     black primary, lavender/rose accents. Hex → shadcn HSL triplets. Scoped to
-     the wrapper so the CMS theme is untouched. */
-  /* ── PUBLIC SURFACE PALETTE ───────────────────────────────────────────
-     Direction C with direction A's colour. See
-     docs/design/2026-09-22-directions/direction-approved.md.
+  .dark {
+    --background: 214.3 31.8% 8.6%;    /* #0F151D */
+    --foreground: 42 20.8% 90.6%;      /* #ECE9E2 */
+    --card: 211.4 32.3% 12.7%;         /* #16202B */
+    --card-foreground: 42 20.8% 90.6%;
+    --popover: 211.4 32.3% 12.7%;
+    --popover-foreground: 42 20.8% 90.6%;
+    --primary: 42 20.8% 90.6%;
+    --primary-foreground: 214.3 31.8% 8.6%;
+    --secondary: 210 30.8% 15.3%;      /* #1B2733 */
+    --secondary-foreground: 42 20.8% 90.6%;
+    --muted: 210 30.8% 15.3%;
+    --muted-foreground: 215.5 12.2% 64.7%; /* #9AA3B0 */
+    --accent: 213 41.7% 18.8%;         /* #1C2E44 */
+    --accent-foreground: 42 20.8% 90.6%;
+    --destructive: 4 100% 79.2%;       /* #FF9C95 */
+    --destructive-foreground: 214.3 31.8% 8.6%;
+    --border: 212.5 24% 19.6%;         /* #26313E */
+    --input: 211 23.3% 26.1%;          /* #334252 */
+    --ring: 210.8 100% 77.8%;          /* #8EC5FF */
+    --chart-1: 210.8 100% 77.8%;
+    --chart-2: 146.2 51.5% 66.9%;
+    --chart-3: 39.6 83.9% 68.4%;
+    --chart-4: 4 100% 79.2%;
+    --chart-5: 215.5 12.2% 64.7%;
 
-     Warm paper rather than pure white, warm ink rather than pure black, and
-     two chromatics that each carry a job: navy marks what is settled, red
-     oxide marks a gap awaiting real material. Neither is decoration.
+    --sidebar-background: 215 35.3% 6.7%;     /* #0B1017 */
+    --sidebar-accent: 213.3 31% 11.4%;        /* #141C26 */
+    --sidebar-border: 214.3 25.9% 15.9%;      /* #1E2733 */
 
-     Every ratio below was computed, not estimated:
-       ink on paper      15.69:1     set on paper      11.11:1
-       ink-soft on paper  7.70:1     come on paper      6.48:1
-       ink-mute on paper  5.28:1     edge on paper      3.29:1  (non-text AA)
+    --os-acc: 210.8 100% 77.8%;
+    --os-acc-soft: 213 41.7% 18.8%;
+    --os-on-acc: 212.8 70.7% 14.7%;    /* #0B2340 */
+    --os-line-2: 211 23.3% 26.1%;
+    --os-ok: 146.2 51.5% 66.9%;
+    --os-ok-soft: 152.1 37.8% 14.5%;
+    --os-warn: 39.6 83.9% 68.4%;
+    --os-warn-soft: 41.1 43.2% 15.9%;
+    --os-bad: 4 100% 79.2%;
+    --os-bad-soft: 2 34.1% 17.3%;
+    --os-shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 16px 40px -20px rgba(0, 0, 0, .6);
+    color-scheme: dark;
+  }
 
-     The retired lavender #7F77DD and rose #D4537E could hold neither a flat
-     block nor white text, which is precisely why the previous site could only
-     ever wash them into a gradient.
+  /* The light palette, forced. ProposalView adds `gk-force-light` to <html>
+     so a client reading a proposal never gets the dark canvas. Higher
+     specificity than `.dark`, and next-themes never touches this class. */
+  html.gk-force-light {
+    --background: 220 15.8% 96.3%;
+    --foreground: 216 29.4% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 216 29.4% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 216 29.4% 10%;
+    --primary: 216 29.4% 10%;
+    --primary-foreground: 220 15.8% 96.3%;
+    --secondary: 220 27.3% 97.8%;
+    --secondary-foreground: 216 29.4% 10%;
+    --muted: 220 27.3% 97.8%;
+    --muted-foreground: 216.5 11.2% 40.2%;
+    --accent: 217.1 72.4% 94.3%;
+    --accent-foreground: 216 29.4% 10%;
+    --destructive: 2.6 61.4% 44.7%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 217.5 16% 90.2%;
+    --input: 216.9 14.9% 82.9%;
+    --ring: 217 67.1% 51.2%;
+    color-scheme: light;
+  }
 
-     These also remap the shadcn tokens, so any shared component rendered
-     inside .gk-public inherits the public palette rather than the CMS one.
-     Scoped to the wrapper, so GAkinzOS is untouched. */
+  /* ── Public wrapper, kept harmless ────────────────────────────────────
+     The public site moved to `.gk-site` (src/marketing/site.css, D-044).
+     `.gk-public` survives for ProposalView and the client portal welcome
+     card, which still set it. */
   .gk-public {
-    --gk-paper: 40 33% 95%;       /* #F6F3ED */
-    --gk-sunk: 42 29% 91%;        /* #EFEBE2 */
-    --gk-ink: 40 12% 10%;         /* #1C1A16 */
-    --gk-ink-soft: 40 10% 29%;    /* #514C42 */
-    --gk-ink-mute: 37 9% 38%;     /* #6B6459 */
-    --gk-set: 232 39% 27%;        /* #2A3160 */
-    --gk-come: 8 52% 38%;         /* #933C2F */
-    --gk-rule: 40 19% 81%;        /* #D8D2C6 — decorative hairline only */
-    --gk-edge: 37 9% 51%;         /* #8E8577 — structural rule, form borders */
+    /* D-037: the reference palette (docs/DESIGN-REFERENCE-MASTERCARD.md)
+       under the token names the pages already use. Ratios are against canvas
+       cream. Every text pairing clears WCAG 2.2 AA at the reference hex, so
+       no hue had to be darkened. Signal orange is the one that would fail as
+       small text (4.11:1), so it is confined to non-text eyebrow dots. */
+    --gk-paper: 24 17% 94%;       /* #F3F0EE canvas cream */
+    --gk-sunk: 30 25% 98%;        /* #FCFBFA lifted cream, the alternate band */
+    --gk-white: 0 0% 100%;        /* #FFFFFF nav pill, secondary action, inputs */
+    --gk-ink: 60 3% 8%;           /* #141413 warm ink, 16.25:1 */
+    --gk-ink-soft: 0 0% 33%;      /* #555555 granite, 6.57:1 */
+    --gk-ink-mute: 0 0% 41%;      /* #696969 slate, 4.84:1 */
+    --gk-set: 60 3% 8%;           /* #141413 the primary action is warm black */
+    --gk-come: 20 88% 32%;        /* #9A3A0A clay, "awaiting material", 6.20:1 */
+    --gk-rule: 36 10% 80%;        /* #D1CDC7 dust taupe, decorative hairline only */
+    --gk-edge: 34 7% 52%;         /* #8C857C structural rule, form borders, 3.21:1 */
+    --gk-orange: 19 89% 59%;      /* #F37338 decorative orbit only, never text */
+    --gk-signal: 20 100% 41%;     /* #CF4500 eyebrow dots only, 4.11:1 non-text */
 
     --background: var(--gk-paper);
     --foreground: var(--gk-ink);
-    --card: var(--gk-paper);
+    --card: var(--gk-sunk);
     --card-foreground: var(--gk-ink);
-    --popover: var(--gk-paper);
+    --popover: var(--gk-white);
     --popover-foreground: var(--gk-ink);
-    --primary: var(--gk-set);
+    --primary: var(--gk-ink);
     --primary-foreground: var(--gk-paper);
-    --secondary: var(--gk-sunk);
+    --secondary: var(--gk-white);
     --secondary-foreground: var(--gk-ink);
     --muted: var(--gk-sunk);
     --muted-foreground: var(--gk-ink-mute);
     --accent: var(--gk-sunk);
-    --accent-foreground: var(--gk-set);
-    --destructive: 8 52% 38%;
+    --accent-foreground: var(--gk-ink);
+    --destructive: var(--gk-come);
     --destructive-foreground: var(--gk-paper);
-    /* --border and --input were 240 6% 88% (#DFDFE2), which is 1.33:1 against
-       the page. Every form-control boundary on the site failed WCAG 1.4.11.
-       The structural edge colour is 3.29:1 and passes. */
+    /* Every form-control boundary takes the 3.21:1 edge, WCAG 1.4.11. */
     --border: var(--gk-edge);
     --input: var(--gk-edge);
     --ring: var(--gk-ink);
-    /* The document has square corners. The 0.75rem radius belonged to the
-       card idiom that direction C replaces. */
-    --radius: 0rem;
-    font-family: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
-    color-scheme: light;
-  }
-
-  /* DARK skin — CMS workspace. Primary swaps to accent2 (lavender) because pure
-     black is invisible on a dark surface; rose/lavender brand accents intact.
-     Stepped neutral elevation ladder, AA contrast on body text. */
-  .dark {
-    --background: 240 8% 8%;         /* #13131a page floor */
-    --foreground: 0 0% 96%;          /* #F5F5F5 body ink — 18:1 on bg (AAA) */
-    --card: 240 7% 12%;               /* #1C1C24 surface */
-    --card-foreground: 0 0% 96%;
-    --popover: 240 7% 14%;
-    --popover-foreground: 0 0% 96%;
-    --primary: 245 56% 67%;          /* #7F77DD accent2 lavender — THE action color */
-    --primary-foreground: 0 0% 4%;   /* near-black on lavender → 6.1:1 (AA+) */
-    --secondary: 240 6% 18%;         /* quiet surface */
-    --secondary-foreground: 0 0% 96%;
-    --muted: 240 6% 16%;
-    --muted-foreground: 0 0% 70%;    /* #B3B3B3 — 9.7:1 on dark bg (AAA) */
-    --accent: 340 58% 58%;           /* accent1 rose for hover/highlight */
-    --accent-foreground: 0 0% 100%;  /* white on rose → 4.5:1 (AA) */
-    --destructive: 0 72% 55%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 240 6% 24%;            /* hairline */
-    --input: 240 6% 24%;
-    --ring: 245 56% 67%;             /* lavender focus glow */
-    --chart-1: 245 56% 67%;          /* lavender */
-    --chart-2: 340 58% 62%;          /* rose */
-    --chart-3: 0 0% 96%;             /* near-white */
-    --chart-4: 245 56% 80%;          /* light lavender */
-    --chart-5: 340 58% 78%;          /* light rose */
-    --sidebar-background: 240 8% 6%; /* slightly deeper than bg */
-    --sidebar-foreground: 0 0% 96%;
-    --sidebar-primary: 245 56% 67%;
-    --sidebar-primary-foreground: 0 0% 4%;
-    --sidebar-accent: 240 6% 18%;
-    --sidebar-accent-foreground: 0 0% 96%;
-    --sidebar-border: 240 6% 24%;
-    --sidebar-ring: 245 56% 67%;
-  }
-
-  /* Force the LIGHT brand palette on the public site / login, even when the CMS
-     left `html.dark` on. Higher specificity than `.dark`, and next-themes never
-     touches this class — so the marketing pages never wash out. PublicLayout and
-     Login add `gk-force-light` to <html>. */
-  html.gk-force-light {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 4%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 4%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 4%;
-    --primary: 0 0% 4%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 240 8% 96%;
-    --secondary-foreground: 0 0% 4%;
-    --muted: 240 8% 96%;
-    --muted-foreground: 240 4% 36%;
-    --accent: 245 65% 96%;
-    --accent-foreground: 245 40% 28%;
-    --destructive: 0 72% 48%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 240 6% 88%;
-    --input: 240 6% 88%;
-    --ring: 245 56% 60%;
+    /* The reference skips the 8 to 12px middle: 20px actions, 40px media,
+       full pills. Shared shadcn controls inherit the 20px step. */
+    --radius: 1.25rem;
+    /* One strong ease-out for every entrance and hover. */
+    --gk-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+    font-family: 'Hanken Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+    font-weight: 450;
     color-scheme: light;
   }
 }
 
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+    font-size: 15px;
+    line-height: 1.5;
+    /* Text fit rule: a long unbroken word wraps rather than overflowing. */
+    overflow-wrap: break-word;
+  }
 
-/* Dark Blue Theme  */
-.dark-blue {
-  --background: 222 47% 11%;    /* deep blue */
-  --foreground: 210 40% 98%;
-  --card: 0 0 0 / 70%;
-  --card-foreground: 210 40% 98%;
+  /* CMS headings in Bricolage Grotesque. `:where` keeps the specificity at
+     zero so a utility on the element still wins, and `.gk-public` content
+     keeps its own family. */
+  :where(h1, h2, h3):not(:where(.gk-public *)) {
+    font-family: theme("fontFamily.display");
+    letter-spacing: -0.025em;
+    line-height: 1.1;
+  }
 
-  --popover: 222 40% 12%;
-  --popover-foreground: 210 40% 98%;
+  /* Figures line up in columns everywhere in the CMS. */
+  :where(td, th) {
+    font-variant-numeric: tabular-nums;
+  }
 
-  --primary: 221 83% 53%;  /* blue accent */
-  --primary-foreground: 0 0% 100%;
+  /* Focus indicator, as the prototype: a 2px blue outline with a 2px gap.
+     Drawn with `outline` so Tailwind's ring shadow chain cannot clobber it.
+     By calculation, the blue clears 3:1 against the canvas, the surface and
+     the graphite sidebar in both themes (WCAG 1.4.11); not yet measured in a
+     browser. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
+  }
+  [tabindex="-1"]:focus {
+    outline: none;
+  }
 
-  --secondary: 217 33% 17%;
-  --secondary-foreground: 210 40% 98%;
+  /* The public wrapper keeps its two-layer ink ring (D-006 history). */
+  .gk-public :focus-visible {
+    outline: 3px solid hsl(var(--foreground));
+    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--foreground));
+  }
+  .gk-public .bg-gk-ink :focus-visible,
+  .gk-public .bg-gk-set :focus-visible {
+    outline-color: hsl(var(--gk-paper));
+    box-shadow: 0 0 0 2px hsl(var(--gk-paper)), 0 0 0 4px hsl(var(--gk-ink));
+  }
 
-  --muted: 217 33% 17%;
-  --muted-foreground: 215 20% 65%;
+  ::selection {
+    background: hsl(var(--os-acc) / 0.22);
+    color: hsl(var(--foreground));
+  }
 
-  --accent: 221 83% 53%;
-  --accent-foreground: 0 0% 100%;
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--os-line-2)) transparent;
+  }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--os-line-2));
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
 
-  --border: 0 0% 100% / 0.1;
-  --input: 217 33% 20%;
-  --ring: 221 83% 53%;
+  /* Placeholder text, WCAG 1.4.3: full-strength muted, never translucent. */
+  ::placeholder { color: hsl(var(--muted-foreground)); }
 
-  /* charts */
-  --chart-1: 215 90% 65%;
-  --chart-2: 220 90% 55%;
-  --chart-3: 222 90% 48%;
-  --chart-4: 224 85% 42%;
-  --chart-5: 226 80% 36%;
+  /* WCAG 2.4.11 Focus Not Obscured: the CMS header is sticky at 64px. */
+  html { scroll-padding-top: 6rem; }
 
-  /* sidebar */
-  --sidebar-background: 0 0 0 / 50%;
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-primary: 221 83% 53%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 217 33% 17%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-border: 217 33% 20%;
-  --sidebar-ring: 221 83% 53%;
-  
-}
-.dark-blue body {
-  background-color: transparent;
-    background-image: url(../images/bg-themes/dark-blue.webp);
-    background-attachment: fixed;
-    background-size: cover;
-    background-repeat: no-repeat;
-}
-
-/* Gaussian Black Theme */
-.gaussian-black {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0 0 / 50%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 100% / 0.1;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-     --chart-1: 215 90% 65%;
-    --chart-2: 220 90% 55%;
-    --chart-3: 222 90% 48%;
-    --chart-4: 224 85% 42%;
-    --chart-5: 226 80% 36%;
-    --sidebar-background: 0 0 0 / 70%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%
-}
-
-.gaussian-black body {
-  background-color: transparent;
-    background-image: url(../images/bg-themes/gausian-black.jpg);
-    background-attachment: fixed;
-    background-size: cover;
-    background-repeat: no-repeat;
+  @media (prefers-reduced-motion: no-preference) {
+    a, button, [role="button"], input, select, textarea, summary {
+      transition: color .15s ease, background-color .15s ease, border-color .15s ease,
+                  box-shadow .15s ease, transform .1s ease, opacity .15s ease;
+    }
+  }
 }
 
 
-/* Classic Light Theme */
-.classic-light {
-  --background: 210 40% 98%;  /* light base */
-  --foreground: 222 47% 11%;
+/* ─────────────────────────────────────────────────────────────────────────
+   GAkinzOS: the flat kit, D-046
+   ────────────────────────────────────────────────────────────────────────
+   The `.gk-app-*` family is used by the modules in src/app/modules. Its names
+   are kept so no module needs an edit; what they draw is now the prototype's
+   flat look. No gradients anywhere: the lavender and rose gradient text,
+   gradient chips, gradient rings and the top accent bar are retired.
 
-  --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
+   These rules sit outside any layer, after Tailwind's utilities, so a class
+   here beats a utility of equal specificity on the same element (a module
+   heading's `text-2xl font-bold` yields to `.gk-app-grad`). */
 
-  --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-
-  --primary: 262 83% 58%; /* purple accent */
-  --primary-foreground: 0 0% 100%;
-
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222 47% 11%;
-
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 20% 45%;
-
-  --accent: 262 83% 58%;
-  --accent-foreground: 0 0% 100%;
-
-  --border: 210 30% 88%;
-  --input: 210 30% 88%;
-  --ring: 262 83% 58%;
-
-  /* charts */
-  --chart-1: 262 83% 60%;
-  --chart-2: 280 80% 65%;
-  --chart-3: 300 75% 60%;
-  --chart-4: 320 70% 55%;
-  --chart-5: 340 65% 50%;
-
-  /* sidebar */
-  --sidebar-background: 0 0% 100%;
-  --sidebar-foreground: 222 47% 11%;
-  --sidebar-primary: 262 83% 58%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 210 40% 96%;
-  --sidebar-accent-foreground: 222 47% 11%;
-  --sidebar-border: 210 30% 88%;
-  --sidebar-ring: 262 83% 58%;
+/* Page title: Bricolage at the prototype's `.ph h1` size, plain ink. */
+.gk-app-grad {
+  color: hsl(var(--foreground));
+  font-family: theme("fontFamily.display");
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+/* Every module's page title, whichever classes it carries: the id beats the
+   `text-2xl font-bold` utilities the modules set. Scoped to the CMS main,
+   because the public site's <main> carries id="main" too. */
+h1.gk-app-grad,
+#main.gk-app-main h1 {
+  font-family: theme("fontFamily.display");
+  font-size: clamp(1.7rem, 2.6vw, 2.2rem);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
 }
 
-.classic-light body {
-  background-color: #f8fafc;
-
-  background-image:
-    radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.25), transparent 35%),
-    radial-gradient(circle at 90% 30%, rgba(168, 85, 247, 0.25), transparent 40%),
-    radial-gradient(circle at 50% 80%, rgba(236, 72, 153, 0.15), transparent 45%),
-
-    linear-gradient(
-      135deg,
-      #f8fafc 0%,
-      #eef2ff 40%,
-      #faf5ff 70%,
-      #fdf2f8 100%
-    );
+/* Card: white surface, hairline, 16px radius. Hover changes the border
+   colour only; nothing lifts or glows. */
+.gk-app-card {
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
+  border-radius: 16px;
+  min-width: 0;
+}
+.gk-app-card:hover {
+  border-color: hsl(var(--os-line-2));
 }
 
-.classic-light .bg-sidebar {
-  background-color: hsl(var(--sidebar-background) / 0.5); /* ✅ transparency */
-
-  background-image:
-    radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.25), transparent 35%),
-    radial-gradient(circle at 80% 30%, rgba(168, 85, 247, 0.25), transparent 40%),
-    radial-gradient(circle at 50% 80%, rgba(236, 72, 153, 0.15), transparent 45%);
-
-  backdrop-filter: blur(20px);              /* ✅ glass */
-  -webkit-backdrop-filter: blur(20px);
-
-  border-right: 1px solid hsl(var(--sidebar-border) / 0.2);
-
-  box-shadow: 
-    0 8px 32px rgba(0, 0, 0, 0.15),        /* depth */
-    inset 0 1px 0 rgba(255, 255, 255, 0.1); /* subtle highlight */
+/* Icon tile: the soft accent tile from the prototype's empty state. */
+.gk-app-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: hsl(var(--os-acc-soft));
+  color: hsl(var(--os-acc));
 }
 
-/* Glass Sidebar Scrollbar */
-.classic-light .bg-sidebar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(100, 100, 120, 0.4) transparent;
+/* Was a gradient hairline; now a plain border. */
+.gk-app-ring {
+  border: 1px solid hsl(var(--border));
+  border-radius: 16px;
+  background: hsl(var(--card));
 }
 
-/* Chrome / Edge / Safari */
-.classic-light .bg-sidebar::-webkit-scrollbar {
-  width: 6px;
+/* Was a gradient bar across the top of a card; retired. The class stays so
+   existing markup is harmless. */
+.gk-app-accent { position: relative; }
+
+/* Was a shine sweep on hover; retired for the same reason. */
+.gk-shine { position: relative; }
+
+/* ── Shell and page kit ─────────────────────────────────────────────────── */
+
+/* Mono uppercase label: crumbs, group headers, table heads, small captions. */
+.gk-os-mono {
+  font-family: theme("fontFamily.mono");
+  font-size: 11.5px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
 }
 
-.classic-light .bg-sidebar::-webkit-scrollbar-track {
-  background: transparent; /* ✅ no ugly track */
-}
-
-.classic-light .bg-sidebar::-webkit-scrollbar-thumb {
-  background: linear-gradient(
-    180deg,
-    rgba(120, 120, 140, 0.4),
-    rgba(80, 80, 100, 0.4)
-  );
-  border-radius: 999px;
-}
-
-.classic-light .bg-sidebar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(
-    180deg,
-    rgba(120, 120, 140, 0.6),
-    rgba(80, 80, 100, 0.6)
-  );
-}
-
-
-/* Semi-Dark Theme */
-.semi-dark {
-  --sidebar-background: 240 5.9% 10%;
-  --sidebar-foreground: 240 4.8% 95.9%;
-
-  --sidebar-primary: 224.3 76.3% 48%;
-  --sidebar-primary-foreground: 0 0% 100%;
-
-  --sidebar-accent: 240 3.7% 15.9%;
-  --sidebar-accent-foreground: 240 4.8% 95.9%;
-
-  --sidebar-border: 240 3.7% 15.9%;
-  --sidebar-ring: 217.2 91.2% 59.8%;
-}
-
-.semi-dark .bg-sidebar {
-  color: var(--sidebar-foreground);
-  --border: var(--sidebar-border);
-  --muted: var(--sidebar-accent);
-}
-
-/* Sidebar Scrollbar */
-.semi-dark .bg-sidebar {
-  scrollbar-width: thin; /* Firefox */
-  scrollbar-color: hsl(240 4% 25%) hsl(240 6% 10%);
-}
-
-/* Chrome, Edge, Safari */
-.semi-dark .bg-sidebar::-webkit-scrollbar {
-  width: 8px;
-}
-
-.semi-dark .bg-sidebar::-webkit-scrollbar-track {
-  background: hsl(240 6% 10%); /* DARK TRACK */
-}
-
-.semi-dark .bg-sidebar::-webkit-scrollbar-thumb {
-  background-color: hsl(240 4% 25%);
+/* Brand tile in the sidebar and on the sign-in panel. */
+.gk-os-mark {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
   border-radius: 10px;
-  border: 2px solid hsl(240 6% 10%);
+  background: hsl(var(--sidebar-foreground));
+  color: hsl(var(--sidebar-background));
+  font-family: theme("fontFamily.display");
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1;
 }
 
-.semi-dark .bg-sidebar::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(240 4% 35%);
+/* Sidebar item, the prototype's `.item`. The active bar sits in the 10px
+   gutter to the left of the item. */
+.gk-os-item[data-active="true"]::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 10px;
+  bottom: 10px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: hsl(var(--sidebar-primary));
+}
+[data-collapsible="icon"] .gk-os-item[data-active="true"]::before {
+  left: -14px;
 }
 
-/* Preview Indicator for Theme Customizer */
-.dark-blue-preview {
-  background-image: 
-    radial-gradient(
-      circle at 30% 30%,
-      rgba(59, 130, 246, 0.25),
-      transparent 40%
-    ),
-    radial-gradient(
-      circle at 70% 60%,
-      rgba(99, 102, 241, 0.25),
-      transparent 50%
-    ),
-    linear-gradient(
-      135deg,
-      #111827,
-      #1e1b4b
-    );
-}
+/* Text fit rule: long names and email addresses wrap inside their box. */
+.gk-os-wrap { overflow-wrap: anywhere; min-width: 0; }
 
-.gaussian-black-preview {
-  background-image:
-    radial-gradient(
-      circle at 25% 30%,
-      rgba(255, 255, 255, 0.12),
-      transparent 55%
-    ),
-    radial-gradient(
-      circle at 75% 70%,
-      rgba(255, 255, 255, 0.08),
-      transparent 60%
-    ),
-    radial-gradient(
-      circle at 50% 50%,
-      rgba(255, 255, 255, 0.05),
-      transparent 70%
-    ),
-    linear-gradient(
-      135deg,
-      #000000,
-      #020202,
-      #000000
-    );
-}
+/* Login colour strip: one band per project colour. */
+.gk-os-strip { display: flex; height: 6px; border-radius: 6px; overflow: hidden; max-width: 420px; }
+.gk-os-strip > i { flex: 1; }
 
 /* ================================
    FullCalendar – shadcn Dark Mode
@@ -542,194 +439,18 @@
   background-color: hsl(var(--muted)) !important;
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-
-  /* ── "Forest Editorial" premium details (theme-aware, both skins) ──────── */
-
-  /* Custom accent focus-glow ring — replaces the browser default everywhere.
-     See DESIGN-SYSTEM.md §5. */
-  /* Focus indicator, WCAG 1.4.11 Non-text Contrast.
-     This was `hsl(var(--ring) / 0.7)`, which composited to #9690E0 — 2.86:1
-     on the page and 2.48:1 on a dark panel. Both failed the 3:1 floor, and
-     `outline: none` meant there was no fallback.
-
-     The fix is two solid layers rather than one translucent one: an inner
-     ring in the surface colour and an outer ring in the ink. On paper the
-     outer ring carries it at 15.69:1; on a dark band the inner ring carries
-     it at the same ratio. There is no background it can disappear against,
-     which one colour alone cannot promise. 4px total also clears 2.4.13
-     Focus Appearance on thickness. */
-  /* The indicator is drawn with `outline`, not `box-shadow`.
-     Measured in Chrome on 2026-09-22: a box-shadow-only rule in @layer base
-     was being overridden on the masthead links by Tailwind's
-     `box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow),
-     var(--tw-shadow)` chain, all three of which resolve to `0 0 #0000`. The
-     element matched :focus-visible and painted nothing. `outline` is not part
-     of that chain, so it cannot be clobbered the same way.
-
-     `outline-offset` leaves a gap in the surface colour between the element
-     and the ring, which is what makes one solid colour sufficient: on paper
-     the ink ring reads at 15.69:1, and inside a dark band the rule below
-     flips it to paper, also 15.69:1. 3px clears 2.4.13 Focus Appearance.
-
-     The box-shadow is kept underneath as a second layer for the cases where
-     an ancestor clips the outline. */
-  :focus-visible {
-    outline: 3px solid hsl(var(--foreground));
-    outline-offset: 2px;
-    box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--foreground));
-    border-radius: calc(var(--radius) - 4px);
-  }
-  /* On a dark surface the ink ring disappears, so it flips to paper. Both the
-     element that CARRIES the dark background and anything inside one need
-     covering: the primary action is itself `bg-gk-set`, and an ink ring on
-     navy measures 1.4:1. The skip link is the same case — it only becomes
-     `bg-gk-ink` once focused. */
-  /* Only a control INSIDE a dark band flips to a paper ring.
-     `outline-offset` puts the ring outside the element, so what it has to
-     contrast against is the surface BEHIND the element, not the element's own
-     background. A dark button sitting on paper therefore keeps the ink ring;
-     giving it a paper ring measured 1.01:1 and was invisible. Descendant
-     selectors only — never `.bg-gk-ink:focus-visible`, which would catch the
-     dark button itself. Measured after this change: 15.53:1 on paper,
-     14.46:1 on the sunk band, 15.80:1 inside a dark band. */
-  .gk-public .bg-gk-ink :focus-visible,
-  .gk-public .bg-gk-set :focus-visible {
-    outline-color: hsl(var(--gk-paper));
-    box-shadow: 0 0 0 2px hsl(var(--gk-paper)), 0 0 0 4px hsl(var(--gk-ink));
-  }
-
-  /* Branded text selection */
-  ::selection {
-    background: hsl(var(--primary) / 0.22);
-    color: hsl(var(--foreground));
-  }
-
-  /* Themed scrollbars (forest grey, accent on hover) */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent;
-  }
-  *::-webkit-scrollbar { width: 10px; height: 10px; }
-  *::-webkit-scrollbar-track { background: transparent; }
-  *::-webkit-scrollbar-thumb {
-    background: hsl(var(--muted-foreground) / 0.3);
-    border-radius: 9999px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
-  }
-  *::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary) / 0.55); background-clip: padding-box; }
-
-  /* Branded placeholders */
-  /* Placeholder text, WCAG 1.4.3. The 0.7 alpha composited to #8A8A8F, which
-     is 3.43:1 on white and fails the 4.5:1 body-text floor. Full-strength
-     muted-foreground is 5.28:1 on the public surface and passes. */
-  ::placeholder { color: hsl(var(--muted-foreground)); }
-
-  /* WCAG 2.4.11 Focus Not Obscured. The masthead is sticky at 64px, so a
-     keyboard target scrolled to the top of the viewport would sit under it. */
-  html { scroll-padding-top: 6rem; }
-
-  /* Glide, don't snap — interactive elements get a baseline transition (§5).
-     Reduced-motion users opt out. */
-  @media (prefers-reduced-motion: no-preference) {
-    a, button, [role="button"], input, select, textarea, summary {
-      transition: color .2s ease, background-color .2s ease, border-color .2s ease,
-                  box-shadow .2s ease, transform .2s ease, opacity .2s ease;
-    }
-  }
+/* Public wrapper typography, kept for ProposalView and the portal card. */
+/* Headings at medium 500. The -2% headline tracking lives in the type scale
+   in tailwind.config.js, so it is not repeated here. The family comes from
+   the D-046 tokens (Bricolage Grotesque, Hanken Grotesk). */
+.gk-public :is(h1, h2, h3, h4, blockquote) {
+  font-weight: 500;
 }
-
-/* Marketing entrance animation — visible by default, animates in when allowed. */
-@keyframes gk-fade-in {
-  from { opacity: 0; transform: translateY(24px); }
-  to   { opacity: 1; transform: none; }
-}
-@media (prefers-reduced-motion: no-preference) {
-  .gk-fadein {
-    animation: gk-fade-in 0.5s ease-out both;
-    animation-delay: var(--gk-delay, 0s);
-  }
-}
-
-/* Custom scrollbar for dark themes */
-.dark-blue,
-.gaussian-black,
-.classic-light {
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
-}
-
-/* Gradient Backgrounds for Cards and Progress Bars */
-.gradient-red {
-  background-image: linear-gradient(310deg, #ee0979, #ff6a00);
-}
-
-.gradient-blue {
-  background-image: linear-gradient(310deg, #00c6fb, #005bea);
-}
-
-.gradient-green {
-  background-image: linear-gradient(310deg, #17ad37, #98ec2d);
-}
-
-.gradient-purple {
-  background-image: linear-gradient(310deg, #7928ca, #ff0080);
-}
-
-.gradient-orange {
-  background-image: linear-gradient(310deg, #f7971e, #ffd200);
-}
-
-.gradient-violet {
-  background-image: linear-gradient(310deg, #3494e6, #ec6ead);
-}
-
-.gradient-cyan {
-  background-image: linear-gradient(310deg, #2af598, #009efd);
-}
-/* ─────────────────────────────────────────────────────────────────────────
-   GAkinz public surface — typography layer (scoped to .gk-public)
-   ────────────────────────────────────────────────────────────────────────
-
-   The effect classes below this block — .gk-aurora, .gk-grid, .gk-shine,
-   .gk-grad-text, .gk-ring, .gk-grain and the .gk-app-* family — are STILL
-   USED BY GAkinzOS (src/app/Login.tsx, SetPassword.tsx, Dashboard.tsx,
-   Mailbox.tsx and the module headers), which keeps its own design tokens and
-   is out of scope for this relaunch. They are kept for that reason alone.
-
-   NONE of them may appear on a public page. The aurora backdrop on all eight
-   heroes and the animated gradient text were the two things that made the
-   old public site read as templated, and the approved direction retires both.
-   If one turns up in src/marketing/ again, that is a regression.
-
-   The `.gk-public` override of --gk-violet / --gk-indigo / --gk-sky is gone
-   with them: those names lied about their values (--gk-indigo held black,
-   --gk-sky held rose) and the audit named that as a standing source of error.
-   ──────────────────────────────────────────────────────────────────────── */
-
-/* Headings set in Newsreader. Tracking comes from the type scale in
-   tailwind.config.js, so it is not repeated here; this only adds the wrapping
-   behaviour, which no utility covers. */
 .gk-public :is(h1, h2, h3, h4) {
   text-wrap: balance;
 }
 .gk-public p {
   text-wrap: pretty;
-}
-
-/* Optical sizing. This is the whole reason Newsreader was chosen: one family
-   carries a 120px masthead and a 21px standfirst without a second display
-   face, because the axis adjusts contrast and detail to the size it is set
-   at. Left to `auto` browsers do this already, but stating it keeps the
-   intent legible. */
-.gk-public :is(h1, h2, h3, h4, blockquote) {
-  font-optical-sizing: auto;
 }
 
 /* Record data aligns in columns, so figures must be tabular. */
@@ -738,277 +459,22 @@
   font-feature-settings: "tnum" 1;
 }
 
-/* Animated gradient text */
-.gk-grad-text {
-  background-image: linear-gradient(110deg,
-    hsl(var(--gk-indigo)) 0%,
-    hsl(var(--gk-violet)) 45%,
-    hsl(var(--gk-sky)) 100%);
-  background-size: 200% auto;
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+/* Toasts (sonner, richColors). The library's own greens, reds and ambers measure
+   4.25:1 to 4.34:1 at 13px, under the AA 4.5:1 line, so the four rich types are
+   redrawn from the CMS tokens: token text on a faint tint of the same token over
+   the card colour. The selectors repeat sonner's own theme attribute and add
+   :root so they win over the stylesheet it injects at runtime. */
+:root [data-sonner-toaster][data-sonner-theme] {
+  --success-text: color-mix(in srgb, hsl(var(--chart-2)) 82%, hsl(var(--foreground)));
+  --success-bg: color-mix(in srgb, hsl(var(--chart-2)) 7%, hsl(var(--card)));
+  --success-border: color-mix(in srgb, hsl(var(--chart-2)) 28%, hsl(var(--card)));
+  --error-text: hsl(var(--destructive));
+  --error-bg: color-mix(in srgb, hsl(var(--destructive)) 7%, hsl(var(--card)));
+  --error-border: color-mix(in srgb, hsl(var(--destructive)) 28%, hsl(var(--card)));
+  --warning-text: hsl(var(--os-warn));
+  --warning-bg: color-mix(in srgb, hsl(var(--os-warn)) 7%, hsl(var(--card)));
+  --warning-border: color-mix(in srgb, hsl(var(--os-warn)) 28%, hsl(var(--card)));
+  --info-text: color-mix(in srgb, hsl(var(--ring)) 85%, hsl(var(--foreground)));
+  --info-bg: color-mix(in srgb, hsl(var(--ring)) 7%, hsl(var(--card)));
+  --info-border: color-mix(in srgb, hsl(var(--ring)) 28%, hsl(var(--card)));
 }
-@media (prefers-reduced-motion: no-preference) {
-  .gk-grad-text {
-    animation: gk-grad-pan 9s ease-in-out infinite alternate;
-  }
-}
-@keyframes gk-grad-pan {
-  to { background-position: 100% center; }
-}
-.gk-grad-text-soft {
-  /* Start at a darker stop so large headings clear the AA contrast bar on white. */
-  background-image: linear-gradient(110deg,
-    hsl(var(--gk-indigo)) 0%,
-    hsl(var(--gk-violet)) 55%,
-    hsl(var(--gk-sky)) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-/* Aurora mesh backdrop — layered radial blobs */
-.gk-aurora {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: 0;
-}
-.gk-aurora::before,
-.gk-aurora::after {
-  content: "";
-  position: absolute;
-  border-radius: 9999px;
-  filter: blur(72px);
-  opacity: 0.55;
-}
-.gk-aurora::before {
-  width: 42rem; height: 42rem;
-  top: -14rem; right: -10rem;
-  background: radial-gradient(circle at center, hsl(var(--gk-violet) / 0.55), transparent 70%);
-}
-.gk-aurora::after {
-  width: 36rem; height: 36rem;
-  bottom: -16rem; left: -8rem;
-  background: radial-gradient(circle at center, hsl(var(--gk-sky) / 0.40), transparent 70%);
-}
-/* Slow drift gives the backdrop atmosphere; cheap (transform behind blur). */
-@media (prefers-reduced-motion: no-preference) {
-  .gk-aurora::before { animation: gk-aurora-a 18s ease-in-out infinite alternate; }
-  .gk-aurora::after  { animation: gk-aurora-b 22s ease-in-out infinite alternate; }
-}
-@keyframes gk-aurora-a { to { transform: translate(-3rem, 2rem) scale(1.08); } }
-@keyframes gk-aurora-b { to { transform: translate(2rem, -2rem) scale(1.06); } }
-
-/* Dotted / grid pattern overlay */
-.gk-grid {
-  background-image:
-    linear-gradient(to right, hsl(var(--gk-indigo) / 0.06) 1px, transparent 1px),
-    linear-gradient(to bottom, hsl(var(--gk-indigo) / 0.06) 1px, transparent 1px);
-  background-size: 56px 56px;
-  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
-}
-.gk-dots {
-  background-image: radial-gradient(hsl(var(--gk-indigo) / 0.10) 1px, transparent 1px);
-  background-size: 22px 22px;
-}
-
-/* Glass card */
-.gk-glass {
-  background: hsl(0 0% 100% / 0.7);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid hsl(var(--gk-indigo) / 0.08);
-}
-
-/* Gradient hairline border via padding box */
-.gk-ring {
-  position: relative;
-  border-radius: 1rem;
-  background:
-    linear-gradient(hsl(0 0% 100%), hsl(0 0% 100%)) padding-box,
-    linear-gradient(135deg, hsl(var(--gk-violet) / 0.5), hsl(var(--gk-sky) / 0.3)) border-box;
-  border: 1px solid transparent;
-}
-
-/* Soft elevated card with violet-tinted shadow + lift on hover */
-.gk-card {
-  background: hsl(0 0% 100%);
-  border: 1px solid hsl(var(--gk-indigo) / 0.08);
-  border-radius: 1rem;
-  box-shadow: 0 1px 2px hsl(var(--gk-indigo) / 0.05),
-              0 8px 24px -16px hsl(var(--gk-indigo) / 0.12); /* soft resting depth */
-  transition: transform .25s cubic-bezier(.2,.7,.3,1), box-shadow .25s, border-color .25s;
-}
-.gk-card:hover {
-  transform: translateY(-4px);
-  border-color: hsl(var(--gk-violet) / 0.35);
-  box-shadow: 0 18px 40px -16px hsl(var(--gk-violet) / 0.35);
-}
-
-/* Glow ring behind featured elements */
-.gk-glow { position: relative; }
-.gk-glow::after {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  border-radius: inherit;
-  background: linear-gradient(135deg, hsl(var(--gk-violet) / 0.6), hsl(var(--gk-sky) / 0.4));
-  filter: blur(20px);
-  opacity: 0.35;
-  z-index: -1;
-}
-
-/* Shine sweep on hover (for primary CTAs / cards) */
-.gk-shine { position: relative; overflow: hidden; }
-.gk-shine::before {
-  content: "";
-  position: absolute;
-  top: 0; left: -150%;
-  width: 75%; height: 100%;
-  background: linear-gradient(115deg, transparent, hsl(0 0% 100% / 0.35), transparent);
-  transition: left .6s ease;
-}
-.gk-shine:hover::before { left: 150%; }
-
-/* Logo / trust marquee */
-@keyframes gk-marquee {
-  from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
-}
-.gk-marquee {
-  display: flex;
-  width: max-content;
-  animation: gk-marquee 28s linear infinite;
-}
-.gk-marquee-mask {
-  -webkit-mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
-  mask-image: linear-gradient(to right, transparent, #000 12%, #000 88%, transparent);
-}
-@media (prefers-reduced-motion: reduce) {
-  .gk-marquee { animation: none; }
-}
-
-/* Slow float for hero ornaments */
-@keyframes gk-float {
-  0%, 100% { transform: translateY(0); }
-  50%      { transform: translateY(-10px); }
-}
-.gk-float { animation: gk-float 6s ease-in-out infinite; }
-@media (prefers-reduced-motion: reduce) {
-  .gk-float { animation: none; }
-}
-
-/* Browser frame chrome dots */
-.gk-browser-dot { width: 11px; height: 11px; border-radius: 9999px; }
-
-/* Section eyebrow pill */
-.gk-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  border-radius: 9999px;
-  border: 1px solid hsl(var(--gk-violet) / 0.25);
-  background: hsl(var(--gk-violet) / 0.07);
-  padding: 0.3rem 0.75rem;
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  /* Deep indigo so the small eyebrow text clears WCAG AA (4.5:1) on the tinted
-     lavender pill background. */
-  color: #312e81;
-}
-
-/* ─────────────────────────────────────────────────────────────────────────
-   GAkinzOS CMS — premium layer (theme-aware: works in light + dark)
-   Uses --primary token so it adapts to the active CMS theme.
-   ──────────────────────────────────────────────────────────────────────── */
-
-/* CMS page title — Space Grotesk display + gradient from foreground → lavender
-   accent (so titles read on dark workspace where --primary is the lavender). */
-.gk-app-grad {
-  font-family: 'Space Grotesk', ui-sans-serif, system-ui, sans-serif;
-  letter-spacing: -0.01em;
-  background-image: linear-gradient(110deg,
-    hsl(var(--foreground)) 0%,
-    hsl(245 56% 60%) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-/* Elevated card — primary-tinted shadow + lift on hover (theme-aware) */
-.gk-app-card {
-  border: 1px solid hsl(var(--border));
-  background: hsl(var(--card));
-  border-radius: var(--radius);
-  transition: transform .22s cubic-bezier(.2,.7,.3,1), box-shadow .22s, border-color .22s;
-}
-.gk-app-card:hover {
-  transform: translateY(-3px);
-  border-color: hsl(var(--primary) / 0.45);
-  box-shadow: 0 16px 36px -18px hsl(var(--primary) / 0.45);
-}
-
-/* Gradient icon chip for KPI tiles */
-.gk-app-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: calc(var(--radius) - 2px);
-  background: linear-gradient(135deg, hsl(var(--primary) / 0.18), hsl(var(--primary) / 0.05));
-  color: hsl(var(--primary));
-  box-shadow: inset 0 0 0 1px hsl(var(--primary) / 0.12);
-}
-
-/* Gradient ring border (theme-aware) */
-.gk-app-ring {
-  position: relative;
-  border-radius: var(--radius);
-  background:
-    linear-gradient(hsl(var(--card)), hsl(var(--card))) padding-box,
-    linear-gradient(135deg, hsl(var(--primary) / 0.55), hsl(var(--primary) / 0.15)) border-box;
-  border: 1px solid transparent;
-}
-
-/* Top accent bar on a card */
-.gk-app-accent { position: relative; overflow: hidden; }
-.gk-app-accent::before {
-  content: "";
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.3));
-}
-
-/* ─────────────────────────────────────────────────────────────────────────
-   "Forest Editorial" signature — grain texture + accent underline flourish.
-   See DESIGN-SYSTEM.md §7. Cheap, reduced-motion-safe, theme-aware.
-   ──────────────────────────────────────────────────────────────────────── */
-
-/* Subtle film grain so forest dark sections aren't dead-flat. Overlay element:
-   <span class="gk-grain" aria-hidden /> inside a position:relative section. */
-.gk-grain {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.5;
-  mix-blend-mode: soft-light;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
-}
-
-/* Caudex display headline accent: wrap the emphasis word in <span class="gk-underline">.
-   Thin sage rule under the word — the signature flourish. */
-.gk-underline {
-  background-image: linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary)));
-  background-repeat: no-repeat;
-  background-position: 0 92%;
-  background-size: 100% 2px;
-  padding-bottom: 0.06em;
-}
-.gk-public .gk-underline { background-image: linear-gradient(90deg, hsl(var(--gk-sky)), hsl(var(--gk-violet))); }

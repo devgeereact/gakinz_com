@@ -4,10 +4,12 @@ One entry per decision that still constrains the work. Each carries a date, the 
 it was taken, and the evidence that it holds today. Superseded decisions are kept, marked, and
 point at what replaced them.
 
-Dates come from the commit history of this repository. Content comes from the previous
-`CLAUDE.md` section 13, which was a running session log; it has been converted into decisions
-here and into current state in `docs/STATUS.md`. The original narrative remains readable in
-git history and in `docs/adoption/AUDIT.md`.
+Dates come from the commit history of this repository. The earliest content comes from the
+previous `CLAUDE.md` section 13, which was a running session log; it has been converted into
+decisions here and into current state in `docs/STATUS.md`. The original narrative remains
+readable in git history, including the retired adoption audit
+(`git show c57eb4a:docs/adoption/AUDIT.md`). D-038 onward record the owner's approval of the
+2026 plan on 2026-10-10.
 
 ---
 
@@ -271,7 +273,8 @@ repository should decline and read the global notes instead.
 ---
 
 ## D-019 · The root `DESIGN-SYSTEM.md` is superseded, not deleted
-**Date:** 2026-09-04 · **Status:** active
+**Date:** 2026-09-04 · **Status:** **superseded by D-044 on 2026-10-10.** The file has left
+the tree; D-006 carries its meaning and git history carries its text.
 
 It stays in the tree as history, with a superseded banner added at its head, and its meaning
 is recorded in D-006.
@@ -315,7 +318,7 @@ complete.
 
 **Where it stands, 2026-09-22:** 47 errors and 2 warnings across 33 files. The ratchet held
 through the relaunch and the count came down by twelve without anyone setting out to fix the
-backlog. 48 and 2 are the new ceiling. The breakdown is in `docs/STATUS.md` section 2.
+backlog. 48 and 2 are the new ceiling. The breakdown is in `docs/STATUS.md` section 6.2.
 
 ---
 
@@ -346,14 +349,29 @@ That is application code and was left alone. See `docs/KNOWN-ISSUES.md` K-014.
 
 ## D-023 · A new design system for the public surface, and only the public surface
 **Date:** 2026-09-22 · **Status:** active. **Narrows D-006.**
+**Status note:** superseded on the public surface by D-037, 2026-10-10.
 
 The public site at `/` is rebuilt on a new palette, type scale and component set, scoped to
 the `.gk-public` wrapper in `src/index.css`. GAkinzOS at `/app/*` keeps the mono and duo
 tokens D-006 describes, unchanged.
 
-The direction is recorded as "direction C with direction A's colour" in
-`docs/design/2026-09-22-directions/direction-approved.md`, chosen from three directions
-produced independently against one shared specification.
+The direction is "direction C with direction A's colour", chosen by the owner from three
+directions produced independently against one shared specification.
+
+**The decision trail.** The three directions were A, a Neo-Brutalist information flow; B, a
+migration from a real-world London benchmark studio; and C, the London typographic and
+information-design tradition. The owner chose a hybrid, recommended over taking A, B or C
+unchanged: C's structure (the page as a document, a contents list instead of a horizontal
+nav bar, a ruled ledger of work whose row labels change with the record kind, Newsreader over
+Instrument Sans with IBM Plex Mono confined to data, a nine-value scale, warm paper and ink),
+with A's colour confidence carried into the navy and vermilion spines on each work record. B
+and C converged further than intended, so A was the genuine alternative. Every image slot in
+all three was an empty labelled frame, so what was judged was structure and typography, not
+composition with real photography. The direction note and the shared brief were retired on
+2026-10-10 (D-044) and remain in git history
+(`git show c57eb4a:docs/design/2026-09-22-directions/direction-approved.md` and
+`git show c57eb4a:docs/design/CONTENT-BRIEF.md`). D-037 replaces this direction once
+implemented.
 
 **What the palette is.** Warm paper `#F6F3ED` and a sunk half-step `#EFEBE2`; warm ink
 `#1C1A16` with `#514C42` and `#6B6459` beneath it; two chromatics, navy `#2A3160` named
@@ -385,6 +403,9 @@ again, that is a regression, not a choice.
 
 ## D-024 · The public type scale is closed at nine values
 **Date:** 2026-09-22 · **Status:** active
+**Status note:** on 2026-10-10 the nine values were retuned to the D-037 reference (14 to
+80px) and the families below were replaced by Sofia Sans; the names and the closed rule are
+kept. `tailwind.config.js` holds the current values.
 
 `tailwind.config.js` defines a nine-value perfect-fourth scale under semantic names: `label`,
 `body`, `lede`, `t4`, `t3`, `t2`, `t1`, `display`, `hero`. **No size outside the scale may
@@ -429,7 +450,7 @@ the approved direction.
 `server/work.php`; `src/marketing/components/Ledger.tsx`.
 
 **Not yet true of the live system.** Neither table exists on any database, and `work.php` has
-never been executed. See `docs/STATUS.md` section 5.
+never been executed. See `docs/STATUS.md` section 6.5.
 
 ---
 
@@ -463,7 +484,10 @@ sees.
 ---
 
 ## D-027 · A labelled gap ships in preference to an invented value
-**Date:** 2026-09-22 · **Status:** active
+**Date:** 2026-09-22 · **Status:** active, **narrowed by D-039 on 2026-10-10.** Never
+inventing a value still holds in full. What changes is the remedy: absent material is left
+unpublished and the page is written around what can be stated honestly, rather than shown to
+buyers as a visible "to supply" gap.
 
 Where the site has no real material for a slot, it ships a designed, visible, labelled
 placeholder carrying the red oxide that means "awaiting material". It does not ship a stock
@@ -480,7 +504,7 @@ false statement to the exact audience it is trying to persuade. A labelled gap h
 **Where it binds beyond the interface.** `src/marketing/data/work.ts` holds a static fallback
 whose every record is true and describes the owner's own work; a field with no true value is
 `null` and renders as a gap. `server/work.php` refuses to publish a record that names a
-client without stored consent. `personSchema()` in `Seo.tsx` omits `sameAs` entirely rather
+client without stored consent. `personSchema()` (now in `seo-schema.ts`, beside `Seo.tsx`) omits `sameAs` entirely rather
 than pointing it at `https://github.com/`, because structured data is read by machines that
 cannot tell a placeholder from an identity claim.
 
@@ -625,3 +649,311 @@ did not arrive in one commit; it accumulated because nothing was counting.
 Fonts stylesheet in `src/index.css` remains, because the three public families and the two
 CMS families are loaded from it and there is no self-hosted alternative in this tree. That is
 still a third-party render dependency and is recorded as such in `docs/ARCHITECTURE.md`.
+
+## D-033 · Alternative sign-in never stands in for two-factor; magic links are for clients
+**Date:** 2026-10-10 · **Status:** active
+
+Magic links sign in `client` accounts only, and not a client with two-factor on. Staff, and
+anyone with two-factor on, sign in with password and code. Google sign-in refuses accounts with
+two-factor on. A link is claimed with a guarded UPDATE so it works once under concurrency.
+**Why:** `magic_consume` gave `super_admin` a full session from an email alone (K-027), and the
+approved scope (`docs/PRODUCT-SPEC.md` section 6.1) requires that customer access never
+becomes owner access.
+
+## D-034 · A provider payment must match the invoice's payable total
+**Date:** 2026-10-10 · **Status:** active
+
+Every amount sent to, or accepted from, a payment provider is the VAT-inclusive payable total
+from `server/_money.php`, the same rounding as `invoices.php` and `portal.php`. The Stripe
+webhook marks an invoice paid only when amount and currency match, and records each event in
+`payment_events`. PayPal checkout stays off (`$PAYPAL_ENABLED`) until it has a webhook or a
+manual reconciliation step. **Why:** K-025 and K-026. Stripe is the one launch provider
+because it already has a signed webhook.
+
+## D-035 · Only a sent, unexpired quote is accepted, once, and its terms are then fixed
+**Date:** 2026-10-10 · **Status:** active
+
+Acceptance requires `status = 'sent'` and `valid_until` not passed, claims the quote inside the
+transaction, and creates exactly one project and one 40/30/30 schedule. An accepted quote
+cannot be moved back to draft; changed terms need a new quote. The CMS previews the three
+VAT-inclusive instalments before confirming. The 40/30/30 split itself is unchanged and awaits
+the owner's review (`docs/STATUS.md` section 5). **Why:** K-028.
+
+## D-036 · Server behaviour is tested against a synthetic database, and deploy waits for CI
+**Date:** 2026-10-10 · **Status:** active
+
+`npm run test:server` runs the real PHP endpoints from a temporary copy of `server/` with a
+synthetic `config.php`, against a local database whose name must end in `_test`, with a fake
+payment provider and `mail()` pointed at `/usr/bin/true`. It refuses any non-local host. CI
+runs it with unit tests, `php -l` and the lint ratchet, and `deploy.yml` runs only after CI
+succeeds on a push to `main`. **Why:** development calls the live API (constraint 8), so
+without this nothing server-side could be tested safely; and a parallel deploy could ship a
+failing build (K-035).
+
+## D-037 · The design direction becomes the full Mastercard-inspired GetDesign system
+**Date:** 2026-10-10 · **Status:** decided by the owner, not yet implemented
+
+The owner chose `npx getdesign@latest add mastercard` as the full design system for the website
+and the CMS, followed as closely as possible. This withdraws the 2026-09-22 rule that the
+public site must not borrow another company's design language, and replaces direction C
+(D-023) once implemented. The evidence rule from the same date stands: no claim on the public
+site without a source. Only the substitutions in `docs/DESIGN-SYSTEM.md` section 10.2 are made:
+a licensed font in place of MarkForMC, never the Mastercard mark colours or interlocking
+circles, and contrast fixes. The imported reference is preserved unedited as
+`docs/DESIGN-REFERENCE-MASTERCARD.md` (getdesign 0.6.25). `docs/DESIGN-SYSTEM.md` sections 1 to
+9 describe the built system until the rebuild lands.
+
+## D-038 · Six services; no networking installation or hardware repair
+**Date:** 2026-10-10 · **Status:** decided by the owner. Public pages not yet updated
+
+GAkinz advertises six services: web design, web development, ecommerce, website care, general
+IT support and IT consultancy. Networking installation and hardware repair are not offered and
+must not be advertised; articles about such equipment are buying advice only. Neither IT
+service needs a new CMS module: IT support is tickets plus billable time on a standing project
+per client, and consultancy is a small project ending in a written recommendation
+(`docs/PRODUCT-SPEC.md` section 5.5). **Why:** the owner added the two IT services to the four
+in `site.ts`. **Not yet true:** `site.ts` holds four services and no IT prices.
+
+## D-039 · GAkinz is the public name, with Gideon named as the owner
+**Date:** 2026-10-10 · **Status:** approved with the 2026 plan. Public copy not yet updated
+
+The company-facing name is GAkinz, with Gideon Akinlotan clearly named as the owner doing the
+work. "I" is used where Gideon delivers personally; the company name in business terms and
+profile headings; no team is claimed unless a job genuinely involves one. This replaces the
+2026-09-22 relaunch rule that the site leads with the person and names the studio only where a
+team does the work. It also narrows D-027: public pages show no "to supply" panels,
+engineering counts or internal paths, and absent material stays unpublished (K-038).
+**Why:** the business sells to companies and wants a company social identity, while staying
+honest that one person does the work.
+
+## D-040 · The CMS centres on seven destinations, and optional modules stay quiet
+**Date:** 2026-10-10 · **Status:** approved with the 2026 plan. Sidebar grouping built 2026-10-10,
+not deployed (K-032); tools inside records still to do
+
+The owner's navigation is Today, Enquiries, Clients, Projects, Money, Website and Settings.
+Supporting tools live inside the relevant record rather than in a flat 24-item sidebar. This
+is grouping and relabelling, not removal: existing URLs stay until the migration is verified,
+optional modules stay available but quiet, and hiding navigation removes neither endpoint
+access nor stored data. The seven server roles stay; the interface defaults to the owner and
+the client. Clients get their own small menu. Detail: `docs/PRODUCT-SPEC.md` section 5.2.
+**Why:** one owner runs the business alone, and the next action should not need cross-checking
+across 24 screens.
+
+## D-041 · Editorial resources first; affiliate links and AdSense only as measured pilots
+**Date:** 2026-10-10 · **Status:** approved with the 2026 plan. Nothing set up
+
+Resources stay an editorial section on practical small-business technology tied to the six
+services. Amazon affiliate recommendations are added selectively, with the required disclosure.
+AdSense is piloted on suitable articles only, after content, consent (a certified CMP),
+performance and approval checks; service, pricing, work, contact, legal and every private page
+stay free of ads, and no monetisation script runs in an authenticated layout. Service enquiries
+come first and ad revenue is never a launch dependency. Policy: `docs/CONTENT-AND-GROWTH.md`.
+**Why:** secondary income must not cost buyer trust, page speed or compliance.
+
+## D-042 · Synthetic-data testing and a tested recovery come before sensitive workflows grow
+**Date:** 2026-10-10 · **Status:** approved with the 2026 plan. Server test path built (D-036)
+
+No sensitive workflow (sign-in, money, client isolation, customer messaging) expands until it
+can be exercised against synthetic data that cannot reach the live API, mail or payment
+providers, and until a backup restoration has been demonstrated. Rules:
+`docs/OPERATIONS.md` sections 8 to 10. **Why:** development calls the live API and there is no
+staging (constraint 8), and no backup procedure is known to exist (K-010).
+
+## D-043 · The 2026 plan is approved, and `docs/PRODUCT-SPEC.md` is the scope authority
+**Date:** 2026-10-10 · **Status:** active
+
+The owner approved the 2026 production plan. Its durable content now lives in the canonical
+documents: scope in `docs/PRODUCT-SPEC.md`, design in `docs/DESIGN-SYSTEM.md` section 10,
+content and monetisation in `docs/CONTENT-AND-GROWTH.md`, gates and recovery in
+`docs/OPERATIONS.md`, release policy in `docs/DEPLOYMENT.md`, findings in
+`docs/KNOWN-ISSUES.md`, and phases, open work and owner inputs in `docs/STATUS.md`. The
+temporary plan folder is no longer referenced by anything.
+
+What the approval settles, beyond D-038 to D-042: the current stack and records are kept, with
+no framework migration; the client portal stays small, with its useful functions finished and
+isolation proved; client access in phase 1 is the existing client password sign-in only, with
+a reference and email link only after scenario J03 passes; fewer functions are finished well;
+and the "deliberately not doing" list in `docs/PRODUCT-SPEC.md` section 8 holds until a dated
+decision names a repeated need and its maintenance cost. The original `GAkinzOS.html` brief
+stops being the scope authority; its 175 features keep their dispositions in Appendix B of the
+product specification. **Why:** one source of truth per fact, and a scope a sole owner can
+finish.
+
+## D-044 · Superseded and completed documents leave the tree; git history keeps them
+**Date:** 2026-10-10 · **Status:** active. **Supersedes D-019.**
+
+Retired with `git rm`, after their still-valid content was moved: the root `DESIGN-SYSTEM.md`
+(meaning in D-006), `GAkinzOS.html` (the register in `docs/PRODUCT-SPEC.md` Appendix B), the
+three `docs/adoption/` records (decisions D-006 and D-019 to D-022, issues K-001 to K-003), the
+September content brief and direction note (D-023, D-039, `docs/PRODUCT-SPEC.md` section 3) and
+the completed relaunch specification (D-023 to D-032, `docs/STATUS.md`). Every one remains
+readable at `c57eb4a`, for example `git show c57eb4a:GAkinzOS.html`. **Why:** D-019 kept the
+superseded design file to explain global details, but D-006 already does that, and an
+out-of-date file in the tree is read as current by people and agents alike. The documentation
+now follows the GEE OS standard-application layout (`docs/GEE-OS.md`).
+
+## D-045 · Documents change in the same pull request as the code, and CI checks it
+**Date:** 2026-10-10 · **Status:** active
+
+A change is not complete until the documents it affects are updated in the same pull request.
+The change-to-document map is in `AGENTS.md`, "Keeping documents current". Measured counts
+live only in `docs/STATUS.md` section 0, and server work not yet uploaded lives only in
+`docs/DEPLOYMENT.md` section 5. `npm run docs:check` (`scripts/docs-check.mjs`) runs in CI on
+every pull request: relative links must resolve, the owner's temporary planning folder must not
+be referenced, a server PHP or `.htaccess` change must touch `docs/DEPLOYMENT.md`, and a schema
+change must touch `docs/DATA-MODEL.md` and `docs/DEPLOYMENT.md`.
+**Why:** by 2026-10-10 counts had drifted between documents, three partial upload lists
+competed in `docs/DEPLOYMENT.md`, and several fixed defects were still listed as open. A check
+that a document changed cannot prove it changed correctly; review still has to.
+**Evidence:** `npm run docs:check -- --base refs/remotes/origin/chore/codebase-hygiene` passes
+on the branch, and fails, naming `docs/DEPLOYMENT.md`, when a server file is touched alone.
+
+## D-046 · The public site and GAkinzOS move to the approved 2026 redesign
+**Date:** 2026-10-14 · **Status:** active. **Supersedes D-037** for visual direction; D-023's
+honesty rules (no invented figures, clients or outcomes, labelled gaps) still hold.
+
+The owner reviewed three directions as working prototypes and approved direction A, "Live
+Wall" (slate-blue graphite, one sky accent, Bricolage Grotesque, Hanken Grotesk and JetBrains
+Mono, all self-hosted), with the brand-colour hero from direction C. The public site is built
+from the approved landing prototype, scoped to `.gk-site` in `src/marketing/site.css`; the CMS
+takes the same type and palette with a sidebar that stays dark in both themes, from the
+approved CMS prototype. The hero shows up to five published Work records chosen in the CMS,
+each in the client's own brand colour, and the site's key copy (hero, services, process,
+pricing, FAQs, contact and footer) is edited in the new Site content module and published
+through `server/site.php`. No public copy states a fixed count of projects or services.
+**Why:** the owner judged the D-037 build generic, wanted a full-screen animated hero, an
+informative portfolio of real projects and a CMS of the same standard, and wanted the hero
+and key sections editable without a developer. **Evidence:** prototypes reviewed and approved
+by the owner on 2026-10-14; screenshots of the owner's projects captured from their local
+builds on 2026-10-13. Client sites are named with the owner's confirmation.
+
+## D-048 · The six service pages use the approved copy only, and an incomplete service is never published
+**Numbering:** D-047 is reserved by the open pull request #19 (`design/hero-nav-footer-demo`), so this decision is D-048.
+**Date:** 2026-10-19 · **Status:** active. Builds on D-038; D-039's rule against visible gaps
+still holds.
+
+Three rules govern the service pages built in journeys batch 4.
+1. **Spec 4.3 copy only.** Each page is made from the hooks, typical needs, deliverables,
+   exclusions and price basis approved in `docs/PRODUCT-SPEC.md` sections 4.1 to 4.3, and from
+   figures already in `site.ts`. Where the owner has not answered (IT coverage, area, response
+   time, IT prices) the page leaves the fact out and says "Priced per job, ask for a quote."
+   It shows no gap marker and invents nothing (K-090). Three website exclusions were priced
+   from `site.ts` and are recorded for the owner to confirm (K-092).
+2. **A service is published whole or not at all.** A services row carries `slug`, `group`,
+   `hook`, `needs`, `deliverables`, `exclusions` and `price_basis` together or none of them.
+   `site.php` refuses a half page on save, and the public site shows a custom row only when it
+   has every field, so a half page cannot appear on a buyer page.
+3. **A legacy list falls back to the built-in six.** A published list of title-and-summary rows
+   shows the built-in six in their default order, with matching titles and summaries, until the
+   owner saves once. The editor upgrades such a list on opening and adds the missing built-ins
+   at the end (K-093). The Website care slug stays `care-and-support`.
+
+**Why:** the owner approved the services and their content on 2026-10-10 (D-038) but not the
+missing facts; building from the approved text unblocks the pages without inventing a claim,
+and an all-or-none page avoids a published service that looks unfinished. **Evidence:**
+`src/marketing/data/content.test.ts`, `src/app/modules/siteContentModel.test.ts`,
+`tests/server/site.test.ts`, and a mocked-API browser check recorded in `docs/STATUS.md`
+section 0.5. Live behaviour is NOT TESTED.
+
+---
+
+## D-049 · Work references are shown but never used for access; code deletes only a prospect's data, and only behind explicit gates
+**Numbering:** D-047 is reserved by the open pull request #19, so the next free number after
+D-048 is D-049.
+**Date:** 2026-10-19 · **Status:** active, rule 1 amended by D-050 (phase 2 sign-in is built
+switched off). Narrows `docs/PRODUCT-SPEC.md` section 6.1 for now; builds on the retention
+proposals in `docs/PRIVACY-READINESS.md` section 6.
+
+Two rules from journeys batch 5.
+1. **A work reference identifies work and is never a key.** Every new enquiry gets
+   `GK-E-YYYY-NNNN` and every new project `GK-P-YYYY-NNNN`, numbered per kind and per year from
+   `reference_counters` and never reused (SQL 19). Quotes, invoices and contracts show their
+   project's reference only while that project is live and belongs to the same client. The
+   reference is shown to the visitor on the contact thank-you, to staff on their screens and
+   in search, and to a client on their own portal cards and documents. **No endpoint reads a
+   reference from a request**: nothing is looked up by it without staff sign-in, and nobody
+   signs in with it. Spec 6.1 phase 2 (reference plus an email link) stays unbuilt until
+   journey J03 passes and the owner sets the policy. No acknowledgement email is sent (K-097).
+2. **Code deletes personal data only for prospects, and only behind explicit gates.** A super
+   admin may erase one enquiry that never became a client, after a preview and typing its
+   email address; a won enquiry, or one linked to a client, a user or a contract signer, is
+   refused and nothing changes. The retention executor (`cron.php job=retention_apply`) acts
+   on old prospect enquiries and soft-deleted files only, from the command line only, and
+   deletes only when `--apply`, `$RETENTION_APPLY = true` and that rule's period all agree;
+   the template ships `false` and `null`. A client's request opens a ticket and deletes
+   nothing. Clients, users, projects, invoices, contracts, tickets and messages have no
+   delete until the owner and an adviser agree the periods and procedure (K-062).
+
+**Why:** a reference that unlocks anything would be a guessable password, so it is kept as a
+label until a proper verified sign-in exists; per-year sequences are short to read out on the
+phone, at the cost of revealing yearly volume (K-094). Deleting a prospect who never became a
+client touches no record the business must keep, so it can be built now; anything else
+needs periods that are legal decisions, and an accidental run must not be able to delete.
+**Evidence:** `tests/server/references.test.ts` (sequence, concurrency, backfill, no lookup
+by reference, a static check on request reads), `tests/server/erase-enquiry.test.ts`,
+`tests/server/retention-apply.test.ts`, `tests/server/deletion-request.test.ts`, and a
+mocked-API browser check recorded in `docs/STATUS.md` section 0.6. Live behaviour is NOT
+TESTED.
+
+---
+
+## D-050 · Gated features ship switched off, and the owner switches them on after the named decisions; ad and consent settings live in tracked code
+**Date:** 2026-10-19 · **Status:** active. Amends D-049 rule 1 and `docs/PRODUCT-SPEC.md`
+section 6.1 (the policy now gates switching on, not the build).
+
+Three rules from journeys batch 6.
+1. **A feature that waits on an owner, legal or hosting decision may be built, but it ships
+   switched off**, with tests proving that nothing changes while it is off, and the owner
+   switches it on only after the named decisions and gates are recorded. Client sign-in by
+   reference and email (`server/client_access.php`) is off unless the live `config.php` sets
+   `$REFERENCE_SIGNIN_ENABLED = true`, only the boolean `true` counts, and every route
+   answers 404 while off. Its gates are the owner's sign-in policy and the three technical
+   gates in `docs/DEPLOYMENT.md` section 5.4 (K-100 to K-102).
+2. **Advertising and consent settings live in a tracked file**, `src/marketing/lib/
+   monetisation.ts`, not in Site content or the CMS. All are off. Switching the pilot on or
+   off is a reviewed code change and a deploy. Ads never load without a certified CMP, and only
+   after Purpose 1 consent; nothing third-party loads on a private route, and the build fails
+   if a prerendered page or the app shell carries third-party markup.
+3. **A feature the session could not build safely is recorded, not worked around.** Client
+   anonymisation (Task 26) was refused by the session's safety check on 2026-10-19 and left to
+   an owner and adviser decision (K-108).
+   *Amended 2026-10-20:* the owner then approved building it ("go on"), and the client
+   anonymisation tool also ships switched off (`$CLIENT_ANONYMISE_ENABLED`, off unless the
+   boolean `true`), with an adviser's confirmation of its rules as the gate.
+
+**Why:** building ahead of a decision keeps the work moving while the decision stays with the
+owner, and an off switch that is proven by tests costs nothing in production. The CMS
+sign-in token sits in browser storage on the same origin (K-033), so turning on a third-party
+script is a security change: the editor role, which can publish site content, must not be able
+to do it, and keeping it in code makes "off" provable at build time and adds no request.
+**Evidence:** `tests/server/client-access.test.ts` (404 on every route for absent, `false`,
+`1`, `"true"` and `"1"`, with no mail, audit row or session), `src/lib/clientAccess.test.ts`,
+`src/marketing/lib/consent.test.ts`, `src/marketing/components/AdSlot.test.tsx`,
+`src/prerender/third-party.test.ts`, and the build gate in `scripts/prerender.mjs`. Live
+behaviour, a browser run of the sign-in form and the ad slots, and a real CMP or AdSense
+script are NOT TESTED.
+
+
+## D-051 · Public-site scroll motion uses GSAP and Lenis, loaded at idle and only for visitors who allow motion
+**Date:** 2026-10-21 · **Status:** active. Extends D-046 and the `.rise` rule in `CLAUDE.md`.
+
+1. **Lenis smooths wheel scrolling and GSAP ScrollTrigger lifts sections in** on the public
+   site only (`src/marketing/lib/motion.ts`, started and stopped by `PublicLayout`). GAkinzOS
+   never loads either library.
+2. **Enhancement only.** Neither library is in the prerendered markup or the first paint: they
+   load in their own chunks once the browser is idle. Under `prefers-reduced-motion: reduce`
+   they are never fetched, and switching the preference on mid-visit stops them and shows
+   every element.
+3. **Nothing on the first screen is hidden.** Only elements that start below the viewport are
+   set up for an entrance, so a failed load leaves every element visible and the prerendered
+   page never flashes. Route changes jump to the top through Lenis, and the mobile drawer
+   pauses it.
+
+**Why:** the owner asked for the landing to be polished with GSAP and Lenis on 2026-10-21. The
+cost (about 51 kB gzipped across three chunks) is kept off the critical path.
+**Evidence:** `src/marketing/lib/motion.test.ts`; a browser run on 2026-10-21 against the built
+preview (`vite preview`, 1440 and 390px): libraries load after idle, 27 elements set up on the
+home page and 0 still hidden at the page foot, `/services` reached at the top with focus on its
+`h1`, drawer stops and restarts Lenis, no horizontal overflow, and under reduced motion no
+library request and nothing hidden. Real devices, Safari, trackpads, real assistive technology
+and a Lighthouse run are NOT TESTED.

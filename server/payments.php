@@ -12,10 +12,17 @@
  *        trust the body without the signature.
  *
  * Config in config.php (secrets stay server-side):
- *   $STRIPE_SECRET, $STRIPE_WEBHOOK_SECRET, optional $STRIPE_SUCCESS_URL/$STRIPE_CANCEL_URL.
+ *   $STRIPE_SECRET, $STRIPE_WEBHOOK_SECRET, optional $STRIPE_SUCCESS_URL/$STRIPE_CANCEL_URL,
+ *   optional $STRIPE_API_BASE (tests point it at a local fake; defaults to Stripe).
  * No Stripe SDK / Composer — plain REST over curl + an HMAC signature check.
+ *
+ * Every provider amount is the VAT-inclusive payable total from _money.php, and
+ * the webhook refuses to mark an invoice paid unless the amount and currency
+ * Stripe reports match it. Processed events are recorded in payment_events so a
+ * redelivered event is a no-op.
  */
 require __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/_money.php';
 
 const PAY_STAFF = ['super_admin', 'admin', 'manager'];
 
@@ -32,22 +39,13 @@ if ($method === 'POST' && $action === 'link') {
   $invoiceId = (int)($in['invoice_id'] ?? 0);
   if ($invoiceId <= 0) fail('An invoice id is required.');
 
-  $stmt = $conn->prepare(
-    'SELECT i.id, i.number, i.status, i.currency, c.email AS client_email, c.company AS client_company,
-            (SELECT COALESCE(SUM(qty * unit_price), 0) FROM invoice_items it WHERE it.invoice_id = i.id) AS total
-     FROM invoices i LEFT JOIN clients c ON c.id = i.client_id
-     WHERE i.id = ? AND i.deleted_at IS NULL LIMIT 1'
-  );
-  $stmt->bind_param('i', $invoiceId);
-  $stmt->execute();
-  $inv = $stmt->get_result()->fetch_assoc();
+  $inv = gk_invoice_payable($conn, $invoiceId);
   if (!$inv) fail('Invoice not found.', 404);
   if ($inv['status'] === 'paid') fail('This invoice is already paid.');
 
-  $total = (float)$inv['total'];
-  if ($total <= 0) fail('This invoice has no billable total.');
-  $minor = (int)round($total * 100); // Stripe wants the smallest currency unit
-  $currency = strtolower($inv['currency'] ?: 'gbp');
+  if ($inv['total_minor'] <= 0) fail('This invoice has no billable total.');
+  $minor = $inv['total_minor']; // VAT-inclusive, in pence
+  $currency = $inv['currency'];
   $label = 'Invoice ' . ($inv['number'] ?: ('#' . $inv['id']))
          . ($inv['client_company'] ? ' — ' . $inv['client_company'] : '');
 
@@ -71,7 +69,8 @@ if ($method === 'POST' && $action === 'link') {
     $params['customer_email'] = $inv['client_email'];
   }
 
-  $ch = curl_init('https://api.stripe.com/v1/checkout/sessions');
+  $apiBase = rtrim($GLOBALS['STRIPE_API_BASE'] ?? 'https://api.stripe.com', '/');
+  $ch = curl_init($apiBase . '/v1/checkout/sessions');
   curl_setopt_array($ch, [
     CURLOPT_RETURNTRANSFER => true,
     CURLOPT_POST           => true,
@@ -131,20 +130,45 @@ if ($method === 'POST' && $action === 'webhook') {
 
   $paidTypes = ['checkout.session.completed', 'payment_intent.succeeded'];
   if (in_array($type, $paidTypes, true) && $invoiceId > 0) {
+    $eventId = (string)($event['id'] ?? '');
+    // Redelivered event: already handled, acknowledge and stop.
+    if ($eventId !== '' && gk_payment_event_seen($conn, 'stripe', $eventId)) {
+      http_response_code(200);
+      echo '{"received":true,"duplicate":true}';
+      exit;
+    }
+
     // Require explicit confirmation — never optimistically assume paid.
     // checkout.session.completed must carry payment_status=paid (async methods
     // can complete unpaid); payment_intent must report status=succeeded.
     $payStatus = $obj['payment_status'] ?? '';
     $intentOk  = $type === 'payment_intent.succeeded' && ($obj['status'] ?? '') === 'succeeded';
+    // Amount Stripe actually took, in pence, and its currency.
+    $paidMinor = (int)($obj['amount_total'] ?? $obj['amount_received'] ?? -1);
+    $paidCcy   = strtolower((string)($obj['currency'] ?? ''));
+
+    $outcome = 'ignored';
     if ($payStatus === 'paid' || $intentOk) {
-      $stmt = $conn->prepare(
-        'UPDATE invoices SET status = "paid", paid_at = NOW()
-         WHERE id = ? AND status <> "paid" AND deleted_at IS NULL'
-      );
-      $stmt->bind_param('i', $invoiceId);
-      $stmt->execute();
-      if ($stmt->affected_rows > 0) audit($conn, null, 'invoice_paid_stripe', '#' . $invoiceId . ' via ' . $type);
+      $inv = gk_invoice_payable($conn, $invoiceId);
+      if (!$inv) {
+        $outcome = 'unknown_invoice';
+      } elseif ($paidMinor !== $inv['total_minor'] || $paidCcy !== $inv['currency']) {
+        // Never mark paid on a mismatch. The owner reconciles it by hand.
+        $outcome = 'amount_mismatch';
+        audit($conn, null, 'invoice_payment_mismatch',
+          '#' . $invoiceId . " stripe paid $paidMinor $paidCcy, expected {$inv['total_minor']} {$inv['currency']}");
+      } else {
+        $stmt = $conn->prepare(
+          'UPDATE invoices SET status = "paid", paid_at = NOW()
+           WHERE id = ? AND status <> "paid" AND deleted_at IS NULL'
+        );
+        $stmt->bind_param('i', $invoiceId);
+        $stmt->execute();
+        $outcome = $stmt->affected_rows > 0 ? 'marked_paid' : 'already_paid';
+        if ($outcome === 'marked_paid') audit($conn, null, 'invoice_paid_stripe', '#' . $invoiceId . ' via ' . $type);
+      }
     }
+    if ($eventId !== '') gk_payment_event_record($conn, 'stripe', $eventId, $invoiceId, $paidMinor, $paidCcy, $outcome);
   }
 
   http_response_code(200);
@@ -177,6 +201,14 @@ function paypal_token(): string {
 // Create a PayPal order and return the approve URL.
 if ($method === 'POST' && $action === 'paypal_link') {
   $user = require_auth($conn, PAY_STAFF);
+  // Off unless explicitly enabled: PayPal payment is only recorded when the
+  // customer's browser returns to paypal_return, and there is no PayPal webhook
+  // yet, so a closed tab leaves a captured payment against an unpaid invoice
+  // (K-026). Turn on with $PAYPAL_ENABLED = true in config.php only
+  // once that gap is closed or reconciled by hand.
+  if (empty($GLOBALS['PAYPAL_ENABLED'])) {
+    fail('PayPal checkout is switched off. Use the Stripe pay link or a bank transfer.', 503);
+  }
   if (($GLOBALS['PAYPAL_CLIENT_ID'] ?? '') === '' || ($GLOBALS['PAYPAL_SECRET'] ?? '') === '') {
     fail('PayPal is not configured on the server.', 503);
   }
@@ -184,17 +216,10 @@ if ($method === 'POST' && $action === 'paypal_link') {
 
   $invoiceId = (int)(body()['invoice_id'] ?? 0);
   if ($invoiceId <= 0) fail('An invoice id is required.');
-  $stmt = $conn->prepare(
-    'SELECT i.id, i.number, i.status, i.currency, i.vat_rate,
-            (SELECT COALESCE(SUM(qty*unit_price),0) FROM invoice_items it WHERE it.invoice_id=i.id) AS sub
-     FROM invoices i WHERE i.id = ? AND i.deleted_at IS NULL LIMIT 1'
-  );
-  $stmt->bind_param('i', $invoiceId);
-  $stmt->execute();
-  $inv = $stmt->get_result()->fetch_assoc();
+  $inv = gk_invoice_payable($conn, $invoiceId);
   if (!$inv) fail('Invoice not found.', 404);
   if ($inv['status'] === 'paid') fail('This invoice is already paid.');
-  $total = round((float)$inv['sub'] * (1 + (float)$inv['vat_rate'] / 100), 2);
+  $total = $inv['total'];
   if ($total <= 0) fail('This invoice has no billable total.');
 
   $token = paypal_token();
@@ -241,6 +266,9 @@ if ($method === 'GET' && $action === 'paypal_return') {
   $invoiceId = (int)($_GET['invoice_id'] ?? 0);
   $orderId = preg_replace('/[^A-Za-z0-9]/', '', (string)($_GET['token'] ?? ''));
   $bounce = "$appUrl/app/invoicing";
+  // Same switch as paypal_link (K-026, K-061). While PayPal is off nothing is
+  // captured here; an approved order is never charged without this capture.
+  if (empty($GLOBALS['PAYPAL_ENABLED'])) { header("Location: $bounce?payfail=1"); exit; }
   if ($invoiceId <= 0 || $orderId === '') { header("Location: $bounce?payfail=1"); exit; }
   $token = paypal_token();
   if ($token === '') { header("Location: $bounce?payfail=1"); exit; }
@@ -260,7 +288,17 @@ if ($method === 'GET' && $action === 'paypal_return') {
   $captured = ($data['status'] ?? '') === 'COMPLETED';
   $custom = $data['purchase_units'][0]['payments']['captures'][0]['custom_id']
           ?? ($data['purchase_units'][0]['custom_id'] ?? '');
-  if ($captured && (int)$custom === $invoiceId) {
+  $capture = $data['purchase_units'][0]['payments']['captures'][0] ?? [];
+  $capMinor = gk_minor_from_decimal((string)($capture['amount']['value'] ?? '-1'));
+  $capCcy = strtolower((string)($capture['amount']['currency_code'] ?? ''));
+  $inv = $invoiceId > 0 ? gk_invoice_payable($conn, $invoiceId) : null;
+  if ($captured && (int)$custom === $invoiceId && $inv
+      && ($capMinor !== $inv['total_minor'] || $capCcy !== $inv['currency'])) {
+    audit($conn, null, 'invoice_payment_mismatch',
+      '#' . $invoiceId . " paypal paid $capMinor $capCcy, expected {$inv['total_minor']} {$inv['currency']}");
+    header("Location: $bounce?payfail=1"); exit;
+  }
+  if ($captured && (int)$custom === $invoiceId && $inv) {
     $upd = $conn->prepare('UPDATE invoices SET status = "paid", paid_at = NOW() WHERE id = ? AND status <> "paid" AND deleted_at IS NULL');
     $upd->bind_param('i', $invoiceId);
     $upd->execute();
@@ -271,3 +309,31 @@ if ($method === 'GET' && $action === 'paypal_return') {
 }
 
 fail('Unknown action.', 400);
+
+// ── Provider event log (dedupe) ─────────────────────────────────────────────
+// Best-effort on an un-migrated database: if payment_events does not exist yet
+// the webhook still works, guarded by status <> "paid" as before.
+function gk_payment_event_seen(mysqli $conn, string $provider, string $eventId): bool {
+  try {
+    $stmt = $conn->prepare('SELECT 1 FROM payment_events WHERE provider = ? AND event_id = ? LIMIT 1');
+    if (!$stmt) return false;
+    $stmt->bind_param('ss', $provider, $eventId);
+    $stmt->execute();
+    return (bool)$stmt->get_result()->fetch_row();
+  } catch (Throwable $e) {
+    return false; // table not created yet
+  }
+}
+
+function gk_payment_event_record(mysqli $conn, string $provider, string $eventId, int $invoiceId, int $amountMinor, string $currency, string $outcome): void {
+  try {
+    $stmt = $conn->prepare(
+      'INSERT IGNORE INTO payment_events (provider, event_id, invoice_id, amount_minor, currency, outcome) VALUES (?, ?, ?, ?, ?, ?)'
+    );
+    if (!$stmt) throw new RuntimeException('prepare failed');
+    $stmt->bind_param('ssiiss', $provider, $eventId, $invoiceId, $amountMinor, $currency, $outcome);
+    $stmt->execute();
+  } catch (Throwable $e) {
+    error_log('GAkinz payment_events not recorded (run the 2026-10-10 schema step): ' . $eventId);
+  }
+}

@@ -5,7 +5,7 @@
  * the client never asserts its own role.
  *
  *   POST /auth.php?action=login   {email, password}      → { token, expires, user }
- *   GET  /auth.php?action=me      (Bearer)               → { user }
+ *   GET  /auth.php?action=me      (Bearer)               → { user, totp_enabled }
  *   POST /auth.php?action=logout  (Bearer)               → { ok: true }
  *   POST /auth.php?action=forgot  {email}                → { ok: true }   (always ok; no enumeration)
  *   POST /auth.php?action=reset   {token, password}      → { ok: true }
@@ -20,6 +20,10 @@ require __DIR__ . '/_bootstrap.php';
 
 const TOKEN_TTL_DAYS = 30;
 const RESET_TTL_MINUTES = 60;
+// Magic links. Declared here, above the dispatch below: a top-level const
+// placed after the switch is never reached, because every action returns.
+const MAGIC_TTL_MINUTES = 15;
+const MAGIC_ROLES = ['client'];
 
 ensure_seed($conn);
 
@@ -50,19 +54,23 @@ function login(mysqli $conn): void {
   $pass  = (string)($in['password'] ?? '');
   if ($email === '' || $pass === '') fail('Email and password are required.');
 
-  // Brute-force throttle: block after too many recent failures for this email
-  // or IP. Reuses audit_log (failure rows store the email in `detail`). Counts
-  // failed second-factor attempts too, so TOTP guessing is throttled as well.
+  // Brute-force throttle. Reuses audit_log (failure rows store the email in
+  // `detail`) and counts failed second-factor attempts too, so TOTP guessing is
+  // throttled as well. Two limits: 10 failures for this email from this IP, and
+  // 30 from this IP for any email. The email limit is per IP on purpose: a
+  // global per-email count let anyone lock any account (the owner's included)
+  // out of password sign-in with ten requests every fifteen minutes.
   $ip = $_SERVER['REMOTE_ADDR'] ?? '';
   $stmt = $conn->prepare(
-    "SELECT COUNT(*) AS c FROM audit_log
+    "SELECT COALESCE(SUM(detail = ?), 0) AS mine, COUNT(*) AS any_email FROM audit_log
      WHERE action IN ('login_failed', 'login_2fa_failed')
        AND created_at > (NOW() - INTERVAL 15 MINUTE)
-       AND (detail = ? OR ip = ?)"
+       AND ip = ?"
   );
   $stmt->bind_param('ss', $email, $ip);
   $stmt->execute();
-  if ((int)($stmt->get_result()->fetch_assoc()['c'] ?? 0) >= 10) {
+  $tries = $stmt->get_result()->fetch_assoc();
+  if ((int)($tries['mine'] ?? 0) >= 10 || (int)($tries['any_email'] ?? 0) >= 30) {
     fail('Too many attempts. Please wait a few minutes and try again.', 429);
   }
 
@@ -75,7 +83,11 @@ function login(mysqli $conn): void {
   $stmt->execute();
   $u = $stmt->get_result()->fetch_assoc();
 
-  if (!$u || !password_verify($pass, $u['password_hash'])) {
+  // An unknown email still pays for one bcrypt check, so response time does not
+  // reveal which addresses have accounts. The hash is of a random value nobody
+  // knows; it never matches.
+  $known = $u ? password_verify($pass, $u['password_hash']) : password_verify($pass, '$2y$12$egnBXeD.0hvaByaZ8NNE5.yLCSbJSj5uCUJzDzx3bXVPjvj1/DWbS');
+  if (!$u || !$known) {
     audit($conn, $u ? (int)$u['id'] : null, 'login_failed', $email);
     fail('Email or password is incorrect.', 401);
   }
@@ -86,7 +98,12 @@ function login(mysqli $conn): void {
   if (!empty($u['totp_enabled']) && !empty($u['totp_secret'])) {
     $code = preg_replace('/\s+/', '', (string)($in['code'] ?? ''));
     if ($code === '') fail('Two-factor code required.', 401, ['two_factor_required' => true]);
-    $okTotp = gk_totp_verify($u['totp_secret'], $code);
+    $step = gk_totp_step($u['totp_secret'], $code);
+    $okTotp = $step !== null;
+    if ($okTotp && !gk_totp_claim($conn, (int)$u['id'], $step)) {
+      audit($conn, (int)$u['id'], 'login_2fa_failed', $email);
+      fail('That code has already been used. Wait for the next one.', 401, ['two_factor_required' => true]);
+    }
     if (!$okTotp) {
       // Fall back to a recovery code (consumed on use).
       $consumed = gk_consume_recovery($conn, (int)$u['id'], $u['totp_recovery'] ?? '', $code);
@@ -105,11 +122,13 @@ function login(mysqli $conn): void {
   // Record device + IP for the active-sessions list. Falls back to the original
   // insert if the DB hasn't been migrated with the session-tracking columns.
   if ($stmt = @$conn->prepare('INSERT INTO auth_tokens (user_id, token, user_agent, ip, last_seen_at, expires_at) VALUES (?, ?, ?, ?, NOW(), ?)')) {
-    $stmt->bind_param('issss', $uid, $token, $ua, $ip, $exp);
+    $stored = token_hash($token);
+    $stmt->bind_param('issss', $uid, $stored, $ua, $ip, $exp);
     $stmt->execute();
   } else {
     $stmt = $conn->prepare('INSERT INTO auth_tokens (user_id, token, expires_at) VALUES (?, ?, ?)');
-    $stmt->bind_param('iss', $uid, $token, $exp);
+    $stored = token_hash($token);
+    $stmt->bind_param('iss', $uid, $stored, $exp);
     $stmt->execute();
   }
   audit($conn, $uid, 'login', '');
@@ -129,21 +148,38 @@ function login(mysqli $conn): void {
 
 function me(mysqli $conn): void {
   $u = require_auth($conn);
-  ok(['user' => $u]);
+  // The caller's own two-factor state, so My account can offer the right
+  // controls to every role (users.php, the only other source, is admin-only).
+  // Kept beside `user`, not inside it, so the stored session shape is
+  // unchanged. Null on an un-migrated DB without the totp columns.
+  // try/catch, not @: under PHP 8 mysqli throws on a missing column.
+  $totp = null;
+  try {
+    $stmt = $conn->prepare('SELECT totp_enabled FROM users WHERE id = ? LIMIT 1');
+    $uid = $u['id'];
+    $stmt->bind_param('i', $uid);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    if ($row) $totp = !empty($row['totp_enabled']);
+  } catch (Throwable $e) {
+    $totp = null;
+  }
+  ok(['user' => $u, 'totp_enabled' => $totp]);
 }
 
 function logout(mysqli $conn): void {
   $token = bearer_token();
   if ($token !== '') {
     // Read the owner first so the audit row can be attributed, then drop it.
-    $stmt = $conn->prepare('SELECT user_id FROM auth_tokens WHERE token = ? LIMIT 1');
-    $stmt->bind_param('s', $token);
+    [$th, $traw] = token_params($token);
+    $stmt = $conn->prepare('SELECT user_id FROM auth_tokens WHERE ' . token_where() . ' LIMIT 1');
+    $stmt->bind_param('ss', $th, $traw);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();
     $uid = $row ? (int)$row['user_id'] : null;
 
-    $stmt = $conn->prepare('DELETE FROM auth_tokens WHERE token = ?');
-    $stmt->bind_param('s', $token);
+    $stmt = $conn->prepare('DELETE FROM auth_tokens WHERE ' . token_where());
+    $stmt->bind_param('ss', $th, $traw);
     $stmt->execute();
     if ($uid !== null) audit($conn, $uid, 'logout', '');
   }
@@ -168,7 +204,8 @@ function forgot(mysqli $conn): void {
     $token = new_token();
     $exp = (new DateTime("+" . RESET_TTL_MINUTES . " minutes"))->format('Y-m-d H:i:s');
     $stmt = $conn->prepare('INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)');
-    $stmt->bind_param('iss', $uid, $token, $exp);
+    $stored = token_hash($token);
+    $stmt->bind_param('iss', $uid, $stored, $exp);
     $stmt->execute();
     audit($conn, $uid, 'password_reset_requested', '');
     // Email delivery (Resend) is Phase 2. Until then, retrieve the token from
@@ -184,8 +221,9 @@ function reset_password(mysqli $conn): void {
   $pass  = (string)($in['password'] ?? '');
   if ($token === '' || strlen($pass) < 8) fail('A token and an 8+ character password are required.');
 
-  $stmt = $conn->prepare('SELECT id, user_id FROM password_resets WHERE token = ? AND used_at IS NULL AND expires_at > NOW() LIMIT 1');
-  $stmt->bind_param('s', $token);
+  $stmt = $conn->prepare('SELECT id, user_id FROM password_resets WHERE ' . token_where() . ' AND used_at IS NULL AND expires_at > NOW() LIMIT 1');
+  [$th, $traw] = token_params($token);
+  $stmt->bind_param('ss', $th, $traw);
   $stmt->execute();
   $r = $stmt->get_result()->fetch_assoc();
   if (!$r) fail('This reset link is invalid or has expired.', 400);
@@ -194,12 +232,15 @@ function reset_password(mysqli $conn): void {
   $uid = (int)$r['user_id'];
   $rid = (int)$r['id'];
 
+  // Claim the token first, atomically, so two requests racing on one link
+  // cannot both set a password.
+  $stmt = $conn->prepare('UPDATE password_resets SET used_at = NOW() WHERE id = ? AND used_at IS NULL');
+  $stmt->bind_param('i', $rid);
+  $stmt->execute();
+  if ($stmt->affected_rows !== 1) fail('This reset link is invalid or has expired.', 400);
+
   $stmt = $conn->prepare('UPDATE users SET password_hash = ? WHERE id = ? AND deleted_at IS NULL');
   $stmt->bind_param('si', $hash, $uid);
-  $stmt->execute();
-
-  $stmt = $conn->prepare('UPDATE password_resets SET used_at = NOW() WHERE id = ?');
-  $stmt->bind_param('i', $rid);
   $stmt->execute();
 
   // Invalidate existing sessions after a password change
@@ -234,7 +275,7 @@ function sessions(mysqli $conn): void {
       'last_seen_at' => $r['last_seen_at'],
       'created_at'   => $r['created_at'],
       'expires_at'   => $r['expires_at'],
-      'current'      => hash_equals((string)$r['token'], $current),
+      'current'      => $current !== '' && (hash_equals((string)$r['token'], token_hash($current)) || hash_equals((string)$r['token'], $current)),
     ];
   }
   ok($rows);
@@ -289,15 +330,58 @@ function gk_totp_at(string $secretB32, int $counter): string {
        | (ord($hash[$offset + 3]) & 0xff);
   return str_pad((string)($val % 1000000), 6, '0', STR_PAD_LEFT);
 }
-function gk_totp_verify(string $secretB32, string $code): bool {
+/** The 30-second step a valid code belongs to, or null. Allows ±1 step for clock drift. */
+function gk_totp_step(string $secretB32, string $code): ?int {
   $code = preg_replace('/\D/', '', $code);
-  if (strlen($code) !== 6) return false;
+  if (strlen($code) !== 6) return null;
   $t = (int)floor(time() / 30);
-  // Allow ±1 step for clock drift.
   for ($i = -1; $i <= 1; $i++) {
-    if (hash_equals(gk_totp_at($secretB32, $t + $i), $code)) return true;
+    if (hash_equals(gk_totp_at($secretB32, $t + $i), $code)) return $t + $i;
   }
-  return false;
+  return null;
+}
+
+/**
+ * Accepts a code's step only if it is later than the last one this account
+ * used, so one code cannot be used twice (K-057). The UPDATE is the check, so
+ * two requests racing with the same code cannot both pass. On a database
+ * without the `totp_last_step` column (schema.sql, 2026-10-17) it allows the
+ * code, exactly as before the change.
+ */
+function gk_totp_claim(mysqli $conn, int $uid, int $step): bool {
+  $stmt = @$conn->prepare('UPDATE users SET totp_last_step = ? WHERE id = ? AND (totp_last_step IS NULL OR totp_last_step < ?)');
+  if (!$stmt) return true;
+  $stmt->bind_param('iii', $step, $uid, $step);
+  if (!@$stmt->execute()) return true;
+  return $stmt->affected_rows === 1;
+}
+
+/**
+ * A current-code check for a signed-in account (setup, enable, disable, new
+ * recovery codes). Without a limit, a stolen bearer token could try codes until
+ * one matched and switch two-factor off. Ten wrong codes in fifteen minutes
+ * blocks the account's code checks until the window passes.
+ */
+function gk_totp_check(mysqli $conn, int $uid, string $secret, string $code, string $message): void {
+  $stmt = $conn->prepare(
+    "SELECT COUNT(*) AS c FROM audit_log
+     WHERE action = '2fa_code_failed' AND user_id = ?
+       AND created_at > (NOW() - INTERVAL 15 MINUTE)"
+  );
+  $stmt->bind_param('i', $uid);
+  $stmt->execute();
+  if ((int)($stmt->get_result()->fetch_assoc()['c'] ?? 0) >= 10) {
+    fail('Too many attempts. Please wait a few minutes and try again.', 429);
+  }
+  $step = gk_totp_step($secret, $code);
+  if ($step === null) {
+    audit($conn, $uid, '2fa_code_failed', '');
+    fail($message);
+  }
+  if (!gk_totp_claim($conn, $uid, $step)) {
+    audit($conn, $uid, '2fa_code_failed', 'reused');
+    fail('That code has already been used. Wait for the next one.');
+  }
 }
 
 function twofa_setup(mysqli $conn): void {
@@ -313,10 +397,7 @@ function twofa_setup(mysqli $conn): void {
   $row = $stmt->get_result()->fetch_assoc();
   if ($row && !empty($row['totp_enabled'])) {
     $code = (string)(body()['code'] ?? '');
-    if (!gk_totp_verify((string)$row['totp_secret'], $code)) {
-      audit($conn, $uid, '2fa_setup_denied', '');
-      fail('Enter a current code to replace your two-factor setup.');
-    }
+    gk_totp_check($conn, $uid, (string)$row['totp_secret'], $code, 'Enter a current code to replace your two-factor setup.');
   }
 
   $secret = gk_base32_encode(random_bytes(20));
@@ -324,6 +405,8 @@ function twofa_setup(mysqli $conn): void {
   $stmt = $conn->prepare('UPDATE users SET totp_secret = ?, totp_enabled = 0 WHERE id = ?');
   $stmt->bind_param('si', $secret, $uid);
   $stmt->execute();
+  // A new secret starts a new code sequence, so the replay marker starts again.
+  if ($r = @$conn->prepare('UPDATE users SET totp_last_step = NULL WHERE id = ?')) { $r->bind_param('i', $uid); @$r->execute(); }
   audit($conn, $uid, '2fa_setup', '');
   $label = rawurlencode('GAkinz:' . $u['email']);
   $issuer = rawurlencode('GAkinz');
@@ -340,7 +423,7 @@ function twofa_enable(mysqli $conn): void {
   $stmt->execute();
   $secret = $stmt->get_result()->fetch_assoc()['totp_secret'] ?? '';
   if ($secret === '') fail('Start setup first.');
-  if (!gk_totp_verify($secret, $code)) fail('That code is invalid. Check your authenticator and try again.');
+  gk_totp_check($conn, $uid, (string)$secret, $code, 'That code is invalid. Check your authenticator and try again.');
   [$plain, $hashed] = gk_gen_recovery();
   $stmt = $conn->prepare('UPDATE users SET totp_enabled = 1, totp_recovery = ? WHERE id = ?');
   $stmt->bind_param('si', $hashed, $uid);
@@ -359,7 +442,7 @@ function twofa_disable(mysqli $conn): void {
   $stmt->execute();
   $row = $stmt->get_result()->fetch_assoc();
   if (!$row || empty($row['totp_enabled'])) ok(['ok' => true]); // already off / not found
-  if (!gk_totp_verify((string)$row['totp_secret'], $code)) fail('Enter a current code to turn off two-factor.');
+  gk_totp_check($conn, $uid, (string)$row['totp_secret'], $code, 'Enter a current code to turn off two-factor.');
   $stmt = $conn->prepare('UPDATE users SET totp_enabled = 0, totp_secret = NULL, totp_recovery = NULL WHERE id = ?');
   $stmt->bind_param('i', $uid);
   $stmt->execute();
@@ -377,7 +460,7 @@ function twofa_recodes(mysqli $conn): void {
   $stmt->execute();
   $row = $stmt->get_result()->fetch_assoc();
   if (!$row || empty($row['totp_enabled'])) fail('Two-factor is not enabled.');
-  if (!gk_totp_verify((string)$row['totp_secret'], $code)) fail('Enter a current code to regenerate recovery codes.');
+  gk_totp_check($conn, $uid, (string)$row['totp_secret'], $code, 'Enter a current code to regenerate recovery codes.');
   [$plain, $hashed] = gk_gen_recovery();
   $stmt = $conn->prepare('UPDATE users SET totp_recovery = ? WHERE id = ?');
   $stmt->bind_param('si', $hashed, $uid);
@@ -418,16 +501,20 @@ function gk_consume_recovery(mysqli $conn, int $uid, ?string $json, string $code
 }
 
 // ── Magic-link login (passwordless) ─────────────────────────────────────────
-const MAGIC_TTL_MINUTES = 15;
+// Customer convenience only. A link never signs in a staff account and never
+// stands in for two-factor: staff, and any client who has two-factor on, sign
+// in with password and code (K-027).
 
 function magic_request(mysqli $conn): void {
   $email = strtolower(str_field(body(), 'email', 200));
-  $stmt = $conn->prepare('SELECT id, name, status FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1');
+  $stmt = $conn->prepare('SELECT id, name, status, role, totp_enabled FROM users WHERE email = ? AND deleted_at IS NULL LIMIT 1');
   $stmt->bind_param('s', $email);
   $stmt->execute();
   $u = $stmt->get_result()->fetch_assoc();
-  // Always succeed (no account enumeration). Only actually send for active users.
-  if ($u && $u['status'] === 'active' && ($GLOBALS['SMTP_HOST'] ?? '') !== '') {
+  // Always succeed (no account enumeration). Only actually send for active
+  // client accounts without two-factor, the only accounts a link can sign in.
+  $eligible = $u && $u['status'] === 'active' && in_array($u['role'], MAGIC_ROLES, true) && empty($u['totp_enabled']);
+  if ($eligible && ($GLOBALS['SMTP_HOST'] ?? '') !== '') {
     $uid = (int)$u['id'];
     // Flood guard: max 3 in 15 min.
     $cnt = $conn->prepare('SELECT COUNT(*) AS c FROM magic_links WHERE user_id = ? AND created_at > (NOW() - INTERVAL 15 MINUTE)');
@@ -437,7 +524,8 @@ function magic_request(mysqli $conn): void {
       $token = new_token();
       $exp = (new DateTime('+' . MAGIC_TTL_MINUTES . ' minutes'))->format('Y-m-d H:i:s');
       $stmt = $conn->prepare('INSERT INTO magic_links (user_id, token, expires_at) VALUES (?, ?, ?)');
-      $stmt->bind_param('iss', $uid, $token, $exp);
+      $stored = token_hash($token);
+      $stmt->bind_param('iss', $uid, $stored, $exp);
       $stmt->execute();
       $appUrl = rtrim($GLOBALS['APP_URL'] ?? 'https://gakinz.com', '/');
       $link = "$appUrl/login#magic=$token";
@@ -458,26 +546,37 @@ function magic_consume(mysqli $conn): void {
   if ($token === '') fail('Invalid link.', 400);
   $stmt = $conn->prepare(
     'SELECT m.id, m.user_id FROM magic_links m
-     WHERE m.token = ? AND m.used_at IS NULL AND m.expires_at > NOW() LIMIT 1'
+     WHERE ' . token_where('m.token') . ' AND m.used_at IS NULL AND m.expires_at > NOW() LIMIT 1'
   );
-  $stmt->bind_param('s', $token);
+  [$th, $traw] = token_params($token);
+  $stmt->bind_param('ss', $th, $traw);
   $stmt->execute();
   $m = $stmt->get_result()->fetch_assoc();
   if (!$m) fail('This sign-in link is invalid or has expired.', 400);
   $uid = (int)$m['user_id'];
+  $mid = (int)$m['id'];
+
+  // Burn the link first, atomically. Only the request whose UPDATE changes the
+  // row may continue, so concurrent clicks cannot mint several sessions.
+  $upd = $conn->prepare('UPDATE magic_links SET used_at = NOW() WHERE id = ? AND used_at IS NULL AND expires_at > NOW()');
+  $upd->bind_param('i', $mid);
+  $upd->execute();
+  if ($upd->affected_rows !== 1) fail('This sign-in link is invalid or has expired.', 400);
 
   // Load the user (must still be active).
-  $stmt = $conn->prepare('SELECT id, name, email, role, client_id, status FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+  $stmt = $conn->prepare('SELECT id, name, email, role, client_id, status, totp_enabled FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1');
   $stmt->bind_param('i', $uid);
   $stmt->execute();
   $u = $stmt->get_result()->fetch_assoc();
   if (!$u || $u['status'] !== 'active') fail('This account is not active.', 403);
-
-  // Burn the link.
-  $upd = $conn->prepare('UPDATE magic_links SET used_at = NOW() WHERE id = ?');
-  $mid = (int)$m['id'];
-  $upd->bind_param('i', $mid);
-  $upd->execute();
+  if (!in_array($u['role'], MAGIC_ROLES, true)) {
+    audit($conn, $uid, 'login_magic_refused', 'role ' . $u['role']);
+    fail('Sign-in links are for client accounts. Please sign in with your password.', 403);
+  }
+  if (!empty($u['totp_enabled'])) {
+    audit($conn, $uid, 'login_magic_refused', 'two-factor enabled');
+    fail('This account uses two-factor authentication. Please sign in with your password and code.', 403);
+  }
 
   // Issue a session token (records device/IP like a normal login).
   $tok = new_token();
@@ -485,11 +584,13 @@ function magic_consume(mysqli $conn): void {
   $ua = mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 255);
   $ip = $_SERVER['REMOTE_ADDR'] ?? '';
   if ($stmt = @$conn->prepare('INSERT INTO auth_tokens (user_id, token, user_agent, ip, last_seen_at, expires_at) VALUES (?, ?, ?, ?, NOW(), ?)')) {
-    $stmt->bind_param('issss', $uid, $tok, $ua, $ip, $exp);
+    $stored = token_hash($tok);
+    $stmt->bind_param('issss', $uid, $stored, $ua, $ip, $exp);
     $stmt->execute();
   } else {
     $stmt = $conn->prepare('INSERT INTO auth_tokens (user_id, token, expires_at) VALUES (?, ?, ?)');
-    $stmt->bind_param('iss', $uid, $tok, $exp);
+    $stored = token_hash($tok);
+    $stmt->bind_param('iss', $uid, $stored, $exp);
     $stmt->execute();
   }
   audit($conn, $uid, 'login_magic', $u['email']);

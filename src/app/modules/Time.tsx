@@ -1,5 +1,9 @@
 import { useEffect, useRef, useState } from "react"
-import { Loader2, Play, Square, Plus, Trash2, RefreshCw, Check, X, Download } from "lucide-react"
+import { useLoad } from "@/hooks/use-load"
+import { Link } from "react-router-dom"
+import { AlertCircle, Clock, Loader2, Play, Square, Plus, Trash2, RefreshCw, Check, X, Download } from "lucide-react"
+import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/page-kit"
+import { TableSkeleton } from "@/app/components/TableSkeleton"
 import { toast } from "sonner"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { useAuth } from "@/store/auth.store"
@@ -23,12 +27,9 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { time, projects as projectsApi, type TimeEntry, type Project } from "@/lib/api"
+import { hoursMinutes } from "@/lib/format"
+import { canAccess } from "@/lib/access"
 
-function hm(minutes: number) {
-  const h = Math.floor(minutes / 60)
-  const m = minutes % 60
-  return h > 0 ? `${h}h ${m}m` : `${m}m`
-}
 function fmtDate(d: string) {
   return new Date(d.replace(" ", "T")).toLocaleDateString("en-GB", { day: "numeric", month: "short" })
 }
@@ -47,10 +48,10 @@ const APPROVER_ROLES = ["super_admin", "admin", "manager"]
 export default function Time() {
   const role = useAuth((s) => s.user?.role)
   const canApprove = !!role && APPROVER_ROLES.includes(role)
-  const [entries, setEntries] = useState<TimeEntry[]>([])
+  // A trainer may log time but has no Support screen, so sees the ticket number without a link.
+  const canOpenTickets = canAccess(role, "support")
+  const { data: entries, error, loading, reload: load, setData: setEntries } = useLoad<TimeEntry[]>(() => time.list(), [])
   const [projectList, setProjectList] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
 
   // Log form
   const [projectId, setProjectId] = useState("")
@@ -64,20 +65,7 @@ export default function Time() {
   const [elapsed, setElapsed] = useState(0) // seconds
   const tick = useRef<number | null>(null)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await time.list()
-    if (res.ok) {
-      setEntries(res.data)
-      setError(null)
-    } else {
-      setError(res.error)
-    }
-    setLoading(false)
-  }
-
   useEffect(() => {
-    load()
     projectsApi.list().then((r) => r.ok && setProjectList(r.data))
     return () => {
       if (tick.current) window.clearInterval(tick.current)
@@ -157,54 +145,43 @@ export default function Time() {
     downloadXlsx("gakinz-approved-timesheet.xlsx", timeHead, rows, "Timesheet")
   }
 
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Time</h1>
-          <p className="text-sm text-muted-foreground">
-            Approved billable hours against projects.
-            {pending > 0 && (
-              <span className="ml-2 rounded bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
-                {pending} awaiting approval
-              </span>
-            )}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportApprovedCsv} disabled={!entries.length}>
-            <Download className="mr-2 h-4 w-4" /> Approved CSV
-          </Button>
-          <Button variant="outline" size="sm" onClick={exportApprovedXlsx} disabled={!entries.length}>
-            <Download className="mr-2 h-4 w-4" /> XLSX
-          </Button>
-          <Button variant="outline" size="sm" onClick={load}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
-        </div>
-      </div>
+  const clock = `${String(Math.floor(elapsed / 3600)).padStart(2, "0")}:${String(Math.floor((elapsed % 3600) / 60)).padStart(2, "0")}:${String(elapsed % 60).padStart(2, "0")}`
 
-      {/* Weekly summary */}
-      <div className="grid gap-4 sm:grid-cols-3">
-        {[
-          { label: "Billable this week", value: hm(weekBillable) },
-          { label: "Non-billable", value: hm(weekNon) },
-          { label: "Utilisation", value: `${utilisation}%` },
-        ].map((s) => (
-          <div key={s.label} className="gk-app-card p-5">
-            <div className="text-2xl font-semibold text-primary">{s.value}</div>
-            <div className="mt-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">{s.label}</div>
-          </div>
-        ))}
-      </div>
+  return (
+    <div>
+      <PageHeader
+        title="Time"
+        subtitle="Approved billable hours against projects."
+        actions={
+          <>
+            <Button onClick={exportApprovedCsv} disabled={!entries.length}>
+              <Download /> Approved CSV
+            </Button>
+            <Button variant="outline" onClick={exportApprovedXlsx} disabled={!entries.length}>
+              <Download /> XLSX
+            </Button>
+            <Button variant="outline" onClick={load}>
+              <RefreshCw /> Refresh
+            </Button>
+          </>
+        }
+      />
+
+      {/* Weekly summary: approved time only */}
+      <StatGrid>
+        <StatTile label="Billable this week" value={hoursMinutes(weekBillable)} note="Approved entries" />
+        <StatTile label="Non-billable" value={hoursMinutes(weekNon)} note="Internal work" />
+        <StatTile label="Utilisation" value={`${utilisation}%`} note="Billable share of approved time" tone={utilisation > 0 ? "up" : undefined} />
+        <StatTile label="Awaiting approval" value={pending} note={pending === 1 ? "Entry" : "Entries"} />
+      </StatGrid>
 
       {/* Log entry */}
-      <div className="rounded-xl border border-border bg-card p-5">
-        <div className="flex flex-wrap items-end gap-3">
-          <div className="min-w-48 flex-1">
-            <Label>Project</Label>
+      <section className="mb-4 rounded-2xl border bg-card p-[18px]" aria-label="Log time">
+        <div className="grid items-end gap-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)_8rem_auto_auto]">
+          <div className="grid min-w-0 gap-1.5">
+            <Label htmlFor="tproj">Project</Label>
             <Select value={projectId} onValueChange={setProjectId}>
-              <SelectTrigger className="mt-1.5">
+              <SelectTrigger id="tproj" className="h-[42px]">
                 <SelectValue placeholder="Pick a project" />
               </SelectTrigger>
               <SelectContent>
@@ -216,60 +193,69 @@ export default function Time() {
               </SelectContent>
             </Select>
           </div>
-          <div className="min-w-48 flex-[2]">
+          <div className="grid min-w-0 gap-1.5">
             <Label htmlFor="tdesc">What did you do?</Label>
-            <Input id="tdesc" value={desc} onChange={(e) => setDesc(e.target.value)} className="mt-1.5" />
+            <Input id="tdesc" value={desc} onChange={(e) => setDesc(e.target.value)} />
           </div>
-          <div className="w-28">
+          <div className="grid min-w-0 gap-1.5">
             <Label htmlFor="tmin">Minutes</Label>
-            <Input id="tmin" type="number" value={minutes} onChange={(e) => setMinutes(e.target.value)} className="mt-1.5" />
+            <Input id="tmin" type="number" inputMode="numeric" value={minutes} onChange={(e) => setMinutes(e.target.value)} />
           </div>
-          <div className="flex items-center gap-2 pb-2.5">
+          <div className="flex min-h-[42px] items-center gap-2">
             <Switch id="billable" checked={billable} onCheckedChange={setBillable} />
             <Label htmlFor="billable" className="cursor-pointer">Billable</Label>
           </div>
-          <Button onClick={log} disabled={saving}>
-            {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Plus className="mr-2 h-4 w-4" />}
-            Log
-          </Button>
-        </div>
-
-        {/* Timer */}
-        <div className="mt-4 flex items-center gap-3 border-t border-border pt-4">
-          <span className="font-mono text-lg tabular-nums">
-            {String(Math.floor(elapsed / 3600)).padStart(2, "0")}:
-            {String(Math.floor((elapsed % 3600) / 60)).padStart(2, "0")}:
-            {String(elapsed % 60).padStart(2, "0")}
-          </span>
-          {running ? (
-            <Button variant="outline" size="sm" onClick={stopTimer}>
-              <Square className="mr-2 h-4 w-4" /> Stop &amp; fill minutes
+          <div className="flex flex-wrap gap-2">
+            {running ? (
+              <Button variant="outline" onClick={stopTimer}>
+                <Square />
+                <span className="font-mono tabular-nums">{clock}</span> Stop and fill minutes
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={startTimer}>
+                <Play /> Start timer
+              </Button>
+            )}
+            <Button onClick={log} disabled={saving}>
+              {saving ? <Loader2 className="animate-spin" /> : <Plus />}
+              Log
             </Button>
-          ) : (
-            <Button variant="outline" size="sm" onClick={startTimer}>
-              <Play className="mr-2 h-4 w-4" /> Start timer
-            </Button>
-          )}
+          </div>
         </div>
-      </div>
+      </section>
 
       {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the time endpoint and DB must be live on the server.
+        <div role="alert" className="mb-4 flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-bad" />
+          <div className="min-w-[min(100%,200px)] flex-1">
+            <p className="font-semibold">Could not load time entries.</p>
+            <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
+              {error}. The time endpoint and database must be live on the server.
+            </p>
+          </div>
+          <Button variant="outline" onClick={load}>
+            <RefreshCw /> Try again
+          </Button>
         </div>
       )}
 
       {/* Entries */}
-      <div className="rounded-xl border border-border bg-card">
-        {loading ? (
-          <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading entries…
+      {loading ? (
+        <div className="overflow-hidden rounded-[14px] border bg-card">
+          <TableSkeleton rows={5} cols={6} />
+        </div>
+      ) : entries.length === 0 ? (
+        !error && (
+          <div className="grid place-items-center gap-2.5 rounded-2xl border border-dashed border-line-strong bg-card px-5 py-14 text-center">
+            <span aria-hidden className="grid h-12 w-12 place-items-center rounded-[14px] bg-acc-soft text-acc">
+              <Clock className="h-5 w-5" />
+            </span>
+            <h2 className="font-display text-[1.2rem] font-semibold">No time logged yet</h2>
+            <p className="max-w-[46ch] text-muted-foreground">Use the timer or enter minutes above.</p>
           </div>
-        ) : entries.length === 0 ? (
-          <div className="p-10 text-center text-sm text-muted-foreground">
-            No time logged yet. Use the timer or enter minutes above.
-          </div>
-        ) : (
+        )
+      ) : (
+        <div className="overflow-hidden rounded-[14px] border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
@@ -277,50 +263,53 @@ export default function Time() {
                 <TableHead>Project</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Who</TableHead>
-                <TableHead>Billable</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead className="text-right">Time</TableHead>
-                <TableHead></TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>
+                  <span className="sr-only">Actions</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {entries.map((e) => (
                 <TableRow key={e.id}>
-                  <TableCell className="whitespace-nowrap text-muted-foreground">{fmtDate(e.entry_date)}</TableCell>
-                  <TableCell className="font-medium">{e.project_name}</TableCell>
-                  <TableCell className="text-muted-foreground">{e.description || "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{e.user_name || "—"}</TableCell>
-                  <TableCell>
-                    {e.billable ? (
-                      <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">Billable</span>
-                    ) : (
-                      <span className="rounded bg-muted px-2 py-0.5 text-xs text-muted-foreground">Internal</span>
-                    )}
+                  <TableCell className="whitespace-nowrap">{fmtDate(e.entry_date)}</TableCell>
+                  <TableCell className="min-w-[140px]">
+                    {e.project_name}
+                    {e.ticket_id ? (
+                      <span className="block text-[13px] text-muted-foreground">
+                        {canOpenTickets ? (
+                          <Link to={`/app/support?ticket=${e.ticket_id}`} className="underline underline-offset-2 hover:text-foreground">
+                            Ticket #{e.ticket_id}
+                          </Link>
+                        ) : (
+                          <>Ticket #{e.ticket_id}</>
+                        )}
+                      </span>
+                    ) : null}
                   </TableCell>
+                  <TableCell className="min-w-[180px]">{e.description || <span className="text-muted-foreground">None</span>}</TableCell>
+                  <TableCell className="whitespace-nowrap">{e.user_name || <span className="text-muted-foreground">Unknown</span>}</TableCell>
+                  <TableCell className="whitespace-nowrap text-right font-mono">{hoursMinutes(e.minutes)}</TableCell>
+                  <TableCell>{e.billable ? "Billable" : <span className="text-muted-foreground">Internal</span>}</TableCell>
                   <TableCell>
-                    {e.status === "approved" ? (
-                      <span className="rounded bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">Approved</span>
-                    ) : e.status === "rejected" ? (
-                      <span className="rounded bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">Rejected</span>
-                    ) : (
-                      <span className="rounded bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">Pending</span>
-                    )}
+                    <StatusBadge status={e.status === "approved" ? "approved" : e.status === "rejected" ? "rejected" : "pending"} />
                   </TableCell>
-                  <TableCell className="text-right font-medium">{hm(e.minutes)}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">
                       {canApprove && e.status !== "approved" && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-emerald-600" onClick={() => setApproval(e.id, true)} aria-label="Approve entry" title="Approve">
-                          <Check className="h-3.5 w-3.5" />
+                        <Button variant="ghost" size="sm" onClick={() => setApproval(e.id, true)} aria-label="Approve entry">
+                          <Check /> Approve
                         </Button>
                       )}
                       {canApprove && e.status !== "rejected" && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setApproval(e.id, false)} aria-label="Reject entry" title="Reject">
-                          <X className="h-3.5 w-3.5" />
+                        <Button variant="ghost" size="icon" className="h-9 w-9 text-bad" onClick={() => setApproval(e.id, false)} aria-label="Reject entry" title="Reject">
+                          <X />
                         </Button>
                       )}
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(e.id)} aria-label="Delete entry">
-                        <Trash2 className="h-3.5 w-3.5" />
+                      <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => remove(e.id)} aria-label="Delete entry" title="Delete">
+                        <Trash2 />
                       </Button>
                     </div>
                   </TableCell>
@@ -328,8 +317,8 @@ export default function Time() {
               ))}
             </TableBody>
           </Table>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1,16 +1,19 @@
-import { useEffect, useState } from "react"
-import { Loader2, Plus, RefreshCw, ShieldCheck, Monitor, LogOut, Trash2 } from "lucide-react"
+import { useEffect, useState, type ReactNode } from "react"
+import { useLoad } from "@/hooks/use-load"
+import { AlertCircle, FileJson, Loader2, Plus, RefreshCw, ShieldCheck, Trash2 } from "lucide-react"
+import { saveAs } from "file-saver"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import {
   Select,
@@ -28,9 +31,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { users, audit, auth, announcements, integrations, clients as clientsApi, type ManagedUser, type AuditEntry, type Client, type Session, type Announcement, type IntegrationStatus } from "@/lib/api"
+import { PageHeader, StatusBadge } from "@/app/components/page-kit"
+import { TableSkeleton } from "@/app/components/TableSkeleton"
+import { users, audit, announcements, integrations, privacy, downloadName, clients as clientsApi, type RetentionReport, type ManagedUser, type AuditEntry, type Client, type Announcement, type IntegrationStatus } from "@/lib/api"
 import { useAuth, type Role } from "@/store/auth.store"
-import { cn } from "@/lib/utils"
+import { exportOutcome, PRIVACY_NOT_AVAILABLE, RETENTION_NOT_AVAILABLE, retentionState } from "@/app/modules/privacyToolsModel"
+import { TwoFactorPanel, SessionsPanel } from "@/app/components/AccountSecurity"
 
 const ROLES: Role[] = ["super_admin", "admin", "manager", "trainer", "editor", "employee", "client"]
 const ROLE_LABEL: Record<Role, string> = {
@@ -52,69 +58,107 @@ function fmt(d: string) {
   })
 }
 
-export default function Platform() {
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .map((w) => w[0])
+    .filter(Boolean)
+    .slice(0, 2)
+    .join("")
+    .toUpperCase()
+
+/** The prototype's `.err` block with a "Try again" action. */
+function LoadError({ what, detail, onRetry }: { what: string; detail: string; onRetry: () => void }) {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Platform</h1>
-        <p className="text-sm text-muted-foreground">Team, roles and the audit trail.</p>
+    <div role="alert" className="mb-4 flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
+      <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-bad" />
+      <div className="min-w-[min(100%,200px)] flex-1">
+        <p className="font-semibold">Could not load {what}.</p>
+        <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">{detail}</p>
       </div>
-      <Tabs defaultValue="team">
-        <TabsList>
+      <Button variant="outline" onClick={onRetry}>
+        <RefreshCw /> Try again
+      </Button>
+    </div>
+  )
+}
+
+/** A muted one-line description with a Refresh action, above a tab's content. */
+function TabBar({ children, onRefresh }: { children?: ReactNode; onRefresh: () => void }) {
+  return (
+    <div className="mb-3.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+      <p className="min-w-0 flex-1 basis-[240px] text-muted-foreground">{children}</p>
+      <Button variant="outline" onClick={onRefresh}>
+        <RefreshCw /> Refresh
+      </Button>
+    </div>
+  )
+}
+
+export default function Platform() {
+  const [tab, setTab] = useState("team")
+  const [addOpen, setAddOpen] = useState(false)
+
+  return (
+    <div>
+      <PageHeader
+        title="Settings"
+        subtitle="Team, roles and the audit trail."
+        actions={
+          <Button
+            onClick={() => {
+              setTab("team")
+              setAddOpen(true)
+            }}
+          >
+            <Plus /> Add user
+          </Button>
+        }
+      />
+      <Tabs value={tab} onValueChange={setTab}>
+        <TabsList className="mb-5 flex w-full">
           <TabsTrigger value="team">Team &amp; roles</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="announcements">Announcements</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
           <TabsTrigger value="sessions">My sessions</TabsTrigger>
           <TabsTrigger value="audit">Audit log</TabsTrigger>
+          <TabsTrigger value="privacy">Privacy</TabsTrigger>
         </TabsList>
-        <TabsContent value="team" className="mt-4">
-          <TeamTab />
+        <TabsContent value="team" className="mt-0">
+          <TeamTab open={addOpen} setOpen={setAddOpen} />
         </TabsContent>
-        <TabsContent value="security" className="mt-4">
-          <SecurityTab />
+        <TabsContent value="security" className="mt-0">
+          <TwoFactorPanel />
         </TabsContent>
-        <TabsContent value="announcements" className="mt-4">
+        <TabsContent value="announcements" className="mt-0">
           <AnnouncementsTab />
         </TabsContent>
-        <TabsContent value="integrations" className="mt-4">
+        <TabsContent value="integrations" className="mt-0">
           <IntegrationsTab />
         </TabsContent>
-        <TabsContent value="sessions" className="mt-4">
-          <SessionsTab />
+        <TabsContent value="sessions" className="mt-0">
+          <SessionsPanel />
         </TabsContent>
-        <TabsContent value="audit" className="mt-4">
+        <TabsContent value="audit" className="mt-0">
           <AuditTab />
+        </TabsContent>
+        <TabsContent value="privacy" className="mt-0">
+          <PrivacyTab />
         </TabsContent>
       </Tabs>
     </div>
   )
 }
 
-function TeamTab() {
+function TeamTab({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const me = useAuth((s) => s.user)
-  const [items, setItems] = useState<ManagedUser[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [open, setOpen] = useState(false)
+  const { data: items, error, loading, reload: load, setData: setItems } = useLoad<ManagedUser[]>(() => users.list(), [])
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "employee" as Role, client_id: "" })
   const [clientList, setClientList] = useState<Client[]>([])
   const [saving, setSaving] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await users.list()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else {
-      setError(res.error)
-    }
-    setLoading(false)
-  }
-
   useEffect(() => {
-    load()
     // Needed to bind a `client`-role login to its client record.
     clientsApi.list().then((r) => r.ok && setClientList(r.data))
   }, [])
@@ -160,7 +204,7 @@ function TeamTab() {
     const res = await users.invite({ name: form.name, email: form.email, role: form.role })
     setSaving(false)
     if (res.ok) {
-      toast.success("Invite sent — they'll get a set-password link by email.")
+      toast.success("Invite sent. They'll get a set-password link by email.")
       setForm({ name: "", email: "", password: "", role: "employee", client_id: "" })
       setOpen(false)
       load()
@@ -189,107 +233,104 @@ function TeamTab() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={load}>
-          <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-        </Button>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm">
-              <Plus className="mr-2 h-4 w-4" /> Add user
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>New user</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
+    <div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add user</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="uname">Name</Label>
+              <Input id="uname" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="mt-1.5" />
+            </div>
+            <div>
+              <Label htmlFor="uemail">Email</Label>
+              <Input id="uemail" type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} className="mt-1.5" />
+            </div>
+            <div>
+              <Label htmlFor="upass">Temporary password</Label>
+              <Input id="upass" type="text" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} className="mt-1.5" placeholder="8+ characters" />
+            </div>
+            <div>
+              <Label htmlFor="platform-sel1">Role</Label>
+              <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v as Role }))}>
+                <SelectTrigger id="platform-sel1" className="mt-1.5">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ROLES.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      {ROLE_LABEL[r]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {form.role === "client" && (
               <div>
-                <Label htmlFor="uname">Name</Label>
-                <Input id="uname" value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} className="mt-1.5" />
-              </div>
-              <div>
-                <Label htmlFor="uemail">Email</Label>
-                <Input id="uemail" type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} className="mt-1.5" />
-              </div>
-              <div>
-                <Label htmlFor="upass">Temporary password</Label>
-                <Input id="upass" type="text" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} className="mt-1.5" placeholder="8+ characters" />
-              </div>
-              <div>
-                <Label>Role</Label>
-                <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v as Role }))}>
-                  <SelectTrigger className="mt-1.5">
-                    <SelectValue />
+                <Label htmlFor="platform-sel2">Client</Label>
+                <Select value={form.client_id} onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}>
+                  <SelectTrigger id="platform-sel2" className="mt-1.5">
+                    <SelectValue placeholder="Which client?" />
                   </SelectTrigger>
                   <SelectContent>
-                    {ROLES.map((r) => (
-                      <SelectItem key={r} value={r}>
-                        {ROLE_LABEL[r]}
+                    {clientList.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>
+                        {c.company}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="mt-1.5 text-[13px] text-muted-foreground">
+                  A client account only ever sees its own client’s portal.
+                </p>
               </div>
-              {form.role === "client" && (
-                <div>
-                  <Label>Client</Label>
-                  <Select value={form.client_id} onValueChange={(v) => setForm((f) => ({ ...f, client_id: v }))}>
-                    <SelectTrigger className="mt-1.5">
-                      <SelectValue placeholder="Which client?" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {clientList.map((c) => (
-                        <SelectItem key={c.id} value={String(c.id)}>
-                          {c.company}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="mt-1.5 text-xs text-muted-foreground">
-                    This account will only see this client’s portal.
-                  </p>
-                </div>
-              )}
-            </div>
-            <DialogFooter className="gap-2 sm:gap-2">
-              <Button variant="outline" onClick={inviteUser} disabled={saving} title="Email a set-password link instead of setting a password">
-                Send invite
-              </Button>
-              <Button onClick={createUser} disabled={saving}>
-                {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create user
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </div>
-
-      {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the users endpoint and DB must be live, and you must be an admin.
-        </div>
-      )}
-
-      <div className="rounded-xl border border-border bg-card">
-        {loading ? (
-          <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading team…
+            )}
           </div>
-        ) : items.length === 0 ? (
-          <div className="p-10 text-center text-sm text-muted-foreground">No users to show.</div>
-        ) : (
+          <DialogFooter className="flex-wrap gap-2 sm:gap-2">
+            <Button variant="outline" onClick={inviteUser} disabled={saving} title="Email a set-password link instead of setting a password">
+              Send invite
+            </Button>
+            <Button onClick={createUser} disabled={saving}>
+              {saving && <Loader2 className="animate-spin" />}
+              Create user
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <TabBar onRefresh={load}>Everyone who can sign in, their role and their internal cost rate.</TabBar>
+
+      {error && <LoadError what="the team" detail={`${error}. The users endpoint and database must be live, and you must be an admin.`} onRetry={load} />}
+
+      {loading ? (
+        <div className="overflow-hidden rounded-[14px] border bg-card">
+          <TableSkeleton rows={4} cols={5} />
+        </div>
+      ) : items.length === 0 ? (
+        !error && (
+          <div className="grid place-items-center gap-2.5 rounded-2xl border border-dashed border-line-strong bg-card px-5 py-14 text-center">
+            <h2 className="font-display text-[1.2rem] font-semibold">No users to show</h2>
+            <p className="max-w-[46ch] text-muted-foreground">Add the first team member.</p>
+            <Button className="mt-1" onClick={() => setOpen(true)}>
+              <Plus /> Add user
+            </Button>
+          </div>
+        )
+      ) : (
+        <div className="overflow-hidden rounded-[14px] border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>Cost £/h</TableHead>
+                <TableHead className="text-right">Cost £/h</TableHead>
                 <TableHead>2FA</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead>
+                  <span className="sr-only">Action</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -297,52 +338,48 @@ function TeamTab() {
                 const isSelf = me?.id === u.id
                 return (
                   <TableRow key={u.id}>
-                    <TableCell className="font-medium">
-                      {u.name}
-                      {isSelf && <span className="ml-2 text-xs text-muted-foreground">(you)</span>}
+                    <TableCell className="min-w-[220px]">
+                      <span className="flex min-w-0 items-center gap-2.5">
+                        <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-acc-soft text-xs font-bold text-acc">
+                          {initials(u.name)}
+                        </span>
+                        <span className="min-w-0">
+                          <b className="block font-semibold [overflow-wrap:anywhere]">
+                            {u.name}
+                            {isSelf && <span className="ml-1.5 text-xs font-normal text-muted-foreground">(you)</span>}
+                          </b>
+                          <small className="block text-[12.5px] leading-snug text-muted-foreground [overflow-wrap:anywhere]">{u.email}</small>
+                        </span>
+                      </span>
                     </TableCell>
-                    <TableCell className="text-muted-foreground">{u.email}</TableCell>
                     <TableCell>
                       <Select value={u.role} onValueChange={(v) => changeRole(u, v as Role)} disabled={isSelf}>
-                        <SelectTrigger className="h-8 w-36 text-xs">
+                        <SelectTrigger className="h-9 w-36 text-[13px]" aria-label={`Role for ${u.name}`}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           {ROLES.map((r) => (
-                            <SelectItem key={r} value={r} className="text-xs">
+                            <SelectItem key={r} value={r}>
                               {ROLE_LABEL[r]}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </TableCell>
-                    <TableCell>
-                      <RateCell user={u} />
+                    <TableCell className="text-right">
+                      <RateCell
+                        user={u}
+                        onSaved={(rate) => setItems((xs) => xs.map((x) => (x.id === u.id ? { ...x, cost_rate: rate } : x)))}
+                      />
                     </TableCell>
                     <TableCell>
-                      {u.totp_enabled ? (
-                        <span className="rounded bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">On</span>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">Off</span>
-                      )}
+                      <Badge variant={u.totp_enabled ? "ok" : "warn"}>{u.totp_enabled ? "On" : "Off"}</Badge>
                     </TableCell>
                     <TableCell>
-                      <span
-                        className={cn(
-                          "rounded px-2 py-0.5 text-xs font-medium",
-                          u.status === "active" ? "bg-primary/10 text-primary" : "bg-destructive/10 text-destructive",
-                        )}
-                      >
-                        {u.status}
-                      </span>
+                      <StatusBadge status={u.status} />
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        disabled={isSelf}
-                        onClick={() => toggleStatus(u)}
-                      >
+                      <Button variant="ghost" size="sm" disabled={isSelf} onClick={() => toggleStatus(u)}>
                         {u.status === "active" ? "Suspend" : "Reactivate"}
                       </Button>
                     </TableCell>
@@ -351,14 +388,16 @@ function TeamTab() {
               })}
             </TableBody>
           </Table>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
 
 // Inline editable internal cost rate (£/h) for profitability reporting.
-function RateCell({ user }: { user: ManagedUser }) {
+// The saved rate goes back to the parent list through onSaved rather than by
+// writing to the user prop.
+function RateCell({ user, onSaved }: { user: ManagedUser; onSaved: (rate: number) => void }) {
   const [value, setValue] = useState(String(user.cost_rate ?? 0))
   const [saving, setSaving] = useState(false)
   const save = async () => {
@@ -371,11 +410,12 @@ function RateCell({ user }: { user: ManagedUser }) {
       toast.error(res.error || "Could not save the rate.")
       setValue(String(user.cost_rate ?? 0))
     } else {
-      user.cost_rate = n
+      onSaved(n)
     }
   }
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center justify-end gap-1">
+      {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
       <Input
         type="number"
         min="0"
@@ -384,159 +424,21 @@ function RateCell({ user }: { user: ManagedUser }) {
         onChange={(e) => setValue(e.target.value)}
         onBlur={save}
         onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
-        className="h-8 w-20 text-xs"
+        aria-label={`Cost per hour for ${user.name}`}
+        className="h-9 w-[5.5rem] text-right font-mono text-[13px] tabular-nums"
       />
-      {saving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
-    </div>
-  )
-}
-
-// Self-service two-factor (TOTP). Any signed-in user can enable/disable their own.
-function SecurityTab() {
-  const me = useAuth((s) => s.user)
-  const [enabled, setEnabled] = useState(false)
-  const [secret, setSecret] = useState("")
-  const [otpauth, setOtpauth] = useState("")
-  const [code, setCode] = useState("")
-  const [busy, setBusy] = useState(false)
-  const [codes, setCodes] = useState<string[]>([]) // recovery codes shown once
-
-  useEffect(() => {
-    // Read current 2FA state from the team list (admins) or assume off otherwise.
-    users.list().then((r) => {
-      if (r.ok && me) {
-        const self = r.data.find((u) => u.id === me.id)
-        if (self) setEnabled(self.totp_enabled)
-      }
-    })
-  }, [me])
-
-  const startSetup = async () => {
-    setBusy(true)
-    const res = await auth.twofaSetup()
-    setBusy(false)
-    if (res.ok) {
-      setSecret(res.data.secret)
-      setOtpauth(res.data.otpauth)
-    } else toast.error(res.error || "Could not start setup.")
-  }
-  const enable = async () => {
-    setBusy(true)
-    const res = await auth.twofaEnable(code.trim())
-    setBusy(false)
-    if (res.ok) {
-      setEnabled(true)
-      setSecret("")
-      setOtpauth("")
-      setCode("")
-      setCodes(res.data.recovery_codes || [])
-      toast.success("Two-factor enabled.")
-    } else toast.error(res.error || "Could not enable 2FA.")
-  }
-  const disable = async () => {
-    setBusy(true)
-    const res = await auth.twofaDisable(code.trim())
-    setBusy(false)
-    if (res.ok) {
-      setEnabled(false)
-      setCode("")
-      setCodes([])
-      toast.success("Two-factor disabled.")
-    } else toast.error(res.error || "Could not disable 2FA.")
-  }
-  const regen = async () => {
-    setBusy(true)
-    const res = await auth.twofaRecodes(code.trim())
-    setBusy(false)
-    if (res.ok) {
-      setCodes(res.data.recovery_codes || [])
-      setCode("")
-      toast.success("New recovery codes generated. Old ones no longer work.")
-    } else toast.error(res.error || "Could not regenerate codes.")
-  }
-
-  return (
-    <div className="max-w-xl space-y-4">
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold">Two-factor authentication</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Add a time-based code (Google Authenticator, 1Password, Authy…) to your sign-in.
-        </p>
-
-        {enabled ? (
-          <div className="mt-4 space-y-3">
-            <span className="inline-flex items-center gap-1 rounded bg-accent px-2 py-0.5 text-xs font-medium text-accent-foreground">
-              <ShieldCheck className="h-3 w-3" /> Enabled
-            </span>
-            <div className="flex items-end gap-2">
-              <div>
-                <Label htmlFor="dcode">Current code</Label>
-                <Input id="dcode" value={code} onChange={(e) => setCode(e.target.value)} className="mt-1.5 w-40" placeholder="123456" />
-              </div>
-              <Button variant="outline" onClick={regen} disabled={busy}>Regenerate codes</Button>
-              <Button variant="outline" onClick={disable} disabled={busy}>
-                {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Disable
-              </Button>
-            </div>
-          </div>
-        ) : !secret ? (
-          <Button className="mt-4" onClick={startSetup} disabled={busy}>
-            {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Set up two-factor
-          </Button>
-        ) : (
-          <div className="mt-4 space-y-3">
-            <p className="text-sm">Add this secret to your authenticator app, then enter the 6-digit code to confirm:</p>
-            <code className="block break-all rounded bg-muted px-3 py-2 text-sm">{secret}</code>
-            <a href={otpauth} className="text-xs text-primary hover:underline">Open in authenticator app →</a>
-            <div className="flex items-end gap-2">
-              <div>
-                <Label htmlFor="ecode">Code</Label>
-                <Input id="ecode" value={code} onChange={(e) => setCode(e.target.value)} className="mt-1.5 w-40" placeholder="123456" />
-              </div>
-              <Button onClick={enable} disabled={busy}>
-                {busy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Enable
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {codes.length > 0 && (
-        <div className="rounded-xl border border-amber-300/60 bg-amber-50 p-5 dark:border-amber-500/30 dark:bg-amber-950/30">
-          <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">Save your recovery codes</h3>
-          <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">
-            Each works once if you lose your authenticator. Stored hashed — they won't be shown again.
-          </p>
-          <div className="mt-3 grid grid-cols-2 gap-2 font-mono text-sm">
-            {codes.map((c) => (
-              <code key={c} className="rounded bg-background px-2 py-1 text-center">{c}</code>
-            ))}
-          </div>
-          <Button variant="outline" size="sm" className="mt-3" onClick={() => navigator.clipboard?.writeText(codes.join("\n"))}>
-            Copy all
-          </Button>
-        </div>
-      )}
     </div>
   )
 }
 
 // Studio-wide announcements (managers+ post; everyone sees them on the dashboard).
 function AnnouncementsTab() {
-  const [items, setItems] = useState<Announcement[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: items, loading, reload: load, setData: setItems } = useLoad<Announcement[]>(() => announcements.list(), [])
   const [title, setTitle] = useState("")
   const [body, setBody] = useState("")
   const [level, setLevel] = useState("info")
   const [saving, setSaving] = useState(false)
 
-  const load = async () => {
-    setLoading(true)
-    const res = await announcements.list()
-    if (res.ok) setItems(res.data)
-    setLoading(false)
-  }
-  useEffect(() => { load() }, [])
 
   const post = async () => {
     if (!title.trim()) return toast.error("A title is required.")
@@ -557,54 +459,65 @@ function AnnouncementsTab() {
   }
 
   return (
-    <div className="max-w-2xl space-y-4">
-      <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold">Post an announcement</h3>
-        <div className="mt-3 space-y-3">
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Title" />
-          <Input value={body} onChange={(e) => setBody(e.target.value)} placeholder="Message (optional)" />
-          <div className="flex items-center gap-2">
+    <div className="grid max-w-3xl gap-4">
+      <section className="rounded-2xl border bg-card p-[18px]" aria-label="Post an announcement">
+        <div className="grid gap-3.5">
+          <div className="grid gap-1.5">
+            <Label htmlFor="atitle">Title</Label>
+            <Input id="atitle" value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="abody">Message</Label>
+            <Textarea id="abody" rows={4} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Optional" />
+          </div>
+          <div className="grid gap-1.5">
+            <Label htmlFor="alevel">Level</Label>
             <Select value={level} onValueChange={setLevel}>
-              <SelectTrigger className="h-9 w-36"><SelectValue /></SelectTrigger>
+              <SelectTrigger id="alevel" className="h-[42px] sm:w-48"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="info">Info</SelectItem>
                 <SelectItem value="warning">Warning</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div>
             <Button onClick={post} disabled={saving}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Post
+              {saving && <Loader2 className="animate-spin" />} Post
             </Button>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="rounded-xl border border-border bg-card">
-        {loading ? (
-          <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading…
-          </div>
-        ) : items.length === 0 ? (
-          <div className="p-8 text-center text-sm text-muted-foreground">No announcements.</div>
-        ) : (
-          <ul className="divide-y">
-            {items.map((a) => (
-              <li key={a.id} className="flex items-start justify-between gap-3 px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium">
-                    {a.level === "warning" && <span className="mr-2 rounded bg-amber-500/15 px-1.5 py-0.5 text-xs text-amber-700 dark:text-amber-300">warning</span>}
-                    {a.title}
-                  </p>
-                  {a.body && <p className="mt-0.5 text-sm text-muted-foreground">{a.body}</p>}
-                  <p className="mt-0.5 text-xs text-muted-foreground">{a.author || "—"} · {fmt(a.created_at)}</p>
+      <section className="min-w-0 rounded-2xl border bg-card">
+        <h2 className="px-[18px] pb-3 pt-4 font-display text-[1.05rem] font-semibold tracking-[-0.01em]">Posted</h2>
+        <div className="px-[18px] pb-[18px]">
+          {loading ? (
+            <TableSkeleton rows={3} cols={2} className="p-0" />
+          ) : items.length === 0 ? (
+            <p className="py-2 text-muted-foreground">No announcements.</p>
+          ) : (
+            <div>
+              {items.map((a) => (
+                <div key={a.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-t py-3 first:border-t-0">
+                  <div className="min-w-0">
+                    <p className="flex flex-wrap items-center gap-2 font-semibold [overflow-wrap:anywhere]">
+                      {a.level === "warning" && <Badge variant="warn">Warning</Badge>}
+                      {a.title}
+                    </p>
+                    {a.body && <p className="mt-0.5 text-sm text-muted-foreground [overflow-wrap:anywhere]">{a.body}</p>}
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {a.author || "Unknown"} · {fmt(a.created_at)}
+                    </p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-bad" onClick={() => remove(a.id)} aria-label="Delete announcement" title="Delete">
+                    <Trash2 />
+                  </Button>
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(a.id)} aria-label="Delete announcement">
-                  <Trash2 className="h-3.5 w-3.5" />
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
     </div>
   )
 }
@@ -629,72 +542,51 @@ const INTEGRATIONS: { key: keyof IntegrationStatus; label: string; note: string 
 ]
 
 function IntegrationsTab() {
-  const [status, setStatus] = useState<IntegrationStatus | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const load = async () => {
-    setLoading(true)
-    const res = await integrations.status()
-    if (res.ok) {
-      setStatus(res.data)
-      setError(null)
-    } else setError(res.error)
-    setLoading(false)
-  }
-  useEffect(() => { load() }, [])
+  const { data: status, error, loading, reload: load } = useLoad<IntegrationStatus | null>(() => integrations.status(), null)
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          Connection status of external services. Keys live only in server <code>config.php</code> — never shown here.
-        </p>
-        <Button variant="outline" size="sm" onClick={load}>
-          <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-        </Button>
-      </div>
+    <div>
+      <TabBar onRefresh={load}>
+        Connection status of external services. Keys live only in the server’s <code className="font-mono text-[13px]">config.php</code> and are never shown here.
+      </TabBar>
 
-      {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the integrations endpoint must be live, and you must be an admin.
-        </div>
-      )}
+      {error && <LoadError what="integrations" detail={`${error}. The integrations endpoint must be live, and you must be an admin.`} onRetry={load} />}
 
       {loading ? (
-        <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin" /> Loading…
+        <div role="status" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <div key={i} className="h-[118px] animate-pulse rounded-2xl border bg-card" />
+          ))}
+          <span className="sr-only">Loading…</span>
         </div>
       ) : (
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {INTEGRATIONS.map((i) => {
             const on = !!status?.[i.key]
             return (
-              <div key={i.key} className="flex items-center justify-between rounded-xl border border-border bg-card p-4">
-                <div>
-                  <p className="text-sm font-medium">{i.label}</p>
-                  <p className="text-xs text-muted-foreground">{i.note}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  {i.key === "slack" && on && (
+              <div key={i.key} className="grid min-w-0 content-start gap-2.5 rounded-2xl border bg-card p-[18px]">
+                <span className="flex flex-wrap items-start justify-between gap-2">
+                  <b className="min-w-0 font-semibold [overflow-wrap:anywhere]">{i.label}</b>
+                  <Badge variant={on ? "ok" : "secondary"}>{on ? "Connected" : "Not set"}</Badge>
+                </span>
+                <p className="text-[13px] text-muted-foreground">{i.note}</p>
+                <p className="text-[13px] text-muted-foreground">
+                  {on ? "Key stored on the server. Never shown here." : "Add the key on the server to switch this on."}
+                </p>
+                {i.key === "slack" && on && (
+                  <div>
                     <Button
-                      variant="ghost"
-                      size="sm"
+                      variant="outline"
                       onClick={async () => {
                         const r = await integrations.slackTest()
-                        r.ok ? toast.success("Posted to Slack.") : toast.error(r.error || "Slack test failed.")
+                        if (r.ok) toast.success("Posted to Slack.")
+                        else toast.error(r.error || "Slack test failed.")
                       }}
                     >
                       Test
                     </Button>
-                  )}
-                  <span className={cn(
-                    "rounded px-2 py-0.5 text-xs font-medium",
-                    on ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300" : "bg-muted text-muted-foreground",
-                  )}>
-                    {on ? "Connected" : "Not set"}
-                  </span>
-                </div>
+                  </div>
+                )}
               </div>
             )
           })}
@@ -704,152 +596,27 @@ function IntegrationsTab() {
   )
 }
 
-// Best-effort, dependency-free user-agent → friendly device label.
-function deviceLabel(ua: string | null): string {
-  if (!ua) return "Unknown device"
-  const browser = /Edg/.test(ua) ? "Edge" : /Chrome/.test(ua) ? "Chrome" : /Firefox/.test(ua) ? "Firefox" : /Safari/.test(ua) ? "Safari" : "Browser"
-  const os = /Windows/.test(ua) ? "Windows" : /Mac OS X|Macintosh/.test(ua) ? "macOS" : /iPhone|iPad|iOS/.test(ua) ? "iOS" : /Android/.test(ua) ? "Android" : /Linux/.test(ua) ? "Linux" : ""
-  return os ? `${browser} · ${os}` : browser
-}
-
-function SessionsTab() {
-  const [items, setItems] = useState<Session[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-  const [busyId, setBusyId] = useState<number | null>(null)
-
-  const load = async () => {
-    setLoading(true)
-    const res = await auth.sessions()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else {
-      setError(res.error)
-    }
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
-
-  const revoke = async (s: Session) => {
-    setBusyId(s.id)
-    const res = await auth.revokeSession(s.id)
-    setBusyId(null)
-    if (res.ok) {
-      setItems((xs) => xs.filter((x) => x.id !== s.id))
-      toast.success("Session signed out.")
-    } else {
-      toast.error(res.error || "Could not revoke the session.")
-    }
-  }
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Monitor className="h-4 w-4" /> Devices currently signed in to your account.
-        </p>
-        <Button variant="outline" size="sm" onClick={load}>
-          <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-        </Button>
-      </div>
-
-      {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the auth endpoint must be live and migrated for session tracking.
-        </div>
-      )}
-
-      <div className="rounded-xl border border-border bg-card">
-        {loading ? (
-          <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading sessions…
-          </div>
-        ) : items.length === 0 ? (
-          <div className="p-10 text-center text-sm text-muted-foreground">No active sessions.</div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Device</TableHead>
-                <TableHead>IP</TableHead>
-                <TableHead>Last seen</TableHead>
-                <TableHead className="text-right">Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-medium">
-                    {deviceLabel(s.user_agent)}
-                    {s.current && <span className="ml-2 rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">This device</span>}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{s.ip || "—"}</TableCell>
-                  <TableCell className="text-muted-foreground">{s.last_seen_at ? fmt(s.last_seen_at) : "—"}</TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" disabled={busyId === s.id || s.current} onClick={() => revoke(s)}>
-                      <LogOut className="mr-1 h-3.5 w-3.5" /> {s.current ? "Current" : "Sign out"}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
-    </div>
-  )
-}
-
 function AuditTab() {
-  const [items, setItems] = useState<AuditEntry[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const load = async () => {
-    setLoading(true)
-    const res = await audit.list()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else {
-      setError(res.error)
-    }
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-  }, [])
+  const { data: items, error, loading, reload: load } = useLoad<AuditEntry[]>(() => audit.list(), [])
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="flex items-center gap-2 text-sm text-muted-foreground">
-          <ShieldCheck className="h-4 w-4" /> The 200 most recent sensitive actions.
-        </p>
-        <Button variant="outline" size="sm" onClick={load}>
-          <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-        </Button>
-      </div>
+    <div>
+      <TabBar onRefresh={load}>
+        <span className="inline-flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 shrink-0" /> The 200 most recent sensitive actions.
+        </span>
+      </TabBar>
 
-      {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the audit endpoint and DB must be live, and you must be an admin.
+      {error && <LoadError what="the audit log" detail={`${error}. The audit endpoint and database must be live, and you must be an admin.`} onRetry={load} />}
+
+      {loading ? (
+        <div className="overflow-hidden rounded-[14px] border bg-card">
+          <TableSkeleton rows={5} cols={4} />
         </div>
-      )}
-
-      <div className="rounded-xl border border-border bg-card">
-        {loading ? (
-          <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading audit log…
-          </div>
-        ) : items.length === 0 ? (
-          <div className="p-10 text-center text-sm text-muted-foreground">No actions logged yet.</div>
-        ) : (
+      ) : items.length === 0 ? (
+        !error && <p className="rounded-[14px] border bg-card px-5 py-10 text-center text-muted-foreground">No actions logged yet.</p>
+      ) : (
+        <div className="overflow-hidden rounded-[14px] border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
@@ -862,17 +629,179 @@ function AuditTab() {
             <TableBody>
               {items.map((a) => (
                 <TableRow key={a.id}>
-                  <TableCell className="whitespace-nowrap text-muted-foreground">{fmt(a.created_at)}</TableCell>
-                  <TableCell>{a.user_name || "—"}</TableCell>
-                  <TableCell>
-                    <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{a.action}</code>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{a.detail || "—"}</TableCell>
+                  <TableCell className="whitespace-nowrap">{fmt(a.created_at)}</TableCell>
+                  <TableCell className="whitespace-nowrap">{a.user_name || <span className="text-muted-foreground">Unknown</span>}</TableCell>
+                  <TableCell className="whitespace-nowrap font-mono text-[13px]">{a.action}</TableCell>
+                  <TableCell className="min-w-[200px] text-muted-foreground [overflow-wrap:anywhere]">{a.detail || "None"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
-        )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * Privacy tools (privacy.php). An export by enquiry email for super_admin and
+ * admin (a client's export is on the client record), and the read-only
+ * retention report for super_admin. Nothing here deletes or changes a row.
+ */
+function PrivacyTab() {
+  const role = useAuth((s) => s.user?.role)
+  const [email, setEmail] = useState("")
+  const [exporting, setExporting] = useState(false)
+  const [exportMissing, setExportMissing] = useState(false)
+
+  const exportEmail = async () => {
+    const e = email.trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) {
+      toast.error("Enter the email address the enquiry came from.")
+      return
+    }
+    setExporting(true)
+    const out = exportOutcome(await privacy.exportEnquiryEmail(e))
+    setExporting(false)
+    setExportMissing(out.kind === "not_on_server")
+    if (out.kind === "saved") {
+      saveAs(out.file, downloadName(out.file, `gakinz-data-export-enquiry-${new Date().toISOString().slice(0, 10)}.json`))
+      toast.success("Export downloaded. It holds personal data: store it safely and delete it once sent.")
+    } else if (out.kind === "error") toast.error(out.error || "Could not export that enquirer's data.")
+  }
+
+  return (
+    <div className="grid gap-4">
+      <div className="grid min-w-0 content-start gap-3 rounded-2xl border bg-card p-[18px]">
+        <b className="font-semibold">Export an enquirer's data</b>
+        <p className="text-[13px] text-muted-foreground">
+          For an access request from someone who sent an enquiry. It downloads every enquiry from that address, the calls on
+          them and the audit entries that name it. For a client, use Export data on the client record instead.
+        </p>
+        <form
+          className="flex flex-wrap items-end gap-2.5"
+          onSubmit={(ev) => {
+            ev.preventDefault()
+            exportEmail()
+          }}
+        >
+          <div className="grid min-w-[min(100%,260px)] flex-1 gap-1.5">
+            <Label htmlFor="privacy-email">Email address</Label>
+            <Input id="privacy-email" type="email" autoComplete="off" value={email} onChange={(ev) => setEmail(ev.target.value)} />
+          </div>
+          <Button type="submit" variant="outline" disabled={exporting}>
+            {exporting ? <Loader2 className="animate-spin" /> : <FileJson />} Export data
+          </Button>
+        </form>
+        <p role="status" className="text-[13px] text-muted-foreground empty:hidden">
+          {exportMissing ? PRIVACY_NOT_AVAILABLE : null}
+        </p>
+      </div>
+      {role === "super_admin" ? (
+        <RetentionCard />
+      ) : (
+        <p className="text-[13px] text-muted-foreground">The retention report is for the super admin.</p>
+      )}
+    </div>
+  )
+}
+
+function RetentionCard() {
+  const [report, setReport] = useState<RetentionReport | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [missing, setMissing] = useState(false)
+
+  const apply = (res: Awaited<ReturnType<typeof privacy.retentionReport>>) => {
+    const next = retentionState(res)
+    setReport(next.kind === "ready" ? next.report : null)
+    setError(next.kind === "error" ? next.error : null)
+    setMissing(next.kind === "not_on_server")
+    setLoading(false)
+  }
+  const load = async () => {
+    setLoading(true)
+    apply(await privacy.retentionReport())
+  }
+  // The first load starts with `loading` already true, so the effect sets
+  // state only once the reply arrives.
+  useEffect(() => {
+    let live = true
+    privacy.retentionReport().then((res) => {
+      if (live) apply(res)
+    })
+    return () => {
+      live = false
+    }
+  }, [])
+
+  return (
+    <div className="grid min-w-0 content-start gap-3 rounded-2xl border bg-card p-[18px]">
+      <span className="flex flex-wrap items-start justify-between gap-2">
+        <b className="font-semibold">Retention report</b>
+        <Badge variant="secondary">Read only</Badge>
+      </span>
+      <p className="text-[13px] text-muted-foreground">
+        How many rows each proposed retention rule would affect if its period were set. Periods are decided by the owner with
+        legal advice and set in the server's <code className="font-mono text-[13px]">config.php</code>. Nothing is deleted or
+        changed, by this report or anything else.
+      </p>
+      {missing && <p className="text-[13px] text-muted-foreground">{RETENTION_NOT_AVAILABLE}</p>}
+      {error && <LoadError what="the retention report" detail={error} onRetry={load} />}
+      {loading ? (
+        <TableSkeleton rows={4} cols={3} />
+      ) : report ? (
+        <div
+          role="region"
+          aria-label="Retention report, scrolls sideways"
+          tabIndex={0}
+          className="overflow-x-auto rounded-xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 [&>div]:overflow-visible"
+        >
+          {/* The Table's own wrapper is made not to scroll, so this focusable region is the one scroll container. */}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Rule</TableHead>
+                <TableHead>Period</TableHead>
+                <TableHead>Would affect</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {report.rules.map((r) => (
+                <TableRow key={r.key}>
+                  <TableCell className="min-w-[180px]">
+                    {r.label}
+                    <small className="block text-[12.5px] text-muted-foreground">From {r.starts_from}</small>
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {r.status === "counted" && r.period !== null ? (
+                      `${r.period} ${r.unit}${r.period === 1 ? "" : "s"}`
+                    ) : (
+                      <span className="text-muted-foreground">{r.status === "invalid_period" ? "Invalid period" : "Period not set"}</span>
+                    )}
+                    <small className="block font-mono text-[12px] text-muted-foreground">{r.config_key}</small>
+                  </TableCell>
+                  <TableCell className="tabular-nums">
+                    {r.counts ? (
+                      Object.entries(r.counts).map(([table, n]) => (
+                        <span key={table} className="block">
+                          {n === null ? "Not available" : n} <span className="text-muted-foreground">{table.replace(/_/g, " ")}</span>
+                        </span>
+                      ))
+                    ) : (
+                      <span className="text-muted-foreground">Nothing happens</span>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      ) : null}
+      <div>
+        <Button variant="outline" onClick={load} disabled={loading}>
+          <RefreshCw /> Refresh
+        </Button>
       </div>
     </div>
   )

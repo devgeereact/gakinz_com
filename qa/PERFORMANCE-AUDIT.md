@@ -1,9 +1,23 @@
 # Performance audit
 
 **Scope:** the public surface at `/`.
-**Date of this run:** 2026-09-22
+**Date of this run:** 2026-09-22, re-measured for D-046 on 2026-10-16 (section 9)
 **Result: large, measured improvements to what ships. Core Web Vitals are
 measured only in a local lab, and that is not the same as field performance.**
+
+**Later evidence (2026-10-10).** After the D-037 rebuild, Lighthouse 12.8.2 mobile against the
+local production build reported performance 96 and first contentful paint 2.1 s on `/`, with
+the Google Fonts `@import` still render-blocking (K-042) and a duplicate canonical on inner
+routes (K-043). The bundle figures below are from 2026-09-22 and have not been re-measured.
+
+**Superseded UI (2026-10-14).** The public site was rebuilt under D-046 (branch
+`feat/redesign-2026`, not deployed) and every font is now self-hosted, with the Google Fonts
+import removed (K-042). No Lighthouse run, CLS or LCP measurement and no bundle count has been
+made since, so nothing in this file describes the current build (`docs/KNOWN-ISSUES.md`
+K-045).
+
+**Re-measured 2026-10-16.** Section 9 is the current measurement: Lighthouse 12.8.2 mobile on
+`/`, `/work` and `/contact`, bundle and font sizes. Home CLS is 0.114 (K-052).
 
 ---
 
@@ -185,3 +199,99 @@ npm audit
 Then trace `http://127.0.0.1:5102/` in Chrome DevTools and record LCP, CLS and the
 breakdown, noting the throttling settings used. If you throttle, say so in the table:
 an unlabelled timing is worse than none.
+
+---
+
+## 9. D-046 re-measurement, 2026-10-16
+
+This section replaces sections 2 and 4 as the description of the current build. Everything
+above is kept as history.
+
+**Result: PARTIAL.** Accessibility, Best Practices and SEO are 100, 100 and 92 to 100.
+Performance is 73 to 92 under simulated mobile throttling. On the home page CLS is **0.114**,
+over the 0.1 threshold, and LCP is 4.9 s (K-052).
+
+### 9.1 Method and its limits
+
+Branch `qa/redesign-audits` at `dae9f3e`: the redesign at `89c7829` plus the first four audit
+fixes. The fifth, `ffaa083`, changes only the lazily loaded CMS sidebar. `npm run build`, then
+`vite preview` on `127.0.0.1:5193`.
+
+Lighthouse **12.8.2** from the command line, mobile preset, **simulated throttling** (150 ms
+RTT, about 1.6 Mbps, 4x CPU slowdown), headless Chrome 155, run twice per page; both runs
+agreed to within one point. This is the first Lighthouse **performance** score recorded for
+the site: section 4 deliberately did not record one, and these figures are a simulation, not
+a field measurement.
+
+**The API was not intercepted during Lighthouse.** Lighthouse cannot route requests the way
+the Playwright audit did. Because the production build calls the API on its own origin, the
+page's `site.php`, `work.php`, `blog.php` and `testimonials.php` requests went to the local
+preview. Its SPA fallback answered with HTML, which the client cannot read, so every public
+page fell back to its built-in content, exactly as in the accessibility run. No request left
+the machine. Real CMS answers would add payload and may move LCP.
+
+### 9.2 Lighthouse scores
+
+| Page | Performance | Accessibility | Best Practices | SEO | FCP | LCP | CLS | TBT | Speed Index |
+|---|---|---|---|---|---|---|---|---|---|
+| `/` | 73, 74 | 100 | 100 | 100 | 2.7 s | 4.9 s | **0.114** | 120 ms, 90 ms | 2.7 s |
+| `/work` | 87, 87 | 100 | 100 | 92 | 2.7 s | 3.5 s | 0 | 30 ms, 40 ms | 2.7 s |
+| `/contact` | 92, 92 | 100 | 100 | 92 | 2.7 s | 2.7 s | 0.001, 0 | 0 ms | 2.7 s |
+
+What drives the numbers:
+
+- **`/` CLS 0.114.** One shift, on the hero's `.laptop` device frame, attributed by Lighthouse
+  to "Web font loaded" three times. The hero columns are vertically centred, so when the
+  display face swaps in and the copy column changes height the device stage moves. K-052.
+- **`/` LCP 4.9 s.** The LCP element is the first hero screenshot,
+  `/images/work/rotaflow-d.webp`. Of the simulated time, 37% is load delay (it is found only
+  after the JavaScript renders) and 53% is render delay. A client-rendered page with no
+  prerender pays both (section 5). K-052.
+- **`/work` LCP 3.5 s.** The LCP element is the first card's screenshot, which carries
+  `loading="lazy"`, so Lighthouse fails `lcp-lazy-loaded`. K-053.
+- **FCP 2.7 s everywhere.** The one stylesheet, `index-*.css` (25 kB on the wire), is
+  render-blocking; Lighthouse estimates about 450 ms of it.
+- **SEO 92 on `/work` and `/contact`.** The `canonical` audit fails with "Multiple conflicting
+  URLs": the static canonical in `index.html` plus the per-route one. That is K-043, still
+  open. `/` passes because both point at the same URL.
+- Lighthouse's experimental `label-content-name-mismatch` flags the brand link (visible
+  "GAkinz", name "GAkinz, home"). The name starts with the visible text, which meets 2.5.3
+  Label in Name, and the audit is not scored.
+
+### 9.3 What ships on first load
+
+From the `vite build` output at `dae9f3e` (the build Lighthouse measured):
+
+| Asset | Size | Gzip |
+|---|---|---|
+| Entry `index-*.js` | 170.62 kB | 52.58 kB |
+| `vendor-*.js` (React, router) | 285.02 kB | 91.53 kB |
+| `index-*.css` (both surfaces) | 114.89 kB | 25.59 kB |
+
+Fonts requested on first paint, the same on all three pages (each Latin subset only; the
+other eight emitted subsets were not requested):
+
+| File | Size |
+|---|---|
+| Bricolage Grotesque, Latin, `opsz` | 76.89 kB |
+| JetBrains Mono, Latin, `wght` | 40.40 kB |
+| Hanken Grotesk, Latin, `wght` | 34.70 kB |
+| **Total** | **151.99 kB** |
+
+The Google Fonts `@import` is gone (K-042). Transfer on first load: `/` 666 kB over 25
+requests, `/work` 580 kB over 18, `/contact` 324 kB over 11. `dist/` is 3.8 MB.
+
+### 9.4 Open
+
+| # | Item | Entry |
+|---|---|---|
+| 1 | Stop the font swap moving the hero: fallback metric overrides (`size-adjust`) on the display face, or preload the Bricolage Latin file | K-052 |
+| 2 | Load the first `/work` card image eagerly | K-053 |
+| 3 | Remove the static canonical (SEO 92 on inner routes) | K-043 |
+| 4 | Prerender the public routes, which removes most of the LCP load and render delay | section 6, item 1 |
+
+### 9.5 NOT TESTED in this run
+
+- Field data, a real device, and the deployed host (compression, caching, HTTP version).
+- Pages fed by real CMS responses.
+- Any CMS screen.

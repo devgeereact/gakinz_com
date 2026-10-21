@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
-import { Loader2, Plus, RefreshCw, ExternalLink, Check, MessageSquare, Trash2, Eye } from "lucide-react"
+import { useLoad } from "@/hooks/use-load"
+import { AlertCircle, Loader2, Plus, RefreshCw, ExternalLink, Check, MessageSquare, Trash2, Eye, PenTool } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -28,20 +29,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { PageHeader, StatusBadge } from "@/app/components/page-kit"
+import { TableSkeleton } from "@/app/components/TableSkeleton"
 import { design, figma as figmaApi, projects as projectsApi, type DesignReview, type DesignStatus, type Project, type FigmaFile } from "@/lib/api"
-import { cn } from "@/lib/utils"
 
-const statusClass: Record<DesignStatus, string> = {
-  pending: "bg-muted text-muted-foreground",
-  approved: "bg-accent text-accent-foreground",
-  changes: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
+const STATUS_LABEL: Record<DesignStatus, string> = {
+  pending: "Pending",
+  approved: "Approved",
+  changes: "Changes requested",
 }
 
 export default function Design() {
-  const [items, setItems] = useState<DesignReview[]>([])
+  const { data: items, error, loading, reload: load, setData: setItems } = useLoad<DesignReview[]>(() => design.list(), [])
   const [projectList, setProjectList] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<number | null>(null)
 
   const [open, setOpen] = useState(false)
@@ -72,18 +72,7 @@ export default function Design() {
     else setFigmaErr(res.error)
   }
 
-  const load = async () => {
-    setLoading(true)
-    const res = await design.list()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else setError(res.error)
-    setLoading(false)
-  }
-
   useEffect(() => {
-    load()
     projectsApi.list().then((r) => r.ok && setProjectList(r.data))
   }, [])
 
@@ -132,22 +121,16 @@ export default function Design() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="gk-app-grad text-2xl font-bold tracking-tight">Design</h1>
-          <p className="text-sm text-muted-foreground">
-            Figma review rounds with client sign-off. Two rounds per project, by design.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={load}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-          </Button>
+    <div>
+      <PageHeader
+        title="Design"
+        subtitle="Figma review rounds with client sign-off. Two rounds per project, by design."
+        actions={
+          <>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" /> New review
+              <Button>
+                <Plus /> New review
               </Button>
             </DialogTrigger>
             <DialogContent>
@@ -156,9 +139,9 @@ export default function Design() {
               </DialogHeader>
               <div className="space-y-4">
                 <div>
-                  <Label>Project</Label>
+                  <Label htmlFor="design-sel1">Project</Label>
                   <Select value={projectId} onValueChange={setProjectId}>
-                    <SelectTrigger className="mt-1.5">
+                    <SelectTrigger id="design-sel1" className="mt-1.5">
                       <SelectValue placeholder="Pick a project" />
                     </SelectTrigger>
                     <SelectContent>
@@ -184,91 +167,116 @@ export default function Design() {
               </div>
               <DialogFooter>
                 <Button onClick={create} disabled={saving}>
-                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {saving && <Loader2 className="animate-spin" />}
                   Create review
                 </Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
-        </div>
-      </div>
+          <Button variant="outline" onClick={load}>
+            <RefreshCw /> Refresh
+          </Button>
+          </>
+        }
+      />
 
       {error && (
-        <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-          {error} — the design endpoint and DB must be live on the server.
+        <div role="alert" className="mb-4 flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground">
+          <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-bad" />
+          <div className="min-w-[min(100%,200px)] flex-1">
+            <p className="font-semibold">Could not load design reviews.</p>
+            <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
+              {error}. The design endpoint and database must be live on the server.
+            </p>
+          </div>
+          <Button variant="outline" onClick={load}>
+            <RefreshCw /> Try again
+          </Button>
         </div>
       )}
 
-      <div className="rounded-xl border border-border bg-card">
-        {loading ? (
-          <div className="flex items-center gap-2 p-6 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Loading reviews…
+      {loading ? (
+        <div className="overflow-hidden rounded-[14px] border bg-card">
+          <TableSkeleton rows={4} cols={5} />
+        </div>
+      ) : items.length === 0 ? (
+        !error && (
+          <div className="grid place-items-center gap-2.5 rounded-2xl border border-dashed border-line-strong bg-card px-5 py-14 text-center">
+            <span aria-hidden className="grid h-12 w-12 place-items-center rounded-[14px] bg-acc-soft text-acc">
+              <PenTool className="h-5 w-5" />
+            </span>
+            <h2 className="font-display text-[1.2rem] font-semibold">No design reviews yet</h2>
+            <p className="max-w-[46ch] text-muted-foreground">Create one against a project to start a review round.</p>
+            <Button className="mt-1" onClick={() => setOpen(true)}>
+              <Plus /> New review
+            </Button>
           </div>
-        ) : items.length === 0 ? (
-          <div className="p-10 text-center text-sm text-muted-foreground">
-            No design reviews yet. Create one against a project to start a review round.
-          </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Project</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Round</TableHead>
-                <TableHead>Figma</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="font-medium">{r.project_name}</TableCell>
-                  <TableCell>
-                    {r.title}
-                    {r.client_comment && (
-                      <p className="mt-0.5 text-xs text-muted-foreground">“{r.client_comment}”</p>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">R{r.round}</TableCell>
-                  <TableCell>
-                    {r.figma_url ? (
-                      <a href={r.figma_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
-                        Open <ExternalLink className="h-3 w-3" />
-                      </a>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <span className={cn("rounded px-2 py-0.5 text-xs font-medium", statusClass[r.status])}>{r.status}</span>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-1">
-                      {r.figma_url && (
-                        <Button variant="ghost" size="sm" onClick={() => preview(r)} title="Preview Figma file">
-                          <Eye className="mr-1 h-3.5 w-3.5" /> Preview
-                        </Button>
-                      )}
-                      {r.status !== "approved" && (
-                        <Button variant="ghost" size="sm" disabled={busyId === r.id} onClick={() => approve(r)}>
-                          <Check className="mr-1 h-3.5 w-3.5" /> Approve
-                        </Button>
-                      )}
-                      <Button variant="ghost" size="sm" disabled={busyId === r.id} onClick={() => { setChangeFor(r); setComment(r.client_comment ?? "") }}>
-                        <MessageSquare className="mr-1 h-3.5 w-3.5" /> Changes
-                      </Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => remove(r)} aria-label="Delete review">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </TableCell>
+        )
+      ) : (
+        <>
+          <div className="overflow-hidden rounded-[14px] border bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Title</TableHead>
+                  <TableHead>Project</TableHead>
+                  <TableHead>Round</TableHead>
+                  <TableHead>Figma</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </div>
+              </TableHeader>
+              <TableBody>
+                {items.map((r) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="min-w-[180px]">
+                      <b className="font-semibold">{r.title}</b>
+                      {r.client_comment && (
+                        <p className="mt-0.5 max-w-[40ch] text-xs text-muted-foreground">“{r.client_comment}”</p>
+                      )}
+                    </TableCell>
+                    <TableCell className="min-w-[140px]">{r.project_name}</TableCell>
+                    <TableCell className="whitespace-nowrap font-mono">{r.round} of 2</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {r.figma_url ? (
+                        <a href={r.figma_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 font-mono text-[12.5px] text-muted-foreground hover:text-acc hover:underline">
+                          Open in Figma <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">None</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={r.status}>{STATUS_LABEL[r.status]}</StatusBadge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-1">
+                        {r.figma_url && (
+                          <Button variant="ghost" size="sm" onClick={() => preview(r)} title="Preview Figma file">
+                            <Eye /> Preview
+                          </Button>
+                        )}
+                        {r.status !== "approved" && (
+                          <Button variant="ghost" size="sm" disabled={busyId === r.id} onClick={() => approve(r)}>
+                            <Check /> Approve
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm" disabled={busyId === r.id} onClick={() => { setChangeFor(r); setComment(r.client_comment ?? "") }}>
+                          <MessageSquare /> Changes
+                        </Button>
+                        <Button variant="ghost" size="icon" className="h-9 w-9 text-bad" onClick={() => remove(r)} aria-label="Delete review">
+                          <Trash2 />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+          <p className="mt-3 text-[13px] text-muted-foreground">A third round can’t be created here. It needs a change to the quote first.</p>
+        </>
+      )}
 
       <Dialog open={figmaOpen} onOpenChange={setFigmaOpen}>
         <DialogContent className="max-w-xl">

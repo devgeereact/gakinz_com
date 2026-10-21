@@ -67,6 +67,32 @@ function new_token(): string {
 }
 
 /**
+ * Session, reset and magic-link tokens are stored hashed (K-059), so a copy of
+ * the database or a backup holds no working credential. The stored form is the
+ * first 62 hex characters of SHA-256 (248 bits): two characters shorter than a
+ * raw 64-character token, so the two can never be confused, and it fits the
+ * existing CHAR(64) columns with no schema change.
+ */
+function token_hash(string $token): string {
+  return substr(hash('sha256', $token), 0, 62);
+}
+
+/**
+ * WHERE fragment matching a presented token against `$col`. Rows written
+ * before hashing hold the raw 64-character token; they still match until they
+ * expire and the prune job removes them, so nobody is signed out by the
+ * upgrade. A stolen 62-character hash presented as a token matches neither
+ * branch: its own hash is different, and the raw branch requires 64 characters.
+ * Bind the two values from token_params().
+ */
+function token_where(string $col = 'token'): string {
+  return "($col = ? OR ($col = ? AND CHAR_LENGTH($col) = 64))";
+}
+function token_params(string $token): array {
+  return [token_hash($token), $token];
+}
+
+/**
  * Validate the bearer token and return the user row, or 401.
  * Pass $roles to also require the user's role be in that list (else 403).
  * Call at the top of every protected endpoint — never trust a role from the client.
@@ -78,9 +104,10 @@ function require_auth(mysqli $conn, array $roles = []): array {
   $stmt = $conn->prepare(
     'SELECT u.id, u.name, u.email, u.role, u.client_id, u.status
      FROM auth_tokens t JOIN users u ON u.id = t.user_id
-     WHERE t.token = ? AND t.expires_at > NOW() AND u.deleted_at IS NULL LIMIT 1'
+     WHERE ' . token_where('t.token') . ' AND t.expires_at > NOW() AND u.deleted_at IS NULL LIMIT 1'
   );
-  $stmt->bind_param('s', $token);
+  [$th, $traw] = token_params($token);
+  $stmt->bind_param('ss', $th, $traw);
   $stmt->execute();
   $user = $stmt->get_result()->fetch_assoc();
 
@@ -90,8 +117,8 @@ function require_auth(mysqli $conn, array $roles = []): array {
 
   // Touch the session so the active-sessions list shows real last-seen times.
   // Best-effort: silently skip if the column isn't present on an un-migrated DB.
-  if ($s = @$conn->prepare('UPDATE auth_tokens SET last_seen_at = NOW() WHERE token = ?')) {
-    $s->bind_param('s', $token);
+  if ($s = @$conn->prepare('UPDATE auth_tokens SET last_seen_at = NOW() WHERE ' . token_where())) {
+    $s->bind_param('ss', $th, $traw);
     @$s->execute();
   }
 
