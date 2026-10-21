@@ -4,6 +4,7 @@ import { SiteChrome } from "./components/site-ui"
 import { useProjects } from "./data/showcase"
 import ConsentLoader from "./components/ConsentLoader"
 import { monetisation } from "./lib/monetisation"
+import { revealPage, scrollToTop, startSiteMotion } from "./lib/motion"
 import "./site.css"
 
 /**
@@ -12,15 +13,20 @@ import "./site.css"
  *
  * On a route change the window returns to the top and focus moves to the new
  * page's heading, so a keyboard or screen reader user lands on the content
- * rather than on the link they just used. The first load is left alone.
+ * rather than on the link they just used. The first load is left alone. The
+ * new page's entrances are set up at the same moment.
  */
 export default function PublicLayout() {
   const { pathname } = useLocation()
   const { projects } = useProjects()
   const last = useRef(pathname)
 
+  // Smooth scrolling and section entrances (D-051); public site only.
+  useEffect(() => startSiteMotion(), [])
+
   useEffect(() => {
-    window.scrollTo(0, 0)
+    scrollToTop()
+    revealPage()
     // Compare paths rather than counting runs, so StrictMode's double effect in
     // development does not move focus on the first load.
     if (last.current === pathname) return

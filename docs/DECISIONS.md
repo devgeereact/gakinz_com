@@ -933,3 +933,27 @@ to do it, and keeping it in code makes "off" provable at build time and adds no 
 behaviour, a browser run of the sign-in form and the ad slots, and a real CMP or AdSense
 script are NOT TESTED.
 
+
+## D-051 · Public-site scroll motion uses GSAP and Lenis, loaded at idle and only for visitors who allow motion
+**Date:** 2026-10-21 · **Status:** active. Extends D-046 and the `.rise` rule in `CLAUDE.md`.
+
+1. **Lenis smooths wheel scrolling and GSAP ScrollTrigger lifts sections in** on the public
+   site only (`src/marketing/lib/motion.ts`, started and stopped by `PublicLayout`). GAkinzOS
+   never loads either library.
+2. **Enhancement only.** Neither library is in the prerendered markup or the first paint: they
+   load in their own chunks once the browser is idle. Under `prefers-reduced-motion: reduce`
+   they are never fetched, and switching the preference on mid-visit stops them and shows
+   every element.
+3. **Nothing on the first screen is hidden.** Only elements that start below the viewport are
+   set up for an entrance, so a failed load leaves every element visible and the prerendered
+   page never flashes. Route changes jump to the top through Lenis, and the mobile drawer
+   pauses it.
+
+**Why:** the owner asked for the landing to be polished with GSAP and Lenis on 2026-10-21. The
+cost (about 51 kB gzipped across three chunks) is kept off the critical path.
+**Evidence:** `src/marketing/lib/motion.test.ts`; a browser run on 2026-10-21 against the built
+preview (`vite preview`, 1440 and 390px): libraries load after idle, 27 elements set up on the
+home page and 0 still hidden at the page foot, `/services` reached at the top with focus on its
+`h1`, drawer stops and restarts Lenis, no horizontal overflow, and under reduced motion no
+library request and nothing hidden. Real devices, Safari, trackpads, real assistive technology
+and a Lighthouse run are NOT TESTED.

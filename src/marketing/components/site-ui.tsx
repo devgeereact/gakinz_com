@@ -3,6 +3,7 @@ import { Link, NavLink } from "react-router-dom"
 import { delay, host, telHref, ToneCtx, type Tone } from "./site-helpers"
 import { kindName, onColour, type Project } from "@/marketing/data/showcase"
 import { useSiteCopy, type BusinessCopy } from "@/marketing/data/content"
+import { holdScroll, scrollToTop } from "@/marketing/lib/motion"
 
 /**
  * Shared pieces of the public site (D-046). Markup and class names follow the
@@ -260,6 +261,7 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
   }, [])
   useEffect(() => {
     document.body.style.overflow = open ? "hidden" : ""
+    holdScroll(open)
     if (!open) return
     // While the drawer covers the page, Escape closes it and hands focus back to the
     // toggle, and Tab cycles between the toggle and the drawer links rather than
@@ -342,7 +344,7 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
                 {copy.business.email}
               </a>
             </div>
-            <button className="btn" type="button" onClick={() => window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" })}>
+            <button className="btn" type="button" onClick={() => scrollToTop(true)}>
               Back to top ↑
             </button>
           </div>
