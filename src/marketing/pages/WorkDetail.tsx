@@ -73,7 +73,11 @@ export default function WorkDetail() {
               <p className="lede" style={{ maxWidth: "60ch", marginBottom: 16 }}>
                 {/* One honest line for every unlaunched project: "in final checks"
                     was printed for all of them, a local app included. */}
-                {p.status === "Live" ? `Live${p.url ? ` at ${p.url}` : ""}.` : "In build, and not launched yet."}
+                {p.status === "Live"
+                  ? `Live${p.url ? ` at ${p.url}` : ""}.`
+                  : p.status === "Demo"
+                    ? "A demo build, made to show the approach. It is not a client's live site."
+                    : "In build, and not launched yet."}
               </p>
               {p.outcome ? (
                 <p className="lede" style={{ maxWidth: "60ch" }}>

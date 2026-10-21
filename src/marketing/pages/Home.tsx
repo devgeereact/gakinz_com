@@ -227,7 +227,7 @@ export default function Home() {
             <h2 className="h-l">Real businesses, and products I run myself.</h2>
           </div>
           <p className="lede">
-            Care staffing, healthcare training, bakeries, a joiner, a tailor in Lagos. Each card opens the write-up: what the job was, what got built, and where it stands now.
+            Care staffing, healthcare training, an author's bookstore, a tailor in Lagos. Each card opens the write-up: what the job was, what got built, and where it stands now. Demo builds are marked as demos.
           </p>
         </div>
         <div className="grid-work">

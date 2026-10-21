@@ -47,11 +47,16 @@ Detail per batch: [STATUS sections 0.2 to 0.4](STATUS.md) and the ledger in
    unavailable (K-031, fixed 2026-10-21), but when one request fails Analytics still computes
    its KPIs from the rest and shows zero for the missing part, under a "Showing what loaded"
    banner. Decide whether each KPI should say "unavailable" instead.
-3. **Buildable leftovers:** K-069, K-072, K-074, K-077, K-078, K-083, K-061 certificate IDs,
+3. **Demo status in the CMS.** On 2026-10-21 the owner confirmed RitaGreen, Harni, MimmyCare
+   and Volume are live, and Priya's Kitchen, Dhemmyn Food and Okafor Joinery are demos. The
+   built-in project list now says so, but a Work record from the CMS can only be "Live" (it
+   has a live address) or "In build". Add a demo flag to `server/work.php` and the Work
+   screen before those three are published from the CMS, or they will show as "In build".
+4. **Buildable leftovers:** K-069, K-072, K-074, K-077, K-078, K-083, K-061 certificate IDs,
    K-020 strict tsc configs.
-4. **Measure the current public site.** Accessibility and performance were last measured
+5. **Measure the current public site.** Accessibility and performance were last measured
    before D-046; run Lighthouse and axe on the built preview, including the new motion.
-5. **Housekeeping:** remove the 11 empty `worktree-agent-*` branches, the 4 spent worktrees
+6. **Housekeeping:** remove the 11 empty `worktree-agent-*` branches, the 4 spent worktrees
    and stash `int-wave-lintcheck-x1`. Track the task plan in git (`.superpowers/` is
    excluded, so Tasks 27 to 30 exist only on the Mac).
 

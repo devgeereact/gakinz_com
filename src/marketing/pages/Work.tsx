@@ -3,15 +3,18 @@ import Seo from "@/marketing/components/Seo"
 import { CtaBand, PageHead, ProjectCard } from "@/marketing/components/site-ui"
 import { useProjects, type Project } from "@/marketing/data/showcase"
 
-type Filter = "all" | "client" | "product" | "Live" | "In build"
+type Filter = "all" | "client" | "product" | "Live" | "In build" | "Demo"
 const FILTERS: [Filter, string][] = [
   ["all", "All"],
   ["client", "Client sites"],
   ["product", "Own products"],
   ["Live", "Live"],
   ["In build", "In build"],
+  ["Demo", "Demos"],
 ]
-const match = (p: Project, f: Filter) => f === "all" || p.kind === f || p.status === f
+// A demo is never counted as a client site, so "Client sites" lists only real clients.
+const match = (p: Project, f: Filter) =>
+  f === "all" || p.status === f || (p.kind === f && !(f === "client" && p.status === "Demo"))
 
 /** Every project, filterable. Counts are computed, never written as copy. */
 export default function Work() {
@@ -28,14 +31,15 @@ export default function Work() {
           <>
             Every project,
             <br />
-            all of them real.
+            each one labelled.
           </>
         }
-        lede="Client sites, and products I build and run. Filter by kind, or by where each one stands today."
+        lede="Client sites, products I build and run, and a few demo builds, each marked as one. Filter by kind, or by where each one stands today."
       />
       <section className="sec wrap" style={{ paddingTop: 40 }}>
         <div className="filters" role="group" aria-label="Filter projects">
-          {FILTERS.map(([k, label]) => (
+          {/* A filter with nothing in it is left out rather than shown at zero. */}
+          {FILTERS.filter(([k]) => k === "all" || projects.some((p) => match(p, k))).map(([k, label]) => (
             <button key={k} className="chip" type="button" aria-pressed={f === k} onClick={() => setF(k)}>
               {label}
               <span>{projects.filter((p) => match(p, k)).length}</span>
