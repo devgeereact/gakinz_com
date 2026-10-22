@@ -5,12 +5,15 @@
 The work on `feat/journeys-2026-10-18` (PR #21: six batches, 2026-10-18 to 2026-10-20, then
 on 2026-10-21 the GSAP and Lenis scroll polish (D-051), lint groups A to C, the footer and the
 project status labels, folded in from `feat/landing-motion-2026-10-21`) is built, tested
-locally and pushed. **Not merged, deployed or uploaded.** SQL 13 to 19 have run only on the
-throwaway test database.
+locally and pushed. **Merged to `main` as `3fc6a31`, and deployed on 2026-10-21 and 2026-10-22:**
+the server files were uploaded, SQL 5 to 19 ran on the live database, and `dist/` went up by
+`rsync` because GitHub Actions did not run. The record is in `docs/WORKBOOK.md` section 1.
+`main` is the only branch, local and on origin; no stash and no extra worktree remain
+(consolidated 2026-10-22; a bundle of every ref was taken first).
 
-The branch stack is: `main` <- `feat/plan-2026-batch-1` (PR #8) <- `feat/redesign-2026` <-
-`audit/readiness-2026-10-17` (PR #20) <- `feat/journeys-2026-10-18` (PR #21). Merge in that order, and only after the operator steps
-below, because a merge to `main` deploys `dist/`.
+The branch stack of #8, `feat/redesign-2026`, #20 and #21 is merged, so next actions 1, 2, 8
+and 11 below are done. They stay as the record of the order used and of the owner decisions
+they raised (actions 3, 5 and 6 remain open). New work starts from `main`.
 
 The verdict of `docs/STATUS.md` section 0.1 still stands: **not ready for production.**
 
@@ -58,9 +61,7 @@ the earlier ledger is in git history at `5d5f95b`).
    (D-050); the ad pilot decisions (CMP, AdSense IDs, Purpose 1 only, cookie notices, a
    privacy choices link; K-104 to K-107); and the client anonymisation rules with an adviser
    (K-108, built 2026-10-20 and switched off; the adviser reviews its rules).
-4. **Housekeeping for the owner**: the stash `int-wave-lintcheck-x1` (made by an agent for a
-   lint comparison and already applied back; a hook blocked dropping it) and four agent
-   worktrees under `.claude/worktrees/` can be removed. The git-ignored `.playwright-mcp`
+4. **Housekeeping** (done 2026-10-22: the stash and the agent worktrees are gone). The git-ignored `.playwright-mcp`
    folder (other sessions' browser logs) was deleted by an agent on 2026-10-19; its contents
    were captured in the session tool results before deletion.
 5. **Owner decisions** raised by the first batch (`docs/STATUS.md` section 5): whether clients see
@@ -92,9 +93,8 @@ the earlier ledger is in git history at `5d5f95b`).
 
 ## Resume on another computer
 
-1. `git fetch origin`, then `git switch feat/journeys-2026-10-18` and `git pull --ff-only`
-   (the branch is pushed to origin). This branch holds everything in `audit/readiness-2026-10-17` plus the
-   journeys batch.
+1. `git fetch origin`, then `git switch main` and `git pull --ff-only`. `main` holds every
+   batch.
 2. `npm ci` (Node 22 or newer).
 3. Read `docs/STATUS.md` (sections 0.1 to 0.6, 3 and 5) and `docs/KNOWN-ISSUES.md` K-056 to K-099,
    then this file and `docs/PRIVACY-READINESS.md`.
@@ -107,7 +107,7 @@ the earlier ledger is in git history at `5d5f95b`).
    message naming it, and stops its PHP workers when it ends or is interrupted.
 5. `npm run dev` talks to the live API: any save is real. For browser checks use `npm run build`
    and `npx vite preview`, whose relative API paths reach no server, and stub the calls.
-6. New work goes on a new branch from `feat/journeys-2026-10-18`, one concern per commit,
+6. New work goes on a new branch from `main`, one concern per commit,
    pushed per verified batch, with a pull request.
 
 ## Mode
