@@ -16,7 +16,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-003 | `config.php.example` named a retired mail host | Medium | Fixed in the template. Server value UNVERIFIED |
 | K-004 | `api.php` accepts an unauthenticated POST | Medium | **Fixed 2026-09-22.** Not uploaded |
 | K-005 | `contact.php` has no spam protection | Medium | **Fixed 2026-09-22.** Not uploaded |
-| K-006 | Deployed server state is unknown | Medium | Open. Needs server access |
+| K-006 | Deployed server state is unknown | Medium | Mitigated 2026-10-21: everything to `3fc6a31` uploaded and checked (WORKBOOK section 1) |
 | K-007 | No MIME allowlist on upload | Low to medium | **Fixed 2026-09-22.** Not uploaded |
 | K-008 | Accessibility is unmeasured | Medium | **Closed 2026-09-22.** Measured. See `qa/ACCESSIBILITY-AUDIT.md` |
 | K-009 | Marketing entry chunk is 556.94 kB | Low | **Closed 2026-09-22.** Now 181.76 kB |

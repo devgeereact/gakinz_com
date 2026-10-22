@@ -10,27 +10,47 @@ branch was folded into it and deleted. Read this first, then only the linked sec
 
 ## 1. Where things stand
 
-Nothing since 2026-10-10 is merged, uploaded or deployed. `main` is still `c57eb4a`. All the
-work sits on one stack of branches, about 416 commits ahead of `main`:
+**Deployed 2026-10-21 to 2026-10-22.** The whole stack is merged and live. PR #21 was
+retargeted to `main` and merged as `3fc6a31`, which carries #8, `feat/redesign-2026` and #20 with
+it. PR #20 (base `feat/redesign-2026`) and #19 stay open and can be closed.
 
-`main` ← #8 `feat/plan-2026-batch-1` ← `feat/redesign-2026` (no PR) ← #20 `audit/readiness-2026-10-17` ← #21 `feat/journeys-2026-10-18`
+What was done, in order, from the Mac over `ssh cpanel`:
 
-PR #19 `design/hero-nav-footer-demo` targets #8 and sits outside the stack.
+1. Backup to `~/private_backups/gakinz.com-predeploy-20261021-160114/` on the host:
+   `docroot.tar.gz` (the whole `~/gakinz.com` docroot) and `db.sql.gz` (a full dump, 33 tables).
+   This is the rollback point (DEPLOYMENT.md section 6).
+2. K-015 check: no `seed_admin_password.txt` in the docroot. Live PHP is 8.4.26 (K-082).
+3. The schema in the dump showed SQL 1 to 4 already applied and SQL 5 to 19 not.
+4. Every file under `server/` except `README.md`, `schema.sql` and `config.php.example` was
+   uploaded in the order of DEPLOYMENT.md 5.1 step 13 (`.htaccess`, the includes, the
+   endpoints, then `_bootstrap.php`, `auth.php`, `oauth.php` and `users.php` together). No file
+   was deleted, and `config.php` and `uploads/` were not touched.
+5. SQL 5 to 18, then SQL 19, ran through a one-off runner that loads the live `config.php`, so
+   no credential left the server. Afterwards no enquiry or project has a null `reference`, both
+   anchor rows exist in `reference_counters`, and `files.client_visible`,
+   `users.totp_last_step` and `work.hero_order` exist.
+6. **GitHub Actions did not run.** No run exists for `3fc6a31`, and none since 2026-10-10 on
+   any branch or PR, although both workflows are active and the repository is public. Cause
+   UNVERIFIED. So `dist/` was built on the Mac from a tree identical to `origin/main` (`npm run
+   build`, 32 prerendered pages) and uploaded with `rsync` (no `--delete`; 150 new files, 6
+   changed, nothing removed). The FTP deploy's `.ftp-deploy-sync-state.json` on the host is
+   now stale, so the next Actions deploy may re-upload files it thinks changed.
 
-Last measured on the Mac (2026-10-21, this branch): `npm test` 540 PASS, build with 32
-prerendered pages PASS, `tsc -b` PASS, `npm run docs:check` PASS, lint ratchet 5 errors and 0
-warnings (`npm run lint` still fails, K-002). `npm run test:server` last ran at `468b884`: 519
-PASS. Counts and their history: [STATUS section 0](STATUS.md).
+**Live check, 2026-10-22 07:00 UTC** (unauthenticated GET requests): every endpoint answers
+JSON (`site`, `today`, `search`, `briefs`, `privacy`, `assets`, `bookings`, `feedback`,
+`client_access`, `auth`, `files`, `work`, `portal`, `support`, `api`). `api.php` answers
+`{"ok":true,"db":true}`. `index.html` is dated 2026-10-22 and `/`, `/services`, `/work`,
+`/pricing`, `/privacy`, `/terms`, `/cookies` and `/app/login` answer 200, with the CMS scripts
+loading. `site.php?action=get` answers `{}` and `work.php?action=hero` answers `[]`, as
+expected before any content is published. Signed-in journeys are NOT TESTED on the live host.
 
-**Live check, 2026-10-21 19:46 UTC** (unauthenticated GET requests from the Mac, read-only):
-`api.php` answers PHP 8.4.26 with the database reachable, so the PHP version is fine (K-082).
-The live `index.html` dates from 2026-10-09. These files are **not on the server**: the
-site's fallback page answers for them instead of PHP: `site.php`, `today.php`, `search.php`,
-`briefs.php`, `privacy.php`, `assets.php`, `bookings.php`, `feedback.php`, `client_access.php`
-and every include added since (`_uploads`, `_ics`, `_time`, `_templates`, `_reference`,
-`_erasure`, `_retention`, `_anonymise`, `_like`). `work.php` answers with no published
-records. Which SQL has run cannot be seen from outside. So the upload in 3b step 2 has not
-happened, and merging to `main` must wait for it.
+Owner actions left: K-025 Stripe VAT reconciliation; publish Work records and Site content
+(DEPLOYMENT.md 5.1 step 7); open Site content > Services once and save (K-093); revoke the old
+super-admin's sessions (K-001); find out why Actions stopped running. Gated features stay off
+(D-050): `$RETENTION_APPLY`, `$REFERENCE_SIGNIN_ENABLED`, `$CLIENT_ANONYMISE_ENABLED`, PayPal.
+
+Last measured on the Mac (2026-10-21): `npm test` 540 PASS, build with 32 prerendered pages
+PASS, `php -l` on every server file PASS.
 
 ## 2. Done (on branches, not live)
 
