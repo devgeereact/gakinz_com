@@ -110,8 +110,9 @@ The current state, what is left and the order of work are in **`docs/WORKBOOK.md
 counts are in `docs/STATUS.md` section 0. This file does not repeat them, so it cannot drift
 (consolidated 2026-10-21; the earlier text is in git history at `5d5f95b`).
 
-- Nothing since 2026-10-10 is merged, uploaded or deployed. The branch stack and merge order
-  are in the workbook, section 1. The deployed server state is UNVERIFIED (K-006).
+- The whole branch stack was merged to `main` (`3fc6a31`), uploaded and deployed on
+  2026-10-21 and 2026-10-22. GitHub Actions did not run for it, so `dist/` went up by `rsync`.
+  The record is in the workbook, section 1.
 - `npm run lint` still fails (K-002). `npm run lint:ratchet` holds the ceiling in
   `scripts/lint-ratchet.mjs`, and the count must not grow.
 - Anything checked only against mocked API responses is NOT TESTED on real data (K-044).

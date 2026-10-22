@@ -156,9 +156,13 @@ the same branch, the fifth being `3636373..b0bbf8b` and the sixth `54d593a..fa88
 `server/` updates this section in the same pull request (`AGENTS.md`, "Keeping documents
 current"), and `npm run docs:check` enforces that in CI.
 
-**Status of the live server: UNVERIFIED** (K-006). No server, database or FTP account was
-contacted while any of this work was done. The repository cannot say which of these files or
-statements are already live; only someone with server access can (section 5.6).
+**Status of the live server: uploaded 2026-10-21, client deployed 2026-10-22.** Every file and
+SQL statement in this section up to `3fc6a31` is live: the PHP went up in the step 13 order,
+SQL 5 to 19 ran (1 to 4 were already applied), and `dist/` was uploaded by `rsync` because
+GitHub Actions did not run for the merge. The backup taken first is
+`~/private_backups/gakinz.com-predeploy-20261021-160114/`. The record and the checks are in
+`docs/WORKBOOK.md` section 1. Section 5.6 post-upload checks that need a signed-in session are
+NOT TESTED. A later server change starts a new list here.
 
 ### 5.1 Operator actions, in order
 
