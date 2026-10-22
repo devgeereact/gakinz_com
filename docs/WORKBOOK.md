@@ -44,6 +44,19 @@ JSON (`site`, `today`, `search`, `briefs`, `privacy`, `assets`, `bookings`, `fee
 loading. `site.php?action=get` answers `{}` and `work.php?action=hero` answers `[]`, as
 expected before any content is published. Signed-in journeys are NOT TESTED on the live host.
 
+**Re-check, 2026-10-22 12:20 (Mac, after consolidation to one branch).** A fresh `npm run build`
+of `main` was compared with the docroot by `rsync -rcn` (checksums, dry run): zero differences,
+so the live `dist/` is byte-identical to the build of `main` and no upload was needed. The live
+home page loads `assets/index-BUGis-UK.js`, the same file as `dist/index.html`. `/`,
+`/services`, `/work`, `/pricing`, `/privacy`, `/terms`, `/cookies`, `/app/login`, `api.php` and
+`site.php?action=get` answer 200, `api.php` reports `db:true`, and a missing `.php` answers 404.
+In a browser the home page logs no console error. `/app/login` logs one 404 for
+`client_access.php?action=status`, which is the designed answer while
+`$REFERENCE_SIGNIN_ENABLED` is off (D-050), plus React Router's `HydrateFallback` warning.
+Local: `npm run test:server` PASS (519 tests, local MariaDB), `npm test` PASS (540),
+`npm run typecheck` PASS, `npm run lint:ratchet` PASS (5 of 5), `npm ci` PASS. Signed-in
+journeys remain NOT TESTED on the live host.
+
 Owner actions left: K-025 Stripe VAT reconciliation; publish Work records and Site content
 (DEPLOYMENT.md 5.1 step 7); open Site content > Services once and save (K-093); revoke the old
 super-admin's sessions (K-001); find out why Actions stopped running. Gated features stay off
