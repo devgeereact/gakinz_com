@@ -310,9 +310,11 @@ NOT TESTED. A later server change starts a new list here.
 
 ### 5.1a Clerk sign-in (D-052, built 2026-10-30, not uploaded)
 
+Read-only findings over `ssh cpanel` on 30 October 2026 (nothing changed): all 63 live PHP files are byte-identical to `main`, the live app bundle (`index-BUGis-UK.js`) is the one `main` builds, SQL 19 is applied (`reference_counters` present), `clerk_user_id` is absent, the server runs PHP 8.4.27 with openssl, mysqli and curl, and `config.php` has no Clerk keys. So this branch differs from the live site only by the Clerk change. Live data: 1 user (`dev@gakinz.com`, super_admin, no 2FA), 0 clients, 1 enquiry, 32 session tokens. `config.php` is mode 644 (set it to 600) and no gakinz backup was found in `~/backups`.
+
 Additive; the old sign-in keeps working until the owner confirms it can go. In order, each step approved by the owner:
 
-1. Full database backup and a copy of `config.php`.
+1. Full database backup and a copy of `config.php` and the document root (outside the web root), then set `config.php` to mode 600.
 2. Add `CLERK_ISSUER` (`https://clerk.gakinz.com`) and `CLERK_AUTHORIZED_PARTIES` (`https://gakinz.com`, `https://local.gakinz.com`) to the server `config.php` (`config.php.example` shows the lines).
 3. Run **SQL 20** (the last block of `server/schema.sql`: `users.clerk_user_id` and its unique index).
 4. Upload `_clerk.php`, then `_bootstrap.php` (it requires `_clerk.php`), never the other way round.
