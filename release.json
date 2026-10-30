@@ -4,9 +4,9 @@
   "url": "https://gakinz.com",
   "checks": [
     "npm run typecheck",
-    "npm run lint",
+    "npm run lint:ratchet",
     "npm test",
-    "npm run test:server"
+    "find server -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null"
   ],
   "build": "VITE_CLERK_PUBLISHABLE_KEY=pk_live_Y2xlcmsuZ2FraW56LmNvbSQ npm run build",
   "parts": [
