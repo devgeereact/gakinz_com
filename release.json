@@ -1,0 +1,44 @@
+{
+  "host": "cpanel",
+  "project": "gakinz_com",
+  "url": "https://gakinz.com",
+  "checks": [
+    "npm run typecheck",
+    "npm run lint",
+    "npm test",
+    "npm run test:server"
+  ],
+  "build": "VITE_CLERK_PUBLISHABLE_KEY=pk_live_Y2xlcmsuZ2FraW56LmNvbSQ npm run build",
+  "parts": [
+    {
+      "from": "dist",
+      "to": "gakinz.com",
+      "exclude": [
+        "/uploads/"
+      ]
+    },
+    {
+      "from": "server",
+      "to": "gakinz.com",
+      "exclude": [
+        "/uploads/",
+        "*.md",
+        "*.example"
+      ]
+    }
+  ],
+  "smoke": [
+    {
+      "path": "/",
+      "status": 200
+    },
+    {
+      "path": "/api.php",
+      "status": 200
+    },
+    {
+      "path": "/auth.php?action=me",
+      "status": 401
+    }
+  ]
+}
