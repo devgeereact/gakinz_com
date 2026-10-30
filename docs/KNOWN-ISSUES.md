@@ -119,6 +119,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-106 | The CMP host allow-list is not checked against Google's certified CMP list | Medium if switched on | Open, check before switching on |
 | K-107 | Some CMPs need more than a script URL | Low | Open, check when a CMP is chosen |
 | K-108 | Client anonymisation is built but switched off, awaiting adviser confirmation | Medium | Built 2026-10-20, switched off, not uploaded. Adviser confirms the rules first |
+| K-111 | SQL 20 was written as live statements at the foot of `schema.sql` and stopped the schema loading on MySQL | High (CI only) | **Fixed 2026-10-30** (commented out; found by the first CI run after Actions came back) |
 | K-110 | A burst of 31 `Class "mysqli" not found` fatals in the live PHP error log | Medium | Open, found 2026-10-30. None since; cause UNVERIFIED |
 | K-109 | GitHub Actions is switched off, so no CI runs and no deploy runs; the FTP deploy state on the host is stale | Medium | Open, found 2026-10-30. Cause verified; switching on awaits the owner |
 
@@ -2130,3 +2131,16 @@ a bad bearer returns 401 JSON) and `php -m` on the host lists mysqli. The host P
 built 2026-10-26. Possible causes, none confirmed: a PHP handler or extension change on the host
 at that moment, or a CLI run under a PHP build without mysqli. Check with the host if it recurs.
 The log is mode 644 but answers 403 over HTTP.
+
+## K-111 · SQL 20 stopped the schema loading on MySQL
+
+**Found and fixed:** 2026-10-30. **Severity:** High for CI, none for the live site.
+
+`ALTER TABLE ... ADD COLUMN IF NOT EXISTS` and `CREATE UNIQUE INDEX IF NOT EXISTS` are MariaDB-only.
+They were live statements at the foot of `server/schema.sql`, so the CI server-test job (MySQL)
+failed at line 1076 with error 1064 and the schema never loaded. The local test run passed because
+the Mac database is MariaDB. Every other migration at the foot is a comment; SQL 20 now is too, and
+the `CREATE TABLE users` block already holds the column and key. The live host (MariaDB 11.4) ran
+SQL 20 on 2026-10-30 and is unaffected. CI had not run since 2026-10-17, which is why it was
+found after the Clerk merge, not before. Lesson: the Mac and CI databases differ; run the server
+tests in CI before merging.

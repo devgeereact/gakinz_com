@@ -1069,9 +1069,12 @@ INSERT IGNORE INTO reference_counters (kind, ref_year, last_n) VALUES ('E', 0, 0
 
 -- ─────────────────────────────────────────────────────────────────────────────
 -- SQL 20 (2026-10-30): staff and portal users sign in with Clerk (email code).
--- Additive and safe to re-run; nothing existing is changed or dropped (password_hash,
+-- Additive and safe to re-run on MariaDB; nothing existing is changed or dropped (password_hash,
 -- the 2FA columns and the token tables stay until the owner confirms the old sign-in can go).
 -- Dry run: SHOW COLUMNS FROM users LIKE 'clerk_user_id';
 -- ─────────────────────────────────────────────────────────────────────────────
-ALTER TABLE users ADD COLUMN IF NOT EXISTS clerk_user_id VARCHAR(64) NULL DEFAULT NULL;
-CREATE UNIQUE INDEX IF NOT EXISTS uq_users_clerk_user_id ON users (clerk_user_id);
+-- Kept as comments like every migration at the foot: the CREATE TABLE users above already has the
+-- column and its unique key, and `ADD COLUMN IF NOT EXISTS` is MariaDB-only, so as live statements
+-- they stopped the schema loading on MySQL (CI, 2026-10-30). Already run on the live host on 2026-10-30.
+--   ALTER TABLE users ADD COLUMN IF NOT EXISTS clerk_user_id VARCHAR(64) NULL DEFAULT NULL;
+--   CREATE UNIQUE INDEX IF NOT EXISTS uq_users_clerk_user_id ON users (clerk_user_id);

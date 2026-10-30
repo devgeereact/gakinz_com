@@ -369,6 +369,8 @@ Production change, 2026-10-30, owner instruction "Leave only Gakinz101@gmail as 
 | Live seed file `seed_admin_password.txt` (K-015) | **PASS**: does not exist in the document root |
 | Live `error_log` | 31 `mysqli not found` fatals in one minute at 13:25 to 13:26 UTC, none since (K-110) |
 
+CI: the first run after Actions came back (PR #23) failed the server-test job on SQL 20 (MySQL does not accept `IF NOT EXISTS` on `ADD COLUMN`; K-111). Fixed by commenting the two statements out; the front-end job (typecheck, lint, docs, unit tests, build) passed in 1m15s.
+
 Git: `move/cpanel-clerk` was deleted on origin and locally on 2026-10-30 at the owner's
 instruction (fully contained in `main` at `a034e40`; the rule against deleting remote branches
 was set aside for this one, recorded in D-052).
