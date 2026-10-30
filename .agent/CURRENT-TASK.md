@@ -196,3 +196,10 @@ Live server == `main` (63 PHP files identical, same app bundle, SQL 19 applied).
 - NOT TESTED: an actual sign-in by the owner; client portal sign-in with Clerk. Magic-link and reference flows untouched.
 - Rollback: restore `_bootstrap.php` from git `main` and the saved `index.html`/`app-shell.html` (old assets still on the server); column is harmless.
 - TEST records to remove later: users row 2 and the Clerk user for gakinz101@gmail.com (six Founder TEST users exist across instances).
+
+## Verification and first sign-in (30 October 2026, later the same day)
+- Independent re-run on the Mac, nothing taken from the documents: `php -l` 65 files clean; `npm test` 545; `npm run test:server` 527 (own database `gakinz_verify_test`, ports 5309/5310, cleaned up); lint ratchet 5/5; `docs:check` PASS; `npm run build` OK, no secret key in `dist/`. Public URLs 200; `/server/_clerk.php` and `/server/config.php` 404.
+- Clerk production `session` config read (read-only): `email` claim present, lifetime 60 s. So the first-sign-in link by email can work.
+- Owner reports a real Clerk sign-in as gakinz101@gmail.com works (owner-reported, not observed by an agent). Recorded in `docs/STATUS.md` section 0.8 and D-052.
+- Still NOT TESTED: client-role portal sign-in with Clerk; `dev@gakinz.com` sign-in; live `users` rows read directly; backup restore. Still open: `/config.php` returns 403 where other server paths return 404 (unexplained, probably a deliberate block).
+- Branch `move/cpanel-clerk` is not merged to `main`; merge and push are the owner's to approve. Next: restore drill, then (owner's call) remove password sign-in, add 2FA or Google, staff list for Clerk, remove the TEST user.

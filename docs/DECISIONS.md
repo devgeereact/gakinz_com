@@ -959,7 +959,7 @@ library request and nothing hidden. Real devices, Safari, trackpads, real assist
 and a Lighthouse run are NOT TESTED.
 
 ## D-052 · Staff and portal users sign in with Clerk (email code only)
-**Date:** 2026-10-30 · **Status:** built on `move/cpanel-clerk`, not deployed. Owner instruction, 30 October 2026: move every project to the standard Clerk sign-in, as done for EGO LIMITED.
+**Date:** 2026-10-30 · **Status:** built on `move/cpanel-clerk`, released to the live server on 2026-10-30, owner sign-in confirmed working (`docs/STATUS.md` section 0.8); not yet merged to `main`. Owner instruction, 30 October 2026: move every project to the standard Clerk sign-in, as done for EGO LIMITED.
 
 1. **Clerk proves who is calling; roles stay in `users`.** `server/_clerk.php` verifies a Clerk
    session token (RS256, signing keys cached, issuer, expiry, not-before and authorised-party

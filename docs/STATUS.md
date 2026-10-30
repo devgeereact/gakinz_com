@@ -333,6 +333,23 @@ Built:
 
 Open items: K-100 to K-108.
 
+## 0.8 Clerk sign-in, 30 October 2026 (D-052)
+
+Released to the live server on 30 October 2026 (record: `docs/DEPLOYMENT.md` section 5.1a and
+`.agent/CURRENT-TASK.md`). Branch `move/cpanel-clerk`, not yet merged to `main`.
+
+| Check | Result |
+|---|---|
+| Re-run on the Mac, same day, against the branch head: `php -l` over 65 files, `npm test` 545 (46 files), `npm run test:server` 527 (37 files, database `gakinz_verify_test`, ports 5309 and 5310), `npm run lint:ratchet` 5 and 0, `npm run docs:check`, `npm run build` (32 public pages), no `sk_live` or `sk_test` string in `dist/` | **PASS** |
+| Read-only HTTP: `/`, `/login`, `/app`, `/sitemap.xml` return 200; `/server/_clerk.php` and `/server/config.php` return 404 | **PASS** |
+| Clerk production instance for gakinz.com, `session` config read through the Clerk connection (nothing changed): custom claim `email` = primary email address, lifetime 60 s, clock skew 5 s | **PASS** (the claim `server/_clerk.php` links a first sign-in by is present) |
+| Owner signed in at `/login` with the email code as `gakinz101@gmail.com` (reported by the owner, not observed by an agent) | **PASS** for the staff path, owner-reported |
+
+Not verified: client portal sign-in with Clerk (a `client`-role user); the `dev@gakinz.com`
+sign-in; the live `users` rows (`clerk_user_id` linked) by direct read; a backup restore (K-010);
+removal of password sign-in, 2FA and Google sign-in (waits for the owner). TEST records still to
+remove: `users` row 2 and its Clerk user.
+
 ## 1. Audit and readiness, 2026-10-10
 
 A broad planning audit of `main` at `c57eb4a`, re-verified the same day by three independent
