@@ -359,6 +359,16 @@ Server checks over `ssh cpanel`, read-only, the same day (no secret printed, not
 | Backup `gakinz_db_20261030_005611.sql.gz`: downloaded to `.local-state/backups/`, SHA-256 identical on both sides (`eda1af5a...aa23`), `gzip -t` ok, restored into a throwaway local MariaDB 11.4 database, then dropped | **PASS** for the database: 42 tables, 1 user (`dev@gakinz.com`), 0 clients, no `clerk_user_id` column (it was taken before SQL 20, as intended). The restore was not into the live site |
 | Backup `gakinz_files_20261030_005611.tar.gz`: `gzip -t` ok on the server, 320 entries listed | **PARTIAL**: integrity only, no files restored |
 
+Production change, 2026-10-30, owner instruction "Leave only Gakinz101@gmail as the super admin":
+
+| Step | Result |
+|---|---|
+| Fresh database backup first: `~/gakinz_backups/gakinz_db_20261030_094555_pre-user-removal.sql.gz`, mode 600, `gzip -t` ok, "Dump completed", 42 `CREATE TABLE`. (A first attempt wrote an empty file and was removed; the retry passed the password through the environment, not the command line) | **PASS**. Restore of this file not drilled; the earlier 30 October file was |
+| Guarded one-off run on the host (aborts unless id 2 is `gakinz101@gmail.com`, super_admin, active, linked, and id 1 is `dev@gakinz.com`), in a transaction: id 1 soft-deleted, status `suspended`, password hash set to `!`; 32 `auth_tokens` deleted (0 `magic_links`, 0 `password_resets`); one `audit_log` row (`user.retire`, by user 2) | **PASS**. Re-read afterwards: id 1 deleted and suspended; id 2 active, linked; active super_admins: 1 |
+| Clerk user for `dev@gakinz.com`: not removed (the connection has no delete-user tool). With no `users` row it gets 401 on every endpoint | Open, harmless; delete it in the Clerk dashboard |
+| Live seed file `seed_admin_password.txt` (K-015) | **PASS**: does not exist in the document root |
+| Live `error_log` | 31 `mysqli not found` fatals in one minute at 13:25 to 13:26 UTC, none since (K-110) |
+
 Git: `move/cpanel-clerk` was deleted on origin and locally on 2026-10-30 at the owner's
 instruction (fully contained in `main` at `a034e40`; the rule against deleting remote branches
 was set aside for this one, recorded in D-052).
@@ -368,10 +378,10 @@ Not verified:
 - A client portal sign-in with Clerk **on the live site**: the live database has no client, so
   a test would need a real record created in production. Covered locally by
   `tests/server/clerk.test.ts` (a client token cannot use a staff endpoint).
-- The `dev@gakinz.com` sign-in: needs the owner to read that mailbox.
-- Removal of password sign-in, 2FA and Google sign-in: waits for the owner.
-- Row 2 is labelled TEST but is the account the owner signed in with; it is the only linked
-  super-admin. Do not remove it until `dev@gakinz.com` has signed in with Clerk.
+- Removal of password sign-in, 2FA and Google sign-in as features: waits for the owner. The only
+  remaining account has no password.
+- Row 2 is still named `TEST owner` and is the only super_admin. Rename it when the owner says
+  how the name should read.
 
 ## 1. Audit and readiness, 2026-10-10
 

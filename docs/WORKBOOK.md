@@ -31,7 +31,7 @@ What was done, in order, from the Mac over `ssh cpanel`:
    `users.totp_last_step` and `work.hero_order` exist.
 6. **GitHub Actions did not run.** No run exists for `3fc6a31`, and none since 2026-10-10 on
    any branch or PR. Cause found 2026-10-30: the repository's Actions permission is `enabled: false`
-   (`gh api`), and the repository is private, not public (K-109). So `dist/` was built on the Mac from a tree identical to `origin/main` (`npm run
+   (`gh api`), and the repository was private at that point; the owner made it public on 2026-10-30 (K-109). So `dist/` was built on the Mac from a tree identical to `origin/main` (`npm run
    build`, 32 prerendered pages) and uploaded with `rsync` (no `--delete`; 150 new files, 6
    changed, nothing removed). The FTP deploy's `.ftp-deploy-sync-state.json` on the host is
    now stale. The deploy step was replaced on 2026-10-30 by `scripts/deploy-ftps.sh`, which does not

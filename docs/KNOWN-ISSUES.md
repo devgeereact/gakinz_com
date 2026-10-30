@@ -11,7 +11,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 
 | ID | Issue | Severity | Status |
 |---|---|---|---|
-| K-001 | A live super-admin credential is in git history | Critical | **Password rotated 2026-10-12 (owner-reported).** Session revocation and K-015 file check unconfirmed |
+| K-001 | A live super-admin credential is in git history | Critical | **Password rotated 2026-10-12 (owner-reported). Sessions revoked and the account retired 2026-10-30:** the 32 session tokens of that account were deleted and the account soft-deleted (`users` id 1). The repository is now public, so the credential in history stays exposed to the web; it is rotated and its account is gone |
 | K-002 | Lint fails | Medium | Open. 5 errors, 0 warnings on 2026-10-21 after groups A to C moved onto `useLoad` (22 screens and the sign-in page); left: Contracts, Portal and the theme toggle; before that 33 errors, 0 warnings on 2026-10-19, all `set-state-in-effect`, down from 41 and 1 (2026-10-11) and 60 and 7; ratchet in CI. Not merged |
 | K-003 | `config.php.example` named a retired mail host | Medium | Fixed in the template. Server value UNVERIFIED |
 | K-004 | `api.php` accepts an unauthenticated POST | Medium | **Fixed 2026-09-22.** Not uploaded |
@@ -25,7 +25,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-012 | Stale design residue in `src/index.css` | Cosmetic | **Closed 2026-09-22** |
 | K-013 | Four shared includes are outside the `.htaccess` deny rule | Informational | **Fixed 2026-10-10.** Not uploaded |
 | K-014 | `auth.php` hard-codes a fallback seed-admin address | Low | **Fixed 2026-09-22.** Not uploaded |
-| K-015 | A seed super-admin password was written to a web-served file | **Critical** | **Fixed in code 2026-09-22.** Operator must delete the live file |
+| K-015 | A seed super-admin password was written to a web-served file | **Critical** | **Fixed in code 2026-09-22. Live file checked 2026-10-30: `seed_admin_password.txt` does not exist in the document root** (`ls` over ssh; the HTTP 200 for that URL is the app shell) |
 | K-016 | Editing a draft blog post silently destroys its body | High | **Fixed 2026-10-10.** Not uploaded |
 | K-017 | `xlsx` carries a HIGH advisory with no fix available | Medium | Open. Owner decision |
 | K-018 | The public site is an empty shell to any client that does not run JavaScript | Medium | **Fixed in code 2026-10-16** for the 30 built-in public pages (prerender), not deployed. CMS-only records remain. The soft 404 lost its noindex in the D-046 rebuild; restored 2026-10-17 (K-066) |
@@ -119,6 +119,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-106 | The CMP host allow-list is not checked against Google's certified CMP list | Medium if switched on | Open, check before switching on |
 | K-107 | Some CMPs need more than a script URL | Low | Open, check when a CMP is chosen |
 | K-108 | Client anonymisation is built but switched off, awaiting adviser confirmation | Medium | Built 2026-10-20, switched off, not uploaded. Adviser confirms the rules first |
+| K-110 | A burst of 31 `Class "mysqli" not found` fatals in the live PHP error log | Medium | Open, found 2026-10-30. None since; cause UNVERIFIED |
 | K-109 | GitHub Actions is switched off, so no CI runs and no deploy runs; the FTP deploy state on the host is stale | Medium | Open, found 2026-10-30. Cause verified; switching on awaits the owner |
 
 
@@ -2086,7 +2087,7 @@ adviser: `docs/PRIVACY-READINESS.md` section 7.
 
 ## K-109 · GitHub Actions is switched off, so no CI and no deploy runs
 
-**Found:** 2026-10-30. **Severity:** Medium. **Status:** Open.
+**Found:** 2026-10-30. **Severity:** Medium. **Status:** Actions switched on 2026-10-30 at the owner's instruction (the repository is public); see the end of this entry.
 
 `gh api repos/devgeereact/gakinz_com/actions/permissions` returns `enabled: false`. This is the
 cause of the missing runs recorded in `docs/WORKBOOK.md` section 1, item 6 (earlier "cause
@@ -2112,3 +2113,20 @@ Still open: Actions is switched off. Switching on is
 `gh api -X PUT repos/OWNER/REPO/actions/permissions -F enabled=true` and needs the owner's
 approval; the first deploy after it should be watched, because it is the first run of the new step.
 No agent has changed the setting.
+
+**Update, 2026-10-30:** the owner made the repository public and instructed Actions back on. It was
+switched on with `gh api -X PUT repos/devgeereact/gakinz_com/actions/permissions -F enabled=true`.
+The result of the first CI and deploy runs is in `docs/STATUS.md` section 0.8.
+
+## K-110 · A burst of `Class "mysqli" not found` fatals in the live PHP error log
+
+**Found:** 2026-10-30 while checking the log for K-015. **Severity:** Medium. **Status:** Open,
+cause UNVERIFIED.
+
+`~/gakinz.com/error_log` holds 31 `PHP Fatal error: Uncaught Error: Class "mysqli" not found in
+config.php:79` entries between 13:25:55 and 13:26:58 UTC on 2026-10-30, each from a request or CLI
+run that loaded `config.php`. None since: at 13:46 UTC the API answers (`auth.php?action=me` with
+a bad bearer returns 401 JSON) and `php -m` on the host lists mysqli. The host PHP is 8.4.27,
+built 2026-10-26. Possible causes, none confirmed: a PHP handler or extension change on the host
+at that moment, or a CLI run under a PHP build without mysqli. Check with the host if it recurs.
+The log is mode 644 but answers 403 over HTTP.
