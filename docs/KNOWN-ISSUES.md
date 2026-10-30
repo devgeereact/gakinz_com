@@ -2144,3 +2144,5 @@ the `CREATE TABLE users` block already holds the column and key. The live host (
 SQL 20 on 2026-10-30 and is unaffected. CI had not run since 2026-10-17, which is why it was
 found after the Clerk merge, not before. Lesson: the Mac and CI databases differ; run the server
 tests in CI before merging.
+
+The same run also failed one test, `references.test.ts` "recovers a database where an earlier draft opened the gate before the backfill": it read the SQL 19 block to the end of the file, so the SQL 20 comments became part of the "recovery" line it ran. The test now stops the block before SQL 20. All other tests (526 of 527) passed on MySQL in CI.

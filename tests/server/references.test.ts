@@ -395,8 +395,9 @@ describe("a reference is never a key", () => {
 })
 
 describe("SQL 19 as the operator runs it", () => {
-  // The SQL 19 block at the foot of server/schema.sql, split into its steps.
-  const block = fs.readFileSync(path.join(SERVER, "schema.sql"), "utf8").match(/-- 2026-10-19 · SQL 19 ·[\s\S]*$/)![0]
+  // The SQL 19 block at the foot of server/schema.sql, split into its steps. It stops before the
+  // SQL 20 block that follows it, whose commented statements are not part of the recovery line.
+  const block = fs.readFileSync(path.join(SERVER, "schema.sql"), "utf8").match(/-- 2026-10-19 · SQL 19 ·[\s\S]*?(?=\n-- ─+\n-- SQL 20 |$)/)![0]
   const part = (from: string, to?: string) => block.slice(block.indexOf(from), to ? block.indexOf(to) : undefined)
   const uncomment = (text: string) => text.replace(/^-- {3}/gm, "")
   const step1 = uncomment(part("-- Step 1", "-- Step 2"))
