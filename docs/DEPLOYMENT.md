@@ -7,37 +7,34 @@ UNVERIFIED**: no server, database, FTP account or DNS record was contacted durin
 
 ---
 
-## 1. Two tracks, one document root
+## 1. One release, one document root (since 2026-10-30)
 
-| Track | What moves | Mechanism | Trigger |
-|---|---|---|---|
-| Client | `dist/` only | GitHub Actions, `scripts/deploy-ftps.sh` (lftp over FTPS, never deletes; replaced `SamKirkland/FTP-Deploy-Action@v4.4.0` on 2026-10-30, K-109, NOT TESTED against the host) | CI passing on a push to `main`. Actions is switched off (K-109) |
-| Server | `server/*.php`, `.htaccess`, `schema.sql` | Manual upload by a person | A decision, never automatic |
+| What moves | Mechanism | Trigger |
+|---|---|---|
+| `dist/` and `server/*.php` (not `config.php`, `.htaccess`, `schema.sql`, Markdown or `*.example`) | `scripts/release.mjs --go` over SSH (`release.json`): checks (typecheck, lint ratchet, Vitest, `php -l`), build with the live Clerk key, checksum upload, entry files last, never deletes, snapshot of every changed server file in `~/backups/gakinz_com/releases/`, automatic restore if the smoke test fails | Every push to `main` (`.github/workflows/deploy.yml`, restricted SSH deploy key, secrets `CPANEL_SSH_KEY` and `CPANEL_KNOWN_HOSTS`); docs-only pushes do not deploy. By hand: `npm run release`, then `npm run release -- --go` |
+| `server/.htaccess`, `config.php`, SQL | By a person, backup first | A decision, never automatic |
 
-Both land in the same cPanel document root for `gakinz.com`. The workflow uploads with
-`server-dir: ./` into an FTP account already scoped to that folder.
+On 2026-10-30 a dry run showed the live server equal to `main` (545 tests passed). The FTP workflow and `scripts/deploy-ftps.sh` were replaced; the owner deletes the FTP secrets and account.
 
-**A change under `server/` is not live when it is committed.** A schema change is not applied
-when it is written. This is the single most common way work here looks finished and is not.
+Because PHP now ships on every push, **a PHP change that needs a schema change must not reach `main` before its SQL has run on the live database** (or must tolerate the old schema).
 
-## 2. Client deploy
+**A PHP change under `server/` goes live on the next push to `main`; a schema change does not.** SQL is applied
+by a person, and `server/.htaccess` is uploaded by hand. This is the single most common way work here looks finished and is not.
+
+## 2. The deploy workflow
 
 `.github/workflows/deploy.yml`:
 
 ```
-on: workflow_run of "CI", completed, branch main   (since 2026-10-10)
-if: CI concluded success AND the CI run was a push
-  actions/checkout@v5     ref: the exact commit CI verified
-  actions/setup-node@v5   node-version: 22
+on: push to main (not docs-only), or by hand (workflow_dispatch)
+  actions/checkout, setup-node 24, setup-php 8.4
   npm ci
-  npm run build
-  sudo apt-get install lftp
-  scripts/deploy-ftps.sh dist     (FTP_SERVER, FTP_USERNAME, FTP_PASSWORD from repository secrets;
-                                   two mirror passes, HTML entry points last, no delete)
+  SSH config for host "cpanel" from secrets.CPANEL_SSH_KEY and secrets.CPANEL_KNOWN_HOSTS
+  node scripts/release.mjs --go     (checks, build, plan, snapshot, upload, smoke, restore on failure)
 ```
 
-Credentials come from `secrets.FTP_SERVER`, `secrets.FTP_USERNAME` and
-`secrets.FTP_PASSWORD`. None of the three values belongs in this repository.
+The deploy key is restricted (`restrict`, label `github-deploy-gakinz_com` in the server's
+`~/.ssh/authorized_keys`). No FTP credentials are used.
 
 ### What `dist/` holds (prerendered since 2026-10-16)
 
