@@ -2146,3 +2146,10 @@ found after the Clerk merge, not before. Lesson: the Mac and CI databases differ
 tests in CI before merging.
 
 The same run also failed one test, `references.test.ts` "recovers a database where an earlier draft opened the gate before the backfill": it read the SQL 19 block to the end of the file, so the SQL 20 comments became part of the "recovery" line it ran. The test now stops the block before SQL 20. All other tests (526 of 527) passed on MySQL in CI.
+
+**First deploy run, 2026-10-30 (run 41073485903 on `42359ed`):** CI passed, then the new upload step
+failed after 90 s with `mirror: Fatal error: max-retries exceeded` (3 retries of 30 s timeouts).
+Cause: the script used `ftps://`, which lftp treats as implicit TLS on port 990. It failed closed:
+nothing was uploaded and the live site was unchanged. The script now uses `ftp://` with
+`ftp:ssl-force` (explicit TLS on port 21, certificate verified). Still NOT TESTED against the host
+until a deploy run passes; this Mac has no access to the FTP secrets.

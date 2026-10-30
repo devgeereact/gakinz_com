@@ -11,13 +11,16 @@ set -euo pipefail
 
 SRC="$(cd "${1:-dist}" && pwd)"
 
-TARGET="${DEPLOY_TARGET_URL:-ftps://${FTP_SERVER:?FTP_SERVER is not set}}"
+# Explicit FTPS: plain ftp:// on port 21 upgraded with AUTH TLS (ftp:ssl-force below). lftp's ftps:// is
+# implicit TLS on port 990, which the host does not offer; the first CI run timed out on it (K-109).
+TARGET="${DEPLOY_TARGET_URL:-ftp://${FTP_SERVER:?FTP_SERVER is not set}}"
 ENTRY='(^|/)(index|app-shell)\.html$'
 
 {
   echo 'set cmd:fail-exit yes'
   echo 'set net:max-retries 3'
-  echo 'set net:timeout 30'
+  echo 'set net:timeout 20'
+  echo 'set net:reconnect-interval-base 5'
   if [ -z "${DEPLOY_TARGET_URL:-}" ]; then
     echo 'set ftp:ssl-force yes'
     echo 'set ftp:ssl-protect-data yes'
