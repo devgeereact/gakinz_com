@@ -1,7 +1,7 @@
 <?php
 /**
  * Client sign-in by work reference and email (docs/PRODUCT-SPEC.md 6.1,
- * qa/TEST-PLAN.md J03). Switched off unless config.php sets
+ * docs/TEST-PLAN.md J03). Switched off unless config.php sets
  * $REFERENCE_SIGNIN_ENABLED = true (strictly true: 1, 'true' or 'yes' leave it
  * off). While off, every route of this file answers 404 and the sign-in page
  * shows nothing new.

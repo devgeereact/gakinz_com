@@ -116,11 +116,11 @@ once.
 | `docs/DESIGN-REFERENCE-MASTERCARD.md` | The preserved, unedited third-party design reference behind the target system. Do not edit |
 | `docs/CONTENT-AND-GROWTH.md` | Resources standard, affiliate and AdSense pilots, measurement and the social profile kit |
 | `docs/GEE-OS.md` | How this repository uses the GEE OS agent contract, and its documentation profile |
-| `qa/TEST-PLAN.md` | What is tested, what is not, the order to close the gaps, and the J01 to J12 acceptance scenarios |
-| `qa/SECURITY-AUDIT.md` | The 2026-09-04 source-inspection audit, with later status |
-| `qa/ACCESSIBILITY-AUDIT.md` | The 2026-09-22 measured run on the public surface (predates the D-046 rebuild), and what is still NOT TESTED |
-| `qa/PERFORMANCE-AUDIT.md` | The 2026-09-22 bundle and page measurements (predate the D-046 rebuild), and what is unmeasured |
-| `qa/RELEASE-CHECKLIST.md` | Run this before shipping |
+| `docs/TEST-PLAN.md` | What is tested, what is not, the order to close the gaps, and the J01 to J12 acceptance scenarios |
+| `docs/AUDIT.md` | The 2026-09-04 source-inspection audit, with later status |
+| `docs/AUDIT.md` | The 2026-09-22 measured run on the public surface (predates the D-046 rebuild), and what is still NOT TESTED |
+| `docs/AUDIT.md` | The 2026-09-22 bundle and page measurements (predate the D-046 rebuild), and what is unmeasured |
+| `docs/AUDIT.md` | Run this before shipping |
 
 Superseded and completed documents, including the original `GAkinzOS.html` brief and the root
 `DESIGN-SYSTEM.md`, were retired on 2026-10-10 and remain in git history (`docs/DECISIONS.md`

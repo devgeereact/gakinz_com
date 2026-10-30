@@ -218,3 +218,4 @@ Live server == `main` (63 PHP files identical, same app bundle, SQL 19 applied).
 - Still open for the owner: delete the Clerk user for `dev@gakinz.com` in the Clerk dashboard (no tool for it); rename the `TEST owner` row; K-110 (the `mysqli not found` burst) if it recurs; whether to remove password sign-in or add 2FA/Google.
 - Next session: the two-line CI lesson: run `npm run test:server` against MySQL (or rely on CI) before merging, because the Mac uses MariaDB.
 - 30 Oct 2026: push to `main` deploys `dist/` and `server/*.php` over SSH (`deploy.yml` runs `scripts/release.mjs --go`); dry run showed the live server equal to `main`. FTP route removed; owner deletes FTP secrets and account.
+- 30 Oct 2026: docs tidy: four `qa/` audits and the release checklist merged into `docs/AUDIT.md` (one audit file); `qa/TEST-PLAN.md` moved to `docs/`; references updated; docs:check PASS.

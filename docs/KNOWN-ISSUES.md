@@ -18,7 +18,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-005 | `contact.php` has no spam protection | Medium | **Fixed 2026-09-22.** Not uploaded |
 | K-006 | Deployed server state is unknown | Medium | Mitigated 2026-10-21: everything to `3fc6a31` uploaded and checked (WORKBOOK section 1) |
 | K-007 | No MIME allowlist on upload | Low to medium | **Fixed 2026-09-22.** Not uploaded |
-| K-008 | Accessibility is unmeasured | Medium | **Closed 2026-09-22.** Measured. See `qa/ACCESSIBILITY-AUDIT.md` |
+| K-008 | Accessibility is unmeasured | Medium | **Closed 2026-09-22.** Measured. See `docs/AUDIT.md` |
 | K-009 | Marketing entry chunk is 556.94 kB | Low | **Closed 2026-09-22.** Now 181.76 kB |
 | K-010 | No backup procedure is known to exist | High | Open. Outside this repository |
 | K-011 | `access.ts` can drift from the server role lists | Low | **Mostly closed 2026-09-22.** Three mismatches fixed, tests added |
@@ -336,7 +336,7 @@ nothing on part of the masthead, and the ring colour was inverted on dark contro
 Neither was reported by axe.
 
 Full method, figures and the list of what remains NOT TESTED are in
-`qa/ACCESSIBILITY-AUDIT.md`. The largest remaining gap is that **no screen-reader pass
+`docs/AUDIT.md`. The largest remaining gap is that **no screen-reader pass
 with real assistive technology has been done**, and GAkinzOS at `/app/*` is unaudited.
 
 **The original finding, for the record.**
@@ -345,7 +345,7 @@ A previous session recorded an axe run with zero violations on three pages. That
 withdrawn: no report was kept, the run is not reproducible from this tree, there is no
 accessibility tooling in `package.json`, and the palette has been replaced twice since.
 
-See `qa/ACCESSIBILITY-AUDIT.md` and `docs/DECISIONS.md` D-020.
+See `docs/AUDIT.md` and `docs/DECISIONS.md` D-020.
 
 ---
 
@@ -357,7 +357,7 @@ warning. `vite.config.ts` gained a `manualChunks` rule that splits the framework
 long-cacheable `vendor` chunk and folds roughly 30 lucide micro-chunks into one.
 
 `dist/` fell from 43 MB to 2.6 MB, almost all of it from removing 35.92 MiB of
-unreferenced images in `public/`. Figures in `qa/PERFORMANCE-AUDIT.md`.
+unreferenced images in `public/`. Figures in `docs/AUDIT.md`.
 
 **The original finding, for the record.**
 
@@ -365,7 +365,7 @@ unreferenced images in `public/`. Figures in `qa/PERFORMANCE-AUDIT.md`.
 556.94 kB raw, 173.79 kB gzipped, against Vite's 500 kB warning. The heavy libraries are
 already lazy; this is the eager public-site entry.
 
-Previous documentation recorded 539 kB, so it has grown. See `qa/PERFORMANCE-AUDIT.md`.
+Previous documentation recorded 539 kB, so it has grown. See `docs/AUDIT.md`.
 
 ---
 
@@ -928,7 +928,7 @@ A search of `src/marketing` for "to supply" finds only `[review date to supply]`
 `Legal.tsx`, which closes with K-021. The original finding follows.
 
 At the 2026-10-10 audit the visible fallback text included "twenty-four modules … Forty
-server endpoints" and a `qa/ACCESSIBILITY-AUDIT.md` path (`work.ts`), "Portrait, to supply"
+server endpoints" and a `docs/AUDIT.md` path (`work.ts`), "Portrait, to supply"
 (`Home.tsx`, `About.tsx`), "Biography, to supply" (`About.tsx`), "Screenshot, to supply"
 (`WorkDetail.tsx`) and "review date to supply" (`Legal.tsx`). With the API unreachable, the
 home page rendered project gaps, the portrait placeholder and technical build commentary. A
@@ -1045,16 +1045,16 @@ computer, and records the result in `docs/STATUS.md`.
 routes at 1440 and 390px and on 8 CMS screens in light and dark, contrast on rendered pixels for
 every hero slide and case hero, keyboard, reduced motion, and Lighthouse 12.8.2 mobile on three
 pages. Five defects were fixed (`0a1d62f`, `bb9ac2e`, `ceb418c`, `dae9f3e`, `ffaa083`). The open
-findings are K-050 to K-053. Results: `qa/ACCESSIBILITY-AUDIT.md` section 9 and
-`qa/PERFORMANCE-AUDIT.md` section 9. Real assistive technology, CMS screens with data, and the
+findings are K-050 to K-053. Results: `docs/AUDIT.md` section 9 and
+`docs/AUDIT.md` section 9. Real assistive technology, CMS screens with data, and the
 live site remain NOT TESTED. The original report follows.
 
-`qa/ACCESSIBILITY-AUDIT.md` and `qa/PERFORMANCE-AUDIT.md` measured the 2026-09-22 build, with a
+`docs/AUDIT.md` and `docs/AUDIT.md` measured the 2026-09-22 build, with a
 partial re-check after the D-037 rebuild on 2026-10-10. The D-046 rebuild replaced every public
 page, the palette, the type families and the hero motion, and moved all fonts to self-hosted
 files (K-042). No axe sweep, contrast measurement, focus check, Lighthouse run or CLS
 measurement has been made since. The CMS has never been audited (K-008). Resolution: re-run
-the audit method in `qa/ACCESSIBILITY-AUDIT.md` and Lighthouse against a local production
+the audit method in `docs/AUDIT.md` and Lighthouse against a local production
 build of the redesign, then on the live site after merge.
 
 ## K-046 · Dead redesign residue: `.gk-fadein` rules, the Sofia Sans dependency, D-037 brand assets
@@ -1185,7 +1185,7 @@ delay, the cost of client rendering. `/work` and `/contact` have CLS 0 and 0.001
 
 Resolution options: fallback metric overrides (`size-adjust`, `ascent-override`) for Bricolage
 Grotesque so the swap moves nothing, or preload its Latin file; align the hero grid to the top
-rather than centre; prerendering (`qa/PERFORMANCE-AUDIT.md` section 6) addresses the LCP delay.
+rather than centre; prerendering (`docs/AUDIT.md` section 6) addresses the LCP delay.
 Re-measure after any of them.
 
 ## K-053 · The LCP image on `/work` is lazy-loaded

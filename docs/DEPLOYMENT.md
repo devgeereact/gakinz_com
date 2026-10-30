@@ -563,7 +563,7 @@ Every one of these must hold before `$REFERENCE_SIGNIN_ENABLED = true` goes into
    section 6.1: "The final owner and client sign-in policy is confirmed before that work
    starts"), recorded in `docs/STATUS.md` section 5.
 
-Then switch it on, and walk the J02 and J03 rows of `qa/TEST-PLAN.md` on the live host with a
+Then switch it on, and walk the J02 and J03 rows of `docs/TEST-PLAN.md` on the live host with a
 client account the owner agrees to use. Switching it off again is the same key set back to
 `false`.
 

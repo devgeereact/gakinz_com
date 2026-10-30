@@ -37,10 +37,10 @@ differences (D-044):
 | Root `KNOWN-ISSUES.md` | `docs/KNOWN-ISSUES.md` | Kept with the other flat docs; every reference already points there |
 | `CHANGELOG.md` | N/A | Commit history, `docs/STATUS.md` and `docs/DECISIONS.md` already record change; a fourth record would drift |
 | `docs/UX-SPEC.md` | N/A | Journeys and screen requirements are in `docs/PRODUCT-SPEC.md`; screen patterns in `docs/DESIGN-SYSTEM.md` section 10.6 |
-| `docs/ACCESSIBILITY.md` | N/A | Requirements in `docs/DESIGN-SYSTEM.md` section 10.7; evidence in `qa/ACCESSIBILITY-AUDIT.md` |
+| `docs/ACCESSIBILITY.md` | N/A | Requirements in `docs/DESIGN-SYSTEM.md` section 10.7; evidence in `docs/AUDIT.md` |
 | `docs/NOTIFICATIONS-SPEC.md` | N/A | One notification route, specified in `docs/PRODUCT-SPEC.md` section 6.2 |
-| `qa/FUNCTIONAL-AUDIT.md`, `qa/REGRESSION-AUDIT.md` | `qa/TEST-PLAN.md` | One test record: suites, gaps and the J01 to J12 acceptance scenarios |
-| `qa/LAUNCH-CHECKLIST.md` | `qa/RELEASE-CHECKLIST.md` | Same purpose; launch gates in `docs/OPERATIONS.md` section 9 |
+| `qa/FUNCTIONAL-AUDIT.md`, `qa/REGRESSION-AUDIT.md` | `docs/TEST-PLAN.md` | One test record: suites, gaps and the J01 to J12 acceptance scenarios |
+| `qa/LAUNCH-CHECKLIST.md` | `docs/AUDIT.md` | Same purpose; launch gates in `docs/OPERATIONS.md` section 9 |
 | Not in the profile | `docs/OPERATIONS.md`, `docs/STATUS.md`, `docs/DECISIONS.md`, `docs/GEE-OS.md`, `docs/CONTENT-AND-GROWTH.md`, `docs/DESIGN-REFERENCE-MASTERCARD.md`, `CODEX.md`, `server/README.md` | Operations, current state, decisions, this route, the content policy, a preserved third-party design source, the Codex entry point, and the server folder's own guide |
 
 ## Boundaries

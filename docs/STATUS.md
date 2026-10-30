@@ -53,7 +53,7 @@ the sixth batch and its fix rounds, section 0.7; Task 26, 2026-10-20 at `de3c7fa
 
 Not measured on this run: `npm audit` (last figure in K-041) and anything on the live system.
 Accessibility and performance were re-measured on the D-046 build on 2026-10-16, locally; see
-section 6.3 and `qa/` section 9 of each audit.
+section 6.3 and section 9 of each audit in `docs/AUDIT.md`.
 
 ## 0.1 Production and privacy readiness audit, 2026-10-17
 
@@ -284,7 +284,7 @@ Built:
   address and IP, per address, per IP and on failed redemptions. Links reuse `magic_links`
   (no SQL 20). The sign-in page shows the form only when `status` says it is on, and a
   switched-off `#access` link reads "That sign-in link is invalid or expired.". J02 and J03
-  in `qa/TEST-PLAN.md` pass locally. Four gates stand before switching on
+  in `docs/TEST-PLAN.md` pass locally. Four gates stand before switching on
   (`docs/DEPLOYMENT.md` section 5.4).
 - **Consent and ad slots (Task 25).** Tracked settings in `src/marketing/lib/monetisation.ts`,
   all off; a TCF consent loader for a certified CMP on public routes only, with a reload when a
@@ -617,7 +617,7 @@ SQL. Both features are switched off. Summary, checks and NOT TESTED in section 0
 
 | Area | Change | Evidence |
 |---|---|---|
-| Reference sign-in | `server/client_access.php` (`status`, `request`, `redeem`), `$REFERENCE_SIGNIN_ENABLED = false` in `config.php.example`; `src/lib/clientAccess.ts`, `clientAccess` in `src/lib/api.ts`, the form and `#access` redemption in `src/app/Login.tsx`; J02 and J03 rows in `qa/TEST-PLAN.md` | `tests/server/client-access.test.ts`, `src/lib/clientAccess.test.ts`; the static request check in `tests/server/references.test.ts` now allows `client_access.php` `request` |
+| Reference sign-in | `server/client_access.php` (`status`, `request`, `redeem`), `$REFERENCE_SIGNIN_ENABLED = false` in `config.php.example`; `src/lib/clientAccess.ts`, `clientAccess` in `src/lib/api.ts`, the form and `#access` redemption in `src/app/Login.tsx`; J02 and J03 rows in `docs/TEST-PLAN.md` | `tests/server/client-access.test.ts`, `src/lib/clientAccess.test.ts`; the static request check in `tests/server/references.test.ts` now allows `client_access.php` `request` |
 | Consent and ads | `src/marketing/lib/monetisation.ts`, `consent.ts`, `adSlots.ts`; `AdSlot.tsx` and `ConsentLoader.tsx`; an optional `slot` in `ArticleBody.tsx`; `.adslot` in `site.css` | `monetisation.test.ts`, `consent.test.ts`, `AdSlot.test.tsx` |
 | Build gate | `thirdPartyProblems()` in `src/prerender/html.ts`; `scripts/prerender.mjs` fails on third-party markup | `src/prerender/third-party.test.ts`, the build |
 
@@ -990,13 +990,13 @@ the unknown rule name as an error. Removing the comment removes the error.
 after the fixes. Lighthouse 12.8.2 mobile, simulated throttling: performance 73 to 74 on `/`,
 87 on `/work`, 92 on `/contact`; accessibility 100 and best practices 100 on all three; SEO 100,
 92 and 92 (K-043); home CLS 0.114 and LCP 4.9 s (K-052). Detail: section 9 of
-`qa/ACCESSIBILITY-AUDIT.md` and of `qa/PERFORMANCE-AUDIT.md`. The rest of this section is the
+`docs/AUDIT.md` and of `docs/AUDIT.md`. The rest of this section is the
 2026-09-22 measurement of an earlier interface, kept as history.
 
 Everything in this section was measured on 2026-09-22 against the production build
 (`npm run build`) served locally by `npm run preview`, driven through the Chrome DevTools
 protocol. None of it was measured against the deployed site, because no server was contacted.
-The detail sits in `qa/ACCESSIBILITY-AUDIT.md` and `qa/PERFORMANCE-AUDIT.md`.
+The detail sits in `docs/AUDIT.md` and `docs/AUDIT.md`.
 
 | Measurement | Result |
 |---|---|
@@ -1137,7 +1137,7 @@ verified by source inspection only; no endpoint was exercised.
 
 **Do not read this table as "the server is secure".** It is a list of specific defects closed
 in source, none of it uploaded, none of it exercised at runtime, and none of it reviewed
-against the live configuration. `qa/SECURITY-AUDIT.md` holds the audit.
+against the live configuration. `docs/AUDIT.md` holds the audit.
 
 ### 6.7 Deployed state
 
@@ -1189,12 +1189,12 @@ whether the code path exists in the repository.
 | Component tests | None |
 | End-to-end tests | None |
 | Lint | FAIL. 47 errors, 2 warnings, down from 60 and 7 |
-| Accessibility, automated | PARTIAL on the D-046 build, measured 2026-10-16: two brand-colour contrast failures found and fixed the same day (K-050, K-051), not re-measured by this table. See section 6.3 and `qa/ACCESSIBILITY-AUDIT.md` section 9 |
+| Accessibility, automated | PARTIAL on the D-046 build, measured 2026-10-16: two brand-colour contrast failures found and fixed the same day (K-050, K-051), not re-measured by this table. See section 6.3 and `docs/AUDIT.md` section 9 |
 | Accessibility, assistive technology | **NOT TESTED.** No screen-reader pass has been run |
 | Accessibility, GAkinzOS at `/app/*` | PARTIAL. First automated check 2026-10-16: 8 screens in empty states, light and dark, 0 axe violations after fixes. Data-filled screens, dialogs and 390px NOT TESTED |
 | Performance, lab | Lighthouse mobile with simulated throttling on a local preview, 2026-10-16: 73 to 92. See section 6.3. With the prerender (`perf/prerender-public`): 81 to 94, CLS 0, SEO 100 on `/`, `/work`, `/contact`; home LCP still 4.5 to 4.8 s (`docs/KNOWN-ISSUES.md` K-052) |
 | Performance, field | **NOT TESTED.** No real-user measurement exists |
-| Security | Source inspection only, and the changes are not deployed. See `qa/SECURITY-AUDIT.md` |
+| Security | Source inspection only, and the changes are not deployed. See `docs/AUDIT.md` |
 
 ### 6.10 Not built, and why
 

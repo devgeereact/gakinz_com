@@ -8,7 +8,7 @@ none of the 2026-09-22 or 2026-10-10 server changes is known to be uploaded
 (`docs/DEPLOYMENT.md` section 5). Nothing here should be read as
 "this system is secure"; it describes what the code intends and where the gaps are.
 
-Findings with severity are in `qa/SECURITY-AUDIT.md`.
+Findings with severity are in `docs/AUDIT.md`.
 
 ---
 
@@ -47,7 +47,7 @@ lock screen no longer clears the session (client change, not deployed).
 
 ### Client sign-in by reference and email (2026-10-19, switched off)
 
-`server/client_access.php` (spec 6.1 phase 2, `qa/TEST-PLAN.md` J02 and J03) lets a client ask
+`server/client_access.php` (spec 6.1 phase 2, `docs/TEST-PLAN.md` J02 and J03) lets a client ask
 for a sign-in link by typing a work reference and their registered email. **It is off unless
 the live `config.php` sets `$REFERENCE_SIGNIN_ENABLED = true`**; only the boolean `true` counts,
 and `1`, `"true"` or a missing key leave it off. While off, every route answers 404 and the
@@ -411,7 +411,7 @@ revocation.
 ## 11. Known gaps
 
 The current list, with status, is `docs/KNOWN-ISSUES.md`; the 2026-09-04 audit is
-`qa/SECURITY-AUDIT.md`. Still open in the repository on 2026-10-10:
+`docs/AUDIT.md`. Still open in the repository on 2026-10-10:
 
 1. A live super-admin credential was published in an earlier `CLAUDE.md` and is in git
    history. The password was rotated on 2026-10-12 (owner-reported); session revocation is

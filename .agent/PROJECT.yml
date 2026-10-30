@@ -37,7 +37,7 @@ sources_of_truth:
   current_state: "docs/STATUS.md"
   decisions: "docs/DECISIONS.md"
   open_problems: "docs/KNOWN-ISSUES.md"
-  completion_standard: "AGENTS.md and qa/RELEASE-CHECKLIST.md"
+  completion_standard: "AGENTS.md and docs/AUDIT.md"
 
 # Retired 2026-10-10 with git rm (docs/DECISIONS.md D-044). Each is readable at commit c57eb4a.
 superseded:

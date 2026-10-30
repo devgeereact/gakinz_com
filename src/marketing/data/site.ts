@@ -457,7 +457,7 @@ export const faqs: { q: string; a: string }[] = [
  * `readMins` was previously asserted per post with no basis. It is gone. The
  * claim "I build to WCAG 2.1 AA as a matter of course" was also removed from
  * the accessibility piece: the project's own accessibility position is
- * measured and recorded in qa/ACCESSIBILITY-AUDIT.md, and the article now says
+ * measured and recorded in docs/AUDIT.md, and the article now says
  * what is actually true.
  */
 export type Insight = {

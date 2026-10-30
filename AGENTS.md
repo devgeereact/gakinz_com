@@ -95,7 +95,7 @@ decision.
 ## Completion standard
 
 A change is complete when all of the following hold and are stated with evidence. The full
-list is `qa/RELEASE-CHECKLIST.md`.
+list is `docs/AUDIT.md`.
 
 1. `npm run build` succeeds, which includes `tsc -b`.
 2. `npm test` passes, and any new behaviour that can be unit tested has a test. A server

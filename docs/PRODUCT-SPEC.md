@@ -8,7 +8,7 @@ features is kept with a disposition in Appendix B.
 The file records three things, and keeps them apart: what the repository **contains today**,
 what the approved scope **requires**, and what is **deliberately not built**. A requirement in
 this file is not a claim that it works. Current evidence lives in `docs/STATUS.md`, open
-defects in `docs/KNOWN-ISSUES.md`, and the acceptance scenarios in `qa/TEST-PLAN.md`.
+defects in `docs/KNOWN-ISSUES.md`, and the acceptance scenarios in `docs/TEST-PLAN.md`.
 
 Phase numbers used below are the delivery phases in `docs/STATUS.md` section 2.
 
@@ -721,7 +721,7 @@ authorises access by itself. Never reveal a name, invoice, project existence or 
 because a visitor knows or guesses a reference.
 
 **Phase 1 uses the existing client password sign-in only** (D-043). The reference plus email
-link comes later, and only after scenario J03 passes (`qa/TEST-PLAN.md`). When it does: ask
+link comes later, and only after scenario J03 passes (`docs/TEST-PLAN.md`). When it does: ask
 for the reference and the registered email, return the same neutral response whether they
 match or not, and send a verified email link into the existing client-role portal. No second
 account platform. The final owner and client sign-in policy is confirmed before that work

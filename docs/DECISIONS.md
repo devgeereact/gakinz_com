@@ -244,7 +244,7 @@ asserted explicitly.
 was left to the type checker and the build.
 
 **Consequence:** there is no component test, no endpoint test and no end-to-end test. This
-now includes `server/work.php`, which has never been executed. See `qa/TEST-PLAN.md`.
+now includes `server/work.php`, which has never been executed. See `docs/TEST-PLAN.md`.
 
 ---
 
@@ -297,7 +297,7 @@ pages, and a contrast fix to the `.gk-pill` eyebrow (`b43abc1`, 2026-06-12).
 accessibility tooling is in `package.json`, and the brand palette has been replaced twice
 since. The `.gk-pill` colour recorded in the old notes is not the colour in the code today.
 
-**Consequence:** `qa/ACCESSIBILITY-AUDIT.md` records the whole area as NOT TESTED until a
+**Consequence:** `docs/AUDIT.md` records the whole area as NOT TESTED until a
 fresh audit is run.
 
 ---
@@ -393,7 +393,7 @@ of error: `--gk-indigo` held black and `--gk-sky` held rose.
 
 **Evidence.** Contrast on the new palette was computed and then measured again on rendered
 pixels: 28 distinct foreground, background and size combinations across the public routes,
-0 failures, lowest 4.91:1. See `qa/ACCESSIBILITY-AUDIT.md`.
+0 failures, lowest 4.91:1. See `docs/AUDIT.md`.
 
 **Rule going forward.** None of `.gk-aurora`, `.gk-grid`, `.gk-shine`, `.gk-grad-text`,
 `.gk-ring` or `.gk-grain` may appear on a public page. If one turns up in `src/marketing/`
@@ -591,7 +591,7 @@ changed rather than the history.
 | Reflow at 640x512, equivalent to 1280x1024 at 200 per cent | No horizontal scrolling on 8 routes |
 | 390px viewport | No overflow, no target under 24x24 |
 
-The report is `qa/ACCESSIBILITY-AUDIT.md`, which states for each line what was run, against
+The report is `docs/AUDIT.md`, which states for each line what was run, against
 what, and on what date.
 
 **What is still NOT TESTED, and it is not a footnote.** No screen-reader pass with real

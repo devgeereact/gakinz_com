@@ -1,6 +1,6 @@
 /**
  * client_access.php: client sign-in by work reference and email
- * (docs/PRODUCT-SPEC.md 6.1, qa/TEST-PLAN.md J03 and J02).
+ * (docs/PRODUCT-SPEC.md 6.1, docs/TEST-PLAN.md J03 and J02).
  *
  * Switched off unless $REFERENCE_SIGNIN_ENABLED is strictly true. When on:
  * one neutral answer for every request outcome, a link only for an active

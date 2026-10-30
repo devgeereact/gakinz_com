@@ -1,5 +1,5 @@
 /**
- * K-039 (acceptance scenarios J04 and J05 in qa/TEST-PLAN.md): a `client`-role user can message the
+ * K-039 (acceptance scenarios J04 and J05 in docs/TEST-PLAN.md): a `client`-role user can message the
  * owner through support tickets, and can only ever see or touch tickets that
  * belong to their own client. The client id always comes from the token, never
  * from the request. Staff behaviour is unchanged.

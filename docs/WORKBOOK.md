@@ -191,5 +191,5 @@ or partly open: [KNOWN-ISSUES](KNOWN-ISSUES.md).
 | Upload list, SQL order, checks | [DEPLOYMENT.md](DEPLOYMENT.md) |
 | Why things are the way they are | [DECISIONS.md](DECISIONS.md) |
 | Scope | [PRODUCT-SPEC.md](PRODUCT-SPEC.md) |
-| Release steps | [RELEASE-CHECKLIST.md](../qa/RELEASE-CHECKLIST.md) |
+| Release steps | [RELEASE-CHECKLIST.md](AUDIT.md) |
 | Current agent task | [CURRENT-TASK.md](../.agent/CURRENT-TASK.md) |

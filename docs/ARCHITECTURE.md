@@ -79,7 +79,7 @@ Measured on the local build of 2026-09-22:
 | `AppLayout` | 87.68 kB | Lazy |
 
 `dist/` is 2.6 MB in total, down from 43 MB, and `public/` is 96 KB, down from 36.1 MB, after
-35.92 MiB of unreferenced assets were removed. See `qa/PERFORMANCE-AUDIT.md` and
+35.92 MiB of unreferenced assets were removed. See `docs/AUDIT.md` and
 `docs/DECISIONS.md` D-032.
 
 ### Build-time prerender (K-043, K-052, K-053)
