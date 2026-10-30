@@ -121,7 +121,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-108 | Client anonymisation is built but switched off, awaiting adviser confirmation | Medium | Built 2026-10-20, switched off, not uploaded. Adviser confirms the rules first |
 | K-111 | SQL 20 was written as live statements at the foot of `schema.sql` and stopped the schema loading on MySQL | High (CI only) | **Fixed 2026-10-30** (commented out; found by the first CI run after Actions came back) |
 | K-110 | A burst of 31 `Class "mysqli" not found` fatals in the live PHP error log | Medium | Open, found 2026-10-30. None since; cause UNVERIFIED |
-| K-109 | GitHub Actions is switched off, so no CI runs and no deploy runs; the FTP deploy state on the host is stale | Medium | Open, found 2026-10-30. Cause verified; switching on awaits the owner |
+| K-109 | GitHub Actions is switched off, so no CI runs and no deploy runs; the FTP deploy state on the host is stale | Medium | **Fixed 2026-10-30.** Actions on; the new no-delete upload ran green on `608dc7b` |
 
 
 ---
@@ -2088,7 +2088,7 @@ adviser: `docs/PRIVACY-READINESS.md` section 7.
 
 ## K-109 · GitHub Actions is switched off, so no CI and no deploy runs
 
-**Found:** 2026-10-30. **Severity:** Medium. **Status:** Actions switched on 2026-10-30 at the owner's instruction (the repository is public); see the end of this entry.
+**Found:** 2026-10-30. **Severity:** Medium. **Status:** Fixed 2026-10-30. Actions is on (the repository is public) and the no-delete upload passed in CI; see the end of this entry.
 
 `gh api repos/devgeereact/gakinz_com/actions/permissions` returns `enabled: false`. This is the
 cause of the missing runs recorded in `docs/WORKBOOK.md` section 1, item 6 (earlier "cause
@@ -2153,3 +2153,11 @@ Cause: the script used `ftps://`, which lftp treats as implicit TLS on port 990.
 nothing was uploaded and the live site was unchanged. The script now uses `ftp://` with
 `ftp:ssl-force` (explicit TLS on port 21, certificate verified). Still NOT TESTED against the host
 until a deploy run passes; this Mac has no access to the FTP secrets.
+
+**Result, 2026-10-30:** deploy run 41075764726 on `608dc7b` passed (build, lftp install, upload, about
+2 minutes). Checked from outside afterwards: `/`, `/pricing`, `/services`, `/contact`, `/login`,
+`/app`, `/app/leads`, `/sitemap.xml` and `/robots.txt` return 200; the home bundle is
+`index-BOepCWBo.js` (the same name the Mac build produced, so the CI build is reproducible); the
+files carry the new modified time (14:54 UTC); the Clerk live key is in the login chunks; the API
+answers 401 JSON to a bad bearer. Nothing was deleted from the host by design. The uploader was
+not read back file by file: PASS means the run and these public checks, not a byte comparison.

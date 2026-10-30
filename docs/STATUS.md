@@ -369,7 +369,12 @@ Production change, 2026-10-30, owner instruction "Leave only Gakinz101@gmail as 
 | Live seed file `seed_admin_password.txt` (K-015) | **PASS**: does not exist in the document root |
 | Live `error_log` | 31 `mysqli not found` fatals in one minute at 13:25 to 13:26 UTC, none since (K-110) |
 
-CI: the first run after Actions came back (PR #23) failed the server-test job on SQL 20 (MySQL does not accept `IF NOT EXISTS` on `ADD COLUMN`; K-111). Fixed by commenting the two statements out; the front-end job (typecheck, lint, docs, unit tests, build) passed in 1m15s.
+CI and deploy: the first run after Actions came back (PR #23) failed the server-test job on SQL 20
+(MySQL does not accept `IF NOT EXISTS` on `ADD COLUMN`; K-111) and, once that was fixed, one test that
+read past the SQL 19 block; both fixed. CI then passed on both jobs. `main` is `608dc7b`. The first
+deploy run (`42359ed`) failed in the upload step on implicit-TLS port 990 and changed nothing on the
+host; after the switch to explicit FTPS on port 21 the deploy run on `608dc7b` passed, and the live
+site was checked from outside (K-109 result). Repository public; Actions on; `main` is the only branch.
 
 Git: `move/cpanel-clerk` was deleted on origin and locally on 2026-10-30 at the owner's
 instruction (fully contained in `main` at `a034e40`; the rule against deleting remote branches
