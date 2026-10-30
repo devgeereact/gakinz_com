@@ -41,3 +41,7 @@ server/uploads/
 
 # Agent worktrees created by Claude Code sessions (local only).
 .claude/worktrees/
+
+# local scratch (tests, temp, logs, recovery)
+.local-test/
+.local-state/

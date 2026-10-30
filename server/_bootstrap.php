@@ -101,6 +101,19 @@ function require_auth(mysqli $conn, array $roles = []): array {
   $token = bearer_token();
   if ($token === '') fail('Not authenticated.', 401);
 
+  if (substr_count($token, '.') === 2) {
+    // Clerk session token (email-code sign-in), checked in _clerk.php. The 64-hex session tokens
+    // from the magic-link and reference flows have no dots and take the lookup below.
+    require_once __DIR__ . '/_clerk.php';
+    $user = gk_clerk_user_from_token($conn, $token);
+    if (!$user) fail('Session expired. Please sign in again.', 401);
+    if ($user['status'] !== 'active') fail('Account is not active.', 403);
+    if ($roles && !in_array($user['role'], $roles, true)) fail('Not allowed.', 403);
+    $user['id'] = (int)$user['id'];
+    $user['client_id'] = $user['client_id'] !== null ? (int)$user['client_id'] : null;
+    return $user;
+  }
+
   $stmt = $conn->prepare(
     'SELECT u.id, u.name, u.email, u.role, u.client_id, u.status
      FROM auth_tokens t JOIN users u ON u.id = t.user_id

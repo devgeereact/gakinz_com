@@ -50,9 +50,11 @@ CREATE TABLE IF NOT EXISTS users (
   totp_recovery VARCHAR(1000) DEFAULT NULL,              -- JSON array of bcrypt-hashed backup codes
   totp_last_step BIGINT NULL DEFAULT NULL,               -- last accepted 30-second TOTP step: blocks replay (2026-10-17)
   status        VARCHAR(20)  NOT NULL DEFAULT 'active',  -- active | suspended
+  clerk_user_id VARCHAR(64) NULL DEFAULT NULL,           -- Clerk user id (sub); set on first email-code sign-in (SQL 20)
   created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  deleted_at    TIMESTAMP NULL DEFAULT NULL
+  deleted_at    TIMESTAMP NULL DEFAULT NULL,
+  UNIQUE KEY uq_users_clerk_user_id (clerk_user_id)
   -- No inline FK to clients: this table is created before clients in this file.
   -- The link is enforced in application code (users.php validates client_id).
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
@@ -1064,3 +1066,12 @@ INSERT IGNORE INTO reference_counters (kind, ref_year, last_n) VALUES ('E', 0, 0
 -- again. A reference shown since the draft ran may change. Step 2 as it is
 -- written now never needs this.
 --   DELETE FROM reference_counters; UPDATE enquiries SET reference = NULL; UPDATE projects SET reference = NULL;
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- SQL 20 (2026-10-30): staff and portal users sign in with Clerk (email code).
+-- Additive and safe to re-run; nothing existing is changed or dropped (password_hash,
+-- the 2FA columns and the token tables stay until the owner confirms the old sign-in can go).
+-- Dry run: SHOW COLUMNS FROM users LIKE 'clerk_user_id';
+-- ─────────────────────────────────────────────────────────────────────────────
+ALTER TABLE users ADD COLUMN IF NOT EXISTS clerk_user_id VARCHAR(64) NULL DEFAULT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_users_clerk_user_id ON users (clerk_user_id);

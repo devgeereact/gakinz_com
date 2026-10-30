@@ -4,6 +4,7 @@
 // (vite.config.ts), so the browser never makes a cross-origin call and the live
 // ALLOWED_ORIGINS list does not need a localhost entry.
 import { getStoredToken, useAuth, type AuthUser, type Role } from "@/store/auth.store"
+import { clerkEnabled, clerkToken } from "@/lib/clerk"
 
 export const API_BASE = ""
 
@@ -95,9 +96,17 @@ const bodyError = (body: unknown): string | undefined =>
     ? (body as { error: string }).error
     : undefined
 
+/** The bearer for the next request: a legacy session token (magic link, reference sign-in) if one is held, else a fresh Clerk token. */
+async function authToken(): Promise<string | null> {
+  const stored = getStoredToken()
+  if (stored || !clerkEnabled) return stored
+  const r = await clerkToken()
+  return r.kind === "token" ? r.token : null
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<ApiResult<T>> {
   try {
-    const token = getStoredToken()
+    const token = await authToken()
     const res = await fetch(`${API_BASE}${path}`, {
       headers: {
         "Content-Type": "application/json",
@@ -137,7 +146,7 @@ export const api = {
   // multipart boundary itself.
   upload: async <T>(path: string, form: FormData): Promise<ApiResult<T>> => {
     try {
-      const token = getStoredToken()
+      const token = await authToken()
       const res = await fetch(`${API_BASE}${path}`, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -164,7 +173,7 @@ export const api = {
   // check on the reply's type for a file whose type varies (see isFileReply).
   download: async (path: string, expectedType: string | ((type: string) => boolean)): Promise<ApiResult<Blob>> => {
     try {
-      const token = getStoredToken()
+      const token = await authToken()
       const res = await fetch(`${API_BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
       if (!res.ok) {
         if (res.status === 401) useAuth.getState().clear()

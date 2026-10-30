@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils"
 import { users, auth, type Session } from "@/lib/api"
 import { useAuth } from "@/store/auth.store"
 import { canAccess } from "@/lib/access"
+import { clerkEnabled } from "@/lib/clerk"
 
 // Self-service security panels shared by My account (every role) and Settings
 // (Platform). Both call auth.php actions that act only on the caller's own
@@ -29,6 +30,12 @@ function fmt(d: string) {
 // Self-service two-factor (TOTP). Any signed-in user can enable/disable their own.
 // `bare` drops the panel's own frame for a host that already draws a card.
 export function TwoFactorPanel({ bare = false }: { bare?: boolean }) {
+  // Sign-in is Clerk's email code; there is no password or authenticator app to set up here.
+  if (clerkEnabled) return <p className="text-sm text-muted-foreground">You sign in with a one-time code sent to your email. There is no password or authenticator to manage.</p>
+  return <LegacyTwoFactorPanel bare={bare} />
+}
+
+function LegacyTwoFactorPanel({ bare = false }: { bare?: boolean }) {
   const me = useAuth((s) => s.user)
   const [enabled, setEnabled] = useState(false)
   const [secret, setSecret] = useState("")

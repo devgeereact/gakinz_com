@@ -957,3 +957,26 @@ home page and 0 still hidden at the page foot, `/services` reached at the top wi
 `h1`, drawer stops and restarts Lenis, no horizontal overflow, and under reduced motion no
 library request and nothing hidden. Real devices, Safari, trackpads, real assistive technology
 and a Lighthouse run are NOT TESTED.
+
+## D-052 · Staff and portal users sign in with Clerk (email code only)
+**Date:** 2026-10-30 · **Status:** built on `move/cpanel-clerk`, not deployed. Owner instruction, 30 October 2026: move every project to the standard Clerk sign-in, as done for EGO LIMITED.
+
+1. **Clerk proves who is calling; roles stay in `users`.** `server/_clerk.php` verifies a Clerk
+   session token (RS256, signing keys cached, issuer, expiry, not-before and authorised-party
+   checks). `require_auth()` accepts it beside the existing 64-hex session tokens.
+2. **Linking.** `users.clerk_user_id` (SQL 20, additive, unique) equals the token's `sub`; on the
+   first sign-in an active user whose email equals the token's verified `email` claim is linked.
+   A row linked to a different Clerk user is never re-linked, an unknown email gets 401, and
+   sign-up never creates a user. Suspended users still get 403.
+3. **Email code only.** Google and passwords are off in the Clerk instance. `VITE_CLERK_PUBLISHABLE_KEY`
+   switches the app to Clerk; unset keeps the existing sign-in, so a build without the key still works.
+4. **Not removed yet.** Password, 2FA, Google SSO, reset and the lock screen stay in the code
+   until the new path is proven live and the owner confirms. The lock screen is off under Clerk.
+   The magic-link and reference sign-ins for portal clients are separate flows and are unchanged.
+5. **Public site unchanged.** Clerk loads only on `/login` and under `/app` (the guard is a lazy
+   route), so visitors to the marketing site download no extra script (entry bundle 198 KB, was 200 KB).
+
+Evidence: `npm run test:server` 527 passed on a throwaway database (`tests/server/clerk.test.ts`:
+linking by email and id, no takeover, unknown email, suspended, client role limits, bad tokens,
+existing sessions still work); `npm test` 545 passed; lint ratchet at its 5-error ceiling; build
+with the live key has no secret keys. NOT TESTED: a real sign-in, the live server.

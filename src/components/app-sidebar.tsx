@@ -1,3 +1,4 @@
+import { clerkEnabled, clerkSignOut } from "@/lib/clerk"
 import { useEffect, useState } from "react"
 import { LogOut, UserRound } from "lucide-react"
 import { Link, useLocation, useNavigate } from "react-router-dom"
@@ -83,6 +84,7 @@ export function AppSidebar({ onHoverChange, ...props }: AppSidebarProps) {
   const onLogout = async () => {
     await auth.logout() // best-effort: the server deletes the token
     clear() // drop the local session regardless
+    if (clerkEnabled) await clerkSignOut().catch(() => {})
     navigate("/login", { replace: true })
   }
 

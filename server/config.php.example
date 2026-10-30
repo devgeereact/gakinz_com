@@ -50,6 +50,14 @@ define('ALLOWED_ORIGINS', [
   'http://localhost:5102',  // gakinz dev port — block 10, pinned in vite.config.ts
 ]);
 
+// ── Clerk sign-in (email code) ───────────────────────────────────────────────
+// CLERK_ISSUER is the Frontend API URL of the PRODUCTION Clerk instance
+// (https://clerk.gakinz.com, no trailing slash). CLERK_AUTHORIZED_PARTIES are the exact
+// origins allowed to present a token: the live site and local-live. Nothing else.
+// CLERK_CACHE_DIR (optional) is a private writable folder outside the web root for the signing keys.
+define('CLERK_ISSUER', 'https://clerk.example.com');
+define('CLERK_AUTHORIZED_PARTIES', ['https://gakinz.com', 'https://local.gakinz.com']);
+
 // ── Optional integrations ────────────────────────────────────────────────────
 define('OPENWEATHER_API_KEY', '');   // read by weather.php (CMS header widget); '' hides the widget
 define('OPENWEATHER_UNITS', 'metric'); // 'metric' (°C) or 'imperial' (°F)

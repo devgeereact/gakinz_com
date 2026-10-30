@@ -308,6 +308,20 @@ NOT TESTED. A later server change starts a new list here.
    deploys the client that expects these server changes.
 16. **Walk the post-upload checks** in section 5.6.
 
+### 5.1a Clerk sign-in (D-052, built 2026-10-30, not uploaded)
+
+Additive; the old sign-in keeps working until the owner confirms it can go. In order, each step approved by the owner:
+
+1. Full database backup and a copy of `config.php`.
+2. Add `CLERK_ISSUER` (`https://clerk.gakinz.com`) and `CLERK_AUTHORIZED_PARTIES` (`https://gakinz.com`, `https://local.gakinz.com`) to the server `config.php` (`config.php.example` shows the lines).
+3. Run **SQL 20** (the last block of `server/schema.sql`: `users.clerk_user_id` and its unique index).
+4. Upload `_clerk.php`, then `_bootstrap.php` (it requires `_clerk.php`), never the other way round.
+5. Make sure each person who should sign in has an active `users` row with their email, and a Clerk user in the production instance. Restrict sign-up in Clerk once they exist.
+6. Build with `VITE_CLERK_PUBLISHABLE_KEY` set to the live key and upload `dist/`.
+7. Check: one Clerk sign-in per role, an unknown email shows "No access yet", a bad token gets 401, a magic-link client still signs in, `/` and the public pages load without a Clerk request.
+
+Rollback: restore the previous `_bootstrap.php` and `dist/`; the new column is harmless.
+
 ### 5.2 SQL, in order
 
 Every statement is at the foot of `server/schema.sql`. There is no migration runner; nothing is

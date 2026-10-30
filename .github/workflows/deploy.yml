@@ -27,7 +27,11 @@ jobs:
         with:
           node-version: 22
       - run: npm ci
-      - run: npm run build
+      - name: Build
+        # Public Clerk key from a repository variable (not a secret). Unset keeps the existing sign-in.
+        env:
+          VITE_CLERK_PUBLISHABLE_KEY: ${{ vars.VITE_CLERK_PUBLISHABLE_KEY }}
+        run: npm run build
       - uses: SamKirkland/FTP-Deploy-Action@v4.4.0
         with:
           server:   ${{ secrets.FTP_SERVER }}

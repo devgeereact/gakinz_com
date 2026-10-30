@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label"
 import { auth } from "@/lib/api"
 import { revokePreviousToken } from "@/lib/session-revoke"
 import { useAuth } from "@/store/auth.store"
+import { clerkEnabled } from "@/lib/clerk"
 import BrandMark from "@/marketing/components/BrandMark"
 
 const IDLE_MS = 15 * 60 * 1000 // lock after 15 minutes idle
@@ -17,7 +18,12 @@ const KEY = "gk-locked"
 // Unlocking re-uses the normal login flow so it can't be bypassed client-side.
 // That login issues a new token, so the token held before the lock is then
 // revoked on the server (K-033) rather than left valid until it expires.
+// Under Clerk there is no password to re-enter; the Clerk session ends the same way as any other.
 export default function LockScreen() {
+  return clerkEnabled ? null : <PasswordLock />
+}
+
+function PasswordLock() {
   const user = useAuth((s) => s.user)
   const currentToken = useAuth((s) => s.token)
   const setAuth = useAuth((s) => s.setAuth)

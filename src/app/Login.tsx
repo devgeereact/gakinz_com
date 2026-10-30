@@ -10,9 +10,15 @@ import { useAuth } from "@/store/auth.store"
 import { defaultPathForRole } from "@/lib/access"
 import AuthFrame from "@/app/components/AuthFrame"
 import { initialRedirectState } from "@/lib/loginRedirect"
+import { clerkEnabled } from "@/lib/clerk"
+import ClerkLogin from "@/app/ClerkLogin"
 
 
 export default function Login() {
+  return clerkEnabled ? <ClerkLogin /> : <LegacyLogin />
+}
+
+function LegacyLogin() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [code, setCode] = useState("")

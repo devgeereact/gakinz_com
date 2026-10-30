@@ -7,7 +7,6 @@ import { publicRoute } from "./public"
 // 🔐 AUTH — eager only for the route guard + error boundary (both tiny). The
 // login/register/cover/error PAGES are lazy (see below) so a marketing visitor
 // never downloads the auth bundle on first paint.
-import RequireAuth from "@/app/RequireAuth"
 import ErrorPage from "@/pages/ErrorPage"
 
 // 📊 CMS (/app/*) + 🔐 auth pages — lazy. The whole admin tree (charts, calendar,
@@ -34,7 +33,7 @@ export const router = createBrowserRouter([
 
   // 📊 APP ROUTES (CMS) — guarded by RequireAuth, mounted under /app, all lazy
   {
-    element: <RequireAuth />,
+    lazy: lz(() => import("@/app/RequireAuth")), // lazy so the Clerk code stays out of the public bundle
     children: [
       {
         path: "app",

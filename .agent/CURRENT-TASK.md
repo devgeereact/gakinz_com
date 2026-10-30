@@ -178,3 +178,8 @@ The 2026-10-17 readiness audit contract (`audit/readiness-2026-10-17`, PR #20) i
 its text is in git history at `8499761`. The D-046 redesign contract (2026-10-12 to
 2026-10-16, `feat/redesign-2026`) is at `ef2d6f9`. The 2026-10-10 contract is at `d314833`, the batch 1
 contract at `9db80b2`, and the 2026-09-22 public relaunch contract was merged as `f67f05b` (#5).
+
+## Handoff: Clerk sign-in (30 October 2026, branch `move/cpanel-clerk`, D-052)
+Built and tested locally, not deployed: `server/_clerk.php`, `require_auth()` accepts a Clerk bearer, SQL 20 (`users.clerk_user_id`), `src/lib/clerk.ts`, `ClerkSession`, `ClerkLogin`, `RequireAuth` (Clerk guard; lazy route so the public bundle stays 198 KB), API client sends a Clerk token when no legacy token is held, lock screen off under Clerk. Clerk app "gakinz.com" (production instance on gakinz.com, DNS verified, email code only, test user gakinz101@gmail.com). Upload order: DEPLOYMENT.md section 5.1a.
+Evidence: `npm run test:server` 527 passed (new `tests/server/clerk.test.ts`); `npm test` 545 passed; lint ratchet 5/5; build OK; docs:check PASS.
+Open: removing password, 2FA, Google SSO, reset after the owner confirms; staff list for Clerk; the server may have other uploads pending (section 5).

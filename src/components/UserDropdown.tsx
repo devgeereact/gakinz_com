@@ -1,3 +1,4 @@
+import { clerkEnabled, clerkSignOut } from "@/lib/clerk"
 import { ChevronDown, LogOut, Monitor, Moon, ShieldCheck, Sun, UserRound } from "lucide-react"
 import { useTheme } from "next-themes"
 import { Link, useNavigate } from "react-router-dom"
@@ -40,6 +41,7 @@ export function UserDropdown() {
   const logout = async () => {
     await authApi.logout()
     clear()
+    if (clerkEnabled) await clerkSignOut().catch(() => {})
     navigate("/login", { replace: true })
   }
 
