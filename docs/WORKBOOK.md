@@ -30,11 +30,12 @@ What was done, in order, from the Mac over `ssh cpanel`:
    anchor rows exist in `reference_counters`, and `files.client_visible`,
    `users.totp_last_step` and `work.hero_order` exist.
 6. **GitHub Actions did not run.** No run exists for `3fc6a31`, and none since 2026-10-10 on
-   any branch or PR, although both workflows are active and the repository is public. Cause
-   UNVERIFIED. So `dist/` was built on the Mac from a tree identical to `origin/main` (`npm run
+   any branch or PR. Cause found 2026-10-30: the repository's Actions permission is `enabled: false`
+   (`gh api`), and the repository is private, not public (K-109). So `dist/` was built on the Mac from a tree identical to `origin/main` (`npm run
    build`, 32 prerendered pages) and uploaded with `rsync` (no `--delete`; 150 new files, 6
    changed, nothing removed). The FTP deploy's `.ftp-deploy-sync-state.json` on the host is
-   now stale, so the next Actions deploy may re-upload files it thinks changed.
+   now stale. The deploy step was replaced on 2026-10-30 by `scripts/deploy-ftps.sh`, which does not
+   use that file and never deletes (K-109).
 
 **Live check, 2026-10-22 07:00 UTC** (unauthenticated GET requests): every endpoint answers
 JSON (`site`, `today`, `search`, `briefs`, `privacy`, `assets`, `bookings`, `feedback`,

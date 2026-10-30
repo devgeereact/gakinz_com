@@ -959,7 +959,7 @@ library request and nothing hidden. Real devices, Safari, trackpads, real assist
 and a Lighthouse run are NOT TESTED.
 
 ## D-052 · Staff and portal users sign in with Clerk (email code only)
-**Date:** 2026-10-30 · **Status:** built on `move/cpanel-clerk`, released to the live server on 2026-10-30, owner sign-in confirmed working (`docs/STATUS.md` section 0.8); not yet merged to `main`. Owner instruction, 30 October 2026: move every project to the standard Clerk sign-in, as done for EGO LIMITED.
+**Date:** 2026-10-30 · **Status:** built on `move/cpanel-clerk`, released to the live server on 2026-10-30, owner sign-in confirmed working (`docs/STATUS.md` section 0.8); merged to `main` (`a034e40`, 2026-10-30, fast-forward). Owner instruction, 30 October 2026: move every project to the standard Clerk sign-in, as done for EGO LIMITED.
 
 1. **Clerk proves who is calling; roles stay in `users`.** `server/_clerk.php` verifies a Clerk
    session token (RS256, signing keys cached, issuer, expiry, not-before and authorised-party
@@ -980,3 +980,5 @@ Evidence: `npm run test:server` 527 passed on a throwaway database (`tests/serve
 linking by email and id, no takeover, unknown email, suspended, client role limits, bad tokens,
 existing sessions still work); `npm test` 545 passed; lint ratchet at its 5-error ceiling; build
 with the live key has no secret keys. NOT TESTED: a real sign-in, the live server.
+
+6. **Exception to the kit's Never list, 2026-10-30.** The owner instructed the deletion of the merged branch `move/cpanel-clerk` on origin ("Fix this now", naming the branch note). It was fully contained in `main` (`a034e40`); deleted on origin and locally. This is a one-off, not a change to the rule.

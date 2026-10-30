@@ -119,6 +119,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-106 | The CMP host allow-list is not checked against Google's certified CMP list | Medium if switched on | Open, check before switching on |
 | K-107 | Some CMPs need more than a script URL | Low | Open, check when a CMP is chosen |
 | K-108 | Client anonymisation is built but switched off, awaiting adviser confirmation | Medium | Built 2026-10-20, switched off, not uploaded. Adviser confirms the rules first |
+| K-109 | GitHub Actions is switched off, so no CI runs and no deploy runs; the FTP deploy state on the host is stale | Medium | Open, found 2026-10-30. Cause verified; switching on awaits the owner |
 
 
 ---
@@ -2082,3 +2083,32 @@ the header of `server/_anonymise.php` is authoritative.
 MySQL 5.7, and Google sign-in for an anonymised
 login. Upload and gates: `docs/DEPLOYMENT.md` sections 5.1 step 14 and 5.4. Rules for the
 adviser: `docs/PRIVACY-READINESS.md` section 7.
+
+## K-109 · GitHub Actions is switched off, so no CI and no deploy runs
+
+**Found:** 2026-10-30. **Severity:** Medium. **Status:** Open.
+
+`gh api repos/devgeereact/gakinz_com/actions/permissions` returns `enabled: false`. This is the
+cause of the missing runs recorded in `docs/WORKBOOK.md` section 1, item 6 (earlier "cause
+UNVERIFIED"). Merging `a034e40` to `main` on 2026-10-30 started no workflow. The last run in
+`gh run list` is from 2026-10-17. Consequences:
+
+1. **No CI on a pull request or a push**: tests, the lint ratchet, gitleaks and Semgrep do not run
+   in GitHub. Only the Mac runs them.
+2. **No automatic deploy of `dist/`**: `dist/` goes up by hand (`rsync`, as on 2026-10-21 and
+   2026-10-30).
+3. **Deploy step replaced, 2026-10-30.** `SamKirkland/FTP-Deploy-Action@v4.4.0` compares against
+   `.ftp-deploy-sync-state.json` on the host and can delete remote files absent from the build,
+   which `RULES.md` section 7 forbids. `.github/workflows/deploy.yml` now calls
+   `scripts/deploy-ftps.sh` (lftp over FTPS with certificate checking; two mirror passes, the HTML
+   entry points last; no delete). **PASS locally** against a folder (`DEPLOY_TARGET_URL=file://...`):
+   a pre-existing old asset and an unrelated file were kept, every file in `dist/` arrived, and
+   `index.html`, `pricing/index.html` and `app-shell.html` were replaced. **NOT TESTED** against the
+   real host (FTPS handshake, that `FTP_SERVER` is the verified origin hostname, passive mode, the
+   account's folder scope) and not run in GitHub Actions. The `VITE_CLERK_PUBLISHABLE_KEY`
+   variable is set, so a CI build keeps Clerk sign-in.
+
+Still open: Actions is switched off. Switching on is
+`gh api -X PUT repos/OWNER/REPO/actions/permissions -F enabled=true` and needs the owner's
+approval; the first deploy after it should be watched, because it is the first run of the new step.
+No agent has changed the setting.

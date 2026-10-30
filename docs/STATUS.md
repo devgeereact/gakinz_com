@@ -336,19 +336,42 @@ Open items: K-100 to K-108.
 ## 0.8 Clerk sign-in, 30 October 2026 (D-052)
 
 Released to the live server on 30 October 2026 (record: `docs/DEPLOYMENT.md` section 5.1a and
-`.agent/CURRENT-TASK.md`). Branch `move/cpanel-clerk`, not yet merged to `main`.
+`.agent/CURRENT-TASK.md`). Merged to `main` the same day by fast-forward (`da4d558` to `a034e40`) and
+pushed; no workflow ran, because GitHub Actions is switched off on the repository (K-109).
 
 | Check | Result |
 |---|---|
 | Re-run on the Mac, same day, against the branch head: `php -l` over 65 files, `npm test` 545 (46 files), `npm run test:server` 527 (37 files, database `gakinz_verify_test`, ports 5309 and 5310), `npm run lint:ratchet` 5 and 0, `npm run docs:check`, `npm run build` (32 public pages), no `sk_live` or `sk_test` string in `dist/` | **PASS** |
-| Read-only HTTP: `/`, `/login`, `/app`, `/sitemap.xml` return 200; `/server/_clerk.php` and `/server/config.php` return 404 | **PASS** |
+| Read-only HTTP on the public site: `/`, `/login`, `/app`, `/sitemap.xml` return 200. `/_clerk.php`, `/_bootstrap.php` and `/config.php` return 403 (the `FilesMatch` deny in `server/.htaccess`, K-013); `/nothing.php` returns 404; `/schema.sql` and `/composer.json` return the app shell (HTML), not the files; `/.env` returns 403. An earlier check of `/server/_clerk.php` and `/server/config.php` (404) tested paths that do not exist on the host and proved nothing | **PASS** |
 | Clerk production instance for gakinz.com, `session` config read through the Clerk connection (nothing changed): custom claim `email` = primary email address, lifetime 60 s, clock skew 5 s | **PASS** (the claim `server/_clerk.php` links a first sign-in by is present) |
 | Owner signed in at `/login` with the email code as `gakinz101@gmail.com` (reported by the owner, not observed by an agent) | **PASS** for the staff path, owner-reported |
 
-Not verified: client portal sign-in with Clerk (a `client`-role user); the `dev@gakinz.com`
-sign-in; the live `users` rows (`clerk_user_id` linked) by direct read; a backup restore (K-010);
-removal of password sign-in, 2FA and Google sign-in (waits for the owner). TEST records still to
-remove: `users` row 2 and its Clerk user.
+Repository state read with `gh`: Actions permission `enabled: false`; repository variable
+`VITE_CLERK_PUBLISHABLE_KEY` set (a public key); secrets `FTP_SERVER`, `FTP_USERNAME`,
+`FTP_PASSWORD` present (values not read). Recorded as K-109.
+
+Server checks over `ssh cpanel`, read-only, the same day (no secret printed, nothing changed on the host):
+
+| Check | Result |
+|---|---|
+| `~/gakinz.com/config.php` mode | **PASS**: 600. `~/gakinz_backups` is mode 700 and holds the 30 October files; `config.php.before-clerk` is 644 inside that private folder |
+| Live `users` rows (columns id, email, role, status, client_id, linked, no-password flag only) | Row 1 `dev@gakinz.com` super_admin, active, **not linked to Clerk yet**, still has a password hash. Row 2 `gakinz101@gmail.com` super_admin, active, **linked**, no password. `clients`: 0. Tables: 42 |
+| Backup `gakinz_db_20261030_005611.sql.gz`: downloaded to `.local-state/backups/`, SHA-256 identical on both sides (`eda1af5a...aa23`), `gzip -t` ok, restored into a throwaway local MariaDB 11.4 database, then dropped | **PASS** for the database: 42 tables, 1 user (`dev@gakinz.com`), 0 clients, no `clerk_user_id` column (it was taken before SQL 20, as intended). The restore was not into the live site |
+| Backup `gakinz_files_20261030_005611.tar.gz`: `gzip -t` ok on the server, 320 entries listed | **PARTIAL**: integrity only, no files restored |
+
+Git: `move/cpanel-clerk` was deleted on origin and locally on 2026-10-30 at the owner's
+instruction (fully contained in `main` at `a034e40`; the rule against deleting remote branches
+was set aside for this one, recorded in D-052).
+
+Not verified:
+
+- A client portal sign-in with Clerk **on the live site**: the live database has no client, so
+  a test would need a real record created in production. Covered locally by
+  `tests/server/clerk.test.ts` (a client token cannot use a staff endpoint).
+- The `dev@gakinz.com` sign-in: needs the owner to read that mailbox.
+- Removal of password sign-in, 2FA and Google sign-in: waits for the owner.
+- Row 2 is labelled TEST but is the account the owner signed in with; it is the only linked
+  super-admin. Do not remove it until `dev@gakinz.com` has signed in with Clerk.
 
 ## 1. Audit and readiness, 2026-10-10
 

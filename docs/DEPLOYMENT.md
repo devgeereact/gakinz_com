@@ -11,7 +11,7 @@ UNVERIFIED**: no server, database, FTP account or DNS record was contacted durin
 
 | Track | What moves | Mechanism | Trigger |
 |---|---|---|---|
-| Client | `dist/` only | GitHub Actions, `SamKirkland/FTP-Deploy-Action@v4.4.0` | CI passing on a push to `main` |
+| Client | `dist/` only | GitHub Actions, `scripts/deploy-ftps.sh` (lftp over FTPS, never deletes; replaced `SamKirkland/FTP-Deploy-Action@v4.4.0` on 2026-10-30, K-109, NOT TESTED against the host) | CI passing on a push to `main`. Actions is switched off (K-109) |
 | Server | `server/*.php`, `.htaccess`, `schema.sql` | Manual upload by a person | A decision, never automatic |
 
 Both land in the same cPanel document root for `gakinz.com`. The workflow uploads with
@@ -31,10 +31,9 @@ if: CI concluded success AND the CI run was a push
   actions/setup-node@v5   node-version: 22
   npm ci
   npm run build
-  SamKirkland/FTP-Deploy-Action@v4.4.0
-    server / username / password from repository secrets
-    local-dir: ./dist/
-    server-dir: ./
+  sudo apt-get install lftp
+  scripts/deploy-ftps.sh dist     (FTP_SERVER, FTP_USERNAME, FTP_PASSWORD from repository secrets;
+                                   two mirror passes, HTML entry points last, no delete)
 ```
 
 Credentials come from `secrets.FTP_SERVER`, `secrets.FTP_USERNAME` and
