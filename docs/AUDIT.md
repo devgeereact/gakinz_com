@@ -1112,3 +1112,10 @@ Each is PASS on source inspection and NOT TESTED at runtime.
    (S-005).
 7. Write the authorisation tests described in `docs/TEST-PLAN.md` priority 1, so this audit can
    be repeated with evidence rather than by reading.
+
+## 30 Oct 2026: config.php moved out of the web root
+
+- The real settings now live in `~/private-config/gakinz_com/config.php` (0600, folder 0700). The web-root `config.php` is a stub (0600, no secrets) that loads it.
+- Original copy: `~/backups/gakinz_com/config.php.before-private`.
+- Releases never upload `config.php` (PROTECT list), so deploys keep the stub.
+- Verified live after the move: the API check returned the expected status.
