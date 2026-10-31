@@ -142,7 +142,6 @@ export default function Files() {
       <div
         role="button"
         tabIndex={0}
-        aria-label="Upload files"
         onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => { e.preventDefault(); setDragOver(false); doUpload(e.dataTransfer.files) }}

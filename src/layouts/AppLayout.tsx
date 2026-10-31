@@ -92,11 +92,10 @@ export default function AppLayout() {
           <button
             type="button"
             onClick={openSearch}
-            aria-label="Search, Control K"
             className="flex h-10 min-w-0 max-w-[440px] flex-[3_1_0%] items-center gap-2.5 rounded-[10px] border border-border bg-card px-3 text-left text-muted-foreground hover:border-line-strong max-[560px]:w-10 max-[560px]:flex-none max-[560px]:justify-center max-[560px]:px-0"
           >
             <Search aria-hidden className="size-[18px] shrink-0" />
-            <span className="truncate text-sm max-[560px]:hidden">Search screens and records…</span>
+            <span className="truncate text-sm max-[560px]:sr-only">Search screens and records…</span>
             <kbd className="ml-auto shrink-0 rounded-md border border-border bg-secondary px-1.5 py-px font-mono text-[11px] max-[1180px]:hidden">
               Ctrl K
             </kbd>
@@ -112,7 +111,7 @@ export default function AppLayout() {
           <UserDropdown />
         </header>
 
-        <main id="main" className="gk-app-main w-full min-w-0 max-w-[1440px] flex-1 px-[clamp(16px,3vw,32px)] pb-[clamp(16px,3vw,32px)] pt-2">
+        <main id="main" className="gk-app-main mx-auto w-full min-w-0 max-w-[1760px] flex-1 px-[clamp(16px,3vw,32px)] pb-[clamp(16px,3vw,32px)] pt-2">
           <Crumb />
           <Outlet />
         </main>

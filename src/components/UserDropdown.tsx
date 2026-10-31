@@ -50,13 +50,12 @@ export function UserDropdown() {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          aria-label={role ? `${name}, ${role}` : name}
           className="flex h-10 max-w-[240px] shrink-0 items-center gap-2.5 rounded-full border border-border bg-card pl-1 pr-1.5 text-left hover:border-line-strong max-md:pr-1"
         >
           <span aria-hidden className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-acc-soft text-xs font-bold text-acc">
             {initials(name)}
           </span>
-          <span className="min-w-0 max-md:hidden">
+          <span className="min-w-0 max-md:sr-only">
             <b className="block truncate text-[13px] font-semibold leading-tight">{name}</b>
             {role && <small className="block truncate text-[11px] leading-none text-muted-foreground">{role}</small>}
           </span>

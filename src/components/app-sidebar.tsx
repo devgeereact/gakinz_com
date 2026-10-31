@@ -94,9 +94,9 @@ export function AppSidebar({ onHoverChange, ...props }: AppSidebarProps) {
     <div onMouseEnter={() => onHoverChange?.(true)} onMouseLeave={() => onHoverChange?.(false)}>
       <Sidebar collapsible="icon" {...props}>
         <SidebarHeader className="min-h-16 justify-center px-4 pb-3 pt-4 group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:px-0">
-          <Link to="/app" className="flex items-center gap-2.5 rounded-[10px]" aria-label="GAkinzOS, go to Today">
+          <Link to="/app" className="flex items-center gap-2.5 rounded-[10px]">
             <span className="gk-os-mark" aria-hidden>G</span>
-            <span className="whitespace-nowrap font-display text-[1.05rem] font-semibold leading-tight tracking-[-0.02em] group-data-[collapsible=icon]:hidden">
+            <span className="whitespace-nowrap font-display text-[1.05rem] font-semibold leading-tight tracking-[-0.02em] group-data-[collapsible=icon]:sr-only">
               GAkinzOS
               <small className="block font-mono text-[10px] font-normal uppercase tracking-[.08em] text-sidebar-muted">
                 Studio platform

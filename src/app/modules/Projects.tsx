@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { PageHeader, StatGrid, StatTile, StatusBadge } from "@/app/components/page-kit"
+import { PageHeader, StatusBadge } from "@/app/components/page-kit"
 import { ProjectAssetsPanel } from "@/app/components/AssetChecklist"
 import { ProjectBriefPanel } from "@/app/components/ProjectBrief"
 import { useUnsavedGuard } from "@/hooks/use-unsaved-guard"
@@ -190,11 +190,14 @@ export default function Projects() {
         actions={
           <>
             <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus /> New project
-                </Button>
-              </DialogTrigger>
+              {/* With no projects the empty state carries the one primary action (K-112 C3). */}
+              {(loading || error || list.length > 0) && (
+                <DialogTrigger asChild>
+                  <Button>
+                    <Plus /> New project
+                  </Button>
+                </DialogTrigger>
+              )}
               <DialogContent className="max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle>New project</DialogTitle>
@@ -321,14 +324,10 @@ export default function Projects() {
 
       {loading ? (
         <div role="status" aria-label="Loading projects" className="grid gap-4">
-          <div className="grid grid-cols-3 gap-4 sm:grid-cols-5">
-            {PROJECT_STAGES.map((s) => (
-              <Skeleton key={s.key} className="h-[76px] rounded-2xl" />
-            ))}
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Skeleton className="h-[76px] rounded-2xl" />
+          <div className="grid gap-px overflow-hidden rounded-2xl border">
             {[0, 1, 2].map((i) => (
-              <Skeleton key={i} className="h-[170px] rounded-2xl" />
+              <Skeleton key={i} className="h-[68px] rounded-none" />
             ))}
           </div>
           <span className="sr-only">Loading projects…</span>
@@ -348,13 +347,18 @@ export default function Projects() {
         )
       ) : (
         <>
-          <StatGrid className="grid-cols-3 sm:grid-cols-5 xl:grid-cols-5">
+          {/* One five-part bar at every width, never 3 + 2 tiles (K-112 C2). */}
+          <dl className="mb-4 grid grid-cols-5 overflow-hidden rounded-2xl border bg-card">
             {stageTally.map((s) => (
-              <StatTile key={s.key} label={s.label} value={s.count} />
+              <div key={s.key} className="grid min-w-0 gap-1 border-r px-2 py-3 last:border-r-0 sm:px-4 sm:py-3.5">
+                <dt className="truncate text-[12px] text-muted-foreground sm:text-[13px]">{s.label}</dt>
+                <dd className="font-display text-[1.3rem] font-bold leading-none tabular-nums text-foreground sm:text-[1.6rem]">{s.count}</dd>
+              </div>
             ))}
-          </StatGrid>
+          </dl>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Records list as rows, so no count leaves a lone card (D-053). */}
+          <div className="overflow-hidden rounded-2xl border bg-card">
             {list.map((p) => (
               <button
                 key={p.id}
@@ -362,27 +366,29 @@ export default function Projects() {
                 onClick={() => select(p)}
                 aria-pressed={selected?.id === p.id}
                 className={cn(
-                  "grid min-w-0 content-start gap-2.5 rounded-2xl border bg-card p-[18px] text-left transition-colors hover:border-line-strong focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30",
-                  selected?.id === p.id && "border-acc hover:border-acc",
+                  "grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-5 gap-y-2 border-b px-[18px] py-3.5 text-left transition-colors last:border-b-0 hover:bg-secondary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/30 md:grid-cols-[minmax(0,2fr)_auto_minmax(0,1.4fr)_7.5rem]",
+                  selected?.id === p.id && "bg-accent hover:bg-accent",
                 )}
               >
-                <span className="flex flex-wrap items-center justify-between gap-2">
-                  <StatusBadge status={p.stage}>{stageLabel(p.stage)}</StatusBadge>
-                  <span className="text-[12.5px] text-muted-foreground">
-                    {p.due_date ? `Due ${fmt(p.due_date)}` : p.status === "launched" ? "Launched" : "No due date"}
+                <span className="min-w-0">
+                  <span className="block font-display text-[1.05rem] font-semibold leading-snug [overflow-wrap:anywhere]">{p.name}</span>
+                  <span className="block text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
+                    {p.client_company || "Internal"}
+                    {p.reference && <span className="font-mono text-[12px] tabular-nums"> · {p.reference}</span>}
                   </span>
                 </span>
-                <span className="font-display text-[1.15rem] font-semibold leading-snug [overflow-wrap:anywhere]">{p.name}</span>
-                <span className="min-w-0 text-muted-foreground [overflow-wrap:anywhere]">
-                  {p.client_company || "Internal"}
-                  {p.reference && <span className="block font-mono text-[12px] tabular-nums">{p.reference}</span>}
-                </span>
-                <Progress value={pct(p)} label={`${p.name}: ${pct(p)}% of tasks done`} />
-                <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[12.5px] text-muted-foreground">
-                  <span>{PROJECT_STATUS.find((s) => s.key === p.status)?.label}</span>
-                  <span className="font-mono tabular-nums">
-                    {p.done_count}/{p.task_count} tasks · {pct(p)}%
+                <StatusBadge status={p.stage}>{stageLabel(p.stage)}</StatusBadge>
+                <span className="col-span-2 grid gap-1.5 md:col-span-1">
+                  <Progress value={pct(p)} label={`${p.name}: ${pct(p)}% of tasks done`} />
+                  <span className="flex flex-wrap items-center justify-between gap-x-2 text-[12.5px] text-muted-foreground">
+                    <span>{PROJECT_STATUS.find((s) => s.key === p.status)?.label}</span>
+                    <span className="font-mono tabular-nums">
+                      {p.done_count}/{p.task_count} tasks · {pct(p)}%
+                    </span>
                   </span>
+                </span>
+                <span className="col-span-2 text-[12.5px] text-muted-foreground md:col-span-1 md:text-right">
+                  {p.due_date ? `Due ${fmt(p.due_date)}` : p.status === "launched" ? "Launched" : "No due date"}
                 </span>
               </button>
             ))}
