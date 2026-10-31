@@ -13,9 +13,10 @@ export default function AuthFrame({ children }: { children: ReactNode }) {
   return (
     <div className="grid min-h-dvh grid-cols-1 bg-background min-[901px]:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">
       <section className="relative flex flex-col justify-between gap-8 overflow-hidden bg-sidebar p-[clamp(24px,5vw,56px)] text-sidebar-foreground">
-        <Link to="/" className="flex w-fit items-center gap-2.5 rounded-[10px]" aria-label="GAkinz home">
+        <Link to="/" className="flex w-fit items-center gap-2.5 rounded-[10px]">
           <span className="gk-os-mark" aria-hidden>G</span>
           <b className="font-display text-[1.1rem] font-semibold">GAkinzOS</b>
+          <span className="sr-only">, back to the website</span>
         </Link>
         <div>
           <h1 className="max-w-[14ch] font-display text-[clamp(2.2rem,4.5vw,3.8rem)] font-[720] leading-[.98] tracking-[-0.045em]">
