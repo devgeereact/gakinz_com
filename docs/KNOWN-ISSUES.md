@@ -119,6 +119,12 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-106 | The CMP host allow-list is not checked against Google's certified CMP list | Medium if switched on | Open, check before switching on |
 | K-107 | Some CMPs need more than a script URL | Low | Open, check when a CMP is chosen |
 | K-108 | Client anonymisation is built but switched off, awaiting adviser confirmation | Medium | Built 2026-10-20, switched off, not uploaded. Adviser confirms the rules first |
+| K-117 | The live sign-in page shows "Continue with Google", while D-052 records Google as switched off | Low | **Resolved 2026-10-31 by owner decision: Google stays on.** D-052 amended. Whether production uses the owner's own Google OAuth credentials is UNVERIFIED |
+| K-116 | `vite preview` inherits the dev proxy and sends `.php` calls to the live API | Medium | Open, found 2026-10-31. One read with a fake token reached gakinz.com and was refused (401); nothing written |
+| K-115 | Text on a light project colour is white by a brightness threshold, failing contrast on Harni's pink | Medium | Open, found 2026-10-31 (`/work/harni`, 3.52:1). Fix approved in the prototype |
+| K-114 | The logo links' accessible names do not match their visible text (WCAG 2.5.3) | Low | Open, found 2026-10-31 by axe-core 4.14.0 on every public page and the sign-in frame |
+| K-113 | Form field borders are below 3:1 against their background (WCAG 1.4.11) | Medium | Open, found 2026-10-31. **Replacement values approved by the owner 2026-10-31**; being built |
+| K-112 | Layout and composition gaps on the public site, sign-in and GAkinzOS (register P1 to P9, C1 to C3) | Medium | Open in code; fixed in the approved prototype 2026-10-31 |
 | K-111 | SQL 20 was written as live statements at the foot of `schema.sql` and stopped the schema loading on MySQL | High (CI only) | **Fixed 2026-10-30** (commented out; found by the first CI run after Actions came back) |
 | K-110 | A burst of 31 `Class "mysqli" not found` fatals in the live PHP error log | Medium | Open, found 2026-10-30. None since; cause UNVERIFIED |
 | K-109 | GitHub Actions is switched off, so no CI runs and no deploy runs; the FTP deploy state on the host is stale | Medium | **Fixed 2026-10-30.** Actions on; the new no-delete upload ran green on `608dc7b` |
@@ -2161,3 +2167,66 @@ until a deploy run passes; this Mac has no access to the FTP secrets.
 files carry the new modified time (14:54 UTC); the Clerk live key is in the login chunks; the API
 answers 401 JSON to a bad bearer. Nothing was deleted from the host by design. The uploader was
 not read back file by file: PASS means the run and these public checks, not a byte comparison.
+
+## K-112 · Layout and composition gaps on the public site, sign-in and GAkinzOS
+
+**Found:** 2026-10-31, on gakinz.com (read-only) and a local build with synthetic data. **Severity:** Medium (first impression and usability).
+
+Each was seen in a browser or measured on the rendered page at 390, 700 to 1050 and 1440px: hero text
+overlapping during the swap (P1); lone cards and 3 + 2 rows in Selected work, the /work filters and the
+process steps (P2 to P4); page headers using 42% of the width (P5); section heads with an empty column (P6);
+pricing lists stretched to four different line spacings (P7); a "Portrait to come" circle (P8); a
+1248×535 slab repeating the name on case studies without screenshots (P9); Clerk's stock card on the
+graphite sign-in with about three seconds of blank screen (C1); project stage tiles 3 + 2 on phones (C2);
+two identical "New project" buttons on an empty screen (C3). Evidence, fixes and status per item:
+`.claude/skills/gakinz-design/references/findings.md`. All except C3 are fixed in the approved prototype
+(D-053); none is built into the site yet.
+
+## K-113 · Form field borders are below 3:1
+
+**Found:** 2026-10-31. **Severity:** Medium (WCAG 2.2 AA 1.4.11, Non-text Contrast).
+
+The edge that shows where a field is measures `#334252` on `#0F151D` 1.78:1 (public site and CMS dark) and
+`#CDD2DA` on white 1.52:1 (CMS light). axe does not test 1.4.11, so earlier audits passed. Measured
+replacements, **approved by the owner 2026-10-31**: public `#647183` (3.32 to 3.69:1), CMS light `#7F8896` (3.28 to 3.58:1),
+CMS dark `#6B7787` (3.33 to 4.03:1). Values and surfaces: `.claude/skills/gakinz-design/references/tokens.md`.
+
+## K-114 · Logo links' accessible names do not match their visible text
+
+**Found:** 2026-10-31. **Severity:** Low (WCAG 2.5.3, Label in Name; speech-input users).
+
+axe-core 4.14.0 reports `label-content-name-mismatch` on the public header link (`aria-label="GAkinz, home"`,
+`site-ui.tsx`) on every page and width checked, and on the sign-in frame's link (`aria-label="GAkinz home"`,
+visible "GAkinzOS", `AuthFrame.tsx`). axe-core 4.10.2 did not flag the same markup. Fix: start the
+accessible name with the visible text, or drop the `aria-label` and let the visible text name the link.
+
+## K-115 · White text on a light project colour
+
+**Found:** 2026-10-31. **Severity:** Medium (WCAG 1.4.3).
+
+`onColour` in `src/marketing/data/showcase.ts` picks white below a luminance of 0.36. On Harni's `#FF385C`
+white measures 3.52:1 and ink `#121821` 5.07:1; axe fails the active `Work` link on `/work/harni` at 1440,
+1920 and 2560px. Fix (approved in the prototype): choose whichever of white and ink measures higher, at full
+opacity, and keep the main call to action graphite on chalk.
+
+## K-116 · `vite preview` sends `.php` calls to the live API
+
+**Found:** 2026-10-31. **Severity:** Medium (a preview can write to the real business).
+
+`vite.config.ts` sets `server.proxy` for `^/…\.php` to `https://gakinz.com`, and `vite preview` uses
+`server.proxy` when `preview.proxy` is unset. During a local check one read (`auth.php?action=me` with a fake
+token) reached the live API, which answered 401; nothing was written. Fix: `preview: { proxy: {} }`. Until
+then, serve `dist/` with `.claude/skills/gakinz-design/scripts/serve.mjs`, which answers every `.php` with 404.
+
+## K-117 · Google sign-in shows although D-052 records it as off
+
+**Found:** 2026-10-31. **Severity:** Low.
+
+The live `/login` (viewed 2026-10-31, morning) shows "Continue with Google" in the Clerk form. D-052 point 3
+says Google and passwords are off in the Clerk instance. Which is intended is UNVERIFIED; the owner decides,
+then either the Clerk instance or D-052 changes.
+
+**Resolved 2026-10-31.** Owner decision: Google sign-in stays on. D-052 point 3 is amended. Production Clerk
+instances need the owner's own Google OAuth credentials; whether those are set is UNVERIFIED from this
+repository (the Clerk dashboard is the authority).
+

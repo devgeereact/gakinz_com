@@ -2,6 +2,35 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-10-31 · Design audit, prototype verification and a first check of the built site
+
+**Scope:** gakinz.com (read-only viewing), a local build of `main` (`npm run build`, served by
+`.claude/skills/gakinz-design/scripts/serve.mjs` with every `.php` answering 404), and the approved
+prototype (D-053). Method: the product-design skill. **Result: PARTIAL**: the prototype passes everything
+measured; the built site has open findings K-112 to K-117.
+
+**Built site (`main`, 31 Oct 2026):** 9 routes (`/`, `/work`, `/services`, `/pricing`, `/about`, `/contact`,
+`/work/ego`, `/work/harni`, `/login`) at 390, 834, 1440, 1920 and 2560px with axe-core 4.14.0:
+- Overflow and page errors: **PASS**, 0 of 45 captures.
+- axe: **FAIL**, 45 of 45 captures. `label-content-name-mismatch` on the logo links (K-114): 40 public, 5 sign-in.
+  `color-contrast` on `/work/harni` at 1440, 1920 and 2560px (K-115).
+- Field borders: **FAIL** by measurement (K-113); axe does not test 1.4.11.
+- Layout gaps P1 to P9 and C1 to C3 (K-112): seen in a browser, measured at 390 to 1440px.
+
+**Prototype (approved):**
+- 185 captures (37 routes × 5 widths): **PASS**, zero overflow, page errors and axe violations.
+- 47 state audits (dark theme on 25 CMS screens, 11 open dialogs, drawers and popovers in both themes):
+  **PASS**.
+- Every hero slide at 1440 and 390px: **PASS**.
+- 38 workflow checks driven by clicks and typing: **PASS**.
+- Contact sheets at every width inspected by eye; each layout fault found this way was fixed and re-checked.
+
+**Also found:** `vite preview` proxies `.php` to the live API (K-116; one refused read, nothing written);
+Google sign-in visible against D-052 (K-117).
+
+**NOT TESTED:** Safari or WebKit, real phones, a screen reader, file uploads, signed-in GAkinzOS on the built
+site, and the live site after any change (none was made).
+
 ## 2026-10-16 · Accessibility Audit
 
 _Merged from `docs/AUDIT.md` on 2026-10-30._

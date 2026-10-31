@@ -1,5 +1,10 @@
 # Design system, as implemented
 
+> **Working guide (2026-10-31, D-053):** `.claude/skills/gakinz-design/` holds the current tokens with
+> measured contrast ratios, the layout rules, the findings register (K-112 to K-117) and the verification
+> routine. The approved prototype is the reference for the next build. This document stays the record of
+> what is implemented; update both when tokens or public components change.
+
 **Status, 2026-10-14:** both surfaces follow D-046 on branch `feat/redesign-2026`, stacked on
 PR #8 and **not merged or deployed**. The public site is described in the note at the top of
 section 10; GAkinzOS at `/app/*` in section 11. The favicon, the 32px and apple-touch icons

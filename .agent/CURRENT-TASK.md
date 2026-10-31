@@ -2,6 +2,14 @@
 
 ## Outcome
 
+**Current, 2026-10-31 (branch `design/gakinz-design-skill`, not committed):** the design gaps were audited
+and fixed in an approved prototype (D-053), and the design system was written up as a project skill,
+`.claude/skills/gakinz-design/`. Defects found in the built site are K-112 to K-117; the audit is the
+2026-10-31 section of `docs/AUDIT.md`. Next, when the owner approves the build: phase 1 (layout) on a new
+branch, then composition, motion and sign-in, verified with the skill's routine. Open owner questions:
+K-113 field-border values, K-117 Google sign-in, judgement items J1 and J2 in the skill's findings.
+
+
 The work on `feat/journeys-2026-10-18` (PR #21: six batches, 2026-10-18 to 2026-10-20, then
 on 2026-10-21 the GSAP and Lenis scroll polish (D-051), lint groups A to C, the footer and the
 project status labels, folded in from `feat/landing-motion-2026-10-21`) is built, tested

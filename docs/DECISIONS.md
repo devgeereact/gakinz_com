@@ -968,7 +968,7 @@ and a Lighthouse run are NOT TESTED.
    first sign-in an active user whose email equals the token's verified `email` claim is linked.
    A row linked to a different Clerk user is never re-linked, an unknown email gets 401, and
    sign-up never creates a user. Suspended users still get 403.
-3. **Email code only.** Google and passwords are off in the Clerk instance. `VITE_CLERK_PUBLISHABLE_KEY`
+3. **Email code, plus Google** (amended 2026-10-31, owner decision, K-117: Google stays on; it was already showing on the live sign-in). Passwords are off in the Clerk instance. `VITE_CLERK_PUBLISHABLE_KEY`
    switches the app to Clerk; unset keeps the existing sign-in, so a build without the key still works.
 4. **Not removed yet.** Password, 2FA, Google SSO, reset and the lock screen stay in the code
    until the new path is proven live and the owner confirms. The lock screen is off under Clerk.
@@ -982,3 +982,27 @@ existing sessions still work); `npm test` 545 passed; lint ratchet at its 5-erro
 with the live key has no secret keys. NOT TESTED: a real sign-in, the live server.
 
 6. **Exception to the kit's Never list, 2026-10-30.** The owner instructed the deletion of the merged branch `move/cpanel-clerk` on origin ("Fix this now", naming the branch note). It was fully contained in `main` (`a034e40`); deleted on origin and locally. This is a one-off, not a change to the rule.
+
+## D-053 · The approved prototype is the design reference, and the GAkinz design skill holds the system
+**Date:** 2026-10-31 · **Status:** decided by the owner; nothing built into the site yet.
+
+1. **Reference.** The live prototype (https://claude.ai/artifact/UDLsqyrLE6smsEP96Pr7be) and the design board
+   (https://claude.ai/artifact/PzKiwCvhsVeNw6C3gGGNqD) are the approved design for the next build of the public
+   site, the sign-in and GAkinzOS. Owner: "this is good" on 31 Oct 2026. They keep D-046's palette, type and
+   structure and fix the gaps in K-112 to K-115. Building them into the site is a separate approval.
+2. **Evidence before approval.** On the prototype: 185 captures at 390, 834, 1440, 1920 and 2560px with zero
+   overflow, page errors and axe violations; 47 state audits (dark theme, open dialogs, drawers, popovers);
+   38 workflow checks; every hero slide audited. NOT TESTED: Safari, real phones, a screen reader, file
+   uploads.
+3. **Selected work on the home page:** RitaGreen and EGO LIMITED as feature cards, then RotaFlow, Harni and
+   Herit Clothing, with fresh first-screen captures of each live site. Volume leaves the home page (its first
+   screen is an empty editor) and stays on /work. EGO LIMITED gains screenshots.
+4. **Vitalcare** stays Live with its existing screenshot while vitalcare.uk shows a rebuild page.
+5. **Project design skill.** `.claude/skills/gakinz-design/` records the tokens with measured ratios, the
+   layout rules, the findings register and the verification routine, and points to the house
+   product-design skill for method. `docs/DESIGN-SYSTEM.md` remains the written record; when the two disagree
+   with the code, the code wins and both are corrected.
+
+Rejected: rebuilding the site on a new visual direction (the owner asked to finish D-046, not replace it);
+invented AI features for the board (model picker, memory, prompt library), because GAkinzOS has none.
+
