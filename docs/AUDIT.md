@@ -2,6 +2,26 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-10-31 · Build verification, `feat/design-finalisation` (not deployed)
+
+**Scope:** the approved design (D-053) built into the code; checked on loopback builds with no route to the
+live API (`.claude/skills/gakinz-design/scripts/serve.mjs`; every `.php` answers 404 or labelled sample data).
+axe-core 4.14.0. **Result: PASS on everything measured below; Clerk styling NOT TESTED in a browser.**
+
+- Gate: `npm run build` PASS (32 prerendered pages); `npm test` PASS (545 of 545); `tsc` PASS;
+  `npm run lint:ratchet` PASS (5 of 5); `npm run docs:check` PASS.
+- Public site: 33 routes (every prerendered page and `/login`) × 390, 834, 1440, 1920, 2560:
+  **165 of 165 clean** (no overflow, no page errors, zero axe violations).
+- Row fill: 11 pages × 5 widths (390, 834, 1050, 1440, 1920), no grid with a short last row: **PASS**.
+- Hero: every slide at 1440 and 390px with axe: **PASS** (4 of 4 each).
+- GAkinzOS (build without Clerk, sample data): 26 modules × light and dark × 390, 834, 1440, 2560:
+  **208 of 208 clean**. The first run found K-114 and K-118 in existing code; both fixed and re-run.
+- Looked at by eye: Selected work, /work, Pricing, About, a case study without screenshots, Services at
+  1440; Projects in both themes at 390, 834 and 1440; Site content dark; Today at 2560.
+- **NOT TESTED:** Clerk's form with the new appearance (the production instance does not load on a local
+  origin; check on the live site after release), Safari or WebKit, real phones, a screen reader, the
+  signed-in CMS with real data.
+
 ## 2026-10-31 · Design audit, prototype verification and a first check of the built site
 
 **Scope:** gakinz.com (read-only viewing), a local build of `main` (`npm run build`, served by

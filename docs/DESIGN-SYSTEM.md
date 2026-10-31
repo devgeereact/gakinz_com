@@ -2,7 +2,12 @@
 
 > **Working guide (2026-10-31, D-053):** `.claude/skills/gakinz-design/` holds the current tokens with
 > measured contrast ratios, the layout rules, the findings register (K-112 to K-117) and the verification
-> routine. The approved prototype is the reference for the next build. This document stays the record of
+> routine. The approved prototype is the reference for the next build. **Built on
+> `feat/design-finalisation` (2026-10-31, not deployed):** full card rows (`useBalancedGrid`, `WorkGrid`),
+> page-header fact rails, single-row section heads, pricing on subgrid rows, the specification sheet for
+> projects without screenshots, the work mosaic on About, the masked hero swap, the main call to action
+> graphite on chalk with full-strength header links, the public field edge `--field: #647183`, Clerk drawn
+> with GAkinzOS tokens, the Projects stage bar and record rows, and the centred CMS column (1760px). This document stays the record of
 > what is implemented; update both when tokens or public components change.
 
 **Status, 2026-10-14:** both surfaces follow D-046 on branch `feat/redesign-2026`, stacked on
@@ -616,7 +621,8 @@ tokens carry an `--os-` prefix so they never collide with the public site's hex 
 | Ink | `#121821` | `#ECE9E2` | `--foreground`, `--primary` |
 | Muted text | `#5B6472` | `#9AA3B0` | `--muted-foreground` |
 | Line | `#E2E5EA` | `#26313E` | `--border` |
-| Line 2 (form borders) | `#CDD2DA` | `#334252` | `--input`, `--os-line-2` |
+| Field edge (inputs, selects, textareas) | `#7F8896` | `#6B7787` | `--input` (3:1 or more on every surface, K-113, 2026-10-31) |
+| Line 2 (strong outlines) | `#CDD2DA` | `#334252` | `--os-line-2` |
 | Accent | `#2866CA` | `#8EC5FF` | `--ring`, `--os-acc` |
 | Accent soft | `#E6EEFB` | `#1C2E44` | `--accent`, `--os-acc-soft` |
 | OK / soft | `#1A774D` / `#E3F3EA` | `#7FD6A5` / `#173326` | `--os-ok`, `--os-ok-soft` |

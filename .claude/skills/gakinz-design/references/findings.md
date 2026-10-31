@@ -5,31 +5,33 @@ Update this file when an item is built, so the next session does not redo the au
 
 ## Found on gakinz.com (live, read-only, 31 Oct 2026)
 
-| ID | Finding | Evidence | Prototype | Code |
+| ID | Finding | Evidence | Prototype | Code (branch `feat/design-finalisation`, 31 Oct) |
 |---|---|---|---|---|
-| P1 | Hero text overlaps while it changes | Outgoing word visible under the incoming one at 1440px | Fixed | Open |
-| P2 | Lone card in Selected work | 1050 and 700px: rows 2+2+1, last row 49% | Fixed | Open |
-| P3 | Process steps break 3+2 | `/`, `/services` at 1050 and 700px | Fixed | Open |
-| P4 | Lone cards on /work filters | Own products, Live, Demos at two columns | Fixed | Open |
-| P5 | Empty right half of page headers | `/work`, `/services`, `/pricing`, `/contact`: 42% of width used | Fixed | Open |
-| P6 | Section head with an empty column | `/services`, service pages: 65% used, 1 of 2 children | Fixed | Open |
-| P7 | Pricing lists stretch; Bespoke price 27px higher | Row heights 44px for 22px text up to 77px for 48px | Fixed | Open |
-| P8 | "Portrait to come" circle; email link cramped | `/about` at 1440px | Fixed | Open |
-| P9 | 1248×535 slab repeating the name | `/work/ego`, `/work/gakinzos` | Fixed (EGO now has screenshots) | Open |
-| C1 | Stock Clerk card on graphite; ~3s blank first | `/login`; no `appearance` anywhere in `src/` | Fixed | Open |
-| C2 | Project stage tiles break 3+2 on phones | Local build with synthetic data, 600px | Fixed | Open |
-| C3 | Two identical "New project" buttons on the empty screen | Local build, empty state | Planned | Open |
-| N3 | `vite preview` proxies `.php` to the live API | One read with a fake token reached gakinz.com (401). Set `preview.proxy` to `{}` | n/a | Open |
-| F2 | Logo links' accessible names do not match their visible text (WCAG 2.5.3, axe `label-content-name-mismatch`) | Public `.brand` ("GAkinz, home") on every page; sign-in frame link ("GAkinz home", visible "GAkinzOS"). axe-core 4.14.0 on the built `main`, 31 Oct 2026. Older axe 4.10.2 did not flag it | Same markup | Open |
-| F3 | White text on Harni's pink in the case-study header | `/work/harni` at 1440, 1920, 2560: nav `Work` link (`.active`) fails contrast. `onColour` in `showcase.ts` uses a brightness threshold (white 3.52:1; ink would be 5.07:1) | Fixed (measured rule) | Open |
-| F1 | Field borders below 3:1 (WCAG 1.4.11) | `#334252` on `#0F151D` 1.78:1; `#CDD2DA` on white 1.52:1 | Not applied | Open, values approved 31 Oct 2026 |
+| P1 | Hero text overlaps while it changes | Outgoing word visible under the incoming one at 1440px | Fixed | Fixed |
+| P2 | Lone card in Selected work | 1050 and 700px: rows 2+2+1, last row 49% | Fixed | Fixed |
+| P3 | Process steps break 3+2 | `/`, `/services` at 1050 and 700px | Fixed | Fixed |
+| P4 | Lone cards on /work filters | Own products, Live, Demos at two columns | Fixed | Fixed |
+| P5 | Empty right half of page headers | `/work`, `/services`, `/pricing`, `/contact`: 42% of width used | Fixed | Fixed |
+| P6 | Section head with an empty column | `/services`, service pages: 65% used, 1 of 2 children | Fixed | Fixed |
+| P7 | Pricing lists stretch; Bespoke price 27px higher | Row heights 44px for 22px text up to 77px for 48px | Fixed | Fixed |
+| P8 | "Portrait to come" circle; email link cramped | `/about` at 1440px | Fixed | Fixed |
+| P9 | 1248×535 slab repeating the name | `/work/ego`, `/work/gakinzos` | Fixed (EGO now has screenshots) | Fixed |
+| C1 | Stock Clerk card on graphite; ~3s blank first | `/login`; no `appearance` anywhere in `src/` | Fixed | Built; NOT TESTED in a browser |
+| C2 | Project stage tiles break 3+2 on phones | Local build with synthetic data, 600px | Fixed | Fixed |
+| C3 | Two identical "New project" buttons on the empty screen | Local build, empty state | Planned | Fixed |
+| N3 | `vite preview` proxies `.php` to the live API | One read with a fake token reached gakinz.com (401). Set `preview.proxy` to `{}` | n/a | Fixed |
+| F2 | Accessible names that differ from visible text (logo links, CMS search, account button, Files drop zone; K-114) (WCAG 2.5.3, axe `label-content-name-mismatch`) | Public `.brand` ("GAkinz, home") on every page; sign-in frame link ("GAkinz home", visible "GAkinzOS"). axe-core 4.14.0 on the built `main`, 31 Oct 2026. Older axe 4.10.2 did not flag it | Same markup | Fixed |
+| F3 | Header link fails contrast over Harni's pink | `/work/harni` at 1440, 1920, 2560: active `Work` link. Cause: 85% opacity and a 12% tint (pink darkened to 4.33:1); the site's `onColour` already measures (corrected after reading the code) | Fixed (measured rule) | Fixed |
+| F1 | Field borders below 3:1 (WCAG 1.4.11) | `#334252` on `#0F151D` 1.78:1; `#CDD2DA` on white 1.52:1 | Not applied | Fixed |
 
 ## Found while verifying the prototype (traps to avoid when building)
 
 | Trap | What happened | Rule |
 |---|---|---|
 | Image height attribute | Cards ~1000px tall, screenshots cropped at the sides | `height: auto` on any `<img>` with width/height attributes outside Tailwind's base |
-| Brightness threshold for on-colour text | White chosen on Harni pink: 3.52:1 | Compare measured ratios |
+| Brightness threshold for on-colour text (prototype only) | White chosen on Harni pink: 3.52:1; the site's `onColour` already measures | Compare measured ratios |
+| Tint behind a link on a project colour | A 12% tint under the active link took dark-on-pink to 4.33:1 | Mark the current page with an underline, not a tint |
+| Labels hidden with `display: none` | 26 icon-rail links had no accessible name (K-118) | `sr-only` for text hidden by layout |
 | Opacity on coloured surfaces | Nav links at 85% on pink failed; "Next project" label failed | Full opacity over project colour |
 | Project colour as button text | Computed background drifted; failed on light colours | Graphite on chalk |
 | `clearProps: "all"` | Deleted inline grid columns; Today tiles stacked to one column | Clear only animated properties |

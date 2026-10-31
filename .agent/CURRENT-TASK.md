@@ -2,12 +2,12 @@
 
 ## Outcome
 
-**Current, 2026-10-31 (branch `design/gakinz-design-skill`, not committed):** the design gaps were audited
-and fixed in an approved prototype (D-053), and the design system was written up as a project skill,
-`.claude/skills/gakinz-design/`. Defects found in the built site are K-112 to K-117; the audit is the
-2026-10-31 section of `docs/AUDIT.md`. Next, when the owner approves the build: phase 1 (layout) on a new
-branch, then composition, motion and sign-in, verified with the skill's routine. Open owner questions:
-K-113 field-border values, K-117 Google sign-in, judgement items J1 and J2 in the skill's findings.
+**Current, 2026-10-31:** the approved design (D-053) is built on `feat/design-finalisation` (stacked on
+`design/gakinz-design-skill`, `890597a`) and verified: public 165 of 165 captures, CMS 208 of 208, hero
+slides, row fill, build, 545 tests, lint ratchet, docs check (`docs/AUDIT.md`, 2026-10-31). K-112 to K-116
+and K-118 fixed on the branch; K-117 resolved by decision. Not pushed, not merged, not deployed. Next: the
+owner's go-ahead to push and release (a push to `main` deploys), then check Clerk's styled form and the
+case studies on the live site. Afterwards in BUILT/IN CODE markers of the skill, change BUILT to IN CODE.
 
 
 The work on `feat/journeys-2026-10-18` (PR #21: six batches, 2026-10-18 to 2026-10-20, then

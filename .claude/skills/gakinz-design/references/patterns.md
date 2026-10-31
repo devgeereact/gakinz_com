@@ -1,4 +1,4 @@
-# Patterns, as built in the approved prototype
+# Patterns, as built in the approved prototype and the site
 
 Copy these when building into the site. Each was verified in the prototype on 31 Oct 2026 (185 captures at
 five widths with axe, 47 state audits, 38 workflow checks). Status: PROTOTYPE unless marked.
@@ -65,7 +65,14 @@ built-list appears inside a card's media area on /work. With screenshots, use th
   failed on light project colours.
 - The solid (scrolled) header uses graphite text in its main button.
 
-## Hero swap (GSAP)
+## Hero swap as built in the site (CSS, `site.css` `.swap`)
+
+The site keeps the hero in CSS so it works before GSAP loads: `.swap` is an `overflow:hidden` mask; the
+outgoing word moves to `translateY(-110%)` in 0.32s (ease-in), and the incoming word waits 0.3s before it
+rises from `translateY(110%)` in 0.55s, so the two never show together. Verified: axe on every slide at
+1440 and 390px.
+
+## Hero swap (GSAP, prototype)
 
 One timeline per change: outgoing word `yPercent: -110` inside an `overflow:hidden` mask (0.32s, power2.in),
 caption fades out, background tweens, the word text swaps while hidden, incoming word from `yPercent: 110`

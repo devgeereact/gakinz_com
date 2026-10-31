@@ -120,11 +120,12 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-107 | Some CMPs need more than a script URL | Low | Open, check when a CMP is chosen |
 | K-108 | Client anonymisation is built but switched off, awaiting adviser confirmation | Medium | Built 2026-10-20, switched off, not uploaded. Adviser confirms the rules first |
 | K-117 | The live sign-in page shows "Continue with Google", while D-052 records Google as switched off | Low | **Resolved 2026-10-31 by owner decision: Google stays on.** D-052 amended. Whether production uses the owner's own Google OAuth credentials is UNVERIFIED |
-| K-116 | `vite preview` inherits the dev proxy and sends `.php` calls to the live API | Medium | Open, found 2026-10-31. One read with a fake token reached gakinz.com and was refused (401); nothing written |
-| K-115 | Text on a light project colour is white by a brightness threshold, failing contrast on Harni's pink | Medium | Open, found 2026-10-31 (`/work/harni`, 3.52:1). Fix approved in the prototype |
-| K-114 | The logo links' accessible names do not match their visible text (WCAG 2.5.3) | Low | Open, found 2026-10-31 by axe-core 4.14.0 on every public page and the sign-in frame |
-| K-113 | Form field borders are below 3:1 against their background (WCAG 1.4.11) | Medium | Open, found 2026-10-31. **Replacement values approved by the owner 2026-10-31**; being built |
-| K-112 | Layout and composition gaps on the public site, sign-in and GAkinzOS (register P1 to P9, C1 to C3) | Medium | Open in code; fixed in the approved prototype 2026-10-31 |
+| K-118 | In the icon rail (768 to 1023px) 26 sidebar links and Sign out had no accessible name | Medium | **Fixed 2026-10-31** on `feat/design-finalisation`, not deployed |
+| K-116 | `vite preview` inherits the dev proxy and sends `.php` calls to the live API | Medium | **Fixed 2026-10-31** on `feat/design-finalisation` (`preview.proxy: {}`), not deployed |
+| K-115 | Header links over a light project colour fail contrast (Harni's pink) | Medium | **Fixed 2026-10-31** on `feat/design-finalisation`, not deployed. Cause corrected: the link tint and opacity, not `onColour` |
+| K-114 | Accessible names that do not match visible text (WCAG 2.5.3) | Low | **Fixed 2026-10-31** on `feat/design-finalisation`, not deployed: logo links, CMS sidebar link, search, account button, Files drop zone |
+| K-113 | Form field borders are below 3:1 against their background (WCAG 1.4.11) | Medium | **Fixed 2026-10-31** on `feat/design-finalisation` with the owner-approved values, not deployed |
+| K-112 | Layout and composition gaps on the public site, sign-in and GAkinzOS (register P1 to P9, C1 to C3) | Medium | **Fixed 2026-10-31** on `feat/design-finalisation`, not deployed. C1 (Clerk appearance) built but NOT TESTED in a browser |
 | K-111 | SQL 20 was written as live statements at the foot of `schema.sql` and stopped the schema loading on MySQL | High (CI only) | **Fixed 2026-10-30** (commented out; found by the first CI run after Actions came back) |
 | K-110 | A burst of 31 `Class "mysqli" not found` fatals in the live PHP error log | Medium | Open, found 2026-10-30. None since; cause UNVERIFIED |
 | K-109 | GitHub Actions is switched off, so no CI runs and no deploy runs; the FTP deploy state on the host is stale | Medium | **Fixed 2026-10-30.** Actions on; the new no-delete upload ran green on `608dc7b` |
@@ -2204,10 +2205,17 @@ accessible name with the visible text, or drop the `aria-label` and let the visi
 
 **Found:** 2026-10-31. **Severity:** Medium (WCAG 1.4.3).
 
-`onColour` in `src/marketing/data/showcase.ts` picks white below a luminance of 0.36. On Harni's `#FF385C`
-white measures 3.52:1 and ink `#121821` 5.07:1; axe fails the active `Work` link on `/work/harni` at 1440,
-1920 and 2560px. Fix (approved in the prototype): choose whichever of white and ink measures higher, at full
-opacity, and keep the main call to action graphite on chalk.
+axe fails the active `Work` link on `/work/harni` at 1440, 1920 and 2560px.
+
+**Cause corrected 2026-10-31 after reading the code.** The first note blamed a brightness threshold in
+`onColour`; that was the prototype's code. The site's `onColour` already compares measured ratios and picks
+near-black `#16120A` on the pink (5.31:1). The failure came from the header links: 85% opacity and a 12%
+tint behind the active link, which darkened the pink to `#E33352` (4.33:1).
+
+**Fixed 2026-10-31** on `feat/design-finalisation`: header links at full opacity, hover and the current page
+marked with an underline instead of a tint, labels on project colours at full opacity, and the main call to
+action graphite on chalk (15.12:1) instead of the project colour as text. Verified: zero contrast
+violations on all twelve case studies at five widths, and on every hero slide.
 
 ## K-116 · `vite preview` sends `.php` calls to the live API
 
@@ -2215,8 +2223,8 @@ opacity, and keep the main call to action graphite on chalk.
 
 `vite.config.ts` sets `server.proxy` for `^/…\.php` to `https://gakinz.com`, and `vite preview` uses
 `server.proxy` when `preview.proxy` is unset. During a local check one read (`auth.php?action=me` with a fake
-token) reached the live API, which answered 401; nothing was written. Fix: `preview: { proxy: {} }`. Until
-then, serve `dist/` with `.claude/skills/gakinz-design/scripts/serve.mjs`, which answers every `.php` with 404.
+token) reached the live API, which answered 401; nothing was written. Fix: `preview: { proxy: {} }`. **Fixed 2026-10-31** on `feat/design-finalisation`.
+The skill's `serve.mjs` remains the safer way to serve `dist/`: it answers every `.php` with 404.
 
 ## K-117 · Google sign-in shows although D-052 records it as off
 
@@ -2229,4 +2237,16 @@ then either the Clerk instance or D-052 changes.
 **Resolved 2026-10-31.** Owner decision: Google sign-in stays on. D-052 point 3 is amended. Production Clerk
 instances need the owner's own Google OAuth credentials; whether those are set is UNVERIFIED from this
 repository (the Clerk dashboard is the authority).
+
+## K-118 · Sidebar links had no accessible name in the icon rail
+
+**Found and fixed:** 2026-10-31 (`feat/design-finalisation`, not deployed). **Severity:** Medium (WCAG 4.1.2).
+
+Between 768 and 1023px the CMS sidebar collapses to an icon rail. `SidebarMenuButton` in
+`src/components/ui/sidebar.tsx` hid each label with `display: none` (`[&>span]:hidden`), which also removes it
+from the accessibility tree, so axe-core 4.14.0 found 26 links and the Sign out button with no name at 834px.
+The label is now visually hidden instead (`sr-only`), as is the GAkinzOS name in the rail. The same run found
+four controls whose `aria-label` differed from their visible text (K-114): each now takes its name from the
+visible words. Verified on a build without Clerk with every `.php` answered locally: 208 captures, 26 CMS
+screens in light and dark at 390, 834, 1440 and 2560px.
 
