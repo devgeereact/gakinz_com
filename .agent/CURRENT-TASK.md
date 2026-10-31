@@ -2,12 +2,11 @@
 
 ## Outcome
 
-**Current, 2026-10-31:** the approved design (D-053) is built on `feat/design-finalisation` (stacked on
-`design/gakinz-design-skill`, `890597a`) and verified: public 165 of 165 captures, CMS 208 of 208, hero
-slides, row fill, build, 545 tests, lint ratchet, docs check (`docs/AUDIT.md`, 2026-10-31). K-112 to K-116
-and K-118 fixed on the branch; K-117 resolved by decision. Not pushed, not merged, not deployed. Next: the
-owner's go-ahead to push and release (a push to `main` deploys), then check Clerk's styled form and the
-case studies on the live site. Afterwards in BUILT/IN CODE markers of the skill, change BUILT to IN CODE.
+**Current, 2026-10-31:** the approved design (D-053) is live as `a907824`, released through GitHub Actions
+with the owner's approval; checks before and after release are in `docs/AUDIT.md` (2026-10-31). K-112 to
+K-116 and K-118 fixed; K-117 resolved by decision. Follow-ups: style Clerk's footer panel (`footer` element
+key), owner test of the signed-in CMS on real data, Safari and phone checks. The skill's rules are now marked
+IN CODE.
 
 
 The work on `feat/journeys-2026-10-18` (PR #21: six batches, 2026-10-18 to 2026-10-20, then

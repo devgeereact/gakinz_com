@@ -2,7 +2,20 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
-## 2026-10-31 · Build verification, `feat/design-finalisation` (not deployed)
+## 2026-10-31 · Release check on gakinz.com (`a907824`)
+
+**Release:** fast-forward of `main` to `a907824`, pushed with the owner's approval; GitHub Actions ran
+`scripts/release.mjs --go`: dist 44 changed and 68 new, server 1 changed (`client_access.php`: the live copy
+lacked a comment-only change from `7f6c73b`, a `[skip ci]` commit; the on/off switch is in `config.php`,
+which is never sent). Snapshot `~/backups/gakinz_com/releases/20261031T182747Z`; 3 smoke checks passed.
+
+**Live, read-only, axe-core 4.14.0:** `/`, `/work/`, `/work/ego/`, `/work/harni/`, `/work/gakinzos/`,
+`/pricing/`, `/about/`, `/services/`, `/contact/`, `/login` at 390 and 1440px: **20 of 20 clean**. Every page
+above and `/images/work/ego-d.webp` answer 200; `client_access.php?action=status` answers 404 (still off).
+Sign-in seen in a browser: Clerk's card frame is gone and the tokens apply; Clerk's grey "Secured by Clerk"
+footer panel remains (follow-up). **NOT TESTED:** signing in, the CMS with real data, Safari, real phones.
+
+## 2026-10-31 · Build verification, `feat/design-finalisation` (released the same day)
 
 **Scope:** the approved design (D-053) built into the code; checked on loopback builds with no route to the
 live API (`.claude/skills/gakinz-design/scripts/serve.mjs`; every `.php` answers 404 or labelled sample data).

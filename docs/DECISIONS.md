@@ -984,7 +984,7 @@ with the live key has no secret keys. NOT TESTED: a real sign-in, the live serve
 6. **Exception to the kit's Never list, 2026-10-30.** The owner instructed the deletion of the merged branch `move/cpanel-clerk` on origin ("Fix this now", naming the branch note). It was fully contained in `main` (`a034e40`); deleted on origin and locally. This is a one-off, not a change to the rule.
 
 ## D-053 · The approved prototype is the design reference, and the GAkinz design skill holds the system
-**Date:** 2026-10-31 · **Status:** decided by the owner; built on `feat/design-finalisation` and verified 2026-10-31 (`docs/AUDIT.md`); not deployed.
+**Date:** 2026-10-31 · **Status:** decided by the owner; built and verified 2026-10-31 (`docs/AUDIT.md`), released to gakinz.com 2026-10-31 as `a907824` with the owner's approval.
 
 1. **Reference.** The live prototype (https://claude.ai/artifact/UDLsqyrLE6smsEP96Pr7be) and the design board
    (https://claude.ai/artifact/PzKiwCvhsVeNw6C3gGGNqD) are the approved design for the next build of the public

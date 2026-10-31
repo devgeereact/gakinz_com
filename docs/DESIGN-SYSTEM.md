@@ -2,8 +2,8 @@
 
 > **Working guide (2026-10-31, D-053):** `.claude/skills/gakinz-design/` holds the current tokens with
 > measured contrast ratios, the layout rules, the findings register (K-112 to K-117) and the verification
-> routine. The approved prototype is the reference for the next build. **Built on
-> `feat/design-finalisation` (2026-10-31, not deployed):** full card rows (`useBalancedGrid`, `WorkGrid`),
+> routine. The approved prototype is the reference for the next build. **Built and released
+> 2026-10-31 (`a907824`):** full card rows (`useBalancedGrid`, `WorkGrid`),
 > page-header fact rails, single-row section heads, pricing on subgrid rows, the specification sheet for
 > projects without screenshots, the work mosaic on About, the masked hero swap, the main call to action
 > graphite on chalk with full-strength header links, the public field edge `--field: #647183`, Clerk drawn
