@@ -36,6 +36,8 @@ const APPEARANCE = {
   elements: {
     cardBox: { boxShadow: "none", border: "0", width: "100%" },
     card: { boxShadow: "none", border: "0", background: "transparent", padding: "0" },
+    // Clerk paints its own grey panel behind "Secured by Clerk"; the frame is the canvas instead.
+    footer: { background: "transparent", backgroundImage: "none" },
   },
 }
 
