@@ -27,16 +27,21 @@ export default function Services() {
           </>
         }
         lede="Websites, from the design to the care afterwards, and everyday IT support. The same person carries each job from the first call to the last fix."
+        rail={[
+          ["Services", copy.services.length, `in ${groupServices(copy.services).length} groups`],
+          ["First reply", "Next day", "working days"],
+          ["Price", "Fixed", "written first"],
+        ]}
       />
       {groupServices(copy.services).map((g) => (
         <section key={g.key} className="sec wrap" aria-labelledby={`grp-${g.key}`}>
-          <div className="sec__head">
-            <div>
-              <p className="eyebrow mono">What I do</p>
-              <h2 className="h-l" id={`grp-${g.key}`}>
-                {g.label}
-              </h2>
-            </div>
+          <div className="sec__head sec__head--solo">
+            <h2 className="h-l" id={`grp-${g.key}`}>
+              {g.label}
+            </h2>
+            <span className="mono mute">
+              {g.items.length} {g.items.length === 1 ? "service" : "services"}
+            </span>
           </div>
           <div className="svc-list">
             {g.items.map((s, i) => (
@@ -59,11 +64,9 @@ export default function Services() {
         </section>
       ))}
       <section className="sec wrap">
-        <div className="sec__head">
-          <div>
-            <p className="eyebrow mono">Process</p>
-            <h2 className="h-l">How a project runs, in order.</h2>
-          </div>
+        <div className="sec__head sec__head--solo">
+          <h2 className="h-l">How a project runs, in order.</h2>
+          <span className="mono mute">{copy.process.length} stages</span>
         </div>
         <ol className="steps" style={{ marginTop: 0 }}>
           {copy.process.map((s) => (

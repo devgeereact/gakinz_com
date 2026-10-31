@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CS
 import { Link } from "react-router-dom"
 import Seo from "@/marketing/components/Seo"
 import { personSchema, sameAsFrom, websiteSchema } from "@/marketing/components/seo-schema"
-import { CtaBand, Devices, IArrow, INext, IPause, IPlay, IPrev, LondonClock, ProjectCard } from "@/marketing/components/site-ui"
+import { CtaBand, Devices, IArrow, INext, IPause, IPlay, IPrev, LondonClock, WorkGrid } from "@/marketing/components/site-ui"
 import { useNavTone } from "@/marketing/components/site-helpers"
-import { kindName, onColour, useProjects, type Project } from "@/marketing/data/showcase"
+import { kindName, onColour, selectedWork, useProjects, type Project } from "@/marketing/data/showcase"
 import { groupServices, useSiteCopy } from "@/marketing/data/content"
 import { howIWork, site } from "@/marketing/data/site"
 import { useMarketingBlog } from "@/marketing/data/blog"
@@ -205,7 +205,6 @@ export default function Home() {
   const { projects, hero } = useProjects()
   const copy = useSiteCopy()
   const { posts } = useMarketingBlog()
-  const [a, b, ...rest] = projects
 
   return (
     <>
@@ -223,20 +222,16 @@ export default function Home() {
       <section className="sec wrap">
         <div className="sec__head">
           <div>
-            <p className="eyebrow mono">Selected work</p>
+            <p className="eyebrow mono">
+              Selected work · {projects.filter((p) => p.status === "Live").length} live
+            </p>
             <h2 className="h-l">Real businesses, and products I run myself.</h2>
           </div>
           <p className="lede">
-            Care staffing, healthcare training, an author's bookstore, a tailor in Lagos. Each card opens the write-up: what the job was, what got built, and where it stands now. Demo builds are marked as demos.
+            Care staffing, building maintenance, an author's bookstore, a tailor in Lagos, and a rota app I run. Each card opens the write-up: what the job was, what got built, and where it stands now. Demo builds are marked as demos.
           </p>
         </div>
-        <div className="grid-work">
-          {a && <ProjectCard p={a} wide />}
-          {b && <ProjectCard p={b} wide />}
-          {rest.slice(0, 3).map((p) => (
-            <ProjectCard key={p.slug} p={p} />
-          ))}
-        </div>
+        <WorkGrid list={selectedWork(projects)} />
         <p style={{ marginTop: 28 }}>
           <Link className="link" to="/work">
             All the work <IArrow />

@@ -1,6 +1,6 @@
 import { Link, useParams } from "react-router-dom"
 import Seo from "@/marketing/components/Seo"
-import { IArrow, PageHead, ProjectCard, Ticks } from "@/marketing/components/site-ui"
+import { IArrow, PageHead, Ticks, WorkGrid } from "@/marketing/components/site-ui"
 import { useSiteCopy } from "@/marketing/data/content"
 import { useProjects } from "@/marketing/data/showcase"
 import NotFound from "./NotFound"
@@ -95,17 +95,13 @@ export default function ServiceDetail() {
       </section>
       {related.length > 0 && (
         <section className="sec wrap">
-          <div className="sec__head">
+          <div className="sec__head sec__head--solo">
             <div>
               <p className="eyebrow mono">In practice</p>
               <h2 className="h-l">Projects where this mattered.</h2>
             </div>
           </div>
-          <div className="grid-work">
-            {related.map((p) => (
-              <ProjectCard key={p.slug} p={p} wide />
-            ))}
-          </div>
+          <WorkGrid list={related} />
         </section>
       )}
     </>

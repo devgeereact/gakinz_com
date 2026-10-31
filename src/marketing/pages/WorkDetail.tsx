@@ -27,12 +27,12 @@ export default function WorkDetail() {
           <Crumbs items={[["/work", "Work"], [null, p.name]]} />
           <div className="case-hero__grid">
             <div>
-              <p className="mono" style={{ opacity: 0.85, marginBottom: 14 }}>
+              <p className="mono" style={{ marginBottom: 14 }}>
                 {kindName(p.kind)} · {p.sector}
               </p>
               <h1 className="h-xl rise">{p.name}</h1>
             </div>
-            <p className="rise" style={{ ...delay(80), fontSize: "1.15rem", opacity: 0.94 }}>
+            <p className="rise" style={{ ...delay(80), fontSize: "1.15rem" }}>
               {p.line}
             </p>
           </div>
@@ -42,8 +42,45 @@ export default function WorkDetail() {
                 <Devices list={[p]} />
               </div>
             ) : (
-              <div className="card__type" style={{ ...tone(p.colour), aspectRatio: "21/9", borderRadius: 20 }}>
-                {p.name}
+              /* No screenshots: what was built and how, instead of a slab repeating the name (K-112 P9). */
+              <div className="spec">
+                <div className="spec__built">
+                  <p className="mono">What was built</p>
+                  {p.built.length > 0 ? (
+                    <ol>
+                      {p.built.map((b) => (
+                        <li key={b}>{b}</li>
+                      ))}
+                    </ol>
+                  ) : (
+                    <p className="spec__line">{p.line}</p>
+                  )}
+                </div>
+                <div className="spec__side">
+                  <dl>
+                    <div>
+                      <dt>Status</dt>
+                      <dd>{p.status === "Live" && p.url ? `Live, at ${p.url}` : p.status}</dd>
+                    </div>
+                    <div>
+                      <dt>Kind</dt>
+                      <dd>{kindName(p.kind)}</dd>
+                    </div>
+                    {p.sector && (
+                      <div>
+                        <dt>Sector</dt>
+                        <dd>{p.sector}</dd>
+                      </div>
+                    )}
+                  </dl>
+                  {p.stack.length > 0 && (
+                    <ul className="stack" aria-label="Built with">
+                      {p.stack.map((t) => (
+                        <li key={t}>{t}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -58,7 +95,8 @@ export default function WorkDetail() {
                 {p.problem || p.line}
               </p>
             </section>
-            {p.built.length > 0 && (
+            {/* Without screenshots the specification sheet above already lists what was built. */}
+            {p.built.length > 0 && p.desktop && (
               <section>
                 <h2>What I built</h2>
                 <ul className="ticks">
@@ -130,7 +168,7 @@ export default function WorkDetail() {
         {nx && nx.slug !== p.slug && (
           <Link className="next" to={`/work/${nx.slug}`} style={tone(nx.colour)}>
             <div>
-              <p className="mono" style={{ opacity: 0.85, marginBottom: 8 }}>
+              <p className="mono" style={{ marginBottom: 8 }}>
                 Next project
               </p>
               <h3>{nx.name}</h3>

@@ -1,6 +1,6 @@
 import { useState } from "react"
 import Seo from "@/marketing/components/Seo"
-import { CtaBand, PageHead, ProjectCard } from "@/marketing/components/site-ui"
+import { CtaBand, PageHead, WorkGrid, type RailFact } from "@/marketing/components/site-ui"
 import { useProjects, type Project } from "@/marketing/data/showcase"
 
 type Filter = "all" | "client" | "product" | "Live" | "In build" | "Demo"
@@ -35,6 +35,12 @@ export default function Work() {
           </>
         }
         lede="Client sites, products I build and run, and a few demo builds, each marked as one. Filter by kind, or by where each one stands today."
+        rail={[
+          ["Live today", projects.filter((p) => match(p, "Live")).length],
+          ["Client sites", projects.filter((p) => match(p, "client")).length],
+          ["Own products", projects.filter((p) => match(p, "product")).length],
+          ["Demo builds", projects.filter((p) => match(p, "Demo")).length, "marked"],
+        ].filter(([, n]) => Number(n) > 0) as RailFact[]}
       />
       <section className="sec wrap" style={{ paddingTop: 40 }}>
         <div className="filters" role="group" aria-label="Filter projects">
@@ -49,11 +55,7 @@ export default function Work() {
         <p className="sr" aria-live="polite">
           {list.length} projects shown
         </p>
-        <div className="grid-work">
-          {list.map((p) => (
-            <ProjectCard key={p.slug} p={p} level={2} />
-          ))}
-        </div>
+        <WorkGrid list={list} level={2} />
       </section>
       <section className="sec wrap">
         <CtaBand projects={projects} />

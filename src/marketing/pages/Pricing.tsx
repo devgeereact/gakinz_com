@@ -1,8 +1,14 @@
 import { Link } from "react-router-dom"
 import Seo from "@/marketing/components/Seo"
-import { CtaBand, IArrow, PageHead, Ticks } from "@/marketing/components/site-ui"
+import { CtaBand, IArrow, PageHead, Ticks, type RailFact } from "@/marketing/components/site-ui"
 import { useSiteCopy } from "@/marketing/data/content"
 import { useProjects } from "@/marketing/data/showcase"
+
+/** The lowest "£n,nnn" package price, as printed; null when no package has a number. */
+const lowest = (packages: { price: string }[]): string | null => {
+  const priced = packages.map((p) => ({ p: p.price, n: Number(p.price.replace(/[^0-9.]/g, "")) })).filter((x) => /£\s?\d/.test(x.p) && x.n > 0)
+  return priced.length ? priced.sort((a, b) => a.n - b.n)[0].p : null
+}
 
 /** Packages, add-ons, payment stages and FAQs, all editable in the CMS (D-046). */
 export default function Pricing() {
@@ -21,6 +27,11 @@ export default function Pricing() {
           </>
         }
         lede="You get a written scope and one number before any work starts. These are starting points; the scope sets the final figure."
+        rail={[
+          ...(lowest(copy.packages) ? [["Starting from", lowest(copy.packages)] as RailFact] : []),
+          ...(copy.terms.length ? [["Paid in stages", copy.terms.map((t) => t.share.replace(/%$/, "")).join(" · "), "%"] as RailFact] : []),
+          ["Currency", "GBP"],
+        ]}
       />
       <section className="sec wrap" style={{ paddingTop: 48 }}>
         <div className="plans">

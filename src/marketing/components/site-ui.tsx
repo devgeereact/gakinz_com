@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactNode } from "react"
 import { Link, NavLink } from "react-router-dom"
-import { delay, host, telHref, ToneCtx, type Tone } from "./site-helpers"
+import { delay, host, telHref, ToneCtx, useBalancedGrid, type CardLayout, type Tone } from "./site-helpers"
 import { kindName, onColour, type Project } from "@/marketing/data/showcase"
 import { useSiteCopy, type BusinessCopy } from "@/marketing/data/content"
 import { holdScroll, scrollToTop } from "@/marketing/lib/motion"
@@ -54,9 +54,16 @@ export function Crumbs({ items }: { items: [string | null, string][] }) {
   )
 }
 
-export function PageHead({ crumbs, title, lede, children }: { crumbs: [string | null, string][]; title: ReactNode; lede?: string; children?: ReactNode }) {
-  return (
-    <header className="phead wrap">
+/** One figure in a page header's fact rail: label, value and an optional unit. Values are computed, never typed. */
+export type RailFact = [label: string, value: ReactNode, unit?: string]
+
+/**
+ * The inner-page header. With `rail`, the right-hand half carries a few real
+ * figures instead of standing empty (D-053, K-112 P5).
+ */
+export function PageHead({ crumbs, title, lede, rail, children }: { crumbs: [string | null, string][]; title: ReactNode; lede?: string; rail?: RailFact[]; children?: ReactNode }) {
+  const head = (
+    <>
       <Crumbs items={crumbs} />
       <h1 className="h-xl rise">{title}</h1>
       {lede && (
@@ -65,6 +72,23 @@ export function PageHead({ crumbs, title, lede, children }: { crumbs: [string | 
         </p>
       )}
       {children}
+    </>
+  )
+  if (!rail?.length) return <header className="phead wrap">{head}</header>
+  return (
+    <header className="phead phead--rail wrap">
+      <div>{head}</div>
+      <dl className="rail rise" style={delay(120)}>
+        {rail.map(([label, value, unit]) => (
+          <div key={label}>
+            <dt>{label}</dt>
+            <dd>
+              {value}
+              {unit && <small>{unit}</small>}
+            </dd>
+          </div>
+        ))}
+      </dl>
     </header>
   )
 }
@@ -137,18 +161,31 @@ export function Devices({ list, active = 0 }: { list: Project[]; active?: number
   )
 }
 
-/** `level` is the card title's heading level: 3 under a section h2, 2 straight under the page h1. */
-export function ProjectCard({ p, wide, level = 3 }: { p: Project; wide?: boolean; level?: 2 | 3 }) {
+/**
+ * `level` is the card title's heading level: 3 under a section h2, 2 straight under the page h1.
+ * `layout` comes from useBalancedGrid. Without a screenshot the media area lists what was built
+ * (K-112 P9), never just the name again.
+ */
+export function ProjectCard({ p, layout = "", level = 3 }: { p: Project; layout?: CardLayout; level?: 2 | 3 }) {
   const Title = level === 2 ? "h2" : "h3"
   const style = { "--cc": p.colour, "--con": onColour(p.colour) } as CSSProperties
   return (
-    <Link className={`card ${wide ? "card--wide" : ""}`} to={`/work/${p.slug}`} style={style}>
+    <Link className={`card${layout ? ` card--${layout}` : ""}`} to={`/work/${p.slug}`} style={style}>
       <div className="card__media">
         {p.desktop ? (
           // Lazy on purpose: eager plus high priority measured slower (K-053).
           <img src={p.desktop.src} alt={p.desktop.alt} loading="lazy" width={1200} height={750} />
         ) : (
-          <div className="card__type">{p.name}</div>
+          <div className="card__type">
+            <b>{p.name}</b>
+            {p.built.length > 0 && (
+              <ol>
+                {p.built.slice(0, 3).map((b) => (
+                  <li key={b}>{b}</li>
+                ))}
+              </ol>
+            )}
+          </div>
         )}
       </div>
       <div className="card__body">
@@ -166,6 +203,18 @@ export function ProjectCard({ p, wide, level = 3 }: { p: Project; wide?: boolean
         </div>
       </div>
     </Link>
+  )
+}
+
+/** A card grid whose rows are always full (useBalancedGrid). */
+export function WorkGrid({ list, level = 3 }: { list: Project[]; level?: 2 | 3 }) {
+  const { ref, layout } = useBalancedGrid(list.length)
+  return (
+    <div className="grid-work" ref={ref}>
+      {list.map((p, i) => (
+        <ProjectCard key={p.slug} p={p} layout={layout(i)} level={level} />
+      ))}
+    </div>
   )
 }
 
@@ -293,11 +342,12 @@ export function SiteChrome({ children, projects }: { children: ReactNode; projec
     <ToneCtx.Provider value={stable}>
       <header className={`nav ${solid ? "solid" : ""}`} style={navStyle}>
         <div className="nav__in">
-          <Link className="brand" to="/" aria-label="GAkinz, home">
+          <Link className="brand" to="/">
             <span className="brand__mark" aria-hidden="true">
               <b>G</b>
             </span>
             <span className="brand__name">GAkinz</span>
+            <span className="sr"> home</span>
           </Link>
           <ul className="nav__links">
             {NAV.map(([to, label]) => (

@@ -140,6 +140,11 @@ export default function Contact() {
           </>
         }
         lede="A paragraph is enough. If it is not something I should take on, I will say so and point you somewhere better."
+        rail={[
+          ["First reply", "Next day", "working days"],
+          ["First call", "20 min"],
+          ["Price", "Fixed", "written first"],
+        ]}
       />
       <section className="sec wrap" style={{ paddingTop: 56 }}>
         <div className="contact">

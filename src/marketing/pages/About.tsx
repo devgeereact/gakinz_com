@@ -1,15 +1,17 @@
+import type { CSSProperties } from "react"
+import { Link } from "react-router-dom"
 import Seo from "@/marketing/components/Seo"
-import { BusinessDetails, CtaBand, Crumbs, Ticks } from "@/marketing/components/site-ui"
+import { BusinessDetails, CtaBand, Crumbs, LondonClock, Ticks } from "@/marketing/components/site-ui"
 import { useSiteCopy } from "@/marketing/data/content"
 import { delay } from "@/marketing/components/site-helpers"
-import { useProjects } from "@/marketing/data/showcase"
+import { onColour, useProjects } from "@/marketing/data/showcase"
 import { howIWork, sectors, site } from "@/marketing/data/site"
 
 /** About (D-046). The portrait seal shows the real photograph once supplied, never a stand-in. */
 export default function About() {
   const { projects } = useProjects()
   const portrait = site.images.portrait
-  const { business } = useSiteCopy()
+  const { business, contact } = useSiteCopy()
   return (
     <>
       <Seo title="About" description="Gideon Akinlotan, a designer and developer in London. You talk to the person doing the work." path="/about" />
@@ -25,10 +27,11 @@ export default function About() {
             <p className="lede rise" style={delay(80)}>
               I am {site.name}, a designer and developer in {site.location}. {site.studio.note} Either way, you talk to me.
             </p>
-            <p className="rise" style={delay(120)}>
+            <p className="contactline rise" style={delay(120)}>
               <a className="link" href={`mailto:${business.email}`} style={{ overflowWrap: "anywhere" }}>
                 {business.email}
               </a>
+              <span className="mute">{contact.reply}</span>
             </p>
             <BusinessDetails business={business} />
           </div>
@@ -38,15 +41,23 @@ export default function About() {
               <img src={portrait.src} alt={portrait.alt} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
             </div>
           ) : (
-            <div className="seal" role="img" aria-label="Portrait to come. A real photograph will go here.">
-              <span className="seal__ring" aria-hidden="true" />
-              <div className="seal__in">
-                <b>GA</b>
-                <p className="mono mute" style={{ marginTop: 10 }}>
-                  Portrait to come
-                </p>
+            /* No photograph yet, so the work stands in rather than a placeholder (K-112 P8). */
+            <figure className="desk">
+              <div className="desk__top">
+                <span className="mono mute">The work</span>
+                <span className="mono">
+                  London <LondonClock />
+                </span>
               </div>
-            </div>
+              <div className="desk__grid">
+                {projects.slice(0, Math.min(12, Math.floor(projects.length / 4) * 4 || projects.length)).map((p) => (
+                  <Link key={p.slug} to={`/work/${p.slug}`} style={{ "--cc": p.colour, "--con": onColour(p.colour) } as CSSProperties}>
+                    {p.name}
+                  </Link>
+                ))}
+              </div>
+              <figcaption className="desk__foot">Each square opens a write-up.</figcaption>
+            </figure>
           )}
         </div>
       </header>

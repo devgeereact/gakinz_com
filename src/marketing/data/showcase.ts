@@ -7,7 +7,10 @@ import { useWork, type WorkRecord } from "./work"
  * at least one published record, the site shows the built-in list below, which
  * is the owner's real work: each entry was read from the project's own
  * repository and each screenshot was captured from its local build on
- * 13 October 2026. Nothing here is invented, and no figure or outcome is
+ * 13 October 2026. The screenshots of the six live sites (RotaFlow, RitaGreen,
+ * Harni, Herit Clothing, MimmyCare, EGO LIMITED) were re-taken from the live
+ * sites on 31 October 2026; Vitalcare keeps its earlier screenshot while its
+ * site is rebuilt (owner, D-053). Nothing here is invented, and no figure or outcome is
  * claimed. Client sites are named with the owner's confirmation (2026-10-13).
  *
  * Nothing on the site may print a count of projects as fixed copy. Counts, where
@@ -72,7 +75,7 @@ export const SHOWCASE: Project[] = [
   { slug: "joinery", name: "Okafor Joinery", kind: "client", who: "joiners", sector: "Fitted furniture, Bristol", line: "A site for a one-person workshop that designs, makes and fits furniture, built around a clear enquiry form.", built: ["Site with starting prices", "Enquiry form"], stack: ["React", "TypeScript", "Tailwind", "Netlify"], status: "Demo", url: null, colour: "#25282B", ...shots("joinery", "Okafor Joinery"), heroOrder: null },
   { slug: "heritage", name: "Herit Clothing", kind: "client", who: "tailors", sector: "Tailoring, Lagos", line: "Website and back office for a tailoring business: enquiries, measurements, jobs and payments.", built: ["Public shop and website", "Admin for clients, measurements and tailoring jobs", "Payment ledger"], stack: ["React", "Vite", "Bootstrap", "PHP", "MySQL"], status: "Live", url: "heritclothing.com", colour: "#F59E0B", ...shots("heritage", "Herit Clothing"), heroOrder: 5 },
   { slug: "mimmycare", name: "MimmyCare", kind: "client", who: "online shops", sector: "Online retail", line: "Launch page for an online shop, with the app and API set up behind it.", built: ["Launch page", "App shell", "PHP and MySQL API"], stack: ["React", "TypeScript", "Tailwind", "PHP", "MySQL"], status: "Live", url: "mimmycare.com", colour: "#2E3A33", ...shots("mimmycare", "MimmyCare"), heroOrder: null },
-  { slug: "ego", name: "EGO LIMITED", kind: "client", who: "maintenance firms", sector: "Maintenance, London", line: "Marketing site and a three-role field service app for a London maintenance company.", built: ["Marketing landing page", "Field service app for office, engineers and clients", "PHP and MySQL API"], stack: ["React", "TypeScript", "Tailwind", "PHP", "MySQL"], status: "Live", url: "egolimited.com", colour: "#2C2C2A", desktop: null, mobile: null, heroOrder: null },
+  { slug: "ego", name: "EGO LIMITED", kind: "client", who: "maintenance firms", sector: "Maintenance, London", line: "Marketing site and a three-role field service app for a London maintenance company.", built: ["Marketing landing page", "Field service app for office, engineers and clients", "PHP and MySQL API"], stack: ["React", "TypeScript", "Tailwind", "PHP", "MySQL"], status: "Live", url: "egolimited.com", colour: "#2C2C2A", ...shots("ego", "EGO LIMITED"), heroOrder: null },
   { slug: "gakinzos", name: "GAkinzOS", kind: "product", who: "studios", sector: "Studio operations", line: "The private system behind this site: enquiries, clients, projects, quotes, invoices, support and a client portal.", built: ["Seven areas covering the whole studio", "Client portal with its own login", "PHP and MySQL API with role checks on every call"], stack: ["React", "TypeScript", "Tailwind", "PHP", "MySQL"], status: "Live", url: "gakinz.com", colour: "#16202B", desktop: null, mobile: null, heroOrder: null },
 ]
 
@@ -113,6 +116,18 @@ export function fromRecord(r: WorkRecord & HeroFields): Project {
     problem: r.rows[0],
     outcome: r.rows[2],
   }
+}
+
+/**
+ * Selected work on the home page (D-053): live work with a strong first screen, in this
+ * order. Projects missing from the list (for example once CMS records take over with other
+ * slugs) are topped up from the rest, screenshots first, so the section always has five.
+ */
+export const SELECTED = ["ritagreen", "ego", "rotaflow", "harni", "heritage"]
+export function selectedWork(list: Project[], max = 5): Project[] {
+  const picked = SELECTED.map((s) => list.find((p) => p.slug === s)).filter((p): p is Project => Boolean(p))
+  const rest = list.filter((p) => !picked.includes(p)).sort((a, b) => Number(Boolean(b.desktop)) - Number(Boolean(a.desktop)))
+  return [...picked, ...rest].slice(0, max)
 }
 
 /** The hero: flagged projects with a screenshot, in order, five at most. */
