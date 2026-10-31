@@ -80,7 +80,7 @@ Each one exists because the opposite was found on a rendered page. Detail and th
    1100px. Above 2200px content sits in a centred column capped at 1760px. IN CODE.
 10. **Sign-in is one frame.** Clerk's form is drawn with GAkinzOS tokens through Clerk's `appearance`
     (`variables` and `elements` by name, never `.cl-*` selectors), in light and dark, and the frame renders
-    at once while only the form waits. IN CODE (live check 31 Oct: card frame gone and tokens applied; Clerk's grey "Secured by Clerk" footer panel remains).
+    at once while only the form waits. IN CODE (live check 31 Oct: card frame and footer panel gone, tokens applied; release `fdc5d94`).
 11. **Field edges reach 3:1** (WCAG 1.4.11) against every surface they sit on: public `--field` `#647183`,
     CMS `--input` light `#7F8896`, dark `#6B7787` (owner-approved, K-113). IN CODE.
 12. **The visible words name the control.** No `aria-label` that differs from visible text (WCAG 2.5.3);

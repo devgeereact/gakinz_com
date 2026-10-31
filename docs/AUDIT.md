@@ -12,8 +12,9 @@ which is never sent). Snapshot `~/backups/gakinz_com/releases/20261031T182747Z`;
 **Live, read-only, axe-core 4.14.0:** `/`, `/work/`, `/work/ego/`, `/work/harni/`, `/work/gakinzos/`,
 `/pricing/`, `/about/`, `/services/`, `/contact/`, `/login` at 390 and 1440px: **20 of 20 clean**. Every page
 above and `/images/work/ego-d.webp` answer 200; `client_access.php?action=status` answers 404 (still off).
-Sign-in seen in a browser: Clerk's card frame is gone and the tokens apply; Clerk's grey "Secured by Clerk"
-footer panel remains (follow-up). **NOT TESTED:** signing in, the CMS with real data, Safari, real phones.
+Sign-in seen in a browser: Clerk's card frame is gone and the tokens apply. Clerk's grey "Secured by Clerk"
+panel was removed in release `fdc5d94` the same evening (owner-approved); live captures of `/login` and `/`
+at 390 and 1440px clean, panel confirmed gone. **NOT TESTED:** signing in, the CMS with real data, Safari, real phones.
 
 ## 2026-10-31 · Build verification, `feat/design-finalisation` (released the same day)
 

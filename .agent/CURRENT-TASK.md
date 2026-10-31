@@ -4,8 +4,8 @@
 
 **Current, 2026-10-31:** the approved design (D-053) is live as `a907824`, released through GitHub Actions
 with the owner's approval; checks before and after release are in `docs/AUDIT.md` (2026-10-31). K-112 to
-K-116 and K-118 fixed; K-117 resolved by decision. Follow-ups: style Clerk's footer panel (`footer` element
-key), owner test of the signed-in CMS on real data, Safari and phone checks. The skill's rules are now marked
+K-116 and K-118 fixed; K-117 resolved by decision. Clerk's footer panel removed in `fdc5d94`. Follow-ups:
+owner test of the signed-in CMS on real data, Safari and phone checks. The skill's rules are now marked
 IN CODE.
 
 

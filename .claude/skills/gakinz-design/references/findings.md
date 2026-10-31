@@ -16,7 +16,7 @@ Update this file when an item is built, so the next session does not redo the au
 | P7 | Pricing lists stretch; Bespoke price 27px higher | Row heights 44px for 22px text up to 77px for 48px | Fixed | Fixed |
 | P8 | "Portrait to come" circle; email link cramped | `/about` at 1440px | Fixed | Fixed |
 | P9 | 1248×535 slab repeating the name | `/work/ego`, `/work/gakinzos` | Fixed (EGO now has screenshots) | Fixed |
-| C1 | Stock Clerk card on graphite; ~3s blank first | `/login`; no `appearance` anywhere in `src/` | Fixed | Fixed; live check: frame and tokens applied, Clerk's grey footer panel remains |
+| C1 | Stock Clerk card on graphite; ~3s blank first | `/login`; no `appearance` anywhere in `src/` | Fixed | Fixed; live 31 Oct (`fdc5d94`): frame and footer panel gone, tokens applied |
 | C2 | Project stage tiles break 3+2 on phones | Local build with synthetic data, 600px | Fixed | Fixed |
 | C3 | Two identical "New project" buttons on the empty screen | Local build, empty state | Planned | Fixed |
 | N3 | `vite preview` proxies `.php` to the live API | One read with a fake token reached gakinz.com (401). Set `preview.proxy` to `{}` | n/a | Fixed |
