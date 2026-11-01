@@ -41,7 +41,7 @@ differences (D-044):
 | `docs/NOTIFICATIONS-SPEC.md` | N/A | One notification route, specified in `docs/PRODUCT-SPEC.md` section 6.2 |
 | `qa/FUNCTIONAL-AUDIT.md`, `qa/REGRESSION-AUDIT.md` | `docs/TEST-PLAN.md` | One test record: suites, gaps and the J01 to J12 acceptance scenarios |
 | `qa/LAUNCH-CHECKLIST.md` | `docs/AUDIT.md` | Same purpose; launch gates in `docs/OPERATIONS.md` section 9 |
-| Not in the profile | `docs/OPERATIONS.md`, `docs/STATUS.md`, `docs/DECISIONS.md`, `docs/GEE-OS.md`, `docs/CONTENT-AND-GROWTH.md`, `docs/DESIGN-REFERENCE-MASTERCARD.md`, `CODEX.md`, `server/README.md` | Operations, current state, decisions, this route, the content policy, a preserved third-party design source, the Codex entry point, and the server folder's own guide |
+| Not in the profile | `docs/OPERATIONS.md`, `docs/STATUS.md`, `docs/DECISIONS.md`, `docs/GEE-OS.md`, `docs/CONTENT-AND-GROWTH.md`, `CODEX.md`, `server/README.md` | Operations, current state, decisions, this route, the content policy, the Codex entry point, and the server folder's own guide |
 
 ## Boundaries
 

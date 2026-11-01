@@ -567,7 +567,7 @@ security-critical):
 
 | Endpoint | Contract | Roles |
 |---|---|---|
-| `ai.php` | POST `{task, input, system?}` returns `{text}`. OpenRouter proxy | Every staff role, not `client`. Capped per role per day |
+| `ai.php` | POST `{task, input, system?}` returns `{text, provider}`. Anthropic first, OpenRouter as backup (D-054) | Every staff role, not `client`. Capped per role per day |
 | `weather.php` | GET `?city=` | Every staff role, not `client`. Cached 10 minutes |
 | `github.php` | GET `?url=` returns commits, pull requests and the latest Actions run | STAFF |
 | `figma.php` | GET `?url=` returns name, last modified and thumbnail | STAFF |

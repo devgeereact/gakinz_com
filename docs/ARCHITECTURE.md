@@ -169,6 +169,7 @@ all denied to direct requests by `.htaccess` (K-013). `work.php` was added on 20
 | `_money.php` | The single VAT-inclusive payable-total calculation, used for payment providers (D-034) and for the manual payment check in `invoices.php` |
 | `_ics.php` | RFC 5545 calendar file for a confirmed call, used by `bookings.php` |
 | `_like.php` | Literal substring matching for `LIKE` with `!` as the escape, used by `search.php` |
+| `_ai.php` | The AI providers, Anthropic then OpenRouter (D-054), used by `ai.php` and `integrations.php` |
 | `_retention.php` | The read-only retention dry run, used by `privacy.php` and `cron.php job=retention_report` |
 | `_erasure.php` | Erasing one prospect's enquiry (`privacy.php?action=erase_enquiry`) and the gated retention executor (`cron.php job=retention_apply`). The only code that hard-deletes personal data |
 | `_reference.php` | Work references (`GK-E-YYYY-NNNN`, `GK-P-YYYY-NNNN`) from `reference_counters`, SQL 19: one atomic counter raise behind a locked anchor row per kind, loaded only if present by the endpoints that create or show a reference (D-049) |
@@ -197,27 +198,24 @@ mirrors them for navigation only.
    the JSON content type, sends `X-Content-Type-Options: nosniff`, `Referrer-Policy:
    strict-origin-when-cross-origin` and `X-Frame-Options: DENY`, and short-circuits `OPTIONS`
    with 204.
-4. `require_auth()` reads the bearer token, joins `auth_tokens` to `users`, rejects an expired
+4. `require_auth()` reads the bearer token (a Clerk session token, D-052, or a GAkinzOS session token), resolves it to `users`, rejects an expired
    token, a soft-deleted user or a non-active account, then enforces the role list.
 5. The endpoint runs, and mutations call `audit()` to write to `audit_log`.
 
-## 5. Two deployment tracks
+## 5. Release path
 
-This is the single most consequential fact about the architecture.
+| What moves | How | Trigger |
+|---|---|---|
+| `dist/` and `server/*.php` | `scripts/release.mjs --go` over SSH (snapshot, upload, smoke checks, automatic rollback) | A push to `main` that changes code, through GitHub Actions |
+| `.htaccess` and `schema.sql` migrations | By hand | A person decides |
 
-| Track | What moves | How | Trigger |
-|---|---|---|---|
-| Client | `dist/` only | GitHub Actions, FTP | CI passing on a push to `main` |
-| Server | `server/*.php`, `.htaccess`, `schema.sql` | Manual upload | A person decides |
-
-A change under `server/` is committed but not live. A schema change is written but not
-applied. See `docs/DEPLOYMENT.md`.
+A schema change is written but not applied until someone runs it. See `docs/DEPLOYMENT.md`.
 
 ## 6. External dependencies at runtime
 
 | Dependency | Used by | Degrades to |
 |---|---|---|
-| OpenRouter | `ai.php`, every AI feature | 503, feature hidden |
+| Anthropic, then OpenRouter (D-054) | `ai.php` via `_ai.php`, every AI feature | 503 with neither key, feature hidden; 502 if both fail |
 | OpenWeather | `weather.php` | Widget hidden |
 | SMTP mailbox | `_smtp.php`, `mail.php`, `comms.php`, `invoices.php`, `cron.php`, `auth.php` | PHP `mail()`, then a clear error |
 | IMAP mailbox | `mail.php` | Inbox banner, compose still works |

@@ -6,6 +6,10 @@ the live site only when PR #8 merges, and anything under `server/` is not live u
 uploaded (`docs/DEPLOYMENT.md` section 5). Read this file before starting work, and update it
 in the same pull request as a fix (`AGENTS.md`, "Keeping documents current").
 
+**Reading old statuses (2026-11-01).** Every branch was merged and released by 2026-10-31 (`fdc5d94`), and the
+server files go up with each release (`scripts/release.mjs`). "Not deployed" or "not uploaded" in a row
+dated before 2026-10-22 describes that date only; check `docs/WORKBOOK.md` for what is live now.
+
 Severity is judged on impact to the live business, not on how hard it is to fix. Entries
 K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` section 1.
 
@@ -35,7 +39,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-022 | `SidebarMenuSub` drops its forwarded ref | Low | **Fixed 2026-10-11.** Not deployed |
 | K-023 | Two CMS account links point at routes that do not exist | Low | **Fixed 2026-10-10.** Not deployed |
 | K-024 | Non-admin roles cannot enable two-factor or revoke their own sessions | Medium | **Fixed 2026-10-10.** Not deployed or uploaded |
-| K-025 | Stripe charged the ex-VAT amount and marked the invoice fully paid | **Critical** | **Fixed 2026-10-10.** Not uploaded. Past Stripe payments need checking |
+| K-025 | Stripe charged the ex-VAT amount and marked the invoice fully paid | **Critical** | **Fixed 2026-10-10**, uploaded 2026-10-21. Past Stripe payments still need checking against their VAT-inclusive totals |
 | K-026 | PayPal payment is recorded only if the customer's browser returns | High | **Mitigated 2026-10-10:** PayPal checkout switched off |
 | K-027 | Magic links and Google sign-in bypassed two-factor; one link could mint several sessions | **Critical** | **Fixed 2026-10-10.** Not uploaded |
 | K-028 | Draft or declined quotes could be accepted; concurrent accepts duplicated projects and invoices | High | **Fixed 2026-10-10.** Not uploaded |
@@ -79,7 +83,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-066 | Public-site defects from the 2026-10-17 audit | Low to medium | **Fixed 2026-10-17**, not deployed; `favicon.ico` and web manifest added 2026-10-18, not deployed. VAT wording and `/sectors` open (owner) |
 | K-067 | "Not in the future" date checks use a server clock whose time zone is not set | Low | Open. Live PHP and database time zones UNVERIFIED |
 | K-068 | The 40/30/30 split moved to integer pence: on PHP 8.4 or later about 2.5% of subtotals move 1p between invoices | Low | Accepted 2026-10-18, not uploaded. Live PHP version UNVERIFIED |
-| K-069 | Header links at 0.85 opacity can fall below AA on a mid-tone owner hero colour | Low | Open. Passes on every current slide; design decision |
+| K-069 | Header links at 0.85 opacity can fall below AA on a mid-tone owner hero colour | Low | **Fixed 2026-10-31** (`a907824`): header links at full opacity, current page underlined (K-115) |
 | K-070 | The client calendar file has no meeting link, and a cancelled call has no cancellation file | Low | Open. Owner decision |
 | K-071 | Portal call requests, update requests and supplied assets notify nobody | Low | Open. Owner decision |
 | K-072 | Asset supply is a note only: a client cannot upload a file | Low | Open. Needs a client upload path in `files.php` |
@@ -92,7 +96,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-079 | The subject access export includes staff notes about the client, and is built whole in memory | Medium | Open. Notes: owner and legal decision. Memory: accepted at current volumes |
 | K-080 | The handoff export's redaction is a safety net: other personal data typed by staff goes out as typed | Medium | Open. By design; staff must not type personal data into the brief |
 | K-081 | axe reports `aria-required-children` on the search dialog's empty state | Low | Open. Inside the third-party `cmdk` list |
-| K-082 | Strict SQL errors in `briefs.php`, `privacy.php` and `_retention.php` are not tested on PHP before 8.1 | Low | Open. Live PHP version UNVERIFIED |
+| K-082 | Strict SQL errors in `briefs.php`, `privacy.php` and `_retention.php` are not tested on PHP before 8.1 | Low | **Closed 2026-11-01.** The host runs PHP 8.4.26 (read 2026-10-21), so the pre-8.1 path does not arise |
 | K-083 | Draft protection does not cover the Brief Measurements form, the Work images, sign and accept dialogs, or the New project dialog | Low | Open. Six screens covered 2026-10-19, not deployed |
 | K-084 | Cancel on a dirty New quote or New contract dialog now asks, then discards the fields | Low | Behaviour change 2026-10-19, not deployed |
 | K-085 | Ticket time with no date, and template due dates, use PHP's time zone, which is not set | Low | Open. Same cause as K-067; live time zone UNVERIFIED |
@@ -121,10 +125,11 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-108 | Client anonymisation is built but switched off, awaiting adviser confirmation | Medium | Built 2026-10-20, switched off, not uploaded. Adviser confirms the rules first |
 | K-117 | The live sign-in page shows "Continue with Google", while D-052 records Google as switched off | Low | **Resolved 2026-10-31 by owner decision: Google stays on.** D-052 amended. Whether production uses the owner's own Google OAuth credentials is UNVERIFIED |
 | K-118 | In the icon rail (768 to 1023px) 26 sidebar links and Sign out had no accessible name | Medium | **Fixed 2026-10-31** on `feat/design-finalisation`, deployed 2026-10-31 (`a907824`) |
+| K-119 | AI features stopped working: one provider, on a free model | Medium | **Fixed 2026-11-01** on `chore/cleanup-2026-11-01` (D-054), not released; live cause UNVERIFIED |
 | K-116 | `vite preview` inherits the dev proxy and sends `.php` calls to the live API | Medium | **Fixed 2026-10-31** on `feat/design-finalisation` (`preview.proxy: {}`), merged 2026-10-31 (`a907824`) |
 | K-115 | Header links over a light project colour fail contrast (Harni's pink) | Medium | **Fixed 2026-10-31** on `feat/design-finalisation`, deployed 2026-10-31 (`a907824`). Cause corrected: the link tint and opacity, not `onColour` |
 | K-114 | Accessible names that do not match visible text (WCAG 2.5.3) | Low | **Fixed 2026-10-31** on `feat/design-finalisation`, deployed 2026-10-31 (`a907824`): logo links, CMS sidebar link, search, account button, Files drop zone |
-| K-113 | Form field borders are below 3:1 against their background (WCAG 1.4.11) | Medium | **Fixed 2026-10-31** on `feat/design-finalisation` with the owner-approved values, not deployed |
+| K-113 | Form field borders are below 3:1 against their background (WCAG 1.4.11) | Medium | **Fixed 2026-10-31** on `feat/design-finalisation` with the owner-approved values, deployed 2026-10-31 (`a907824`) |
 | K-112 | Layout and composition gaps on the public site, sign-in and GAkinzOS (register P1 to P9, C1 to C3) | Medium | **Fixed 2026-10-31** on `feat/design-finalisation`, deployed 2026-10-31 (`a907824`). C1 live: card frame and footer panel gone, tokens applied (`fdc5d94`) |
 | K-111 | SQL 20 was written as live statements at the foot of `schema.sql` and stopped the schema loading on MySQL | High (CI only) | **Fixed 2026-10-30** (commented out; found by the first CI run after Actions came back) |
 | K-110 | A burst of 31 `Class "mysqli" not found` fatals in the live PHP error log | Medium | Open, found 2026-10-30. None since; cause UNVERIFIED |
@@ -1431,9 +1436,10 @@ an adviser has reviewed the text.
 ## K-064 · Enquiry and client text can reach an AI provider, undisclosed
 **Severity:** medium · **Status:** open. Owner and legal decision.
 
-`ai.php` sends staff-supplied text to OpenRouter when `OPENROUTER_KEY` is set. Leads, Comms,
-Support, Proposals, Mailbox and Content can pass enquiry, client and message text, which is
-personal data, to OpenRouter and the model provider it routes to. Neither the privacy page nor
+`ai.php` sends staff-supplied text to Anthropic when `ANTHROPIC_KEY` is set, and to OpenRouter when
+Anthropic is not set or fails (D-054, 2026-11-01). Leads, Comms, Support, Proposals, Mailbox and
+Content can pass enquiry, client and message text, which is personal data, to Anthropic, or to
+OpenRouter and the model provider it routes to. Neither the privacy page nor
 any contract names it. Whether the key is set in production is UNVERIFIED. Decide whether to
 keep it, which model and provider, their retention terms, and the disclosure.
 
@@ -2249,4 +2255,16 @@ The label is now visually hidden instead (`sr-only`), as is the GAkinzOS name in
 four controls whose `aria-label` differed from their visible text (K-114): each now takes its name from the
 visible words. Verified on a build without Clerk with every `.php` answered locally: 208 captures, 26 CMS
 screens in light and dark at 390, 834, 1440 and 2560px.
+
+## K-119 · AI features stopped working: one provider, on a free model
+
+**Found and fixed:** 2026-11-01 (`chore/cleanup-2026-11-01`, not released). **Severity:** Medium.
+
+The owner reported the AI section not working. `ai.php` had one provider, OpenRouter, and the template set a
+free model (`openai/gpt-oss-120b:free`); free models are rate-limited and withdrawn without notice, and any
+failure answered "AI provider error". `integrations.php` also reported OpenRouter as configured while the key
+was still the `REPLACE_…` placeholder. The live cause is UNVERIFIED: the live `config.php` was not read and
+no live AI call was made. Fix (D-054): Anthropic first, OpenRouter as the backup, a placeholder key counted as
+not set, and `scripts/set-server-key.sh` to save the keys. Verified with `tests/server/ai.test.ts` (9 tests,
+both providers stubbed). NOT TESTED: a real call to either provider.
 

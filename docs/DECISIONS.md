@@ -1006,3 +1006,23 @@ with the live key has no secret keys. NOT TESTED: a real sign-in, the live serve
 Rejected: rebuilding the site on a new visual direction (the owner asked to finish D-046, not replace it);
 invented AI features for the board (model picker, memory, prompt library), because GAkinzOS has none.
 
+## D-054 · AI runs on Anthropic first, with OpenRouter as the backup
+**Date:** 2026-11-01 · **Status:** decided by the owner ("anthropic as default ... openrouter as backup ... so ai
+is never out"); built 2026-11-01 on `chore/cleanup-2026-11-01`, not released.
+
+1. `server/_ai.php` tries Anthropic's Messages API first (raw HTTP, API version `2026-10-21`, model
+   `ANTHROPIC_MODEL`, default `claude-opus-5-5`, effort `ANTHROPIC_EFFORT`, default `low`), with Anthropic's
+   server-side refusal fallback (`fallbacks: "default"`). If Anthropic has no key, answers with an error,
+   times out, declines or returns no text, OpenRouter answers instead (`OR_MODEL`, default `openrouter/auto`).
+   With neither key, `ai.php` answers 503 and the interface hides AI, as before.
+2. Timeouts are 50 s for Anthropic and 40 s for OpenRouter, so both attempts fit inside Cloudflare's
+   100-second proxy limit. Low effort is chosen for the same reason: the drafts are short.
+3. Keys are set with `scripts/set-server-key.sh`, which reads them from a hidden prompt and writes them over
+   SSH into `~/private-config/gakinz_com/config.php`. No key enters the repository, a chat or a log.
+4. The audit row of each call names the provider that answered (`ai_call`, "task via anthropic").
+
+**Why:** a free OpenRouter model was the only provider (`openai/gpt-oss-120b:free` in the template); free
+models are rate-limited and withdrawn without notice, so one outage stopped every AI feature.
+Rejected: the Anthropic PHP SDK (the host has no Composer and every other provider call is raw curl);
+OpenRouter first (the owner chose Anthropic as the default); retrying the same provider (a second provider
+covers outages that a retry does not).

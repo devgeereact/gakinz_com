@@ -2,6 +2,33 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-01 · Cleanup and AI provider check (`chore/cleanup-2026-11-01`, local only)
+
+**Dead code** (knip 5, then read by hand): removed the weather pill and the `weather` API group, the old
+`src/layouts/Footer.tsx`, the unused Avatar and Collapsible components with their two Radix packages, and the
+unused work-record hooks in `src/marketing/data/work.ts`. Kept on purpose: the shadcn kit's unused exports, the
+`entry-server.tsx` exports (used by the prerender), the `ROLE_REFUSAL` re-export, and `server/weather.php` (a
+release never deletes on the server, so removing it from git would leave an untracked live copy).
+
+**Housekeeping:** one worktree; merged local branches `design/gakinz-design-skill` and
+`feat/design-finalisation` deleted (origin has `main` only); no stash; empty `qa/`, `.playwright-mcp/` logs and
+`.DS_Store` files removed. `.superpowers/` (owner plans) and `graphify-out/` kept.
+
+**Documents:** STATUS (1,211 to about 200 lines), WORKBOOK, DEPLOYMENT section 5, DESIGN-SYSTEM, CLAUDE,
+README, ARCHITECTURE and the task contract rewritten to the current state; history left the tree under D-044
+and is read at `ee1281f`. Stale rows corrected: K-025, K-082, K-113, and K-001 and K-015 in STATUS section 5.
+
+**AI (K-119, D-054):** `tests/server/ai.test.ts`, 9 tests against the fake provider: Anthropic first with
+API version `2026-10-21` and `fallbacks: "default"`; OpenRouter on a 529, on a refusal, with no Anthropic key and
+with a placeholder key; 502 when both fail (and the call is not counted); 503 with no key; 401 signed out, 403
+for a client; `integrations.php` reports booleans only. `scripts/set-server-key.sh` tried against a throwaway
+HOME: replaces or adds the line, rejects unknown names and odd characters, keeps mode 600, backs up first.
+NOT TESTED: a real call to either provider, and the script against the real server.
+
+**Gate (Mac, final tree):** `npm run build` PASS (32 pages prerendered); `npm test` 545 of 545; `npm run test:server`
+536 of 536 in 38 files (local MariaDB, 515 s); lint ratchet 5 of 5; `docs:check` PASS (24 documents); `php -l` clean on
+all 66 PHP files. CI on MySQL not yet run for this branch.
+
 ## 2026-10-31 · Release check on gakinz.com (`a907824`)
 
 **Release:** fast-forward of `main` to `a907824`, pushed with the owner's approval; GitHub Actions ran

@@ -46,7 +46,7 @@ Each rule below is marked **IN CODE**: true of `main` and the live site since re
 - Shared: Bricolage Grotesque (display), Hanken Grotesk (text and UI), JetBrains Mono (figures,
   references, dates). Self-hosted with `@fontsource-variable`; never fetched from a third party. IN CODE.
 
-Tokens with measured ratios are in [references/tokens.md](references/tokens.md). Never add a hex value in
+Tokens with measured ratios are in `docs/DESIGN-SYSTEM.md` section 2 (the one copy). Never add a hex value in
 a component: add or reuse a token, and record its measured ratio beside it.
 
 ## Rules that keep GAkinz looking right
@@ -101,7 +101,7 @@ Each one exists because the opposite was found on a rendered page. Detail and th
 GAkinzOS has three AI uses and no others: the AI draft (Enquiries, Support, Comms, Quotes), the Today brief,
 and Content Hub. Every AI block is labelled, says what it was written from, and is edited by a person before
 it goes anywhere. The model is set on the server; there is no model picker, memory, prompt library or
-confidence score. With no OpenRouter key the feature is hidden, not broken. Do not draw AI features the
+confidence score. With no Anthropic or OpenRouter key the feature is hidden, not broken. Do not draw AI features the
 product does not have.
 
 ## Motion

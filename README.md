@@ -72,18 +72,19 @@ src/
   index.css      design tokens for both surfaces, and the utility layer
 server/          PHP endpoints and shared includes, schema.sql, .htaccess, config template
 tests/server/    server integration tests, run against a local *_test database
-scripts/         lint ratchet and documentation check
+scripts/         release, prerender, lint ratchet and documentation check
 docs/            project documentation, flat, see below
-qa/              test plan, audits and release checklist
+.claude/skills/  the gakinz-design project skill (design rules and checks)
 ```
 
 ## Deployment, in one paragraph
 
-**Two tracks, and only one is automatic.** Pushing to `main` runs CI, and only when CI passes
-does GitHub Actions build and FTP-upload `dist/`, and nothing else. Everything under `server/`
-is uploaded by hand, and schema changes are run by hand, because there is no migration runner
-and the host has no Node. A change under `server/` is committed but not live. What is waiting
-is listed in `docs/DEPLOYMENT.md` section 5.
+A push to `main` that changes code runs `scripts/release.mjs --go` through GitHub Actions
+(`.github/workflows/deploy.yml`, settings in `release.json`): it builds, snapshots every live file it
+is about to change, uploads `dist/` and `server/*.php` over SSH without deleting anything, runs smoke
+checks and rolls back by itself if they fail. Never sent: `config.php`, `.htaccess`, `schema.sql`,
+Markdown and `*.example`. `.htaccess` changes and SQL migrations are still applied by hand, because there
+is no migration runner. Details and rollback: `docs/DEPLOYMENT.md`.
 
 ## Documentation
 
@@ -105,26 +106,23 @@ once.
 | `docs/KNOWN-ISSUES.md` | Open and fixed problems, with evidence and status |
 | `docs/DECISIONS.md` | Dated decision records, including superseded ones |
 | `docs/PRODUCT-SPEC.md` | The approved scope: services, public pages, CMS journeys, customer access, planned features, exclusions, and the original brief's 175-feature register |
-| `docs/ARCHITECTURE.md` | Shape, client, server, request lifecycle, the two deploy tracks, and what was built on 2026-10-10 and in the D-046 redesign |
+| `docs/ARCHITECTURE.md` | Shape, client, server, request lifecycle and the release path |
 | `docs/DATA-MODEL.md` | The tables, ownership, share tokens, and the migration situation |
 | `docs/API-SPEC.md` | The endpoints, their actions and their role gates |
 | `docs/SECURITY.md` | Authentication, roles, client isolation, payments, secrets, open gaps |
 | `docs/PRIVACY-READINESS.md` | Data inventory, vendors, cookies and storage, proposed retention, rights pathways and a draft privacy notice for the owner and an adviser (2026-10-17) |
-| `docs/DEPLOYMENT.md` | Both tracks, release policy, and the one list of server files and SQL not yet uploaded |
+| `docs/DEPLOYMENT.md` | The release script, rollback, and the SQL and `.htaccess` steps still done by hand |
 | `docs/OPERATIONS.md` | Local development, cron jobs, monitoring, mail, test environment rules, launch gates, recovery targets |
-| `docs/DESIGN-SYSTEM.md` | The design system as implemented: the D-046 public site and GAkinzOS, with the superseded D-037 system kept as record |
-| `docs/DESIGN-REFERENCE-MASTERCARD.md` | The preserved, unedited third-party design reference behind the target system. Do not edit |
+| `docs/DESIGN-SYSTEM.md` | The design system as implemented, with measured tokens (D-046 and D-053) |
+| `.claude/skills/gakinz-design/` | The project design skill: layout rules, findings register and the verification routine |
 | `docs/CONTENT-AND-GROWTH.md` | Resources standard, affiliate and AdSense pilots, measurement and the social profile kit |
 | `docs/GEE-OS.md` | How this repository uses the GEE OS agent contract, and its documentation profile |
 | `docs/TEST-PLAN.md` | What is tested, what is not, the order to close the gaps, and the J01 to J12 acceptance scenarios |
-| `docs/AUDIT.md` | The 2026-09-04 source-inspection audit, with later status |
-| `docs/AUDIT.md` | The 2026-09-22 measured run on the public surface (predates the D-046 rebuild), and what is still NOT TESTED |
-| `docs/AUDIT.md` | The 2026-09-22 bundle and page measurements (predate the D-046 rebuild), and what is unmeasured |
-| `docs/AUDIT.md` | Run this before shipping |
+| `docs/AUDIT.md` | Every audit and review, newest first: security, accessibility, performance, design and release checks |
 
-Superseded and completed documents, including the original `GAkinzOS.html` brief and the root
-`DESIGN-SYSTEM.md`, were retired on 2026-10-10 and remain in git history (`docs/DECISIONS.md`
-D-044).
+Superseded and completed documents remain in git history (`docs/DECISIONS.md` D-044): the original
+`GAkinzOS.html` brief and the root `DESIGN-SYSTEM.md` (retired 2026-10-10), and the 2026 plan folder, the
+Mastercard design reference and the D-037 design record (retired 2026-11-01, readable at `ee1281f`).
 
 ## Ground rules
 
@@ -132,7 +130,7 @@ D-044).
 2. The browser never connects to MySQL. New data means a PHP endpoint.
 3. `src/lib/access.ts` hides navigation. `require_auth()` on the server is the security
    boundary.
-4. The deploy ships `dist/` only.
+4. A release sends `dist/` and `server/*.php`, never `config.php`, `.htaccess` or SQL.
 5. There is no migration runner.
 6. DNS, TLS, hosting and mail-server facts are **not** documented here and must not be acted
    on from here.
@@ -148,6 +146,6 @@ D-044).
 
 Current state lives in one place, `docs/STATUS.md`: the measured counts, the 2026-10-10 audit
 and readiness verdict, the delivery phases, the open work in priority order and the owner
-inputs still outstanding. In short, a substantial system builds and its local tests pass, **the deployed
-state of the server is unverified**, and production readiness is **BLOCKED** until the
-credential, deployment, recovery, money and isolation gates in `docs/OPERATIONS.md` pass.
+inputs still outstanding. In short: everything on `main` is live (release `fdc5d94`, 2026-10-31), the
+public pages pass the release checks, and signed-in journeys on real data are still NOT TESTED. The
+production gates in `docs/OPERATIONS.md` decide what may be switched on.

@@ -1,9 +1,8 @@
 # Deployment
 
-**Status:** current as at 2026-10-10, with the prerendered client build of 2026-10-16. The two tracks are read from
-`.github/workflows/deploy.yml`, `.github/workflows/ci.yml`, `server/README.md` and
-`server/.htaccess`. Section 5 is the one list of server work not yet uploaded. **Everything about the live server state is
-UNVERIFIED**: no server, database, FTP account or DNS record was contacted during this work.
+**Status:** current as at 2026-11-01. Read from `scripts/release.mjs`, `release.json`,
+`.github/workflows/deploy.yml`, `.github/workflows/ci.yml`, `server/README.md` and `server/.htaccess`.
+Section 5 is the one list of server work a release cannot carry.
 
 ---
 
@@ -98,10 +97,10 @@ Approved 2026-10-10. Until then CI ran no tests and the deploy did not wait for 
   in `scripts/lint-ratchet.mjs`; the current figure is in `docs/STATUS.md` (K-002). Clear the errors in small batches, then make
   lint blocking. `continue-on-error` alone is advisory, not a ratchet.
 - **Production deploys only after the required checks pass**, or through a deliberate,
-  approved release trigger. Every push to `main` deploys `dist/`, so documentation or planning
-  work is not pushed to `main` without considering that.
-- **Server files and SQL stay deliberate operator actions**, recorded in section 5 with their
-  evidence and rollback.
+  approved release trigger. Every push to `main` with code changes releases `dist/` and
+  `server/*.php`; documentation-only pushes do not (`paths-ignore` in `deploy.yml`).
+- **SQL, `.htaccess` and `config.php` stay deliberate operator actions**, recorded in section 5
+  with their evidence and rollback.
 - **Small reviewed batches**, one concern each, on feature branches. Never `npm audit fix
   --force`, a framework change, or every improvement merged into one unreviewable release.
 - **Dependencies.** Identify reachable advisories, update compatible versions in small
@@ -111,19 +110,14 @@ Approved 2026-10-10. Until then CI ran no tests and the deploy did not wait for 
 
 ## 3. Server deploy
 
-The server has no Node, so nothing is built there. PHP files are uploaded as source.
+The server has no Node, so nothing is built there. PHP files go up as source with each release
+(section 1), after `php -l` passes on every file; nobody uploads PHP by hand.
 
-Gate before uploading any PHP:
-
-```bash
-find server -name '*.php' -print0 | xargs -0 -n1 php -l
-```
-
-Then upload the changed files to the document root. `config.php.example` and `README.md` stay
-out of the document root: the `.htaccess` denies `.md` and `.sql` anyway, but there is no
-reason to put them there.
-
-`config.php` on the server is never overwritten by a deploy and never leaves the server.
+Settings: the real values live in `~/private-config/gakinz_com/config.php` (mode 600, outside every
+web root, since 2026-10-30). The document root holds a `config.php` stub with no secrets that loads
+it. A release never uploads a file named `config.php`, so neither is overwritten, and neither leaves
+the server. Add or change a key with `scripts/set-server-key.sh` (it prompts with hidden input and
+writes over SSH) or by a person on the server; never through the repository.
 
 ## 4. First-time server setup
 
@@ -141,184 +135,23 @@ Adapted from `server/README.md`, which has been corrected as part of this migrat
 There is no `/smoke` route any more. The public smoke-test page and its route were removed
 during the demo-surface cleanup, so step 5 of the old instructions could not pass.
 
-## 5. Not yet uploaded
+## 5. Hand-applied server work
 
-This is the one list of server work that is committed and not known to be live. It covers
-every server change since `c57eb4a` (`main`, 2026-10-10) on the stacked branches in PR #8,
-including `audit/readiness-2026-10-17` (PR #20) and `feat/journeys-2026-10-18` (2026-10-18,
-stacked on PR #20, pushed to origin, not merged, deployed or uploaded; its second batch of
-2026-10-19 is in PR #21, and its third, fourth and fifth batches of 2026-10-19 follow it on
-the same branch, the fifth being `3636373..b0bbf8b` and the sixth `54d593a..fa88266`), and, conditionally, the 2026-09-22 relaunch set already on `main`. Keep it current: a change under
-`server/` updates this section in the same pull request (`AGENTS.md`, "Keeping documents
-current"), and `npm run docs:check` enforces that in CI.
+This is the one list of server work a release cannot carry: SQL, `server/.htaccess` and keys in the
+private `config.php`. A change that needs one of them records it here in the same pull request
+(`AGENTS.md`, "Keeping documents current"; `npm run docs:check` enforces it in CI).
 
-**Status of the live server: uploaded 2026-10-21, client deployed 2026-10-22.** Every file and
-SQL statement in this section up to `3fc6a31` is live: the PHP went up in the step 13 order,
-SQL 5 to 19 ran (1 to 4 were already applied), and `dist/` was uploaded by `rsync` because
-GitHub Actions did not run for the merge. The backup taken first is
-`~/private_backups/gakinz.com-predeploy-20261021-160114/`. The record and the checks are in
-`docs/WORKBOOK.md` section 1. Section 5.6 post-upload checks that need a signed-in session are
-NOT TESTED. A later server change starts a new list here.
+**Pending as at 2026-11-01:** the AI keys (D-054): run `scripts/set-server-key.sh ANTHROPIC_KEY`, then
+`scripts/set-server-key.sh OPENROUTER_KEY`, after the release that carries `_ai.php`. Nothing else is
+pending. SQL 1 to 19 ran on 2026-10-21 and SQL 20 on 2026-10-30; the
+current `server/.htaccess` went up on 2026-10-21; the Clerk keys were added on 2026-10-30. Since then
+`server/*.php` goes up with every release (section 1).
 
-### 5.1 Operator actions, in order
-
-1. **Delete `seed_admin_password.txt` from the live document root if it is there** (K-015).
-   `auth.php` used to write a generated super-admin password into that file, and the old
-   `.htaccess` did not deny `.txt`. If it was there, treat the password as public: sign in,
-   change it, and revoke the account's sessions. Confirm the credential from git history is
-   rotated at the same time (K-001).
-2. **Upload `server/.htaccess` first.** It denies `.txt` except `robots.txt` and `llms.txt` (2026-09-22) and
-   every `_*.php` include (K-013), so both are in force before anything else lands. Since
-   2026-10-16 it also routes the prerendered public pages and the SPA shell (section 2); those
-   rules are safe before or after the client deploy.
-3. **Run the SQL in section 5.2**, in the order given.
-4. **Set or check the configuration in section 5.4.** In particular leave `$PAYPAL_ENABLED`
-   unset or `false` (K-026).
-5. **Upload the PHP in section 5.3** as one set. Several files depend on each other:
-   `payments.php` requires the new `_money.php`, and uploading one without the other breaks
-   every payment action. Since 2026-10-18 `invoices.php` requires `_money.php` too, and
-   `bookings.php` requires the new `_ics.php`.
-6. **Check invoices already paid through Stripe** (K-025). Before this change Stripe charged
-   the ex-VAT subtotal and marked the invoice fully paid. For every invoice with
-   `vat_rate > 0` marked paid by the Stripe webhook (`audit_log.action =
-   'invoice_paid_stripe'`), compare the amount in the Stripe dashboard with the invoice total
-   including VAT, and reconcile any shortfall with the client by hand.
-7. **Prepare the redesign content (D-046)**, once SQL 7 and 8 have run and `site.php` and
-   `work.php` are uploaded. In the CMS, publish the owner's real projects in Work with client
-   consent stored, switch on up to five for the homepage hero in the order wanted, and attach
-   the desktop and mobile screenshots with alt text. Publish Site content sections only when
-   their copy is final. A published Work record also shows on the live `/work` page at once,
-   because the client already deployed reads `work.php` too (source inspection of
-   `src/marketing/data/work.ts` at `c57eb4a`), so publish only finished records.
-8. **Owner test before merging**, on the other computer after `git pull --ff-only` on
-   `feat/redesign-2026`: the Work hero switches and order, one Site content publish, Enquiries
-   drag and drop between stages, and the Client Portal signed in as a client. Development
-   calls the live API, so each of these is a real write (`docs/KNOWN-ISSUES.md` K-044).
-9. **For `feat/journeys-2026-10-18`**, run SQL 13 to 15 and upload its six files (section
-   5.3) before the merge that deploys its screens. **Do not merge before `support.php`,
-   `bookings.php` (with `_ics.php`) and `assets.php` are uploaded.** The portal hides a
-   request whose route is missing (a 403 "Not allowed." from an older staff-only file, a
-   405, a bare 404, a 503, or the `app-shell.html` page a never-uploaded file is rewritten
-   to) and says quietly that it opens after a server update, so clients would see no "Request
-   a call" button, an "Ask for an update" that turns into that note once they send, and no
-   "What we need from you" card, until the files arrive. Every other failure still shows as
-   an error. The calendar download buttons need the new `bookings.php` and `_ics.php` first.
-   Mind the order between the two sides:
-   - **SQL 14 and the new `proposals.php` before the merge**: the old screens send no
-     acceptance evidence, so Accept on a quote fails with 400 "Say how the client accepted:
-     email, letter, in person, phone or other." until the merge. Run SQL 14 and upload
-     `proposals.php` just before merging, or accept no quotes in between.
-   - **The merge before the new `invoices.php`**: Record payment fails with 405 "Method not
-     allowed."
-   - **The merge before the new `proposals.php`**: the Accept dialog and its toast say that
-     SQL 14 has not run, even when it has, because the old file never reports that the
-     evidence columns are ready. Nothing is stored as evidence until the file is uploaded.
-10. **For the second journeys batch (2026-10-19, PR #21)**: upload its PHP and the new
-   `.htaccess` (section 5.3), run SQL 16, then merge. Nothing in this batch breaks if the order
-   slips, because every new screen degrades quietly (section 5.5), but this order means staff
-   never see a "not available yet" line once the merge has deployed. Before uploading, **check
-   the live PHP version** in cPanel (Select PHP Version, or MultiPHP Manager) and record it in
-   `docs/STATUS.md` section 3. The code expects PHP 8.1 or later. `briefs.php`, `privacy.php`
-   and `_retention.php` set strict SQL error reporting themselves so an older PHP should behave
-   the same, but that path is NOT TESTED (`docs/KNOWN-ISSUES.md` K-082). The live version is
-   UNVERIFIED: `api.php` stopped reporting it on 2026-10-17.
-11. **For the third journeys batch (2026-10-19, `029f867..bdca4aa`)**: upload its PHP
-   (section 5.3), run SQL 17 and then SQL 18, then merge. The order is the same as step 10:
-   upload PHP, run SQL, then merge. Two files must not go up without their include:
-   - **`_time.php` with or before `support.php` and `time.php`.** Both load it only when time
-     is logged or shown, so without it their other routes work, but logging time answers 503:
-     on a ticket ("Upload server/_time.php first") and, more importantly, on the existing Time
-     screen, where Log time would stop working for everyone until `_time.php` arrives.
-   - **`_templates.php` with `projects.php`.** Without it the two template routes answer 503
-     "Project templates are not available yet." and every other Projects route works.
-   `files.php`, `portal.php` and `privacy.php` are each safe before SQL 17 and 18 (section
-   5.5). Since the fifth batch `files.php` and `privacy.php` need their includes first (step 13). `files.php` changes the download headers for every caller, staff and the
-   public share link included, the moment it is uploaded (section 5.5).
-12. **For the fourth journeys batch (2026-10-19, six service pages, `8193555..ebcb002`)**: upload
-   `server/site.php` (section 5.3), then merge. There is **no SQL**. The order matters on one
-   side only: the redesigned Site content editor sends the new service page fields (`slug`,
-   `group`, `hook`, `detail`, `needs`, `deliverables`, `exclusions`, `price_basis`), and the
-   `site.php` already on the host refuses them as "unknown field", so saving services would fail
-   until the new file is up. The public site is safe in either order, because it reads
-   `site.php?action=get` the same way and falls back to its built-in six services. `contact.php`
-   is unchanged. **After the merge, the owner opens Site content > Services once and saves** to
-   upgrade an older title-and-summary list: the editor turns it into whole pages, adds the two
-   IT pages at the end and explains this in a note. Until that save the website shows the
-   built-in six in their default order (`docs/KNOWN-ISSUES.md` K-093). NOT TESTED against the
-   live host.
-13. **For the fifth journeys batch (2026-10-19, work references, deletion tooling and business
-   details, `3636373..b0bbf8b`)**, and from here on for the whole branch, upload in this order.
-   It comes from the batch 5 final review and covers every file in section 5.3:
-   1. **`.htaccess` first.** Its `_*.php` deny covers the three new includes.
-   2. **Includes before the files that load them:** `_like.php`, `_retention.php`,
-      `_uploads.php`, `_money.php`, `_ics.php`, `_time.php`, `_templates.php`,
-      `_reference.php`, then `_erasure.php`, which hard-requires `_retention.php`,
-      `_uploads.php` and `_like.php`.
-   3. **Files that hard-require an include:** `files.php` after `_uploads.php`. Without it
-      **every Files route fails, the public Work image share links included**, so the Work
-      pictures on the live site break. Then `search.php` after `_like.php`, `invoices.php`
-      after `_money.php`, `bookings.php` with `_ics.php`, and `privacy.php` and `cron.php`
-      after `_retention.php`. The erase routes answer 503 until all four of `_erasure.php`,
-      `_retention.php`, `_uploads.php` and `_like.php` are up.
-   4. **Files with an optional or lazy include:** `support.php` and `time.php` (after
-      `_time.php`), `projects.php` (with `_templates.php`), and `contact.php`, `leads.php`,
-      `contracts.php` and `proposals.php`, which each work without `_reference.php` and
-      answer `reference: null`.
-   5. **Stand-alone:** `portal.php`, `assets.php`, `briefs.php`, `today.php` and `site.php`.
-      **`site.php` must be up before the merge**: the merged CMS sends the `business` section
-      and the service page fields, which an older file refuses.
-   6. **The readiness set together, in one go:** `_bootstrap.php`, `auth.php`, `oauth.php` and
-      `users.php` (K-059).
-   7. **SQL 13 to 18 as documented, then SQL 19 after all the PHP above** (section 5.2):
-      step 1, then step 2 pasted as one piece into one SQL tab, then check that no
-      `reference IS NULL` remains in `enquiries` or `projects`; if one does, run step 2 again.
-   8. **Merge** (step 15), which deploys `dist/`.
-   Keep **`$RETENTION_APPLY = false`** in the live `config.php` (section 5.4) and do not run
-   `cron.php job=retention_apply --apply`. NOT TESTED against the live host.
-14. **For the sixth journeys batch (2026-10-19, client sign-in by reference and email, and the
-   consent and ad slot build, `54d593a..fa88266`)**:
-   - **Upload `server/client_access.php`**, a new stand-alone endpoint. It needs the K-059
-     `_bootstrap.php` (any version with `token_hash()`, so upload the readiness set of step 13.6
-     first or together) and `_smtp.php`; `_reference.php` is optional. It is safe to upload
-     while switched off: every route then answers 404, and the sign-in page shows nothing new.
-   - **Do not add `$REFERENCE_SIGNIN_ENABLED = true`** to the live `config.php`. Keep it `false`
-     or leave it out (section 5.4). Switch it on only after every gate in section 5.4, "Before
-     switching on reference sign-in", holds.
-   - **No SQL.** The links use the existing `magic_links` table, and matching needs SQL 19.
-   - **Consent and ad slots need a deploy, not an upload.** Their settings live in the tracked
-     file `src/marketing/lib/monetisation.ts` (D-050), all off, and ship inert in `dist/` with
-     the merge. Turning the pilot on or off means a reviewed code change and a deploy. Nothing
-     under `server/` changed for them. `npm run build` now fails if a prerendered page or
-     `app-shell.html` carries third-party script or ad markup.
-   - **Client anonymisation (Task 26, 2026-10-20, K-108), built and switched off.** Upload the
-     new **`server/_anonymise.php` together with `server/privacy.php`**. It needs
-     `_erasure.php`, `_retention.php`, `_uploads.php` and `_like.php` already on the server
-     (step 13); without any of them the two routes answer 503 once switched on. **Add
-     `$CLIENT_ANONYMISE_ENABLED = false;` to the live `config.php` and keep it `false`**
-     (a missing key is also off). **No SQL.** The CMS change (the Anonymise button in the
-     client record) ships in `dist/` with the merge and stays hidden while the server answers
-     404. Do not switch it on until an adviser has confirmed the rules (section 5.4, "Before
-     switching on client anonymisation").
-   NOT TESTED against the live host.
-15. **Merge to `main`** only when you want `dist/` deployed. CI must pass first, and the merge
-   deploys the client that expects these server changes.
-16. **Walk the post-upload checks** in section 5.6.
-
-### 5.1a Clerk sign-in (D-052, built 2026-10-30, not uploaded)
-
-Read-only findings over `ssh cpanel` on 30 October 2026 (nothing changed): all 63 live PHP files are byte-identical to `main`, the live app bundle (`index-BUGis-UK.js`) is the one `main` builds, SQL 19 is applied (`reference_counters` present), `clerk_user_id` is absent, the server runs PHP 8.4.27 with openssl, mysqli and curl, and `config.php` has no Clerk keys. So this branch differs from the live site only by the Clerk change. Live data: 1 user (`dev@gakinz.com`, super_admin, no 2FA), 0 clients, 1 enquiry, 32 session tokens. `config.php` is mode 644 (set it to 600) and no gakinz backup was found in `~/backups`.
-
-Additive; the old sign-in keeps working until the owner confirms it can go. In order, each step approved by the owner:
-
-1. Full database backup and a copy of `config.php` and the document root (outside the web root), then set `config.php` to mode 600.
-2. Add `CLERK_ISSUER` (`https://clerk.gakinz.com`) and `CLERK_AUTHORIZED_PARTIES` (`https://gakinz.com`, `https://local.gakinz.com`) to the server `config.php` (`config.php.example` shows the lines).
-3. Run **SQL 20** (the last block of `server/schema.sql`: `users.clerk_user_id` and its unique index).
-4. Upload `_clerk.php`, then `_bootstrap.php` (it requires `_clerk.php`), never the other way round.
-5. Make sure each person who should sign in has an active `users` row with their email, and a Clerk user in the production instance. Restrict sign-up in Clerk once they exist.
-6. Build with `VITE_CLERK_PUBLISHABLE_KEY` set to the live key and upload `dist/`.
-7. Check: one Clerk sign-in per role, an unknown email shows "No access yet", a bad token gets 401, a magic-link client still signs in, `/` and the public pages load without a Clerk request.
-
-Rollback: restore the previous `_bootstrap.php` and `dist/`; the new column is harmless.
+The step-by-step upload record of 2026-10-21 (old 5.1 with its steps 1 to 14, the Clerk steps 5.1a,
+the file list 5.3 and the behaviour notes 5.5) left the tree under D-044:
+`git show ee1281f:docs/DEPLOYMENT.md`. What stays below is still in force: the SQL list (to rebuild a
+database), the configuration gates, the post-upload checks that are still NOT TESTED signed in, and
+the key list.
 
 ### 5.2 SQL, in order
 
@@ -351,183 +184,6 @@ is UNVERIFIED, so check them before step 1.
 
 No existing data is migrated by statements 1 to 18. Statement 19 step 2 writes a reference
 onto every existing enquiry and project.
-
-### 5.3 PHP to upload
-
-**Changed on the branch since `c57eb4a`**, from `git diff --name-only c57eb4a -- server`.
-Upload all of them, with `.htaccess`:
-
-```
-.htaccess           api.php             cron.php            _bootstrap.php
-_money.php (new)    _ics.php (new)      _like.php (new)     _retention.php (new)
-_templates.php (new) _time.php (new)    _reference.php (new) _erasure.php (new)
-_uploads.php (new)  assets.php (new)    auth.php            client_access.php (new)
-_anonymise.php (new)
-blog.php            bookings.php (new)  briefs.php (new)    clients.php
-comms.php           contact.php         content.php         contracts.php
-design.php          dev.php             feedback.php (new)  files.php
-invoices.php        knowledge.php       leads.php           oauth.php
-payments.php        portal.php          privacy.php (new)   projects.php
-proposals.php       resourcing.php      search.php (new)    site.php (new)
-support.php         tasks.php           testimonials.php    time.php
-today.php (new)     users.php           work.php
-```
-
-`bookings.php`, `feedback.php` and the timeline change in `clients.php` are the 2026-10-16
-batch (calls, private feedback and the client timeline). Upload them after SQL statements 9
-to 11 if you want the features at once; either order is safe, because each degrades with a
-503 or an `unavailable` note until its table exists.
-
-`.htaccess` changed again on 2026-10-16 (`perf/prerender-public`): prerendered pages are served
-from their own `index.html` with no redirect, and the fallback is `app-shell.html`, or
-`index.html` until a build with the shell is live. The Cloudflare origin lock, the
-`Authorization` pass-through, the PHP exemptions and both deny blocks are unchanged.
-
-`.htaccess`, `api.php`, `auth.php`, `users.php` and `work.php` changed again on 2026-10-17
-(readiness audit, K-056 to K-058). No SQL. `.htaccess` adds four browser security headers to
-every response; `api.php` no longer reports the PHP version; `auth.php` throttles failed
-sign-ins per email and address, limits code checks on a signed-in account, claims a reset link
-before using it, and evens out sign-in timing; `users.php` stops an admin changing a super
-admin; `work.php` refuses a non-image file as a Work picture. After uploading `.htaccess`,
-check one page's response headers (section 5.6) and that the site still loads: if the host
-lacks `mod_headers`, the block is skipped, not fatal.
-
-**Upload `_bootstrap.php`, `auth.php`, `oauth.php` and `users.php` together, in one go**
-(2026-10-17, K-059). Sign-in, reset and magic-link tokens are now stored hashed; the new
-`auth.php`, `oauth.php` and `users.php` call `token_hash()`, which only the new `_bootstrap.php`
-defines, so any of them without it fails every sign-in with a 500. Nobody is signed out:
-sessions issued before the upload are still accepted until they expire. SQL 12 is optional and
-can run before or after.
-
-Also on 2026-10-17, no SQL: `cron.php` runs from the command line and gains a `prune` job, so
-**change the cPanel cron entry** to `php /home/<account>/public_html/cron.php job=all`
-(`docs/OPERATIONS.md` section 2); `proposals.php` refuses links to declined or lapsed proposals
-with 410 and gains `unshare`; `payments.php` ignores a PayPal return while PayPal is off.
-
-**The 2026-10-18 journeys batch** (`feat/journeys-2026-10-18`) changes six files:
-`invoices.php`, `proposals.php`, `support.php`, `bookings.php`, and the new `assets.php` and
-`_ics.php`. **Upload `bookings.php` and `_ics.php` together**: the calendar routes in
-`bookings.php` require `_ics.php`. `invoices.php` now requires `_money.php`, which is
-unchanged here but must already be on the server (it is part of this list since 2026-10-10,
-for `payments.php`). Each file is safe before its SQL: `invoices.php` answers 503 on
-`record_payment` until SQL 13, `proposals.php` accepts without evidence until SQL 14,
-`assets.php` answers 503 until SQL 15, and `support.php` and the `bookings.php` call requests
-need no new SQL beyond statements 9 and 10. `support.php` and `bookings.php` now serve
-`client`-role callers, and `assets.php` has a client branch: all three are security-critical
-(`docs/SECURITY.md` section 3). No `.htaccess` change: the existing `_*.php` deny covers
-`_ics.php`, and real files such as `favicon.ico` and `site.webmanifest` pass through.
-
-**The 2026-10-19 second journeys batch** (PR #21, from `git diff --name-only 6789b47..HEAD --
-server`) adds `today.php`, `search.php` with `_like.php`, `briefs.php`, and `privacy.php` with
-`_retention.php`, and changes `cron.php` and `.htaccess`. No existing endpoint changed, so
-`bookings.php` and the rest are as listed for the first batch. Upload as sets:
-
-- **`search.php` with `_like.php`**: `search.php` requires `_like.php` at the top, so without it
-  every search is a 500.
-- **`privacy.php`, `_retention.php` and `cron.php` together**: `privacy.php?action=retention_report`
-  and `cron.php job=retention_report` both load `_retention.php`. Without it the export still
-  works and only the retention report fails.
-- **`today.php`** and **`briefs.php`** stand alone. `today.php` needs no new SQL: each section
-  whose table or column is missing (SQL 6, 9, 15) answers `unavailable` on its own. `briefs.php`
-  answers 503 until SQL 16.
-- **`.htaccess`**: one new rule, before the SPA fallback, answers 404 for a request to a `.php`
-  file that does not exist, instead of the `app-shell.html` page with status 200. Existing
-  files, the `_*.php` and `config.php` deny (still 403) and every other rule are unchanged.
-  Checked on a local Apache on 2026-10-19 (macOS `httpd`): a missing endpoint 404, an existing
-  one 200, `_bootstrap.php` 403, `/app/leads` the shell, `robots.txt` 200. The live host runs
-  LiteSpeed (the note at the top of `.htaccess`), not Apache, so whether LiteSpeed honours
-  `[R=404,L]` here is NOT TESTED, and so is the rule behind Cloudflare. The worst case is the
-  old behaviour, the shell page with status 200, which the CMS also treats as "not available
-  yet". It is safe to upload before or after the merge.
-
-All the new endpoints are staff or admin only, and none serves the `client` role
-(`docs/SECURITY.md`). The existing `_*.php` deny covers `_like.php` and `_retention.php`.
-
-**The 2026-10-19 third journeys batch** (`029f867..bdca4aa`, from `git diff --name-only
-029f867..HEAD -- server`) adds `_time.php` and `_templates.php`, and changes `support.php`,
-`time.php`, `files.php`, `projects.php`, `portal.php`, `privacy.php` and `schema.sql` (SQL 17
-and 18). No `.htaccess` change: the existing `_*.php` deny covers both new includes. Upload as
-sets:
-
-- **`_time.php` with or before `support.php` and `time.php`** (section 5.1 step 11). Neither
-  requires it at the top, so neither breaks outright, but without it ticket time and the
-  existing `time.php` create answer 503, the ticket detail returns `time: null`, and the time
-  list reports `ticket_id: null`. Delete, approve and reject are unaffected. Then run SQL 17.
-- **`projects.php` with `_templates.php`.** Without `_templates.php` only the two template
-  routes answer 503; list, plain create, status and stage work.
-- **`files.php`** (third batch) added no include. Before SQL 18 `client_share` and both client
-  routes answer 503, the staff list sends `client_visible: null`, and every existing action
-  works. It changes every download the moment it is up (section 5.5). Its client branch is
-  security-critical (`docs/SECURITY.md` section 3).
-- **`portal.php`** stands alone and works before SQL 17: it names the standing project "IT
-  support" once SQL 17 has run, and treats every project as ordinary before. It no longer
-  depends on `_time.php`.
-- **`privacy.php`** stands alone: the export's files rows add `client_visible` and
-  `shared_at` once SQL 18 has run, and fall back to the old columns before.
-
-**Since the fifth batch `files.php` no longer stands alone**: it requires `_uploads.php` at
-the top, so upload `_uploads.php` first (section 5.1 step 13).
-
-**Task 26, client anonymisation (2026-10-20, `fc61847..de3c7fa`)** adds `_anonymise.php`,
-changes `privacy.php` (two routes) and adds `$CLIENT_ANONYMISE_ENABLED = false` to
-`config.php.example`. No SQL and no `.htaccess` change (the existing `_*.php` deny covers the
-new include). Upload `_anonymise.php` with `privacy.php`; it needs `_erasure.php`,
-`_retention.php`, `_uploads.php` and `_like.php` already up. Both routes answer 404 while the
-switch is off (section 5.1 step 14, section 5.4).
-
-**The 2026-10-19 sixth journeys batch** (`54d593a..fa88266`, from `git diff --name-only
-54d593a..HEAD -- server`) adds `client_access.php` and a new key in `config.php.example`
-(`$REFERENCE_SIGNIN_ENABLED = false`). `_reference.php` and `schema.sql` changed in comment
-text only, after the batch, so a host copy of `_reference.php` need not be replaced for it. No
-SQL and no `.htaccess` change. `client_access.php` needs `_bootstrap.php` with `token_hash()`
-(K-059) and `_smtp.php`, and answers 404 on every route while the switch is off (section 5.1
-step 14).
-
-**The 2026-10-19 fifth journeys batch** (`3636373..b0bbf8b`, from `git diff --name-only
-68074f5..HEAD -- server`) adds `_reference.php`, `_erasure.php` and `_uploads.php`, and changes
-again `contact.php`, `contracts.php`, `invoices.php`, `leads.php`, `portal.php`,
-`projects.php`, `proposals.php`, `search.php`, `site.php`, `support.php`, `cron.php`,
-`privacy.php`, `files.php`, `_retention.php` (header comment only), `config.php.example` (the
-new `$RETENTION_APPLY` key) and `schema.sql` (SQL 19). No `.htaccess` change: the existing
-`_*.php` deny covers the three new includes. Use the order in section 5.1 step 13. In short:
-
-- **`_uploads.php` before `files.php`**, or every Files route fails, public Work images
-  included.
-- **`_erasure.php` with `_retention.php`, `_uploads.php` and `_like.php`**, then `privacy.php`
-  and `cron.php`. Without any of the four, the two erase routes answer 503 "Not available on
-  this server yet." and `cron.php job=retention_apply` exits 1 deleting nothing; the export
-  and older routes keep working. Since the fix wave (`b0bbf8b`) the retention report also
-  answers 503 (web) or exits 1 (command line) without `_retention.php`, instead of a fatal
-  error.
-- **`_reference.php`** is optional for `contact.php`, `leads.php`, `projects.php`,
-  `proposals.php`, `invoices.php`, `contracts.php`, `search.php` and `support.php`: without it,
-  or before SQL 19, each creates records as before and answers `reference: null`.
-  `portal.php` does not load it and stands alone.
-- **`support.php`** adds the client's `deletion_request` and is security-critical
-  (`docs/SECURITY.md` section 3), like `portal.php`, whose client branch now carries
-  references.
-- **`site.php`** gains the `business` section and must be up before the merge (section 5.1
-  step 13). No SQL.
-
-`site.php` and `work.php` are the 2026-10-14 redesign batch (homepage hero and editable site
-copy). Upload them **after** SQL statements 7 and 8 if you want the new features at once;
-either order is safe, because both degrade until their statement has run. `site.php` changed
-again on 2026-10-19 (six service pages): upload the new file **before the merge** (step 12 of
-section 5.1), because the new CMS editor sends fields the 2026-10-14 file refuses. No SQL.
-
-**If the 2026-09-22 relaunch set was never uploaded**, which is UNVERIFIED, also upload these
-files from `main`. The other relaunch files, `invoices.php` included since 2026-10-18, are in
-the list above already.
-
-```
-_bootstrap.php  _monitor.php  ai.php      api.php      figma.php
-mail.php        portal.php    weather.php work.php (new)
-```
-
-`support.php` now serves `client`-role callers and is security-critical, like `portal.php`
-(`docs/SECURITY.md` section 3). So does the client branch of `feedback.php`, which is write
-only. `README.md`, `schema.sql` and `config.php.example` stay out
-of the document root.
 
 ### 5.4 Configuration this set needs
 
@@ -586,202 +242,6 @@ Switching it off again is the same key set back to `false`. It does not undo an 
 already done. NOT TESTED against the live host.
 
 The full key list is in section 5.7.
-
-### 5.5 Behaviour changes to expect
-
-From the 2026-09-22 relaunch set, if it was not already live:
-
-- **Care-plan monitoring may report sites as down.** TLS peer verification is on and redirects
-  are no longer followed, so an expired certificate fails and a redirecting site reports its
-  own 301. Check the certificate first. Internal addresses are no longer checked at all.
-- **`employee`, `editor` and `trainer` lose the Portal screen.** The staff preview branch of
-  `portal.php` is now super_admin, admin and manager, matching `invoices.php`.
-- **`api.php` is a read-only health check** returning `{"ok":true,"db":true}` (the PHP
-  version was dropped on 2026-10-17).
-  The unauthenticated POST is gone (K-004).
-- **Attaching an image to a work record makes that file permanently public** and clears any
-  earlier share expiry. Detaching does not revoke the link; revoke it in Files.
-- **Existing file rows keep their stored MIME type**, filtered through the allowlist on
-  download. Files already in `uploads/` with a now-rejected extension need a manual review.
-
-From the branch:
-
-- **Stripe pay links charge the VAT-inclusive total**, matching the invoice, PDF and portal.
-- **The Stripe webhook refuses mismatched payments.** A different amount or currency leaves
-  the invoice unpaid and writes an `invoice_payment_mismatch` audit row.
-- **PayPal checkout is switched off** (button removed, endpoint 503).
-- **Magic links sign in client accounts only**, and not one with two-factor on. Google sign-in
-  refuses accounts with two-factor on (K-027).
-- **Quotes can be accepted only from "sent" and before `valid_until`, exactly once**, and an
-  accepted quote can no longer go back to draft (K-028).
-- **Create endpoints return the new record's id**, not the audit-log row id (K-029).
-- **Editing a blog post keeps its body** (K-016).
-- **`files.php` quotes the column `stored`**, so it works on MySQL 8 as well as MariaDB
-  (K-040). The live table needs no change.
-- **Clients can message the studio** from the portal through `support.php`: list, read, start
-  and reply to their own tickets only. Staff replies show to clients as "GAkinz" (K-039).
-- **Enquiries carry a next-action date, a note and an owner priority** once SQL statement 6
-  has run.
-- **`auth.php?action=me` also returns `totp_enabled`**, which My account reads (K-024).
-- **Work records can go on the homepage hero** (2026-10-14): at most five, published only.
-  Unpublishing or removing a record takes it out of the hero. Attaching a hero screenshot
-  makes that file permanently public, exactly as attaching a work image does.
-- **Public-site copy can be edited in the CMS** through `site.php` (2026-10-14). Nothing
-  changes on the public site until a section is published.
-- **Services are whole pages** (2026-10-19). A services row carries its page fields all
-  together or none, so a half page is refused on save and never published. A previously
-  published row without every field is no longer shown as a service; while the list has no web
-  addresses the website shows its built-in six (`docs/KNOWN-ISSUES.md` K-093).
-- **Calls are recorded inside Enquiries** (2026-10-16) through `bookings.php`, staff only.
-  A customer is emailed about a reschedule or cancellation only when the owner switches that
-  on for the change; nothing is sent automatically.
-- **Clients can send private feedback from the portal** (2026-10-16) through `feedback.php`.
-  They cannot read it back. Permission to quote is a separate switch, off by default, and
-  nothing is published from it.
-- **Public pages arrive as HTML** (2026-10-16, with the client deploy and this `.htaccess`).
-  Each prerendered page carries its own title, description and one canonical, and shows the
-  built-in content until the bundle loads and the CMS answers (section 2).
-
-From `feat/journeys-2026-10-18` (2026-10-18), once its files and SQL are up:
-
-- **A sent invoice can be marked paid by bank transfer, cash, cheque or other** with a
-  reference, the date received and the amount, which must equal the VAT-inclusive total
-  (SQL 13). Moving an invoice back to draft or sent clears that record. Setting paid through
-  the plain status change still works as before, so there are two ways to paid until the
-  owner retires the plain one.
-- **Accepting a quote needs evidence once SQL 14 has run**: how the client accepted, a
-  reference of 3 to 200 characters and the date it arrived (not in the future, not before
-  the quote was created). Without them the accept is refused and nothing is created. The
-  shared public quote then shows "Accepted on" with the date only.
-- **The 40/30/30 instalments are worked out in integer pence.** On PHP 8.4 or later a few
-  quotes split 1p differently from the old code; the total never changes (K-068).
-- **Clients can ask for an update and propose call times from the portal.** Update requests
-  arrive in Support titled "Update request: ...". Call requests arrive in Enquiries, Calls as
-  "Requested, not confirmed" with the topic and up to three times in the notes: reschedule to
-  the chosen time, then confirm. A client may have five open call requests at once; the
-  sixth is refused with 429. Nobody is notified of either (K-071).
-- **Projects carry an asset checklist** (SQL 15) under the task board, and the portal shows
-  "What we need from you" when items exist. A client marks an item supplied with a note only,
-  no file (K-072).
-- **A confirmed call has a "Download calendar file" button** in Enquiries, Calls and in the
-  portal. The client's file has no location or meeting link (K-070).
-- **The public site shows a "Client sign in" link** in the header, drawer and footer, and
-  serves `favicon.ico` and `site.webmanifest` (client deploy only).
-
-From the second journeys batch (2026-10-19), once its files and SQL 16 are up:
-
-- **The dashboard leads with "Needs attention"** (`today.php`): new enquiries, follow-ups
-  due, calls, overdue tasks, material waiting from the client and unpaid invoices, each
-  linking to its record. The old "Follow-ups due" card is gone, the tiles read "Cash received"
-  and "Invoiced, unpaid", and "Updated" is the last refresh of the attention list.
-- **Cmd or Ctrl+K finds records** (`search.php`): clients, projects, enquiries, invoices and
-  quotes, each limited to the roles that can open that screen.
-- **Projects carry a brief and agreed measurements** (`briefs.php`, SQL 16), and staff can
-  download a sanitised Markdown handoff for GEE OS.
-- **A super admin or admin can export everything held about a client or an enquirer** as
-  JSON (client record, "Export data"; Settings, Privacy tab), and a super admin sees a read-only
-  retention report there. Every export writes a `privacy_export` audit row.
-- **Record links open the record**: `?project=` (with `&task=` or `&asset=`), `?invoice=`,
-  `?enquiry=`, `?view=calls&call=` and `?client=` (client deploy only).
-- **Articles can hold recommendation blocks** (client deploy only). An affiliate block shows
-  the labelled gap "[Affiliate disclosure: owner to supply]" until the owner supplies the
-  wording (`docs/STATUS.md` section 5).
-
-From the third journeys batch (2026-10-19), once its files and SQL 17 and 18 are up:
-
-- **Every `files.php` download changes headers** as soon as `files.php` is uploaded, before
-  any SQL: `Content-Disposition` carries an ASCII `filename` and a UTF-8 `filename*`, so names
-  with accents or spaces download as typed; every staff and client download, and every
-  expiring share link, sends `Cache-Control: private, no-store`; a share link with no expiry
-  (the Work images and hero screenshots on the public site) sends `public, max-age=86400`, so
-  browsers keep those images for up to a day (`docs/KNOWN-ISSUES.md` K-087). A stored name
-  that is not a plain file name directly inside `uploads/` now answers 404 "File is missing on
-  disk." instead of being read; every name `files.php` has written passes.
-- **Log time on a support ticket** (SQL 17): the first entry for a client creates its standing
-  "IT support" project (in progress, stage support) and puts the time there as a draft for
-  approval on the Time screen, which links it back to `/app/support?ticket=<id>`. A ticket
-  with no client cannot take time (400), and a ticket of a removed client answers 409. The
-  portal shows the project as "IT support", "Ongoing support", with no progress bar.
-- **Files can be shared to a client's portal** (SQL 18): a "Visible to client" switch in Files,
-  only for a file that belongs to exactly one client, and a "Shared files" card in the
-  portal, hidden while nothing is shared.
-- **New project can start from a template**: five work-type templates with a preview. The
-  client checklist is an unticked option, because its items appear in the client's portal at
-  once (K-086).
-- **Unsaved changes prompt before leaving** (client deploy only): the Blog post editor, the New
-  quote and New contract dialogs, Work, Site content and the project Brief sections ask "Leave
-  without saving?" before navigation, closing the tab or switching project. **Cancel on a
-  dirty New quote or New contract dialog now asks first and then discards the fields**; it
-  used to close and keep them silently for next time (K-084).
-- **The privacy export lists `client_visible` and `shared_at`** on each file once SQL 18 has
-  run.
-
-From the fifth journeys batch (2026-10-19), once its files and SQL 19 are up:
-
-- **Every new enquiry and project gets a work reference**, `GK-E-YYYY-NNNN` or
-  `GK-P-YYYY-NNNN`, and SQL 19 numbers the existing ones. A visitor sees theirs on the contact
-  form's thank-you ("Your reference is GK-E-2026-0042. Mention it if you write to me about
-  this."). Staff see references in Enquiries (card and drawer), Projects (card and board
-  header), Proposals and Contracts lists ("Project GK-P-..."), the contract and invoice PDFs
-  and record search. A client sees their own project references on portal cards, the
-  accepted shared quote and invoice PDFs. Nothing signs in or looks a record up by reference,
-  and no acknowledgement email is sent (K-097). (The sixth batch adds sign-in by reference and
-  email, switched off; see below.)
-
-From the sixth journeys batch (2026-10-19):
-
-- **Nothing visible while the switch is off.** With `client_access.php` uploaded and
-  `$REFERENCE_SIGNIN_ENABLED` off or absent, every route answers 404 and the sign-in page shows
-  only what it shows today. The browser console prints that 404 once per visit to the sign-in
-  page (K-103). A `#access=` link opened while off shows "That sign-in link is invalid or
-  expired."
-- **No consent banner, no ad slot and no third-party request** on the public site: the tracked
-  settings are all off, and the build refuses a page carrying third-party markup.
-- **A super admin can erase one prospect's enquiry** from the Enquiries drawer ("Erase
-  enquiry"), after a preview of what stays and typing the enquiry's email address. It
-  hard-deletes the enquiry and its calls and scrubs the address from the audit log; it is
-  refused for anything linked to a client, a user or a contract signer. **This is the first
-  action in the CMS that deletes personal data for good.** Other roles never see the button.
-- **A client can "Ask to delete my data"** in My account. It opens one "Data deletion
-  request" ticket in Support and deletes nothing. It is not flagged urgent and nobody is
-  notified (K-095), so watch Support for it.
-- **`cron.php job=retention_apply`** exists on the command line and is a dry run unless
-  `--apply`, `$RETENTION_APPLY = true` and a period all agree. With the template settings it
-  deletes nothing.
-- **Business details** (Site content > Business details): the public email, phone, address,
-  opening note and social profiles. Nothing changes on the public site until the section is
-  published; then the footer, About and the legal pages show them, and the home page's
-  structured data lists the https profiles as `sameAs`. The Contact page keeps the enquiry
-  email.
-
-**What staff see in each gap**, if the merge goes first. The rule is `src/lib/notAvailable.ts`:
-a bare 404, the `app-shell.html` page with status 200, a 405, a 503, or the role gate's "Not
-allowed." from an older file all mean "not on the server yet", and the screen says so quietly
-or hides the feature, with no error toast. Checked in a production build with every endpoint
-stubbed (`docs/STATUS.md` section 0.3); not seen on the live host.
-
-| Missing | What staff see |
-|---|---|
-| `today.php` | The old client-side "Follow-ups due" card, for roles that see enquiries. Other roles see no attention block. Totals and the chart work |
-| `search.php` (or `_like.php`) | No Records group in the search; module search works. Without `_like.php` the 500 shows as "Record search failed." |
-| `briefs.php` | "The project brief is not available yet." on the project board, no Retry |
-| SQL 16 only | "The project brief needs a database update first (SQL 16 in docs/DEPLOYMENT.md)." |
-| `privacy.php` | "The retention report is not available on the server yet." and "Data exports are not available on the server yet.", as a status line or a neutral toast |
-| The new `.htaccess` | No difference to staff: the CMS treats the shell page and the 404 the same way |
-| `_time.php` | No "Log time" on a ticket; Log time on the Time screen fails with "Logging time is not available yet. Upload server/_time.php first." |
-| SQL 17 only | No "Log time" on a ticket; Time entries show no ticket link; the portal shows the standing project, once made, as an ordinary project |
-| The new `support.php` | No "Log time" section on a ticket |
-| `_templates.php` or the new `projects.php` | No "Start from template" in New project; a plain create works |
-| The new `files.php`, or SQL 18 | No "Client portal" column in Files and no "Shared files" card in the portal |
-| `_reference.php` or SQL 19 | No reference anywhere: the contact thank-you, cards, PDFs and the portal simply omit it |
-| `_erasure.php` or one of its includes, or the new `privacy.php` | "Erase enquiry" shows a quiet "not available yet" toast and closes |
-| `_anonymise.php`, or the new `privacy.php` | Nothing: the Anonymise button is shown only when `anonymise_preview` answers 200, and it answers 404 (or is missing) while the switch is off |
-| The new `support.php` (deletion request) | My account says "Deletion requests open once GAkinz finishes a server update. Until then, email hello@gakinz.com." |
-| `client_access.php` | Nothing: the sign-in page treats the missing file like the switch being off |
-| The new `site.php` | Saving Business details fails with "Business details need the updated site.php on the server."; the public site shows its built-in details |
-
-Uploading first and merging later is invisible to staff: the deployed client calls none of
-the new files.
 
 ### 5.6 Post-upload checks
 
@@ -940,8 +400,9 @@ breaking the application.
 |---|---|
 | `DB_*` | Required. Nothing works without it |
 | `ALLOWED_ORIGINS` | Required. `_bootstrap.php` fatals without the constant |
-| `OPENROUTER_KEY`, `OR_MODEL`, `OR_SITE` | Every AI feature |
-| `OPENWEATHER_API_KEY` | Header weather widget |
+| `ANTHROPIC_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT` | Every AI feature, tried first (D-054). Set with `scripts/set-server-key.sh` |
+| `OPENROUTER_KEY`, `OR_MODEL`, `OR_SITE` | Every AI feature when Anthropic has no key or fails. Use a paid `OR_MODEL`, not a `:free` one |
+| `OPENWEATHER_API_KEY` | `weather.php` only; no screen calls it since the weather pill was retired (2026-11-01) |
 | `$SMTP_*` | Outgoing mail, invoice chasing, invites, magic links, the weekly digest |
 | `$IMAP_*` | The in-app inbox. Also needs the PHP `imap` extension |
 | `$TWILIO_SID`, `$TWILIO_TOKEN`, `$TWILIO_FROM` | SMS |

@@ -66,7 +66,8 @@ Article 9. REQUIRES LEGAL REVIEW for the condition relied on and staff-facing in
 | Stripe | invoice id, amount, client email | `payments.php` | **owner to confirm** | likely |
 | PayPal | payment data | `payments.php` | switched off in code (K-026) | likely |
 | Twilio | phone number and message text | `_sms.php`, `comms.php` | **owner to confirm** | likely |
-| OpenRouter | free text from staff | `ai.php` | **owner to confirm** (K-064) | likely |
+| Anthropic | free text from staff | `ai.php` (first, D-054) | **owner to confirm** (K-064) | likely |
+| OpenRouter | free text from staff | `ai.php` (backup, D-054) | **owner to confirm** (K-064) | likely |
 | Google (sign-in) | sign-in email | `oauth.php` | **owner to confirm** | likely |
 | Slack | announcement text | `_slack.php` | **owner to confirm** | likely |
 | Calendly | nothing from the site; the visitor follows a link | `book.php` | link only | n/a |

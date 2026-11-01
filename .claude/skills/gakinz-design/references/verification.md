@@ -80,7 +80,7 @@ python3 ~/.claude/skills/product-design/scripts/contrast.py "#9AA3B0,#16202B" "#
 ```
 
 Text 4.5:1, large text 3:1, UI parts and field edges 3:1 against every surface they touch. Record the
-ratio in `tokens.md` and as a comment beside the token.
+ratio in `docs/DESIGN-SYSTEM.md` and as a comment beside the token.
 
 ## 7. Work screenshots
 

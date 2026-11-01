@@ -1,10 +1,10 @@
-# GAkinz server files (placed by hand, NOT auto-deployed)
+# GAkinz server files
 
-The GitHub Actions deploy uploads **only `dist/`**. These PHP and configuration files live in
-the document root on cPanel and are uploaded by hand, then left alone by deploys.
+These PHP files live in the document root on cPanel. Each release (`scripts/release.mjs`, run on a
+push to `main`) uploads `server/*.php` over SSH. It never sends `config.php`, `.htaccess`,
+`schema.sql`, Markdown or `*.example`: `.htaccess` changes and SQL migrations are applied by hand.
 
-Full deploy detail, including the one list of files and SQL not yet uploaded, is in
-`docs/DEPLOYMENT.md` section 5. The endpoint contract is in `docs/API-SPEC.md`.
+Full deploy detail is in `docs/DEPLOYMENT.md`. The endpoint contract is in `docs/API-SPEC.md`.
 
 ## One-time server setup
 
@@ -46,6 +46,7 @@ of their own and are denied to direct requests by `.htaccess`. The file count is
 | `_money.php` | The single VAT-inclusive payable-total calculation used by `payments.php` and, since 2026-10-18, by `invoices.php` to check a manual payment |
 | `_ics.php` | Builds the RFC 5545 calendar file for a confirmed call (escaping, 75-octet folding, UTC times). Required by `bookings.php` on its calendar routes, so upload the two together (2026-10-18) |
 | `_like.php` | Literal substring matching for `LIKE`, with `!` as the escape so it reads the same under any `sql_mode`. Required by `search.php`; upload the two together (2026-10-19) |
+| `_ai.php` | The AI providers for `ai.php`: Anthropic first, OpenRouter when Anthropic has no key or fails (D-054). Required by `ai.php` and `integrations.php`; a release uploads all three together (2026-11-01) |
 | `_retention.php` | The read-only retention dry run: counts what each proposed rule would affect, never deletes. Used by `privacy.php` and `cron.php job=retention_report`, and required by `_erasure.php`; upload them together (2026-10-19). Without it the report answers 503 (web) or exits 1 (command line) |
 | `_uploads.php` | `UPLOAD_DIR` and `stored_path()`, the one rule for where an uploaded file lives. Required by `files.php` on every route, the public Work image links included, and by `_erasure.php`: upload it **before** `files.php` (2026-10-19) |
 | `_reference.php` | Work references `GK-E-YYYY-NNNN` and `GK-P-YYYY-NNNN` from `reference_counters` (SQL 19). Loaded only if present by `contact.php`, `leads.php`, `projects.php`, `proposals.php`, `invoices.php`, `contracts.php` and `search.php`, and by `support.php` when it creates the IT support project; without it every reference is `null` and records are created as before. Never reads a reference from a request (2026-10-19). The only endpoint that takes one as input is `client_access.php`, and only while switched on, to decide whether to email a sign-in link |
@@ -67,7 +68,7 @@ of their own and are denied to direct requests by `.htaccess`. The file count is
 | `invoices.php`, `payments.php`, `reports.php` | Money |
 | `portal.php`, `support.php`, `feedback.php`, `comms.php`, `mail.php` | Client-facing. `portal.php` and the client branches of `support.php` and `feedback.php` serve `client`-role callers and are security-critical |
 | `blog.php`, `testimonials.php`, `content.php`, `knowledge.php`, `announcements.php`, `work.php`, `site.php` | Content. `work.php` also serves the public work ledger and the homepage hero; `site.php` serves published site copy publicly and drafts to editors |
-| `ai.php` | OpenRouter proxy. Staff roles only, capped per role per day. The key stays server-side |
+| `ai.php` | AI proxy: Anthropic first, OpenRouter as backup (`_ai.php`, D-054). Staff roles only, capped per role per day. Keys stay server-side |
 | `weather.php` | OpenWeather proxy. Staff roles only, cached 10 minutes. The key stays server-side |
 | `github.php`, `figma.php`, `slack.php` | External connectors |
 | `cron.php` | Scheduled jobs. Gated by `$CRON_KEY`, not by a user session. `job=retention_report` and `job=retention_apply` run from the command line only (2026-10-19). `retention_apply` is a dry run unless `--apply` is passed **and** `$RETENTION_APPLY = true` **and** the rule's period is set; it is not part of `job=all` |

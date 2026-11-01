@@ -325,7 +325,7 @@ placeholders rather than real values.
 
 Keys never reach the browser:
 
-- `ai.php` proxies OpenRouter server-side.
+- `ai.php` calls Anthropic, then OpenRouter, server-side (`_ai.php`); neither key reaches the browser.
 - `weather.php` proxies OpenWeather server-side.
 - `integrations.php` returns **booleans only**, so an admin can see what is connected without
   the value being exposed.
