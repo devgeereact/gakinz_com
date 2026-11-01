@@ -20,6 +20,7 @@ document disagree, the linked document wins and this page is wrong.
 | 2026-10-30 | `560949d` onwards | Releases over SSH through `scripts/release.mjs` | GitHub Actions on push to `main` |
 | 2026-10-31 | `a907824` | The D-053 design finalisation | GitHub Actions, owner-approved |
 | 2026-10-31 | `fdc5d94` | Clerk's grey footer panel removed | GitHub Actions, owner-approved |
+| 2026-11-01 | `bde12c7` | Cleanup; AI on Anthropic first with OpenRouter as backup (D-054) | GitHub Actions, owner-approved ("push live") |
 
 The checks of each release are in [AUDIT.md](AUDIT.md) (newest first). Measured counts are in
 [STATUS.md](STATUS.md) section 0. Signed-in use of the live system is NOT TESTED by an agent; the

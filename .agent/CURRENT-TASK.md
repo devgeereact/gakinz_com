@@ -18,7 +18,7 @@ section 3; finished sessions are in [HANDOFF.md](HANDOFF.md).
 
 ## Next actions, in order
 
-1. Owner: approve the push and the merge of this branch (the merge releases `server/ai.php`).
+1. Done 2026-11-01: released as `bde12c7` (owner: "push live"); checks in `docs/AUDIT.md`.
 2. Owner: run `scripts/set-server-key.sh` for the Anthropic key, then the OpenRouter key.
 3. Check the AI draft once signed in (NOT TESTED by an agent: it would be a live call).
 

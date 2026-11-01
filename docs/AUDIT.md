@@ -2,6 +2,16 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-01 · Release check on gakinz.com (`bde12c7`)
+
+**Release:** `main` fast-forwarded to `bde12c7` and pushed with the owner's approval ("push live"). CI (MySQL)
+and Deploy both passed. `release.mjs`: server `_ai.php` new, `ai.php` and `integrations.php` changed; snapshot
+`~/backups/gakinz_com/releases/20261101T074732Z` (36 files); 3 smoke checks passed.
+
+**Live, from outside, signed out:** `/`, `/work/`, `/app/login`, `api.php` 200; `auth.php?action=me` 401;
+`ai.php` and `integrations.php` 401; `_ai.php` 403 (the include deny). NOT TESTED: a signed-in AI draft, which
+waits for the owner to save the keys with `scripts/set-server-key.sh`.
+
 ## 2026-11-01 · Cleanup and AI provider check (`chore/cleanup-2026-11-01`, local only)
 
 **Dead code** (knip 5, then read by hand): removed the weather pill and the `weather` API group, the old
