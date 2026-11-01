@@ -9,8 +9,9 @@ Full deploy detail is in `docs/DEPLOYMENT.md`. The endpoint contract is in `docs
 ## One-time server setup
 
 1. Upload everything in this folder to the document root (`/home/<cpanel_user>/gakinz.com/`),
-   **except** `config.php.example` and this README.
-2. Copy `config.php.example` to `config.php` on the server and fill in the real values.
+   **except** the `*.example` templates and this README.
+2. Copy `config.php.example` to `~/private-config/gakinz_com/config.php` on the server (mode 600) and fill in
+   the real values; save `config.stub.php.example` in the document root as `config.php` (docs/DEPLOYMENT.md section 3).
    **Never commit `config.php`.** Every field in the template is empty or a `REPLACE_`
    placeholder, including the database name and user, the seed admin address and both mail
    hosts. Fill them on the server only. The mail server hostname is a hosting fact and is not
@@ -37,7 +38,8 @@ of their own and are denied to direct requests by `.htaccess`. The file count is
 
 | File | Purpose |
 |---|---|
-| `config.php.example` | Template for `config.php`. Placeholders only, never real values. Copy it; never commit the filled copy |
+| `config.php.example` | Template for the private `config.php` outside the web root. Placeholders only, never real values. Copy it; never commit the filled copy |
+| `config.stub.php.example` | The document-root `config.php`: no secrets, it only `require`s the private file (added 2026-11-01) |
 | `_bootstrap.php` | Shared CORS, JSON helpers, `require_auth()`, `audit()`. Provides `$conn` |
 | `_smtp.php` | Built-in SMTP client, SSL on 465 or STARTTLS on 587, `mail()` fallback |
 | `_sms.php` | Twilio transport for SMS and WhatsApp |
@@ -73,7 +75,7 @@ of their own and are denied to direct requests by `.htaccess`. The file count is
 | `github.php`, `figma.php`, `slack.php` | External connectors |
 | `cron.php` | Scheduled jobs. Gated by `$CRON_KEY`, not by a user session. `job=retention_report` and `job=retention_apply` run from the command line only (2026-10-19). `retention_apply` is a dry run unless `--apply` is passed **and** `$RETENTION_APPLY = true` **and** the rule's period is set; it is not part of `job=all` |
 | `schema.sql` | Every table, plus the migration statements as comments in the `MIGRATIONS` block and dated blocks at the foot |
-| `.htaccess` | SPA routing, the `Authorization` header pass-through, and hardening: denies `config.php`, every `_*.php` include, and `.md`, `.sql`, `.log` and `.txt` files other than `robots.txt` and `llms.txt`. Since 2026-10-19 a request for a `.php` file that does not exist answers 404 instead of the SPA shell |
+| `.htaccess` | SPA routing, the `Authorization` header pass-through, and hardening: denies `config.php`, every `_*.php` include, and `.md`, `.sql`, `.log` and `.txt` files other than `robots.txt` and `llms.txt`; since 2026-11-01 also dotfiles, backup copies, `*.example` and `config.php.*`, and a one-year cache for the hashed `/assets/` files. Since 2026-10-19 a request for a `.php` file that does not exist answers 404 instead of the SPA shell |
 
 ## Adding endpoints
 

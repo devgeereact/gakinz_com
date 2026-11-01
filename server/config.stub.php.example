@@ -1,0 +1,16 @@
+<?php
+/**
+ * GAkinz: the document-root settings stub (docs/DEPLOYMENT.md section 3).
+ *
+ * Saved on the server as ~/gakinz.com/config.php. It holds no secrets: it only
+ * loads the real settings from ~/private-config/gakinz_com/config.php, outside
+ * every web root. A release never uploads a file named config.php, so this copy
+ * in the repository is for review and for rebuilding the server.
+ *
+ * Rules: `require`, never `include` or a file_exists() fallback, so a missing
+ * private file stops every endpoint instead of running without settings; an
+ * absolute path built from this file's own folder, never from the request; and
+ * errors hidden before the load, so a failure cannot print the path.
+ */
+ini_set('display_errors', '0');
+require dirname(__DIR__) . '/private-config/gakinz_com/config.php';

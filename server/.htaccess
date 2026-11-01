@@ -80,6 +80,16 @@ RewriteRule ^ index.html [L]
   Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
 </IfModule>
 
+# Vite's content-hashed build files (/assets/<name>-<8-char hash>.js|css|woff2)
+# never change under the same name, so browsers may keep them for a year. Was
+# 4 hours for JS (2026-11-01 SEO audit). HTML, app-shell.html and unhashed files
+# do not match and keep the host's default.
+<IfModule mod_headers.c>
+  <FilesMatch "-[A-Za-z0-9_-]{8}\.(js|css|woff2)$">
+    Header always set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+</IfModule>
+
 # config.php and every shared include (_bootstrap, _money, _smtp, _sms, _slack,
 # _monitor and any future _*.php). Includes are required by endpoints, never
 # requested directly (KNOWN-ISSUES K-013).
@@ -97,5 +107,13 @@ RewriteRule ^ index.html [L]
 # <Files>/<FilesMatch> sections. sitemap.xml is not matched by either branch
 # and is served normally.
 <FilesMatch "^(?!robots\.txt$|llms\.txt$).*\.(md|sql|log|txt)$|^(error_log|\.ftp-deploy-sync-state\.json|\.ftpquota)$">
+  Require all denied
+</FilesMatch>
+
+# Dotfiles (.user.ini and the like), editor and backup copies, templates and any
+# copy of the settings stub (config.php.bak, config.php.old). A release never
+# deletes, so a stray file made by hand would otherwise stay served
+# (2026-11-01 security audit). Files only: the .well-known directory is untouched.
+<FilesMatch "^\.|\.(bak|old|orig|save|swp|example|dist)$|~$|^config\.php\.">
   Require all denied
 </FilesMatch>

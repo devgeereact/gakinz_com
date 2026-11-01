@@ -2,8 +2,10 @@
 /**
  * GAkinz — server configuration (gakinz.com).
  *
- * COPY this file to `config.php` on the server and fill in the real values.
- * NEVER commit config.php. It is gitignored and lives only on the server.
+ * COPY this file to ~/private-config/gakinz_com/config.php on the server (mode 600,
+ * outside every web root) and fill in the real values. The document root holds only
+ * the no-secret stub in config.stub.php.example, saved there as config.php.
+ * NEVER commit either. config.php is gitignored and lives only on the server.
  *
  * Used by every endpoint via _bootstrap.php. Provides:
  *   $conn (mysqli) + DB_*, ANTHROPIC_*, OPENROUTER_*, OR_*, ALLOWED_ORIGINS constants.
@@ -58,6 +60,10 @@ define('ALLOWED_ORIGINS', [
 // CLERK_CACHE_DIR (optional) is a private writable folder outside the web root for the signing keys.
 define('CLERK_ISSUER', 'https://clerk.example.com');
 define('CLERK_AUTHORIZED_PARTIES', ['https://gakinz.com', 'https://local.gakinz.com']);
+// Set this on the server. The built-in default (two folders above the endpoints) is
+// usually not writable on cPanel, and without a writable cache every sign-in fetches
+// Clerk's keys again and the 30-second failure back-off cannot be recorded.
+define('CLERK_CACHE_DIR', '/home/REPLACE_cpanel_user/private-config/gakinz_com/cache');
 
 // ── Optional integrations ────────────────────────────────────────────────────
 define('OPENWEATHER_API_KEY', '');   // read by weather.php; no screen calls it since 2026-11-01
@@ -65,10 +71,10 @@ define('OPENWEATHER_UNITS', 'metric'); // 'metric' (°C) or 'imperial' (°F)
 
 // ── Seed super-admin ── read by auth.php (only on an EMPTY users table) ───────
 // On a fresh install auth.php creates one super-admin. Set a strong password
-// here; if left blank a random one is generated and written to
-// server/seed_admin_password.txt (delete that file after first login).
+// here; if left blank a random one is generated and written to the PHP error log
+// only (auth.php). Sign in, change it, and clear that log line.
 $SEED_ADMIN_EMAIL    = 'REPLACE_seed_admin_email';
-$SEED_ADMIN_PASSWORD = '';   // '' → random, written to seed_admin_password.txt
+$SEED_ADMIN_PASSWORD = '';   // '' → random, written to the PHP error log
 
 // ── Outgoing mail (SMTP) ── read by mail.php ──────────────────────────────────
 // Leave $SMTP_HOST blank to fall back to PHP mail(). Use the hosting account's

@@ -115,7 +115,7 @@ The server has no Node, so nothing is built there. PHP files go up as source wit
 
 Settings: the real values live in `~/private-config/gakinz_com/config.php` (mode 600, outside every
 web root, since 2026-10-30). The document root holds a `config.php` stub with no secrets that loads
-it. A release never uploads a file named `config.php`, so neither is overwritten, and neither leaves
+it; its text is `server/config.stub.php.example` (added 2026-11-01, so it can be reviewed). A release never uploads a file named `config.php`, so neither is overwritten, and neither leaves
 the server. Add or change a key with `scripts/set-server-key.sh` (it prompts with hidden input and
 writes over SSH) or by a person on the server; never through the repository.
 
@@ -143,8 +143,19 @@ private `config.php`. A change that needs one of them records it here in the sam
 
 **Pending as at 2026-11-01:** the AI keys (D-054): run `scripts/set-server-key.sh ANTHROPIC_KEY`, then
 `scripts/set-server-key.sh OPENROUTER_KEY` (`_ai.php` is live since `bde12c7`). From `golive/2026-11`
-(not merged): `_smtp.php` and `clients.php` (K-120) need nothing by hand and go up with the release. Nothing
-else is pending. SQL 1 to 19 ran on 2026-10-21 and SQL 20 on 2026-10-30; the
+(not merged): `_smtp.php` and `clients.php` (K-120) need nothing by hand and go up with the release. By hand,
+after that branch merges, backup first:
+- **`server/.htaccess`**: two new blocks, a one-year `immutable` cache for the hashed `/assets/*` files and a
+  deny for dotfiles, backup copies, `*.example` and `config.php.*`. Check after upload: `/` 200,
+  `/assets/<any index-*.js>` answers `cache-control: public, max-age=31536000, immutable` (Cloudflare's
+  "Browser Cache TTL" must be "Respect existing headers" for that to reach the browser), `/robots.txt`,
+  `/llms.txt` and `/sitemap.xml` 200, `/config.php` 403.
+- **`CLERK_CACHE_DIR`** in the private config, pointing at a writable private folder (key list and reason in
+  `server/config.php.example`); create the folder with mode 700.
+- **Compare the live stub** `~/gakinz.com/config.php` with `server/config.stub.php.example`: it must `require`
+  the private file by an absolute path and hold no secret.
+
+Nothing else is pending. SQL 1 to 19 ran on 2026-10-21 and SQL 20 on 2026-10-30; the
 current `server/.htaccess` went up on 2026-10-21; the Clerk keys were added on 2026-10-30. Since then
 `server/*.php` goes up with every release (section 1).
 
