@@ -51,8 +51,17 @@ The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md).
    Safari and phone checks of the live design.
 6. **Run the server suite on MySQL before merging** server or schema work: the Mac runs MariaDB
    and CI runs MySQL (K-111).
+7. **Go-live audit leftovers (2026-11-01, `docs/AUDIT.md`):** the AI cap reservation (K-122); the two
+   deferred audit units (`cron.php` billing race, `mail.php` IMAP certificate check); a report-only CSP
+   from the draft in the audit (K-033); the home-page H1 read twice by crawlers (needs the owner's OK).
 
 ### 3b. Owner actions, in order
+
+0. **Go-live (2026-11-01):** decide K-121 (Clerk and app two-factor; run the `totp_enabled` query first);
+   read the host's client-IP trust setting and consider Authenticated Origin Pulls (K-123); after merging
+   `golive/2026-11`, upload `server/.htaccess`, set `CLERK_CACHE_DIR` and compare the live stub (K-124,
+   `docs/DEPLOYMENT.md` section 5); check `clients.email` for line breaks (K-120); the SEO copy list in
+   `docs/AUDIT.md`; run the Rich Results Test on `/` and one service page after release.
 
 1. **Safety.** Restore one backup somewhere isolated and agree recovery targets (K-010); record
    the live database engine (K-099); delete the Clerk user for `dev@gakinz.com` in the Clerk

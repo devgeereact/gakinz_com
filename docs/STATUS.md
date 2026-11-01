@@ -26,13 +26,13 @@ Anything about signed-in use of the live system is NOT TESTED unless a row says 
 
 ## 0. Current measurements
 
-Measured on 2026-11-01 on the Mac on `chore/cleanup-2026-11-01` over `ee1281f`. Re-measure and update
+Measured on 2026-11-01 on the Mac on `golive/2026-11` over `3225e01`. Re-measure and update
 this table when a count changes; the previous figures are in the history above.
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 545 tests in 46 files |
-| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 536 tests in 38 files in 515 s on local MariaDB, run as `GK_TEST_DB=gakinz_cleanup_test GK_TEST_PHP_PORT=5309 GK_TEST_PROVIDER_PORT=5310 npm run test:server` (`ai.test.ts` added, 9 tests) |
+| Unit tests | `npm test` | **PASS.** 551 tests in 47 files (`seo-schema.test.ts` added) |
+| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 541 tests in 39 files in 640 s on local MariaDB 11.4, run as `GK_TEST_DB=gakinz_golive_test GK_TEST_PHP_PORT=5319 GK_TEST_PROVIDER_PORT=5320 npm run test:server` (`smtp-recipients.test.ts` added, 5 tests) |
 | Server suite on MySQL 8 | `npm run test:server` against MySQL 8.0 (`docs/OPERATIONS.md` section 8) | Last PASS 2026-10-20 (519 tests). MySQL 5.7 NOT TESTED; the live engine is UNVERIFIED (K-099) |
 | Type check and build | `npm run build` | **PASS.** 32 public pages and `app-shell.html` prerendered, `sitemap.xml` with 32 URLs |
 | Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 5 errors, 0 warnings. **`npm run lint` still fails** (K-002) |

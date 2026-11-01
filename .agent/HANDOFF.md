@@ -49,3 +49,9 @@ Live server == `main` (63 PHP files identical, same app bundle, SQL 19 applied).
 - `a907824` released through `deploy.yml` and `release.mjs`; `fdc5d94` removed Clerk's footer panel. Both CI runs exit 0. Checks before and after are in `docs/AUDIT.md` (2026-10-31).
 - K-112 to K-116 and K-118 fixed; K-117 resolved by decision (Google sign-in stays on). The `gakinz-design` skill was added.
 - Open: owner test of the signed-in CMS on real data (K-044); Safari and phone checks.
+
+## Go-live audit (1 November 2026, branch `golive/2026-11`, local only)
+- Security audit (quick profile, source only, 7 hunters, 1 critic, 4 verifiers): no confirmed Critical or High. Fixed K-120 (SMTP command injection through a client email) test-first. Left for the owner: K-121 (Clerk skips app two-factor: decision), K-123 (host client-IP trust). Recorded K-122 (AI cap) and K-124 (stub template added, `CLERK_CACHE_DIR`). 2 units deferred (cron billing race, IMAP certificate check).
+- SEO: ProfessionalService, Service and BreadcrumbList schema; sitemap `lastmod` only where real; `.htaccess` asset cache and dotfile deny (hand-applied); copy list for the owner in `docs/AUDIT.md`.
+- Evidence: `npm run verify` PASS before each commit; `npm test` 551; `npm run test:server` 541 (MariaDB 11.4); lint ratchet 5/5; `docs:check --base main` PASS.
+- NOT TESTED: anything on the live server or Clerk; the live mail server; CI on MySQL for this branch; CrUX field data; Rich Results Test.

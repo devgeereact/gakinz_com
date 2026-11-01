@@ -2,6 +2,102 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-01 · Go-live security audit and SEO audit (`golive/2026-11`, local only, not released)
+
+### Security audit (security-audit skill, quick profile)
+
+**Method:** source review only. One wave of 7 hunters over 14 coverage units, one final coverage critic, one
+fresh independent verifier per candidate. No OS-enforced sandbox was provisioned, so the audit itself ran no
+target code; the K-120 fix was then reproduced and checked with the project's own server test harness
+(local MariaDB 11.4, loopback only). Nothing was sent to gakinz.com, Clerk or any provider. Source ref
+`3225e01`. Run record (findings, coverage ledger; both validators PASS) kept outside the repository.
+**Partial pass:** quick profile; 2 units deferred (below).
+
+**Result: 0 confirmed Critical or High.** 4 leads, all "needs validation" (no severity until proven):
+
+| Lead | Where | What decides it | State |
+|---|---|---|---|
+| Clerk sign-in skips app two-factor (K-121) | `_bootstrap.php` 104-114, `_clerk.php` 192-213 | Whether any active account has `totp_enabled = 1`; owner decision under D-052 | **Left for the owner** (a fix could lock the owner out) |
+| SMTP command injection through a client email (K-120) | `clients.php` create/update, `invoices.php` chase, `cron.php` chase, `_smtp.php` 83 | Live mail server pipelining | **Fixed**: reproduced locally (CR/LF stored, reached the transport), test-first, `b19633e` |
+| Per-IP throttles vs the forgeable CF-RAY lock (K-123) | `.htaccess` 10, `auth.php` 63, `contact.php` 27 | Host "client IP from header" trust setting | **Left for the owner** (host setting) |
+| AI daily cap counts only successes (K-122) | `ai.php` 36-64 | Provider billing of failed calls | Open, Low if confirmed |
+
+**Covered with no finding** (source): authorisation on every write and read across all 49 endpoints
+(every branch calls `require_auth` with a staff list before touching data; no list includes `client`);
+client-role isolation (portal, support, assets, bookings, feedback, files); SQL (every `->query()` is
+static; every dynamic column list, `IN (...)`, `LIMIT` and table name comes from constants); uploads
+(extension allow-list plus sniffed MIME, server-generated names, no SVG/HTML/PHP, `stored_path()`
+traversal and symlink guard, attachment download with `nosniff`, deny file in `uploads/`); outbound fetches
+(fixed hosts; the uptime monitor pins resolved public addresses and follows no redirects); public forms
+(`contact.php` stores only, 5 per 15 minutes per IP, sends no mail, SMS or AI); Clerk token checks (RS256
+only, `kid` from the pinned issuer's JWKS, `iss`, `azp`, `exp`, `nbf`, `sub`; first-sign-in link only to an
+unlinked active row); Stripe webhook (HMAC, 5-minute window, event de-duplication, amount and currency
+match); stored XSS (the only HTML sink is the escaped JSON-LD); secrets (tracked files and full git history:
+no live key; `release.json` holds the public Clerk publishable key only).
+
+**Private config stub:** the document-root `config.php` is not in the repository, so the live stub is
+UNVERIFIED. Template added (`server/config.stub.php.example`): `require` of
+`dirname(__DIR__)/private-config/gakinz_com/config.php`, errors hidden first; checked in a throwaway tree to
+stop (exit 255) when the private file is missing and to load it when present (K-124).
+
+**`.htaccess` and CSP:** denies config, includes, docs, SQL and logs; added a deny for dotfiles, backups,
+`*.example` and `config.php.*`. No CSP (K-033) and no HSTS in the file (K-058); a report-only CSP draft is
+below. The origin lock is K-123.
+
+**The 5 lint errors:** all `react-hooks/set-state-in-effect` (`theme-toggle.tsx` 12; `Contracts.tsx`;
+`Portal.tsx`), render-cascade only, no security relevance (K-002). Not changed.
+
+**Deferred (quick profile, critic):** `cron.php` billing (select-then-insert with no lock could create a
+duplicate retainer invoice if a web call overlaps the cron run) and digest recipients; `mail.php` IMAP read
+actions (`/novalidate-cert` at line 42).
+
+**Hardening noted, not done:** `files.php` lets any staff role share or delete any file; an editor can make an
+image file permanently public through a draft Work record; SMTP and IMAP skip certificate checks;
+`github.php` accepts `..` in owner/repo; `comms.php` has no send cap; `dev.php` URLs have no scheme check;
+`proposals.php` share tokens survive client deletion; `require_auth()` with no role list admits clients
+(every current call is self-scoped); the deploy key sits on the runner while dependencies run, and actions
+are pinned by tag. CSP draft (report-only first): `default-src 'self'; script-src 'self' 'sha256-<next-themes
+inline script>' https://clerk.gakinz.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline';
+img-src 'self' data: https://img.clerk.com; font-src 'self'; connect-src 'self' https://clerk.gakinz.com;
+frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self';
+form-action 'self'; frame-ancestors 'none'`.
+
+### SEO audit (claude-seo, gakinz.com, read-only)
+
+**Method:** all 32 sitemap URLs fetched from the live site (all 200), head and body parsed; `robots.txt`,
+`sitemap.xml`, `llms.txt` and response headers read; lab Core Web Vitals in headless Chromium (mobile: 4x CPU,
+1.6 Mbps, 150 ms). The plugin's own runtime was not installed (needs `/seo setup`), and no CrUX, Search Console
+or Analytics data was available, so field data is NOT TESTED. **Estimated health: 71/100 before this branch.**
+
+| Area | Finding | Done |
+|---|---|---|
+| Crawl and index | Every page prerendered, own canonical matching the sitemap, `en-GB`, no noindex on public pages, `/app/`, `/p/`, `/verify/` and `*.php` disallowed | PASS |
+| Sitemap | Build date as `lastmod` on 29 pages, so every release claimed every page changed | **Fixed**: `lastmod` only on posts with their own date |
+| Schema | Home: Person and WebSite only; posts: Article with author by `@id` only; no Organization/LocalBusiness, Service or breadcrumbs | **Fixed**: ProfessionalService (London, email, the six services; no address, phone or company number), Service on each service page, BreadcrumbList on service, work and writing pages, Article author named, image added. Not yet run through Google's Rich Results Test (owner, after release) |
+| Core Web Vitals (lab) | Home mobile LCP 1.70 s (hero image), CLS 0.003; `/services`, `/work`, `/services/web-design` LCP under 0.4 s; 150 KB of compressed JS | PASS (lab only) |
+| Caching | Hashed JS cached 4 hours, CSS 7 days | **Fixed in `.htaccess`** (1 year, immutable); hand-applied, and Cloudflare must respect origin headers |
+| Titles and descriptions | Unique on every page, but brand-first with no service or place ("Web design · Gideon Akinlotan"); several descriptions under 80 characters (pricing 50) | Copy: left for the owner (list below) |
+| Content depth | Service pages 206 to 341 words, case studies about 230 to 260 | Copy: left for the owner |
+| Home H1 | Screen-reader sentence plus the animated words, so a crawler reads the line twice | Left: design change, needs the owner's OK |
+| AI search | `llms.txt` matches the site; search and answer bots allowed; Cloudflare's managed `robots.txt` blocks training bots (ClaudeBot, GPTBot, Google-Extended, Applebot-Extended), which does not stop AI search citing the site | Owner's Cloudflare choice |
+| Trust signals | No portrait, no real social profiles (`sameAs` empty), no company number, no reviews | Owner inputs |
+
+**Copy changes for the owner** (titles keep the " · Gideon Akinlotan" suffix the code adds):
+1. Home title: "Web designer and developer in London" (now "Gideon Akinlotan · designer and developer, London").
+2. Service titles: "Web design for small businesses", "Website development, hand-built", "Ecommerce websites",
+   "Website care and maintenance", "IT support for small businesses in London", "IT consultancy for small
+   businesses". Pricing: "Website prices, fixed in writing".
+3. Descriptions of 120 to 155 characters naming the service and London for Pricing (50), Writing (59),
+   Web development (70), Website care (71), Web design (73), MimmyCare (70).
+4. Service pages to about 500 words: who it is for, what is included, a typical timeline, a price anchor
+   linking to Pricing, two or three questions and answers.
+5. Case studies: the problem, what was built, one measured or quoted result (with the client's permission).
+6. Trust: a portrait, the real LinkedIn or GitHub profile (feeds `sameAs`), the company number if there is
+   one, and a Google Business Profile as a service-area business (no street address needed).
+
+**Gate (Mac):** `npm run test:server` 541 of 541 in 39 files (local MariaDB 11.4, 640 s; `smtp-recipients.test.ts` added, 5 tests); `npm test` 551 of 551; `npm run verify` PASS before each commit (typecheck, lint ratchet 5 of 5, `npm test`, `php -l`,
+build with 32 prerendered pages); `npm run docs:check -- --base main` PASS.
+
 ## 2026-11-01 · Release check on gakinz.com (`bde12c7`)
 
 **Release:** `main` fast-forwarded to `bde12c7` and pushed with the owner's approval ("push live"). CI (MySQL)

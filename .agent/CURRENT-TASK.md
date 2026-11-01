@@ -2,25 +2,25 @@
 
 ## Outcome
 
-**2026-11-01, branch `chore/cleanup-2026-11-01`.**
+**2026-11-01, branch `golive/2026-11` (local only: not pushed, not deployed).** Owner asked: get ready for live.
 
-1. **Cleanup.** Dead code removed (the weather pill and `weather` API group, the old footer, the
-   unused Avatar and Collapsible components and their two packages, the unused work-record
-   hooks); merged branches and scratch files removed; the stale documents brought to the current
-   state (STATUS, WORKBOOK, DEPLOYMENT section 5, DESIGN-SYSTEM, CLAUDE, README, ARCHITECTURE, this
-   file); the owner's retired planning folder and the Mastercard reference left the tree (D-044).
-2. **AI never out.** `server/ai.php` uses Anthropic first and OpenRouter when Anthropic fails or
-   has no key; `scripts/set-server-key.sh` saves either key into the server's private config
-   without showing it.
+1. **Security audit** (security-audit skill, quick profile, source only): no confirmed Critical or High.
+   K-120 (SMTP command injection through a client email) fixed test-first. Leads for the owner: K-121
+   (Clerk skips app two-factor), K-123 (per-IP throttles vs the host's client-IP trust); K-122 (AI cap) and
+   K-124 (settings stub, Clerk cache folder) recorded. Details in `docs/AUDIT.md`.
+2. **SEO audit** (claude-seo, live site read-only): ProfessionalService, Service and BreadcrumbList schema;
+   sitemap `lastmod` only where real; one-year cache for hashed assets (`.htaccess`, hand-applied). Copy
+   changes listed for the owner in `docs/AUDIT.md`.
 
-Live: `fdc5d94` (2026-10-31). The order of work after this task is [WORKBOOK.md](../docs/WORKBOOK.md)
-section 3; finished sessions are in [HANDOFF.md](HANDOFF.md).
+Live: `bde12c7` (2026-11-01). The order of work is [WORKBOOK.md](../docs/WORKBOOK.md) section 3; finished
+sessions are in [HANDOFF.md](HANDOFF.md).
 
 ## Next actions, in order
 
-1. Done 2026-11-01: released as `bde12c7` (owner: "push live"); checks in `docs/AUDIT.md`.
-2. Owner: run `scripts/set-server-key.sh` for the Anthropic key, then the OpenRouter key.
-3. Check the AI draft once signed in (NOT TESTED by an agent: it would be a live call).
+1. Owner: review the branch; approve push and merge (merging releases `dist/` and `server/*.php`).
+2. Owner: K-121 decision, K-123 host setting, then the hand-applied items in `docs/DEPLOYMENT.md` section 5.
+3. Owner: AI keys with `scripts/set-server-key.sh` (still pending from the previous task).
+4. Run the server suite on MySQL (CI) before merging: this branch changes `_smtp.php` and `clients.php`.
 
 ## Resume on another computer
 
@@ -40,9 +40,8 @@ agent write runs through the dev server.
 
 ## Scope
 
-- In scope: the 2026-11-01 cleanup (dead code, merged branches, stale documents) and the AI
-  provider fallback (Anthropic first, OpenRouter second) with a script that saves the keys to the
-  server's private config.
+- In scope: the go-live security audit and SEO audit, fixes for Critical and High findings, safe SEO
+  fixes in code, and the documents they touch.
 - Out of scope: switching on any gated feature (D-050); DNS, TLS, Cloudflare and mail hosting;
   rewriting git history.
 
@@ -63,9 +62,9 @@ agent write runs through the dev server.
 
 ## Risk and dependencies
 
-- Risk level: production. `server/ai.php` ships with the next release; with neither key set it
-  keeps answering 503 and the interface hides AI, as today.
-- The keys are entered by the owner through `scripts/set-server-key.sh`, never by an agent.
+- Risk level: production. `_smtp.php` and `clients.php` ship with the next release; `clients.php` then
+  refuses a client email that is not one valid address (two addresses in one field included).
+- `server/.htaccess` and `CLERK_CACHE_DIR` are applied by a person; nothing on the server was read or changed.
 
 ## Evidence
 
@@ -82,6 +81,6 @@ agent write runs through the dev server.
 
 ## Previous contracts
 
-Earlier contracts and their next-action lists are in git history: the one before this cleanup at
-`ee1281f`, the readiness audit at `8499761`, the D-046 redesign at `ef2d6f9`, 2026-10-10 at
+Earlier contracts and their next-action lists are in git history: the 2026-11-01 cleanup at `3225e01`,
+the one before it at `ee1281f`, the readiness audit at `8499761`, the D-046 redesign at `ef2d6f9`, 2026-10-10 at
 `d314833`, batch 1 at `9db80b2`, the 2026-09-22 relaunch as `f67f05b` (#5).

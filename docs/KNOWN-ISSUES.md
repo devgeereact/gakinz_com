@@ -127,6 +127,10 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-118 | In the icon rail (768 to 1023px) 26 sidebar links and Sign out had no accessible name | Medium | **Fixed 2026-10-31** on `feat/design-finalisation`, deployed 2026-10-31 (`a907824`) |
 | K-119 | AI features stopped working: one provider, on a free model | Medium | **Fixed 2026-11-01** on `chore/cleanup-2026-11-01` (D-054), not released; live cause UNVERIFIED |
 | K-120 | A client email with a line break reached the SMTP `RCPT TO` command (invoice chase and the cron chase) | Medium | **Fixed 2026-11-01** on `golive/2026-11`, not released |
+| K-121 | Clerk sign-in gives a full session to an account with app two-factor on, without the code (K-027 rule not applied to Clerk) | High if any account has TOTP on | Open, found 2026-11-01. **Owner decision** (D-052): retire app TOTP under Clerk, or refuse or step up those accounts |
+| K-122 | The AI daily cap counts only successful replies and checks before it records | Low | Open, found 2026-11-01. Staff only; cost only |
+| K-123 | The Cloudflare origin lock trusts any CF-RAY; if the host takes the client IP from a header without checking the peer, every per-IP throttle can be bypassed | Medium if the host setting is open | Open, found 2026-11-01. Host setting UNVERIFIED |
+| K-124 | The settings stub was not in the repository, and CLERK_CACHE_DIR was not in the template | Low | **Template fixed 2026-11-01** (`config.stub.php.example`); the live stub and key UNVERIFIED |
 | K-116 | `vite preview` inherits the dev proxy and sends `.php` calls to the live API | Medium | **Fixed 2026-10-31** on `feat/design-finalisation` (`preview.proxy: {}`), merged 2026-10-31 (`a907824`) |
 | K-115 | Header links over a light project colour fail contrast (Harni's pink) | Medium | **Fixed 2026-10-31** on `feat/design-finalisation`, deployed 2026-10-31 (`a907824`). Cause corrected: the link tint and opacity, not `onColour` |
 | K-114 | Accessible names that do not match visible text (WCAG 2.5.3) | Low | **Fixed 2026-10-31** on `feat/design-finalisation`, deployed 2026-10-31 (`a907824`): logo links, CMS sidebar link, search, account button, Files drop zone |
@@ -2287,4 +2291,54 @@ update refuse such an email with 400 (empty stays allowed). Verified with `tests
 (5 tests): written first and seen failing (201, 200 and "Connect failed"), then passing. Behaviour change:
 a client email holding two addresses (`a@x, b@y`) is now refused on save. NOT TESTED: the real mail server;
 existing rows were not read (owner check: `SELECT id FROM clients WHERE email REGEXP '[\r\n<>,;]'`).
+
+## K-121 · Clerk sign-in skips the app's two-factor
+
+**Found:** 2026-11-01 (security audit, source only). **Severity:** High if any active account has `totp_enabled = 1`; none otherwise.
+
+`require_auth()` sends a three-part bearer to `_clerk.php`, and `gk_clerk_resolve_user()` returns the linked
+row after checking only status and role; neither reads `users.totp_enabled`. Under K-027 every other
+alternative sign-in refuses such accounts: `auth.php` magic links (line 576), Google SSO in `oauth.php`
+(148) and the reference redeem in `client_access.php` (251). So whoever completes Clerk's email code (or
+Clerk's Google sign-in, K-117) for that address gets the account's role, super_admin included, with no
+TOTP code, and the CMS hides the two-factor controls under Clerk (`AccountSecurity.tsx`). D-052 adopted
+Clerk but never said whether app TOTP enrolments are retired. **Not fixed on purpose:** refusing those
+accounts could lock the owner out of production. Owner: run
+`SELECT id, role FROM users WHERE totp_enabled = 1 AND deleted_at IS NULL`, check whether the Clerk
+production instance requires its own second factor, then decide (record in D-052): retire app TOTP and clear
+the flags, or make the Clerk branch refuse those accounts, or require Clerk MFA. NOT TESTED locally (the
+case is written out in `docs/AUDIT.md`, 2026-11-01).
+
+## K-122 · The AI daily cap counts only successes
+
+**Found:** 2026-11-01 (security audit, source only). **Severity:** Low.
+
+`ai.php` counts today's `ai_call` rows before the paid call and writes the row only after a successful
+reply. A refused, timed-out or failed provider call is never counted (the existing test asserts this), and
+parallel requests all pass the same count. Effect: a signed-in staff account can make more paid calls than
+D-011 allows. Fix when convenient: write a reservation row before the call and count attempts, not
+successes. Backstop now: a spending limit on both provider accounts (owner). NOT TESTED.
+
+## K-123 · Per-IP throttles depend on how the host trusts the client-IP header
+
+**Found:** 2026-11-01 (security audit, source only). **Severity:** Medium if the host trusts the header from any peer.
+
+The origin lock in `.htaccess` refuses only an empty `CF-RAY`, which anyone can send. If LiteSpeed's
+"Use Client IP in Header" (or mod_remoteip) believes `CF-Connecting-IP` from any peer, a client that reaches
+the origin directly picks a new `REMOTE_ADDR` per request, so the login, enquiry and reference throttles
+never trigger and `audit_log` records invented addresses. K-102 is the opposite failure. Owner: read that
+host setting (it must trust Cloudflare's ranges only) and switch on Cloudflare Authenticated Origin Pulls.
+Nothing in the repository can settle it.
+
+## K-124 · The settings stub and the Clerk key cache folder
+
+**Found:** 2026-11-01 (security audit). **Severity:** Low.
+
+`docs/DEPLOYMENT.md` says the document-root `config.php` is a no-secret stub that loads
+`~/private-config/gakinz_com/config.php`, but the stub was not in the repository, so it could not be
+reviewed. `server/config.stub.php.example` now holds it (`require` of an absolute path, errors hidden first;
+checked to stop when the private file is missing). `CLERK_CACHE_DIR` was not in the template, and the
+default resolves above the home folder, where the host will not let PHP write: every Clerk sign-in then
+fetches the keys again and the failure back-off cannot be recorded. Template fixed. Owner: compare the live
+stub, and set `CLERK_CACHE_DIR` (`docs/DEPLOYMENT.md` section 5).
 
