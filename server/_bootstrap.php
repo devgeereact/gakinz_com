@@ -108,6 +108,8 @@ function require_auth(mysqli $conn, array $roles = []): array {
     $user = gk_clerk_user_from_token($conn, $token);
     if (!$user) fail('Session expired. Please sign in again.', 401);
     if ($user['status'] !== 'active') fail('Account is not active.', 403);
+    if ($user['needs_second_factor']) fail('This account has two-factor sign-in on. Add a second factor to your sign-in, or ask an admin to turn two-factor off for the account.', 403);
+    unset($user['needs_second_factor']);
     if ($roles && !in_array($user['role'], $roles, true)) fail('Not allowed.', 403);
     $user['id'] = (int)$user['id'];
     $user['client_id'] = $user['client_id'] !== null ? (int)$user['client_id'] : null;

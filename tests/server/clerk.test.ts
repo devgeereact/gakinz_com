@@ -104,3 +104,63 @@ describe("Clerk sign-in", () => {
     expect((await me(legacy)).status).toBe(200)
   })
 })
+
+// K-121: Clerk must not stand in for this app's two-factor (the K-027 rule for every other sign-in).
+describe("Clerk sign-in and app two-factor", () => {
+  const SECRET = "JBSWY3DPEHPK3PXP" // synthetic
+  beforeEach(() => {
+    resetDb()
+    seedJwks()
+    createUser({ email: "staff@example.test", role: "super_admin" })
+    sql(`UPDATE users SET totp_enabled = 1, totp_secret = ${q(SECRET)} WHERE email = ${q("staff@example.test")}`)
+  })
+
+  it("refuses an account with two-factor on when Clerk verified no second factor", async () => {
+    const r = await me(token({ fva: [0, -1] }))
+    expect(r.status).toBe(403)
+    expect(r.json.error).toMatch(/two-factor/i)
+  })
+
+  it("refuses it when the token carries no factor ages at all", async () => {
+    expect((await me(token())).status).toBe(403)
+  })
+
+  it("refuses it on the linked-row path as well", async () => {
+    sql(`UPDATE users SET clerk_user_id = 'user_abc' WHERE email = ${q("staff@example.test")}`)
+    expect((await me(token({ fva: [0, -1] }))).status).toBe(403)
+  })
+
+  it("accepts it when Clerk verified a second factor", async () => {
+    const r = await me(token({ fva: [0, 3] }))
+    expect(r.status).toBe(200)
+    expect(r.json.user?.role).toBe("super_admin")
+  })
+
+  it("still signs in on a database without the two-factor column", async () => {
+    sql("ALTER TABLE users DROP COLUMN totp_last_step, DROP COLUMN totp_recovery, DROP COLUMN totp_enabled")
+    try {
+      expect((await me(token({ fva: [0, -1] }))).status).toBe(200)
+    } finally {
+      // Put the columns back exactly as schema.sql has them: resetDb() only truncates.
+      sql("ALTER TABLE users ADD COLUMN totp_enabled TINYINT(1) NOT NULL DEFAULT 0 AFTER totp_secret, ADD COLUMN totp_recovery VARCHAR(1000) DEFAULT NULL AFTER totp_enabled, ADD COLUMN totp_last_step BIGINT NULL DEFAULT NULL AFTER totp_recovery")
+    }
+  })
+
+  it("leaves accounts without app two-factor as they were", async () => {
+    sql(`UPDATE users SET totp_enabled = 0 WHERE email = ${q("staff@example.test")}`)
+    expect((await me(token({ fva: [0, -1] }))).status).toBe(200)
+  })
+})
+
+describe("Clerk session status", () => {
+  beforeEach(() => {
+    resetDb()
+    seedJwks()
+  })
+
+  it("refuses a pending session (sign-in tasks not finished)", async () => {
+    createUser({ email: "staff@example.test", role: "admin" })
+    expect((await me(token({ sts: "pending" }))).status).toBe(401)
+    expect((await me(token({ sts: "active" }))).status).toBe(200)
+  })
+})

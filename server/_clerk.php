@@ -189,8 +189,22 @@ function gk_clerk_verifier(): GkClerkJwt {
  * sign-in. Null when the person is not approved. Pass only claims from GkClerkJwt::verify().
  * Suspended users are returned as they are: require_auth() answers 403 for them, as for any session.
  */
-function gk_clerk_resolve_user(mysqli $conn, array $claims): ?array {
+/** The users columns to read. totp_enabled only where the column exists, so a database without it still signs in. */
+function gk_clerk_user_cols(mysqli $conn): string {
+  static $cols = null;
+  if ($cols !== null) return $cols;
   $cols = 'id, name, email, role, client_id, status';
+  try {
+    $r = @$conn->query("SHOW COLUMNS FROM users LIKE 'totp_enabled'");
+    if ($r && $r->num_rows === 1) $cols .= ', totp_enabled';
+  } catch (Throwable $e) {
+    // Leave the column out; the two-factor gate then has nothing to enforce.
+  }
+  return $cols;
+}
+
+function gk_clerk_resolve_user(mysqli $conn, array $claims): ?array {
+  $cols = gk_clerk_user_cols($conn);
   $sub = (string) ($claims['sub'] ?? '');
   if ($sub === '' || strlen($sub) > 64) return null;
   $st = $conn->prepare("SELECT $cols FROM users WHERE clerk_user_id = ? AND deleted_at IS NULL LIMIT 1");
@@ -212,9 +226,28 @@ function gk_clerk_resolve_user(mysqli $conn, array $claims): ?array {
   return $st->get_result()->fetch_assoc() ?: null;
 }
 
-/** Bearer JWT to user row, or null. Never throws. */
+/**
+ * True when Clerk verified a second factor for this session: `fva` is [first, second] factor
+ * ages in minutes, and the second is -1 when none was verified (Clerk session token v2).
+ */
+function gk_clerk_second_factor_verified(array $claims): bool {
+  $fva = $claims['fva'] ?? null;
+  return is_array($fva) && isset($fva[1]) && is_int($fva[1]) && $fva[1] >= 0;
+}
+
+/**
+ * Bearer JWT to user row, or null. Never throws. A pending session (Clerk sign-in tasks not
+ * finished) gets nothing. An account with this app's two-factor on is accepted only when Clerk
+ * itself verified a second factor; otherwise the row comes back with `needs_second_factor`, and
+ * require_auth() answers 403 (K-121, the K-027 rule every other sign-in path follows).
+ */
 function gk_clerk_user_from_token(mysqli $conn, string $tok): ?array {
   if (!gk_clerk_configured()) return null;
   try { $claims = gk_clerk_verifier()->verify($tok); } catch (Throwable $e) { return null; }
-  return gk_clerk_resolve_user($conn, $claims);
+  if (($claims['sts'] ?? 'active') !== 'active') return null;
+  $user = gk_clerk_resolve_user($conn, $claims);
+  if (!$user) return null;
+  $user['needs_second_factor'] = (int) ($user['totp_enabled'] ?? 0) === 1 && !gk_clerk_second_factor_verified($claims);
+  unset($user['totp_enabled']);
+  return $user;
 }
