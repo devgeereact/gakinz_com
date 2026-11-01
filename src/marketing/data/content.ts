@@ -274,11 +274,7 @@ export function mergeCopy(p: PublishedSections | null | undefined): SiteCopy {
 }
 
 /** Loader for published sections; null when the endpoint is unavailable. Replaceable in tests. */
-let loader: (() => Promise<PublishedSections | null>) | null = () =>
-  siteContent.get().then((r) => (r.ok ? (r.data as PublishedSections) : null))
-export function setSiteCopyLoader(fn: () => Promise<PublishedSections | null>) {
-  loader = fn
-}
+const loader = (): Promise<PublishedSections | null> => siteContent.get().then((r) => (r.ok ? (r.data as PublishedSections) : null))
 
 let cache: SiteCopy | null = null
 let pending: Promise<SiteCopy> | null = null
@@ -286,7 +282,7 @@ let pending: Promise<SiteCopy> | null = null
 function load(): Promise<SiteCopy> {
   if (cache) return Promise.resolve(cache)
   if (!pending) {
-    pending = (loader ? loader().catch(() => null) : Promise.resolve(null)).then((p) => (cache = mergeCopy(p)))
+    pending = loader().catch(() => null).then((p) => (cache = mergeCopy(p)))
   }
   return pending
 }

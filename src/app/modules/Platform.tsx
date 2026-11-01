@@ -530,7 +530,7 @@ const INTEGRATIONS: { key: keyof IntegrationStatus; label: string; note: string 
   { key: "twilio", label: "Twilio (SMS)", note: "SMS sends from Comms" },
   { key: "openrouter", label: "OpenRouter (AI)", note: "AI assists, briefs, drafts" },
   { key: "google", label: "Google SSO", note: "Continue-with-Google sign-in" },
-  { key: "openweather", label: "OpenWeather", note: "Dashboard weather pill" },
+  { key: "openweather", label: "OpenWeather", note: "Not used by the interface since the weather pill was retired (D-046)" },
   { key: "cron", label: "Cron runner", note: "Scheduled chase / billing / uptime / digest" },
   { key: "reports", label: "Scheduled reports", note: "Weekly digest recipients" },
   { key: "paypal", label: "PayPal", note: "Invoice checkout via PayPal" },

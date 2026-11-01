@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { work as workApi, type ApiResult } from "@/lib/api"
-import { resolveList, resolveOne } from "./cmsResult"
+import { resolveList } from "./cmsResult"
 import { seedFromFallback } from "./seed"
 
 /**
@@ -46,14 +46,6 @@ export const KIND_LABELS: Record<WorkKind, { name: string; rows: [string, string
   writing: { name: "Writing", rows: ["Argument", "Written", "Status"] },
 }
 
-/**
- * Which of the two chromatics a record's spine takes.
- *
- * Navy marks a record whose material is settled. Red oxide marks one still
- * waiting for real material. The convention carries meaning and must not be
- * used decoratively — see the approved direction.
- */
-export type Spine = "set" | "to-come"
 
 // ── Record shape ────────────────────────────────────────────────────────────
 
@@ -94,10 +86,6 @@ export type WorkRecord = {
 
 export type HeroShot = { src: string; alt: string }
 
-/** A record is settled when every one of its three rows has real content. */
-export function spineFor(r: WorkRecord): Spine {
-  return r.rows.every((v) => v !== null && v !== "") && r.awaiting === null ? "set" : "to-come"
-}
 
 // ── Static fallback ─────────────────────────────────────────────────────────
 
@@ -272,32 +260,4 @@ export function useWork() {
   }, [])
 
   return { records, loading, fromCms }
-}
-
-// One record by slug. A 404 is a real not-found; the static record with that
-// slug is used only when the request fails. Keyed by slug, so a previous record
-// never shows while the next one loads.
-export function useWorkRecord(slug: string | undefined) {
-  const [result, setResult] = useState<{ slug: string; record: WorkRecord | null } | null>(() =>
-    slug && seedFromFallback() ? { slug, record: fallbackWork.find((r) => r.slug === slug) ?? null } : null,
-  )
-
-  useEffect(() => {
-    if (!slug) return
-    let alive = true
-    workApi
-      .get(slug)
-      .catch(() => null)
-      .then((res) => {
-        if (!alive) return
-        const fallback = fallbackWork.find((r) => r.slug === slug) ?? null
-        setResult({ slug, record: resolveOne(res as ApiResult<ApiWork | null> | null, fromApi, fallback) })
-      })
-    return () => {
-      alive = false
-    }
-  }, [slug])
-
-  const current = slug && result?.slug === slug ? result : null
-  return { record: current ? current.record : null, loading: Boolean(slug) && !current }
 }

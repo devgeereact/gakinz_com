@@ -59,7 +59,7 @@ define('CLERK_ISSUER', 'https://clerk.example.com');
 define('CLERK_AUTHORIZED_PARTIES', ['https://gakinz.com', 'https://local.gakinz.com']);
 
 // ── Optional integrations ────────────────────────────────────────────────────
-define('OPENWEATHER_API_KEY', '');   // read by weather.php (CMS header widget); '' hides the widget
+define('OPENWEATHER_API_KEY', '');   // read by weather.php; no screen calls it since 2026-11-01
 define('OPENWEATHER_UNITS', 'metric'); // 'metric' (°C) or 'imperial' (°F)
 
 // ── Seed super-admin ── read by auth.php (only on an EMPTY users table) ───────

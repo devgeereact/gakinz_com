@@ -149,7 +149,7 @@
      `.gk-public` survives for ProposalView and the client portal welcome
      card, which still set it. */
   .gk-public {
-    /* D-037: the reference palette (docs/DESIGN-REFERENCE-MASTERCARD.md)
+    /* D-037: the reference palette (retired reference: git show ee1281f:docs/DESIGN-REFERENCE-MASTERCARD.md)
        under the token names the pages already use. Ratios are against canvas
        cream. Every text pairing clears WCAG 2.2 AA at the reference hex, so
        no hue had to be darkened. Signal orange is the one that would fail as

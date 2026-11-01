@@ -1498,22 +1498,6 @@ export const booking = {
   url: () => api.get<{ url: string }>("/book.php"),
 }
 
-// Weather (CMS dashboard widget). Server proxies OpenWeather; key stays server-side.
-export type Weather = {
-  city: string
-  country: string
-  temp: number | null
-  feels_like: number | null
-  description: string
-  icon: string
-  humidity: number | null
-  wind: number | null
-  units: string
-  updated: string
-}
-export const weather = {
-  current: (city = "London") => api.get<Weather>(`/weather.php?city=${encodeURIComponent(city)}`),
-}
 
 // Mailbox (GAkinzOS). SMTP send + IMAP inbox via mail.php. Senior staff only.
 export type MailStatus = { smtp: boolean; imap: boolean; imap_ext: boolean }
