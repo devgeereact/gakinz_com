@@ -37,7 +37,7 @@ export default function AiAssist({ task, title, input, system, label = "AI draft
     const res = await ai.run(task, input, system)
     setLoading(false)
     if (res.ok) setText(res.data.text)
-    else toast.error(res.error || "AI is not available. Add an OpenRouter key on the server.")
+    else toast.error(res.error || "AI is not available. Add an Anthropic or OpenRouter key on the server.")
   }
 
   const openAndRun = () => {

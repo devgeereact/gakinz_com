@@ -27,6 +27,7 @@ export const WEBHOOK_SECRET = "whsec_synthetic_test_only"
 export const WORK_DIR = path.join(os.tmpdir(), `gakinz-server-test-${DB_NAME}`)
 /** The fake provider appends every request it receives to this file. */
 export const PROVIDER_LOG = path.join(WORK_DIR, "provider-requests.jsonl")
+export const AI_MODE = path.join(WORK_DIR, "ai-mode.json")
 
 export function assertSafeTarget(): void {
   if (!["localhost", "127.0.0.1"].includes(DB_HOST)) {

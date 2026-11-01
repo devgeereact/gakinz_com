@@ -86,7 +86,7 @@ export default function Content() {
     const input = JSON.stringify({ topic: topic.trim(), audience: audience.trim() || "small businesses", tone, goal, platforms: selected })
     const res = await ai.run("content_hub", input, SYSTEM)
     setGenerating(false)
-    if (!res.ok) return toast.error(res.error || "AI is unavailable. Check the OpenRouter key on the server.")
+    if (!res.ok) return toast.error(res.error || "AI is unavailable. Check the Anthropic or OpenRouter key on the server.")
     try {
       const parsed = parseAI(res.data.text)
       if (!parsed.platforms || Object.keys(parsed.platforms).length === 0) throw new Error("empty")

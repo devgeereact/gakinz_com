@@ -15,7 +15,7 @@ import net from "node:net"
 import path from "node:path"
 import {
   assertSafeTarget, BASE, DB_HOST, DB_NAME, DB_PASS, DB_PORT, DB_USER, PHP_PORT, PROVIDER_BASE,
-  PROVIDER_LOG, PROVIDER_PORT, STRIPE_SECRET, WEBHOOK_SECRET, WORK_DIR,
+  AI_MODE, PROVIDER_LOG, PROVIDER_PORT, STRIPE_SECRET, WEBHOOK_SECRET, WORK_DIR,
 } from "./env"
 import { mysqlArgs } from "./helpers"
 
@@ -37,7 +37,6 @@ define('DB_HOST', ${phpString(host)});
 define('DB_NAME', ${phpString(DB_NAME)});
 define('DB_USER', ${phpString(DB_USER)});
 define('DB_PASS', ${phpString(DB_PASS)});
-define('OPENROUTER_KEY', '');
 define('OR_MODEL', '');
 define('OR_SITE', '${BASE}');
 define('ALLOWED_ORIGINS', ['${BASE}']);
@@ -76,6 +75,12 @@ $CLIENT_ANONYMISE_ENABLED = false;
 // an invalid one and a cron key), and removes it afterwards.
 $__gk_over = @json_decode((string)@file_get_contents(__DIR__ . '/overrides.json'), true);
 if (is_array($__gk_over)) foreach ($__gk_over as $__k => $__v) $GLOBALS[$__k] = $__v;
+// AI keys (_ai.php): synthetic, pointed at the fake provider. A test may blank one
+// through overrides.json (TEST_ANTHROPIC_KEY, TEST_OPENROUTER_KEY).
+define('ANTHROPIC_KEY', (string)($GLOBALS['TEST_ANTHROPIC_KEY'] ?? 'test-anthropic-key'));
+define('OPENROUTER_KEY', (string)($GLOBALS['TEST_OPENROUTER_KEY'] ?? 'test-openrouter-key'));
+$AI_ANTHROPIC_BASE = '${PROVIDER_BASE}';
+$AI_OPENROUTER_BASE = '${PROVIDER_BASE}';
 $conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, ${Number(DB_PORT) || 3306});
 if ($conn->connect_errno) { http_response_code(500); echo json_encode(['error' => 'Test database connection failed']); exit; }
 $conn->set_charset('utf8mb4');
@@ -84,14 +89,35 @@ $OR_MODEL   = OR_MODEL;
 `
 }
 
+// Stand-ins for the Anthropic Messages API and OpenRouter. ai.test.ts picks each
+// one's answer by writing AI_MODE ({ anthropic, openrouter }: ok | error | refusal).
+function aiReply(url: string): { status: number; body: unknown } | null {
+  const which = url.startsWith("/v1/messages") ? "anthropic" : url.startsWith("/v1/chat/completions") ? "openrouter" : null
+  if (!which) return null
+  let mode = "ok"
+  try { mode = JSON.parse(fs.readFileSync(AI_MODE, "utf8"))[which] ?? "ok" } catch { /* default ok */ }
+  if (mode === "error") return { status: 529, body: { type: "error", error: { type: "overloaded_error", message: "Overloaded" } } }
+  if (which === "anthropic") {
+    if (mode === "refusal") return { status: 200, body: { stop_reason: "refusal", stop_details: { type: "refusal", category: null }, content: [] } }
+    return { status: 200, body: { stop_reason: "end_turn", content: [{ type: "thinking", thinking: "" }, { type: "text", text: "Draft from Anthropic." }] } }
+  }
+  return { status: 200, body: { choices: [{ message: { content: "Draft from OpenRouter." } }] } }
+}
+
 function startProvider(): http.Server {
   // Minimal stand-in for Stripe's Checkout Session endpoint. Records requests.
   const server = http.createServer((req, res) => {
     let body = ""
     req.on("data", (c) => (body += c))
     req.on("end", () => {
-      fs.appendFileSync(PROVIDER_LOG, JSON.stringify({ path: req.url, body }) + "\n")
+      fs.appendFileSync(PROVIDER_LOG, JSON.stringify({ path: req.url, headers: req.headers, body }) + "\n")
       res.setHeader("Content-Type", "application/json")
+      const ai = aiReply(req.url ?? "")
+      if (ai) {
+        res.statusCode = ai.status
+        res.end(JSON.stringify(ai.body))
+        return
+      }
       res.end(JSON.stringify({ id: "cs_test_synthetic", url: "https://checkout.example.test/cs_test_synthetic" }))
     })
   })

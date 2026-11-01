@@ -127,7 +127,7 @@ export function stripeSignature(payload: string, at = Math.floor(Date.now() / 10
   return `t=${at},v1=${v1}`
 }
 
-export function providerRequests(): Array<{ path: string; body: string }> {
+export function providerRequests(): Array<{ path: string; headers: Record<string, string>; body: string }> {
   if (!fs.existsSync(PROVIDER_LOG)) return []
   return fs.readFileSync(PROVIDER_LOG, "utf8").split("\n").filter(Boolean).map((l) => JSON.parse(l))
 }

@@ -6,7 +6,7 @@
  * NEVER commit config.php. It is gitignored and lives only on the server.
  *
  * Used by every endpoint via _bootstrap.php. Provides:
- *   $conn (mysqli) + DB_*, OPENROUTER_*, OR_*, ALLOWED_ORIGINS constants.
+ *   $conn (mysqli) + DB_*, ANTHROPIC_*, OPENROUTER_*, OR_*, ALLOWED_ORIGINS constants.
  */
 
 // ── Error display ─────────────────────────────────────────────────────────────
@@ -29,15 +29,16 @@ define('DB_NAME', 'REPLACE_db_name');   // e.g. <cpanel_user>_<database>
 define('DB_USER', 'REPLACE_db_user');   // usually the same as DB_NAME
 define('DB_PASS', 'REPLACE_db_password');
 
-// ── OpenRouter (server-side AI — read only by ai.php; never sent to the browser)
-define('OPENROUTER_KEY', 'REPLACE_openrouter_key'); // sk-or-v1-…  ('' disables AI cleanly)
-define('OR_MODEL', 'openai/gpt-oss-120b:free');     // model ai.php sends
+// ── AI (server-side only — read by _ai.php; never sent to the browser) ─────────
+// Anthropic is tried first; OpenRouter answers when Anthropic has no key, errors or
+// declines. Set either or both with scripts/set-server-key.sh (hidden prompt).
+// A key left as '' or REPLACE_… counts as not set; with neither set, AI is hidden.
+define('ANTHROPIC_KEY', 'REPLACE_anthropic_key');   // sk-ant-…
+define('ANTHROPIC_MODEL', 'claude-opus-5-5');       // optional; this is the default
+define('ANTHROPIC_EFFORT', 'low');                  // optional: low | medium | high (latency vs depth)
+define('OPENROUTER_KEY', 'REPLACE_openrouter_key'); // sk-or-v1-…
+define('OR_MODEL', 'openrouter/auto');              // a paid model; free (:free) models are rate-limited and withdrawn without notice
 define('OR_SITE', 'https://gakinz.com');            // sent as HTTP-Referer to OpenRouter
-
-// Alternative models, swap into OR_MODEL as needed (openrouter.ai/models):
-//   'google/gemma-4-31b-it:free'
-//   'qwen/qwen3-next-80b-a3b-instruct:free'
-//   'anthropic/claude-sonnet-4.6'
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
 // In dev the Vite app runs on localhost:5102 (project block 10 in the workspace

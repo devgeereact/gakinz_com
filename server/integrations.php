@@ -4,9 +4,10 @@
  * Reports which external integrations are configured on the server. Returns
  * BOOLEANS ONLY — never the keys/secrets themselves.
  *
- *   GET /integrations.php → { smtp, imap, openrouter, stripe, twilio, google, openweather, cron, reports }
+ *   GET /integrations.php → { smtp, imap, anthropic, openrouter, stripe, twilio, google, openweather, cron, reports }
  */
 require __DIR__ . '/_bootstrap.php';
+require __DIR__ . '/_ai.php';
 
 const ADMINS = ['super_admin', 'admin'];
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') fail('Method not allowed.', 405);
@@ -17,7 +18,9 @@ $has = fn($k) => isset($GLOBALS[$k]) && trim((string)$GLOBALS[$k]) !== '';
 ok([
   'smtp'       => $has('SMTP_HOST') && $has('SMTP_USER'),
   'imap'       => $has('IMAP_HOST') && function_exists('imap_open'),
-  'openrouter' => $has('OR_API_KEY') || (defined('OPENROUTER_KEY') && OPENROUTER_KEY !== ''),
+  // A placeholder key (REPLACE_…) counts as not configured.
+  'anthropic'  => in_array('anthropic', ai_providers(), true),
+  'openrouter' => in_array('openrouter', ai_providers(), true),
   'stripe'     => $has('STRIPE_SECRET'),
   'twilio'     => $has('TWILIO_SID') && $has('TWILIO_TOKEN'),
   'google'     => $has('GOOGLE_CLIENT_ID') && $has('GOOGLE_CLIENT_SECRET'),

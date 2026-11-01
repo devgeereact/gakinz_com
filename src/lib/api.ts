@@ -1013,7 +1013,7 @@ export const comms = {
 // reaches the browser. Returns generated text for the given task/input.
 export const ai = {
   run: (task: string, input: string, system?: string) =>
-    api.post<{ text: string }>("/ai.php", { task, input, system }),
+    api.post<{ text: string; provider: "anthropic" | "openrouter" }>("/ai.php", { task, input, system }),
 }
 
 // Users & roles (§6.11 Platform). Admin only.
@@ -1451,6 +1451,7 @@ export const careplan = {
 export type IntegrationStatus = {
   smtp: boolean
   imap: boolean
+  anthropic: boolean
   openrouter: boolean
   stripe: boolean
   twilio: boolean
