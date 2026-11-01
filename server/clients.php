@@ -183,6 +183,8 @@ if ($method === 'POST' && $action === 'create') {
   if ($company === '') fail('A company name is required.');
   $contact = str_field($in, 'contact_name', 200);
   $email   = str_field($in, 'email', 200);
+  // One plain address or none: it is sent to by the invoice chase and comms (K-120).
+  if ($email !== '' && (preg_match('/[\r\n<>]/', $email) || !filter_var($email, FILTER_VALIDATE_EMAIL))) fail('Enter one valid email address, or leave it empty.');
   $phone   = str_field($in, 'phone', 60);
   $tag     = str_field($in, 'tag', 30);
   $notes   = str_field($in, 'notes', 5000);
@@ -206,6 +208,8 @@ if ($method === 'POST' && $action === 'update') {
   if ($company === '') fail('A company name is required.');
   $contact = str_field($in, 'contact_name', 200);
   $email   = str_field($in, 'email', 200);
+  // One plain address or none: it is sent to by the invoice chase and comms (K-120).
+  if ($email !== '' && (preg_match('/[\r\n<>]/', $email) || !filter_var($email, FILTER_VALIDATE_EMAIL))) fail('Enter one valid email address, or leave it empty.');
   $phone   = str_field($in, 'phone', 60);
   $tag     = str_field($in, 'tag', 30);
   $notes   = str_field($in, 'notes', 5000);

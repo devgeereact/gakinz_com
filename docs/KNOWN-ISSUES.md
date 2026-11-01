@@ -126,6 +126,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-117 | The live sign-in page shows "Continue with Google", while D-052 records Google as switched off | Low | **Resolved 2026-10-31 by owner decision: Google stays on.** D-052 amended. Whether production uses the owner's own Google OAuth credentials is UNVERIFIED |
 | K-118 | In the icon rail (768 to 1023px) 26 sidebar links and Sign out had no accessible name | Medium | **Fixed 2026-10-31** on `feat/design-finalisation`, deployed 2026-10-31 (`a907824`) |
 | K-119 | AI features stopped working: one provider, on a free model | Medium | **Fixed 2026-11-01** on `chore/cleanup-2026-11-01` (D-054), not released; live cause UNVERIFIED |
+| K-120 | A client email with a line break reached the SMTP `RCPT TO` command (invoice chase and the cron chase) | Medium | **Fixed 2026-11-01** on `golive/2026-11`, not released |
 | K-116 | `vite preview` inherits the dev proxy and sends `.php` calls to the live API | Medium | **Fixed 2026-10-31** on `feat/design-finalisation` (`preview.proxy: {}`), merged 2026-10-31 (`a907824`) |
 | K-115 | Header links over a light project colour fail contrast (Harni's pink) | Medium | **Fixed 2026-10-31** on `feat/design-finalisation`, deployed 2026-10-31 (`a907824`). Cause corrected: the link tint and opacity, not `onColour` |
 | K-114 | Accessible names that do not match visible text (WCAG 2.5.3) | Low | **Fixed 2026-10-31** on `feat/design-finalisation`, deployed 2026-10-31 (`a907824`): logo links, CMS sidebar link, search, account button, Files drop zone |
@@ -2267,4 +2268,23 @@ was still the `REPLACE_…` placeholder. The live cause is UNVERIFIED: the live 
 no live AI call was made. Fix (D-054): Anthropic first, OpenRouter as the backup, a placeholder key counted as
 not set, and `scripts/set-server-key.sh` to save the keys. Verified with `tests/server/ai.test.ts` (9 tests,
 both providers stubbed). NOT TESTED: a real call to either provider.
+
+## K-120 · A client email with a line break reached the SMTP `RCPT TO` command
+
+**Found and fixed:** 2026-11-01 (security audit, `golive/2026-11`, not released). **Severity:** Medium.
+
+`clients.php` stored the email with `str_field` alone, which keeps a line break inside the value, and an
+editor may create and update clients. The invoice chase (`invoices.php`, manager and above) and the
+scheduled chase (`cron.php`, `job=chase` and `job=all`) sent to that stored value after only an `empty()`
+check, and `_smtp.php` wrote each recipient raw into `RCPT TO:<…>` and the `To:` header, trusting callers
+to validate. A stored value such as `a@x>` + CRLF + `RCPT TO:<b@y` therefore added commands to the
+studio's authenticated SMTP session. Whether the live mail server would have delivered an injected message
+is UNVERIFIED (it depends on its pipelining and synchronisation checks); no live send was made.
+
+Fix: `gk_send_email` refuses any to or cc address that fails `FILTER_VALIDATE_EMAIL` or holds CR, LF, `<`
+or `>`, before it connects (`gk_valid_recipient`), which covers every caller; `clients.php` create and
+update refuse such an email with 400 (empty stays allowed). Verified with `tests/server/smtp-recipients.test.ts`
+(5 tests): written first and seen failing (201, 200 and "Connect failed"), then passing. Behaviour change:
+a client email holding two addresses (`a@x, b@y`) is now refused on save. NOT TESTED: the real mail server;
+existing rows were not read (owner check: `SELECT id FROM clients WHERE email REGEXP '[\r\n<>,;]'`).
 

@@ -192,7 +192,7 @@ redeem into "That sign-in link is invalid or expired.". Links live in `magic_lin
 | Endpoint | Actions | Roles |
 |---|---|---|
 | `leads.php` | GET list, `status`, `meta` | STAFF |
-| `clients.php` | GET list, GET `?id=`, `create`, `update`, `convert` | STAFF |
+| `clients.php` | GET list, GET `?id=`, `create`, `update`, `convert` | STAFF. `create` and `update` answer 400 unless `email` is empty or one valid address (K-120) |
 | `bookings.php` | Staff: GET list (`?enquiry_id=` or `?client_id=` to filter), GET `?action=ics&id=`, `create`, `update`, `reschedule`, `status`, `notify`. Client: `request`, GET `?action=mine`, GET `?action=mine_ics&id=` | STAFF (as `leads.php`); every branch, reads included. The `client` role on its own three routes only (2026-10-18) |
 | `proposals.php` | GET list, GET `?id=`, `create`, `status`, `accept`, `share`, `unshare` | STAFF |
 | `contracts.php` | GET list, GET `?id=`, `create`, `status`, `sign`, `delete` | STAFF |

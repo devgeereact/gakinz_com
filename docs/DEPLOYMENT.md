@@ -142,8 +142,9 @@ private `config.php`. A change that needs one of them records it here in the sam
 (`AGENTS.md`, "Keeping documents current"; `npm run docs:check` enforces it in CI).
 
 **Pending as at 2026-11-01:** the AI keys (D-054): run `scripts/set-server-key.sh ANTHROPIC_KEY`, then
-`scripts/set-server-key.sh OPENROUTER_KEY` (`_ai.php` is live since `bde12c7`). Nothing else is
-pending. SQL 1 to 19 ran on 2026-10-21 and SQL 20 on 2026-10-30; the
+`scripts/set-server-key.sh OPENROUTER_KEY` (`_ai.php` is live since `bde12c7`). From `golive/2026-11`
+(not merged): `_smtp.php` and `clients.php` (K-120) need nothing by hand and go up with the release. Nothing
+else is pending. SQL 1 to 19 ran on 2026-10-21 and SQL 20 on 2026-10-30; the
 current `server/.htaccess` went up on 2026-10-21; the Clerk keys were added on 2026-10-30. Since then
 `server/*.php` goes up with every release (section 1).
 

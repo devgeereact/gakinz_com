@@ -15,8 +15,14 @@
  *     'references'  => '<id@host> ...',                  // optional, threading
  *   ]) → ['ok' => bool, 'error' => string, 'message_id' => string]
  *
- * Addresses are assumed already-validated by the caller (FILTER_VALIDATE_EMAIL).
+ * Every to and cc address is checked here as well (gk_valid_recipient): a value with
+ * a line break would otherwise add commands to the SMTP session (K-120).
  */
+
+/** One plain address: FILTER_VALIDATE_EMAIL, and no CR, LF or angle bracket. */
+function gk_valid_recipient(string $addr): bool {
+  return !preg_match('/[\r\n<>]/', $addr) && filter_var($addr, FILTER_VALIDATE_EMAIL) !== false;
+}
 
 /**
  * Low-level transport. Returns [bool ok, string error].
@@ -110,6 +116,9 @@ function gk_send_email(array $opts): array {
     : array_filter(array_map('trim', preg_split('/[,;]+/', (string)($opts['cc'] ?? ''))));
   $toList = array_values($toList);
   $ccList = array_values($ccList);
+  foreach (array_merge($toList, $ccList) as $addr) {
+    if (!gk_valid_recipient((string)$addr)) return ['ok' => false, 'error' => 'Invalid recipient address.', 'message_id' => ''];
+  }
 
   // Strip CR/LF from the subject too — it is base64-wrapped in the SMTP path, but
   // the mail() fallback (below) passes it raw, where a newline would inject headers.
