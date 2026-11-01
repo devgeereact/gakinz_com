@@ -1,6 +1,6 @@
 import { Link, useParams } from "react-router-dom"
 import Seo from "@/marketing/components/Seo"
-import { SITE_URL } from "@/marketing/components/seo-schema"
+import { breadcrumbSchema, OG_IMAGE, SITE_NAME, SITE_URL } from "@/marketing/components/seo-schema"
 import { Crumbs, CtaBand, IPrev } from "@/marketing/components/site-ui"
 import { delay } from "@/marketing/components/site-helpers"
 import { useMarketingPost } from "@/marketing/data/blog"
@@ -86,7 +86,10 @@ export default function ResourceDetail() {
     mainEntityOfPage: { "@type": "WebPage", "@id": url },
     ...(post.date ? { datePublished: post.date } : {}),
     ...(post.excerpt ? { description: post.excerpt } : {}),
-    author: { "@id": `${SITE_URL}/#person` },
+    image: OG_IMAGE,
+    // Named in full: the Person record itself is only on the home page.
+    author: { "@type": "Person", "@id": `${SITE_URL}/#person`, name: SITE_NAME, url: SITE_URL },
+    publisher: { "@type": "Person", "@id": `${SITE_URL}/#person`, name: SITE_NAME, url: SITE_URL },
   }
 
   return (
@@ -96,7 +99,7 @@ export default function ResourceDetail() {
         description={post.excerpt || `${post.title}. A piece on designing and building websites.`}
         path={`/resources/${post.slug}`}
         type="article"
-        jsonLd={jsonLd}
+        jsonLd={[jsonLd, breadcrumbSchema([["/resources", "Writing"], [`/resources/${post.slug}`, post.title]])]}
       />
 
       <article>

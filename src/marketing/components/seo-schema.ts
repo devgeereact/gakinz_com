@@ -59,6 +59,67 @@ export function personSchema(opts: { sameAs?: string[]; jobTitle: string; descri
   }
 }
 
+type ServiceRef = { slug: string; title: string; summary: string }
+
+const UK = { "@type": "Country", name: "United Kingdom" }
+
+/**
+ * The business behind the site, as a service-area business. Only what the site
+ * itself states: London at town level, the public email, and the services it
+ * lists. No street address, telephone or company number is claimed until a real
+ * one exists (site.ts).
+ */
+export function businessSchema(opts: { description: string; email: string; services: ServiceRef[] }) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "ProfessionalService",
+    "@id": `${SITE_URL}/#business`,
+    name: SITE_NAME,
+    url: SITE_URL,
+    image: OG_IMAGE,
+    description: opts.description,
+    email: opts.email,
+    founder: { "@id": `${SITE_URL}/#person` },
+    address: { "@type": "PostalAddress", addressLocality: "London", addressCountry: "GB" },
+    areaServed: UK,
+    hasOfferCatalog: {
+      "@type": "OfferCatalog",
+      name: "Services",
+      itemListElement: opts.services.map((s) => ({
+        "@type": "Offer",
+        itemOffered: { "@type": "Service", name: s.title, description: s.summary, url: `${SITE_URL}/services/${s.slug}` },
+      })),
+    },
+  }
+}
+
+/** One service page. The provider is referenced, not repeated. */
+export function serviceSchema(s: ServiceRef) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "Service",
+    name: s.title,
+    description: s.summary,
+    url: `${SITE_URL}/services/${s.slug}`,
+    provider: { "@id": `${SITE_URL}/#business` },
+    areaServed: UK,
+  }
+}
+
+/** The page's breadcrumb trail, Home first. Each step is [path, label]. */
+export function breadcrumbSchema(steps: [string, string][]) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [["/", "Home"] as [string, string], ...steps].map(([path, name], i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name,
+      item: `${SITE_URL}${path}`,
+    })),
+  }
+}
+
 export function websiteSchema() {
   return {
     "@context": "https://schema.org",

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react"
 import { Link } from "react-router-dom"
 import Seo from "@/marketing/components/Seo"
-import { personSchema, sameAsFrom, websiteSchema } from "@/marketing/components/seo-schema"
+import { businessSchema, personSchema, sameAsFrom, websiteSchema } from "@/marketing/components/seo-schema"
 import { CtaBand, Devices, IArrow, INext, IPause, IPlay, IPrev, LondonClock, WorkGrid } from "@/marketing/components/site-ui"
 import { useNavTone } from "@/marketing/components/site-helpers"
 import { kindName, onColour, selectedWork, useProjects, type Project } from "@/marketing/data/showcase"
@@ -214,6 +214,7 @@ export default function Home() {
         jsonLd={[
           personSchema({ jobTitle: `${site.role}, ${site.location}`, description: site.line, sameAs: sameAsFrom(copy.business.social) }),
           websiteSchema(),
+          businessSchema({ description: site.line, email: site.contact.email, services: copy.services }),
         ]}
       />
 

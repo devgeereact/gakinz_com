@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router-dom"
 import Seo from "@/marketing/components/Seo"
+import { breadcrumbSchema, serviceSchema } from "@/marketing/components/seo-schema"
 import { IArrow, PageHead, Ticks, WorkGrid } from "@/marketing/components/site-ui"
 import { useSiteCopy } from "@/marketing/data/content"
 import { useProjects } from "@/marketing/data/showcase"
@@ -32,7 +33,12 @@ export default function ServiceDetail() {
 
   return (
     <>
-      <Seo title={s.title} description={s.summary} path={`/services/${s.slug}`} />
+      <Seo
+        title={s.title}
+        description={s.summary}
+        path={`/services/${s.slug}`}
+        jsonLd={[serviceSchema(s), breadcrumbSchema([["/services", "Services"], [`/services/${s.slug}`, s.title]])]}
+      />
       <PageHead crumbs={[["/services", "Services"], [null, s.title]]} title={s.title} lede={s.hook} />
       <section className="sec wrap">
         <div className="two">

@@ -8,7 +8,8 @@
  * Pages marked noindex are left out by the caller.
  */
 
-export type SitemapEntry = { loc: string; lastmod: string }
+/** lastmod only where the page has a real date of its own (a post); otherwise omitted. */
+export type SitemapEntry = { loc: string; lastmod?: string }
 
 const escapeXml = (s: string) =>
   s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;")
@@ -19,12 +20,12 @@ export function buildSitemap(entries: SitemapEntry[]): string {
   const locs = new Set<string>()
   for (const e of entries) {
     if (!/^https:\/\/gakinz\.com\//.test(e.loc)) throw new Error(`sitemap: ${e.loc} is not an absolute https://gakinz.com URL`)
-    if (!ISO_DATE.test(e.lastmod)) throw new Error(`sitemap: ${e.loc} has lastmod "${e.lastmod}", expected YYYY-MM-DD`)
+    if (e.lastmod !== undefined && !ISO_DATE.test(e.lastmod)) throw new Error(`sitemap: ${e.loc} has lastmod "${e.lastmod}", expected YYYY-MM-DD`)
     if (locs.has(e.loc)) throw new Error(`sitemap: ${e.loc} is listed twice`)
     locs.add(e.loc)
   }
   const urls = entries.map(
-    (e) => `  <url>\n    <loc>${escapeXml(e.loc)}</loc>\n    <lastmod>${e.lastmod}</lastmod>\n  </url>`,
+    (e) => `  <url>\n    <loc>${escapeXml(e.loc)}</loc>\n${e.lastmod ? `    <lastmod>${e.lastmod}</lastmod>\n` : ""}  </url>`,
   )
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',

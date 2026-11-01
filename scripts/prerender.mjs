@@ -13,7 +13,8 @@
  * The build fails if any page's metadata is not its own (checkHeads: canonical,
  * og:url, social titles and descriptions) or if two indexable pages share a
  * title, description or canonical. The sitemap's <lastmod> is a post's own
- * date where it has one, and otherwise the day the build ran (UTC).
+ * date where it has one, and is left out otherwise (a build date on every page
+ * says everything changed on every release).
  *
  * Every page, the shell included, is checked for third-party code
  * (thirdPartyProblems): any script or frame from another origin, or any ad or
@@ -84,9 +85,8 @@ const problems = ssr.checkHeads(heads)
 if (problems.length) throw new Error(`prerender: page metadata is wrong:\n  ${problems.join("\n  ")}`)
 
 // public/sitemap.xml no longer exists, so this is the only sitemap that ships.
-const buildDate = new Date().toISOString().slice(0, 10)
 const indexable = heads.filter(({ head }) => ssr.isIndexable(head))
-const sitemap = ssr.buildSitemap(indexable.map(({ path, head }) => ({ loc: head.canonical, lastmod: ssr.contentDate(path) ?? buildDate })))
+const sitemap = ssr.buildSitemap(indexable.map(({ path, head }) => ({ loc: head.canonical, lastmod: ssr.contentDate(path) ?? undefined })))
 await writeFile(join(dist, "sitemap.xml"), sitemap)
 
 await rm(ssrDir, { recursive: true, force: true })

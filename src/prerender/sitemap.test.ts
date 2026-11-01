@@ -14,6 +14,14 @@ describe("buildSitemap", () => {
     expect(xml).toContain("<loc>https://gakinz.com/resources/a&amp;b</loc>\n    <lastmod>2026-05-12</lastmod>")
   })
 
+  it("leaves lastmod out when a page has no date of its own", () => {
+    // A build date on every page says every page changed on every release, which
+    // is the kind of lastmod a search engine learns to ignore.
+    const out = buildSitemap([{ loc: "https://gakinz.com/work" }])
+    expect(out).toContain("<url>\n    <loc>https://gakinz.com/work</loc>\n  </url>")
+    expect(out).not.toContain("<lastmod>")
+  })
+
   it("is well-formed XML", () => {
     // DOMParser is not in the node test environment, so check nesting by hand:
     // every element opened is closed in order, and no bare ampersand is left.

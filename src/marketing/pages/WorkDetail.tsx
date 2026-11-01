@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react"
 import { Link, useParams } from "react-router-dom"
 import Seo from "@/marketing/components/Seo"
+import { breadcrumbSchema } from "@/marketing/components/seo-schema"
 import { Crumbs, CtaBand, Devices, IArrow, Pill } from "@/marketing/components/site-ui"
 import { delay, useNavTone } from "@/marketing/components/site-helpers"
 import { kindName, onColour, useProjects } from "@/marketing/data/showcase"
@@ -21,7 +22,12 @@ export default function WorkDetail() {
 
   return (
     <>
-      <Seo title={p.name} description={p.line} path={`/work/${p.slug}`} />
+      <Seo
+        title={p.name}
+        description={p.line}
+        path={`/work/${p.slug}`}
+        jsonLd={breadcrumbSchema([["/work", "Work"], [`/work/${p.slug}`, p.name]])}
+      />
       <section className="case-hero" style={tone(p.colour)}>
         <div className="wrap">
           <Crumbs items={[["/work", "Work"], [null, p.name]]} />
