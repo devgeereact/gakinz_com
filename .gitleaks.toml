@@ -1,0 +1,18 @@
+# gitleaks: the default rules, plus the false positives read by hand on 2026-11-01.
+# Each is matched by its exact value, not by path, so a real secret pasted into the
+# same file would still be caught.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Public Clerk publishable key (release.json build step; VITE_* is public by design)"
+regexes = ['''pk_live_Y2xlcmsuZ2FraW56LmNvbSQ''']
+
+[[allowlists]]
+description = "Synthetic test fixtures: a repeated hex token, base32 TOTP test secrets, and setting names"
+regexes = [
+  '''^0123456789abcdef$''',
+  '''KRSXG5CTMVRXEZLU''',
+  '''JBSWY3DPEHPK3PXP''',
+  '''RETENTION_[A-Z_]+_MONTHS''',
+]
