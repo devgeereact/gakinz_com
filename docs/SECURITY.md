@@ -27,7 +27,7 @@ That is the main thing to check in review.
 
 | Element | Implementation |
 |---|---|
-| Password storage | `password_hash(..., PASSWORD_BCRYPT)`, verified with `password_verify` |
+| Password storage | `password_hash(..., PASSWORD_BCRYPT, GK_BCRYPT)` at cost 12 (`_bootstrap.php`), verified with `password_verify`; a hash at a lower cost is replaced at the next correct password sign-in (2026-11-01) |
 | Session token | `bin2hex(random_bytes(32))`, 64 hex characters, opaque. Since 2026-10-17 only a hash is stored (`token_hash()` in `_bootstrap.php`, the first 62 hex characters of SHA-256), for sessions, reset links and magic links; rows written raw before that still match until they expire (K-059) |
 | Transport | `Authorization: Bearer`, re-exposed by `server/.htaccess` because CGI strips it |
 | Lifetime | 30 days (`TOKEN_TTL_DAYS`) |
@@ -35,6 +35,7 @@ That is the main thing to check in review.
 | Reset tokens | 60 minutes (`RESET_TTL_MINUTES`) |
 | Two-factor codes | One use each: the accepted 30-second step is stored in `users.totp_last_step` and an equal or earlier step is refused, once SQL 12 has run (K-057) |
 | Magic links | 15 minutes (`MAGIC_TTL_MINUTES`), single use, claimed by a guarded `UPDATE`. `client` role only (`MAGIC_ROLES`), never for an account with two-factor on (K-027). Since 2026-10-19 the reference sign-in links of `client_access.php` share the `magic_links` table and its cap of 3 links per user in 15 minutes, so a reference link can also be redeemed at `auth.php?action=magic_consume`, under the same rules and still once only (K-100) |
+| Clerk sign-in | RS256 session token checked in `_clerk.php` (issuer, `azp`, `exp`, `nbf`, `sub`, key from the issuer's JWKS). Since 2026-11-01 a `pending` session is refused, and an account with app two-factor on is accepted only when the token shows a verified Clerk second factor (`fva[1] >= 0`), so Clerk never stands in for two-factor (K-027, K-121) |
 
 The token lives in browser storage and is read by `getStoredToken()` in `src/lib/api.ts`.
 It is not an `HttpOnly` cookie, so it is reachable by any script that runs on the origin.
@@ -386,10 +387,11 @@ that, any type was accepted and the generated `.htaccess` was the only defence.
 origin is reflected only on a match, and `Vary: Origin` is set. There is no wildcard and no
 pattern match.
 
-The tracked example lists `https://gakinz.com`, `https://www.gakinz.com` and
-`http://localhost:5102`. **Whether the live `config.php` matches is UNVERIFIED**, and it
-matters: local development calls the live API directly, so a mismatch appears as an opaque
-CORS failure rather than an error message.
+The tracked example lists `https://gakinz.com` and `https://www.gakinz.com` only (since 2026-11-01).
+Local development needs no entry: `npm run dev` proxies every `.php` call through Vite, so the browser
+sees same-origin requests. Whether the live private config still lists `http://localhost:5102` is
+UNVERIFIED; removing it if present is in `docs/DEPLOYMENT.md` section 5. With bearer tokens and no cookies, that entry only let
+a page on the owner's own machine read replies to requests it authorised itself.
 
 ## 9. Hardening at the web-server layer
 
@@ -398,8 +400,15 @@ CORS failure rather than an error message.
 and `error_log`, `.ftp-deploy-sync-state.json` and `.ftpquota`. Neither change is known to be
 uploaded. Since 2026-10-19 a request for a `.php` file that does not exist answers 404 rather
 than the SPA shell; the deny on existing includes still answers 403. Checked on a local Apache
-only; the host's LiteSpeed is NOT TESTED. `_bootstrap.php` sends `X-Content-Type-Options: nosniff`, `Referrer-Policy` and
-`X-Frame-Options: DENY`.
+only; the host's LiteSpeed is NOT TESTED. `_bootstrap.php` sends `X-Content-Type-Options: nosniff`, `Referrer-Policy`,
+`X-Frame-Options: DENY` and `Content-Security-Policy: default-src 'none'; frame-ancestors 'none'`, removes
+`X-Powered-By`, and marks every reply to a signed-in request `Cache-Control: no-store` (2026-11-01).
+
+Since 2026-11-01 (`golive/2026-11`, `.htaccess` not uploaded): HSTS for a year, COOP, an enforced CSP on the
+public pages with a Report-Only one on the app shell (K-033), `X-Powered-By` and `X-Turbo-Charged-By`
+removed, `ServerSignature Off`, a 404 for directory requests instead of the host's listing, and a deny for
+dotfiles, backups, `*.example` and `config.php.*`. Checked on a local Apache 2.4.67; LiteSpeed NOT TESTED.
+CI runs gitleaks over the full history and Semgrep on every push and pull request (`.github/workflows/ci.yml`).
 
 ## 10. Audit trail
 
@@ -416,8 +425,8 @@ The current list, with status, is `docs/KNOWN-ISSUES.md`; the 2026-09-04 audit i
 1. A live super-admin credential was published in an earlier `CLAUDE.md` and is in git
    history. The password was rotated on 2026-10-12 (owner-reported); session revocation is
    unconfirmed (K-001).
-2. The session token is readable by scripts on the origin, and there is no
-   Content-Security-Policy (K-033).
+2. The session token is readable by scripts on the origin; the CSP is enforced on the public
+   pages but only reported on the CMS shell until Clerk is seen under it (K-033).
 3. Every fix since 2026-09-22 (the `api.php` POST, the contact throttle, the upload allowlist,
    the include deny, the payment and sign-in defects) is in the repository only until the
    server set is uploaded (K-006, `docs/DEPLOYMENT.md` section 5).

@@ -2,25 +2,26 @@
 
 ## Outcome
 
-**2026-11-01, branch `golive/2026-11` (local only: not pushed, not deployed).** Owner asked: get ready for live.
+**2026-11-01 to 02, branch `golive/2026-11` (local only: not pushed, not deployed).** Owner asked: get ready for
+live, then "make the best call for me ... fix all".
 
-1. **Security audit** (security-audit skill, quick profile, source only): no confirmed Critical or High.
-   K-120 (SMTP command injection through a client email) fixed test-first. Leads for the owner: K-121
-   (Clerk skips app two-factor), K-123 (per-IP throttles vs the host's client-IP trust); K-122 (AI cap) and
-   K-124 (settings stub, Clerk cache folder) recorded. Details in `docs/AUDIT.md`.
-2. **SEO audit** (claude-seo, live site read-only): ProfessionalService, Service and BreadcrumbList schema;
-   sitemap `lastmod` only where real; one-year cache for hashed assets (`.htaccess`, hand-applied). Copy
-   changes listed for the owner in `docs/AUDIT.md`.
+1. **First pass:** security audit (quick profile) and SEO audit; K-120 fixed; schema, sitemap, caching.
+2. **Second pass (D-055):** K-121 Clerk two-factor and K-122 AI cap fixed; contact form JSON only; staff
+   links and GitHub input checked; cron billing locked; bcrypt cost 12 with rehash; API and page headers
+   (CSP, HSTS, no version headers, no directory listing); `weather.php` retired; mail TLS switch; dependencies
+   to 0 critical and 0 high; gitleaks and Semgrep in CI. Details and evidence: `docs/AUDIT.md`.
 
 Live: `bde12c7` (2026-11-01). The order of work is [WORKBOOK.md](../docs/WORKBOOK.md) section 3; finished
 sessions are in [HANDOFF.md](HANDOFF.md).
 
 ## Next actions, in order
 
-1. Owner: review the branch; approve push and merge (merging releases `dist/` and `server/*.php`).
-2. Owner: K-121 decision, K-123 host setting, then the hand-applied items in `docs/DEPLOYMENT.md` section 5.
-3. Owner: AI keys with `scripts/set-server-key.sh` (still pending from the previous task).
-4. Run the server suite on MySQL (CI) before merging: this branch changes `_smtp.php` and `clients.php`.
+1. Owner: run `SELECT id, role FROM users WHERE totp_enabled = 1 AND deleted_at IS NULL` (K-121) before merging.
+2. Owner: review the branch; approve push. Let CI (MySQL, gitleaks, Semgrep) pass, then approve the merge
+   (merging releases `dist/` and `server/*.php`).
+3. Owner: the hand-applied list in `docs/DEPLOYMENT.md` section 5 (`.htaccess`, private config, stub), then
+   K-123 with the host.
+4. Owner: AI keys with `scripts/set-server-key.sh` (pending from the cleanup task).
 
 ## Resume on another computer
 
@@ -40,8 +41,8 @@ agent write runs through the dev server.
 
 ## Scope
 
-- In scope: the go-live security audit and SEO audit, fixes for Critical and High findings, safe SEO
-  fixes in code, and the documents they touch.
+- In scope: the go-live security audit and SEO audit, every fix that can be tested locally, safe SEO fixes,
+  in-range dependency updates, CI security checks, and the documents they touch.
 - Out of scope: switching on any gated feature (D-050); DNS, TLS, Cloudflare and mail hosting;
   rewriting git history.
 
@@ -62,8 +63,8 @@ agent write runs through the dev server.
 
 ## Risk and dependencies
 
-- Risk level: production. `_smtp.php` and `clients.php` ship with the next release; `clients.php` then
-  refuses a client email that is not one valid address (two addresses in one field included).
+- Risk level: production. The next release changes sign-in (K-121: a TOTP account needs a Clerk second factor),
+  the AI cap, the contact form (JSON only) and client emails (one valid address). All covered by tests.
 - `server/.htaccess` and `CLERK_CACHE_DIR` are applied by a person; nothing on the server was read or changed.
 
 ## Evidence

@@ -1026,3 +1026,31 @@ models are rate-limited and withdrawn without notice, so one outage stopped ever
 Rejected: the Anthropic PHP SDK (the host has no Composer and every other provider call is raw curl);
 OpenRouter first (the owner chose Anthropic as the default); retrying the same provider (a second provider
 covers outages that a retry does not).
+
+## D-055 · Go-live security choices
+**Date:** 2026-11-01 · **Status:** decided by the agent on the owner's instruction ("make the best call for
+me"); built on `golive/2026-11`, not released. Each can be reversed by a later decision.
+
+1. **Clerk and app two-factor (K-121).** An account with `totp_enabled = 1` is accepted through Clerk only when
+   Clerk's token shows a verified second factor (`fva[1] >= 0`); a `pending` Clerk session is refused.
+   Rejected: retiring app TOTP (it removes a control someone chose); refusing every such account outright (an
+   owner who turns on Clerk MFA would still be locked out).
+2. **The AI cap counts attempts (K-122).** A failed provider call may be billed, so it uses a slot; the slot is
+   taken under a per-user database lock before the call. D-054 point 4 still holds: once the call ends, the row
+   names the provider ("task via anthropic") or reads "task failed".
+3. **Content-Security-Policy (K-033).** Enforced on the prerendered public pages, where it was proved locally;
+   Report-Only on the CMS and sign-in shell until Clerk's needs are seen in a real browser. The inline script is
+   allowed by hash, and the build fails if they drift. Switching on ads or a consent platform (D-050) now also
+   needs their hosts added to the policy first.
+4. **The contact form takes JSON only**, which stops other sites posting through visitors' browsers.
+   Rejected: a honeypot field (a browser that autofills it would silently lose a real enquiry) and a site-wide
+   hourly cap (it turns spam into a way to block real enquiries).
+5. **Mail certificate checks are a switch, off by default (K-126):** turning them on blind could stop all mail.
+6. **`xlsx` comes from the SheetJS CDN, pinned by integrity (K-017):** SheetJS stopped publishing to npm, and
+   the export feature stays. Rejected: a CSV-only export (removes a feature the owner has not given up).
+7. **No major dependency upgrades here** (ESLint 10, Vite 8, Tailwind 4, React Router majors): each is a planned
+   task. In-range updates were taken.
+8. **HSTS without `includeSubDomains` or preload:** a subdomain this repository does not know of may still need
+   plain HTTP, and preload is hard to undo.
+
+**Evidence:** `docs/AUDIT.md`, 2026-11-01 (second section).

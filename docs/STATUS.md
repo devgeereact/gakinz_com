@@ -31,8 +31,8 @@ this table when a count changes; the previous figures are in the history above.
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 551 tests in 47 files (`seo-schema.test.ts` added) |
-| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 541 tests in 39 files in 640 s on local MariaDB 11.4, run as `GK_TEST_DB=gakinz_golive_test GK_TEST_PHP_PORT=5319 GK_TEST_PROVIDER_PORT=5320 npm run test:server` (`smtp-recipients.test.ts` added, 5 tests) |
+| Unit tests | `npm test` | **PASS.** 556 tests in 48 files (`seo-schema.test.ts`, `csp.test.ts` added) |
+| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 562 tests in 44 files in 539 s on local MariaDB 11.4, run as `GK_TEST_DB=gakinz_golive_test GK_TEST_PHP_PORT=5319 GK_TEST_PROVIDER_PORT=5320 npm run test:server` (6 files added on `golive/2026-11`) |
 | Server suite on MySQL 8 | `npm run test:server` against MySQL 8.0 (`docs/OPERATIONS.md` section 8) | Last PASS 2026-10-20 (519 tests). MySQL 5.7 NOT TESTED; the live engine is UNVERIFIED (K-099) |
 | Type check and build | `npm run build` | **PASS.** 32 public pages and `app-shell.html` prerendered, `sitemap.xml` with 32 URLs |
 | Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 5 errors, 0 warnings. **`npm run lint` still fails** (K-002) |
@@ -41,9 +41,9 @@ this table when a count changes; the previous figures are in the history above.
 | Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 42 |
 | CMS screens | `src/routes/index.tsx` under `/app` | 26: Today, 24 module routes and My account, in seven navigation groups |
 | Client API groups | `grep -cE "^export const [a-zA-Z]+ *= *\{" src/lib/api.ts` | 46 (the unused `weather` group removed 2026-11-01) |
-| `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 44 of 66 files, 167 call sites (`_ai.php` is an include and calls none) |
+| `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 43 of 66 files, 167 call sites (`_ai.php` is an include and calls none; `weather.php` is a 404 stub since 2026-11-02) |
 
-Not measured on this run: `npm audit` (last figure in K-041) and anything signed in on the live system.
+`npm audit` on 2026-11-02: 0 critical, 0 high, 13 moderate (dev tooling, K-041). Semgrep 0 findings; gitleaks clean over the full history. Not measured on this run: anything signed in on the live system.
 The design verification of 2026-10-31 (screens at five widths, axe 4.14) is in `docs/AUDIT.md`.
 
 ## 3. Open work

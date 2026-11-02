@@ -143,17 +143,28 @@ private `config.php`. A change that needs one of them records it here in the sam
 
 **Pending as at 2026-11-01:** the AI keys (D-054): run `scripts/set-server-key.sh ANTHROPIC_KEY`, then
 `scripts/set-server-key.sh OPENROUTER_KEY` (`_ai.php` is live since `bde12c7`). From `golive/2026-11`
-(not merged): `_smtp.php` and `clients.php` (K-120) need nothing by hand and go up with the release. By hand,
-after that branch merges, backup first:
-- **`server/.htaccess`**: two new blocks, a one-year `immutable` cache for the hashed `/assets/*` files and a
-  deny for dotfiles, backup copies, `*.example` and `config.php.*`. Check after upload: `/` 200,
-  `/assets/<any index-*.js>` answers `cache-control: public, max-age=31536000, immutable` (Cloudflare's
-  "Browser Cache TTL" must be "Respect existing headers" for that to reach the browser), `/robots.txt`,
-  `/llms.txt` and `/sitemap.xml` 200, `/config.php` 403.
-- **`CLERK_CACHE_DIR`** in the private config, pointing at a writable private folder (key list and reason in
-  `server/config.php.example`); create the folder with mode 700.
+(not merged). The PHP goes up with the release; check first, for K-121:
+`SELECT id, role FROM users WHERE totp_enabled = 1 AND deleted_at IS NULL`. Any account listed must add a
+second factor in Clerk, or have app two-factor cleared by an admin, or its Clerk sign-in answers 403.
+By hand, after that branch merges, backup first:
+- **`server/.htaccess`** (K-033, K-058, K-125): a CSP enforced on the public pages and Report-Only on the app
+  shell; HSTS; COOP; `X-Powered-By` and `X-Turbo-Charged-By` removed; `ServerSignature Off`; directory requests
+  answer 404 instead of a listing; a deny for dotfiles, backups, `*.example` and `config.php.*`; a one-year
+  `immutable` cache for the hashed `/assets/*` files. Either order with the release is safe: the live pages'
+  inline script had the same hash on 2026-11-01, and `npm run build` fails if a future build drifts from it. Checks after upload: `/`, `/work`,
+  `/services/web-design`, `/login`, `/app` 200; `/assets/` and `/uploads/` 404; `/config.php`, `/README.md`,
+  `/config.php.bak` 403; `/robots.txt`, `/llms.txt`, `/sitemap.xml` 200; `curl -sI https://gakinz.com/` shows
+  `content-security-policy` and `strict-transport-security`; `/api.php` has no `x-powered-by`; an
+  `/assets/index-*.js` shows `cache-control: public, max-age=31536000, immutable` (Cloudflare's "Browser Cache
+  TTL" must respect existing headers); sign in once and look at the browser console for CSP reports. Rollback:
+  restore the backup.
+- **Private config:** `CLERK_CACHE_DIR` pointing at a writable private folder (mode 700); remove
+  `http://localhost:5102` from `ALLOWED_ORIGINS` if present; then try `$MAIL_VERIFY_TLS = true`, send one
+  message and open the inbox, and turn it back off if either fails (K-126).
 - **Compare the live stub** `~/gakinz.com/config.php` with `server/config.stub.php.example`: it must `require`
   the private file by an absolute path and hold no secret.
+- **Host, not this file:** `ServerTokens` cannot be set in `.htaccess`; Cloudflare already replaces the
+  `Server` header. Confirm the client-IP header is trusted from Cloudflare's ranges only (K-123).
 
 Nothing else is pending. SQL 1 to 19 ran on 2026-10-21 and SQL 20 on 2026-10-30; the
 current `server/.htaccess` went up on 2026-10-21; the Clerk keys were added on 2026-10-30. Since then

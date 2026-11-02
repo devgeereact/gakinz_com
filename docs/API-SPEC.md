@@ -101,7 +101,7 @@ server; `src/lib/access.ts` is the client mirror and is not a boundary.
 | super_admin, admin, manager | `careplan.php`, `contracts.php`, `invoices.php`, `reports.php`, `resourcing.php` |
 | super_admin, admin, manager, editor | `clients.php`, `design.php`, `figma.php`, `leads.php`, `proposals.php` |
 | super_admin, admin, manager, editor, employee | `comms.php`, `dev.php`, `files.php`, `github.php`, `projects.php`, `support.php`, `tasks.php` |
-| super_admin, admin, manager, trainer, editor, employee | `knowledge.php`, `ai.php`, `weather.php` |
+| super_admin, admin, manager, trainer, editor, employee | `knowledge.php`, `ai.php` |
 | super_admin, admin, manager, editor, employee, trainer | `time.php` |
 
 `time.php` approve and reject narrow further to super_admin, admin and manager.
@@ -112,7 +112,7 @@ Treat these as the internet-facing attack surface.
 
 | Endpoint | Method | Purpose |
 |---|---|---|
-| `contact.php` | POST | Public enquiry form. Validates name, email and a message of at least 10 characters, then inserts into `enquiries` with the caller IP. Throttled per IP from `audit_log`, modelled on the login throttle; over the limit it returns 429. Answers `{ id, reference }` with 201; `reference` is the enquiry's `GK-E-YYYY-NNNN` once SQL 19 has run and `_reference.php` is up, else `null` (2026-10-19, see Work references in section 5) |
+| `contact.php` | POST | Public enquiry form. Validates name, email and a message of at least 10 characters, then inserts into `enquiries` with the caller IP. JSON only: any other `Content-Type` answers 415 (2026-11-01). Throttled per IP from `audit_log`, modelled on the login throttle; over the limit it returns 429. Answers `{ id, reference }` with 201; `reference` is the enquiry's `GK-E-YYYY-NNNN` once SQL 19 has run and `_reference.php` is up, else `null` (2026-10-19, see Work references in section 5) |
 | `verify.php` | GET `?id=` | Certificate lookup by `public_id`, excluding revoked ones |
 | `book.php` | GET | Returns the configured Calendly URL, or an empty string |
 | `blog.php` | GET, and GET `?slug=` | Published posts without their body, and one published post with its body |
@@ -331,7 +331,7 @@ Work references (2026-10-19, SQL 19, `docs/PRODUCT-SPEC.md` section 6.1, D-049):
 | `projects.php` | GET list, GET `?action=templates`, `create` (optionally from a template), `status`, `stage` | STAFF |
 | `tasks.php` | GET list, `create`, `status` | STAFF |
 | `design.php` | GET list with optional `?project_id=`, `create`, `status`, `delete` | STAFF. Two rounds maximum |
-| `dev.php` | GET `?project_id=`, GET list, `meta`, `deploy` | STAFF |
+| `dev.php` | GET `?project_id=`, GET list, `meta`, `deploy` | STAFF. Links must be empty or http(s), else 400 (2026-11-01) |
 | `resourcing.php` | GET list, `leave`, `delete` | STAFF. Weekly capacity constant is 2400 minutes |
 | `time.php` | GET list, `create`, `delete`, `approve`, `reject` | STAFF; approve and reject are management only. The list carries `ticket_id` (2026-10-19, SQL 17), NULL before SQL 17 or while `_time.php` is missing |
 | `careplan.php` | GET list, `check` | STAFF |
@@ -568,8 +568,8 @@ security-critical):
 | Endpoint | Contract | Roles |
 |---|---|---|
 | `ai.php` | POST `{task, input, system?}` returns `{text, provider}`. Anthropic first, OpenRouter as backup (D-054) | Every staff role, not `client`. Capped per role per day |
-| `weather.php` | GET `?city=` | Every staff role, not `client`. Cached 10 minutes |
-| `github.php` | GET `?url=` returns commits, pull requests and the latest Actions run | STAFF |
+| `weather.php` | Retired 2026-11-01: answers 404 to every request | None |
+| `github.php` | GET `?url=` returns commits, pull requests and the latest Actions run. An owner or repo of `.` or `..` answers 400 | STAFF |
 | `figma.php` | GET `?url=` returns name, last modified and thumbnail | STAFF |
 | `slack.php` | POST `?action=test` | ADMINS |
 
@@ -681,7 +681,7 @@ then leads their `secondary` line. Before SQL 19 the older query runs, so neithe
 
 ## 6. AI daily caps
 
-Enforced in `ai.php` by counting `ai_call` rows in `audit_log` since `CURDATE()`.
+Enforced in `ai.php` by counting `ai_call` rows in `audit_log` since `CURDATE()`. Since 2026-11-01 every attempt that reaches a provider counts, failed ones included: the row is written ("task pending") under a per-user lock before the call and then reads "task via <provider>" or "task failed" (K-122).
 
 | Role | Calls per day |
 |---|---|

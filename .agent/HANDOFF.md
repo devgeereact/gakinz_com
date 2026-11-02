@@ -55,3 +55,8 @@ Live server == `main` (63 PHP files identical, same app bundle, SQL 19 applied).
 - SEO: ProfessionalService, Service and BreadcrumbList schema; sitemap `lastmod` only where real; `.htaccess` asset cache and dotfile deny (hand-applied); copy list for the owner in `docs/AUDIT.md`.
 - Evidence: `npm run verify` PASS before each commit; `npm test` 551; `npm run test:server` 541 (MariaDB 11.4); lint ratchet 5/5; `docs:check --base main` PASS.
 - NOT TESTED: anything on the live server or Clerk; the live mail server; CI on MySQL for this branch; CrUX field data; Rich Results Test.
+
+## Go-live hardening, second pass (1 to 2 November 2026, branch `golive/2026-11`, local only)
+- Owner: "make the best call ... fix all". Calls recorded in D-055. Fixed test-first: K-121 (Clerk must prove a second factor), K-122 (AI cap counts attempts), contact JSON only, `dev.php`/`github.php` input, cron billing lock, bcrypt 12 with rehash, API headers (no `X-Powered-By`, CSP, `no-store`), `.htaccess` (CSP, HSTS, COOP, version headers, listing 404), `weather.php` retired, mail TLS switch (off), deps 0 critical / 0 high, gitleaks + Semgrep in CI, Node 24.22.1 pinned.
+- Evidence: 8 commits each verified alone (`npm run verify`, rest stashed); `npm test` 556; `npm run test:server` 562 (MariaDB 11.4); Semgrep 0; gitleaks clean; `.htaccess` on a local Apache 2.4.67 plus headless Chromium, 64 of 64 page loads with no CSP violation.
+- NOT TESTED: LiteSpeed; Clerk under the shell CSP; CI on GitHub; mail TLS; the live private config and stub.

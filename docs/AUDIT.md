@@ -2,6 +2,42 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-01 (continued into 2026-11-02) · Go-live hardening, second pass (`golive/2026-11`, local only)
+
+**Scope:** the owner's checklist (keys, environment, admin routes, authentication, access, forms, XSS, rate
+limits, endpoints, CORS, headers, debug, dependencies, unused packages, exposed files, database, password
+hashing, git secrets, a full audit, `X-Powered-By` and the server version), with the instruction "make the best
+call". Each fix written test-first and seen failing; decisions in D-055. Nothing pushed, deployed or changed
+on the server, Clerk, Cloudflare or GitHub.
+
+| Item | Result | Evidence |
+|---|---|---|
+| Two-factor through Clerk (K-121) | **Fixed.** Reproduced first: a TOTP super_admin got 200 through Clerk with no second factor; now 403 unless Clerk's `fva` shows one; `pending` sessions 401 | `clerk.test.ts`, 7 new |
+| AI cap (K-122) | **Fixed.** Every attempt counts; slot taken under a per-user lock | `ai.test.ts`, 3 new or changed |
+| Forms and input | **Fixed:** contact JSON only (415); `dev.php` links http(s) only; `github.php` refuses `.` and `..`; client email (K-120, first pass). Honeypot rejected (D-055) | `contact-hardening`, `input-hardening` |
+| Cron billing race (deferred unit) | **Fixed:** named lock; an overlapping run skips | `cron-billing-lock.test.ts` |
+| Passwords | **Fixed:** bcrypt cost 12 stated, weaker hashes replaced at the next sign-in | `password-rehash.test.ts` |
+| Headers, CSP, listing (K-033, K-058, K-125) | **Fixed in code:** API CSP, `no-store` when signed in, no `X-Powered-By` (live sent `PHP/8.4.27`); `.htaccess`: CSP enforced on public pages and Report-Only on the shell, HSTS, COOP, version headers unset, `ServerSignature Off`, directory requests 404 (live listed `/assets/` and `/uploads/`) | `headers.test.ts`; Apple Apache 2.4.67 with listing on, staged document root: every deny 403, listing 404, headers present; headless Chromium through that Apache, 32 pages x 390 and 1440px: **64 of 64 with no CSP violation**; the build fails on a wrong hash (tried) |
+| Exposed files (live, read-only GETs) | `config.php`, includes, `.git`, `.env`, `.htaccess`, `error_log`, `uploads/.htaccess` 403; `schema.sql`, `README.md`, `.user.ini`, `config.php.bak`, `package.json`, `docs/` and others return the app shell, not the file; only the listing above was a leak | 30 paths compared byte-for-byte with the shell |
+| Debug mode | No `display_errors`, `phpinfo`, `var_dump` or `console.log` in tracked code; `GK_DEBUG` false in the template; no source maps in `dist/`; the stub hides errors before loading. Live private config UNVERIFIED | grep, `dist/` scan |
+| Keys and environment | One `VITE_*` variable, the Clerk publishable key (public by design); no secret in `dist/`; secrets live only in the private config | grep, `dist/` scan |
+| Git secrets | gitleaks 8.30.1 over 521 commits: 7 hits, all false positives (synthetic fixtures, the public Clerk key), now allowlisted by exact value; clean | `gitleaks git` |
+| Semgrep 1.182 (`p/php`, `p/react`, `p/typescript`, `p/secrets`) | 8 results to **0**: 7 in the retired `weather.php` (now a 404 stub), 1 dummy timing hash (`nosemgrep` with reason) | local run |
+| CI | gitleaks and Semgrep added (neither ran, against the house rule), pinned; Node from `.node-version` (24.22.1, was 22); CI PHP 8.4 (was 8.3) | not yet run on GitHub |
+| Dependencies (K-017, K-041) | `npm update` in range, SheetJS 0.20.3 from its CDN: **0 critical, 0 high** (was 1 and 7); 13 moderate left, all ESLint dev tooling (needs the ESLint 10 major, planned) | `npm audit` |
+| Unused packages | None: every dependency is imported or used by config (types, PostCSS, Tailwind, tsc) | import scan |
+| CORS | Exact allow-list, no credentials; dev is proxied same-origin, so `localhost:5102` left the template; live config UNVERIFIED | source |
+| Admin routes, access, endpoints, SQL | Re-confirmed from the first pass: every endpoint calls `require_auth` with a staff list; client isolation holds; prepared statements only | first-pass section below |
+| Mail TLS (K-126) | Switch added (`$MAIL_VERIFY_TLS`), **off** until the owner tests it | `php -l` only |
+| Database | Prepared statements, hashed tokens, bcrypt 12. DB user privileges, remote access and backups are host settings: NOT TESTED (K-010) | — |
+| Server version | `X-Powered-By` removed in PHP and `.htaccess`; Cloudflare replaces `Server`; `ServerTokens` is host-only | — |
+
+**Gate (Mac):** `npm run verify` PASS on each of 8 commits, run with the rest of the work stashed so it checked
+only that commit; `npm test` 556 of 556 in 48 files; `npm run test:server` 562 of 562 in 44 files (MariaDB 11.4,
+539 s); lint ratchet 5 of 5; `docs:check --base main` PASS.
+**NOT TESTED:** LiteSpeed (the live server) with the new `.htaccess`; Clerk under the shell's CSP; CI on GitHub
+for this branch; the mail certificate check; the live private config and stub.
+
 ## 2026-11-01 · Go-live security audit and SEO audit (`golive/2026-11`, local only, not released)
 
 ### Security audit (security-audit skill, quick profile)
