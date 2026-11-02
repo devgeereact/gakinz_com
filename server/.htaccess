@@ -36,6 +36,16 @@ SetEnvIf Authorization "(.*)" HTTP_AUTHORIZATION=$1
 RewriteCond %{REQUEST_FILENAME}/index.html -f
 RewriteRule ^(.+?)/?$ $1/index.html [L]
 
+# A directory with no index.html of its own (/assets/, /uploads/, /images/)
+# answers 404 instead of the host's file listing, which was on and listed every
+# build file (go-live audit 2026-11-01). Done here rather than with
+# `Options -Indexes`, which can turn every request into a 500 on this host
+# (K-058). The home page is the document root: its path is empty, so `.+`
+# never matches it. Prerendered pages were served by the rule above.
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteCond %{REQUEST_FILENAME}/index.html !-f
+RewriteRule ^.+$ - [R=404,L]
+
 # Let real files and directories through (assets, *.php, etc.)
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
@@ -64,20 +74,46 @@ RewriteRule ^ app-shell.html [L]
 RewriteRule ^ index.html [L]
 
 # Basic hardening
-# No `Options -Indexes` here on purpose: where the host does not allow Options
+# Directory listing is answered 404 by the rewrite near the top. No
+# `Options -Indexes` here on purpose: where the host does not allow Options
 # overrides, that one line turns every request into a 500. Ask the host to
 # switch off directory listing instead (K-058).
 
 # Browser security headers on every response: the prerendered pages, the SPA
 # shell and static files, not only the PHP JSON that _bootstrap.php covers.
-# Same values as _bootstrap.php, so a PHP response is unchanged. No CSP yet
-# (K-033) and no HSTS: transport security belongs to the TLS and Cloudflare
-# set-up, which this repository does not own (K-058).
+# HSTS without includeSubDomains (a subdomain this repository does not know of
+# may still need plain HTTP) and without preload; Cloudflare may send it too,
+# which is harmless. No server or PHP version leaves the site (go-live 2026-11-01).
+ServerSignature Off
 <IfModule mod_headers.c>
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
   Header always set X-Frame-Options "DENY"
   Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+  Header always set Strict-Transport-Security "max-age=31536000"
+  Header always set Cross-Origin-Opener-Policy "same-origin-allow-popups"
+  Header always unset X-Powered-By
+  Header unset X-Powered-By
+  Header always unset X-Turbo-Charged-By
+  Header unset X-Turbo-Charged-By
+</IfModule>
+
+# Content-Security-Policy (K-033). Enforced on the prerendered public pages
+# (each is an index.html): checked locally on all 32 pages at 390 and 1440px
+# with no violation. The hash is the one inline script (the next-themes theme
+# setter); `npm run build` fails if it changes and is not updated here
+# (src/prerender/csp.ts). Style attributes need 'unsafe-inline'. Switching on
+# ads or a consent platform (D-050) needs their hosts added here first.
+# The SPA shell (CMS, sign-in, shared proposals) reports only: Clerk cannot be
+# run locally, so its needs are listed but not yet enforced. Watch the browser
+# console after release, then enforce.
+<IfModule mod_headers.c>
+  <FilesMatch "^index\.html$">
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-cd+HpnSsLaEz1lKWBNn+k+xOe1m2p5ZgfjoyNvHy9eU='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
+  </FilesMatch>
+  <FilesMatch "^app-shell\.html$">
+    Header always set Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'sha256-cd+HpnSsLaEz1lKWBNn+k+xOe1m2p5ZgfjoyNvHy9eU=' https://clerk.gakinz.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://img.clerk.com; font-src 'self' data:; connect-src 'self' https://clerk.gakinz.com; frame-src https://challenges.cloudflare.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+  </FilesMatch>
 </IfModule>
 
 # Vite's content-hashed build files (/assets/<name>-<8-char hash>.js|css|woff2)

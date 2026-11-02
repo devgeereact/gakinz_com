@@ -8,6 +8,7 @@ export { prerenderPaths, outputFile, normalisePath, contentDate } from "@/market
 export { buildPage, buildShell, splitHead, thirdPartyProblems, withFontPreloads } from "@/prerender/html"
 export { readHead, checkHeads, isIndexable } from "@/prerender/head"
 export { buildSitemap } from "@/prerender/sitemap"
+export { cspHashProblems } from "@/prerender/csp"
 
 /**
  * Build-time renderer for the public site (scripts/prerender.mjs).

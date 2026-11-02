@@ -16,12 +16,17 @@ header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization');
 header('Content-Type: application/json; charset=utf-8');
 
-// Baseline security headers on every API response. Deliberately no
-// Content-Security-Policy: the SPA has not been audited for one and a wrong
-// policy would break the site.
+// Baseline security headers on every API response. The CSP here covers only the
+// JSON these endpoints answer: it may load nothing and is never framed. The pages'
+// own policy is in .htaccess. No PHP version leaves the server (go-live 2026-11-01).
+header_remove('X-Powered-By');
 header('X-Content-Type-Options: nosniff');
 header('Referrer-Policy: strict-origin-when-cross-origin');
 header('X-Frame-Options: DENY');
+header("Content-Security-Policy: default-src 'none'; frame-ancestors 'none'");
+// A reply to a signed-in request may hold private data: never keep it in a cache.
+// An endpoint that sets its own Cache-Control later replaces this one.
+if (($_SERVER['HTTP_AUTHORIZATION'] ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? '') !== '') header('Cache-Control: no-store');
 
 if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'OPTIONS') {
   http_response_code(204);

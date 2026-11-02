@@ -66,6 +66,7 @@ await writeFile(join(dist, "app-shell.html"), shell)
 
 const paths = ssr.prerenderPaths()
 const heads = []
+const built = []
 for (const path of paths) {
   const markup = ssr.render(path)
   heads.push({ path, head: ssr.readHead(ssr.splitHead(markup).head) })
@@ -79,7 +80,13 @@ for (const path of paths) {
   const file = join(dist, ssr.outputFile(path))
   await mkdir(dirname(file), { recursive: true })
   await writeFile(file, page)
+  built.push({ path, html: page })
 }
+
+// The public pages' CSP (server/.htaccess) allows inline scripts by hash only. A changed inline
+// script would be blocked in the browser, so the build stops here instead (src/prerender/csp.ts).
+const cspProblems = ssr.cspHashProblems(built, await readFile(join(root, "server", ".htaccess"), "utf8"))
+if (cspProblems.length) throw new Error(`prerender: update the hashes in server/.htaccess (and upload it):\n  ${cspProblems.join("\n  ")}`)
 
 const problems = ssr.checkHeads(heads)
 if (problems.length) throw new Error(`prerender: page metadata is wrong:\n  ${problems.join("\n  ")}`)
