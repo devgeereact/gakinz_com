@@ -86,6 +86,7 @@ function login(mysqli $conn): void {
   // An unknown email still pays for one bcrypt check, so response time does not
   // reveal which addresses have accounts. The hash is of a random value nobody
   // knows; it never matches.
+  // nosemgrep: generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash -- a dummy hash of a random value, so an unknown email costs the same time; it unlocks nothing.
   $known = $u ? password_verify($pass, $u['password_hash']) : password_verify($pass, '$2y$12$egnBXeD.0hvaByaZ8NNE5.yLCSbJSj5uCUJzDzx3bXVPjvj1/DWbS');
   if (!$u || !$known) {
     audit($conn, $u ? (int)$u['id'] : null, 'login_failed', $email);
@@ -113,6 +114,15 @@ function login(mysqli $conn): void {
       }
       audit($conn, (int)$u['id'], 'login_2fa_recovery', $email);
     }
+  }
+
+  // Fully signed in: replace a hash made at a lower cost than today's (go-live 2026-11-01).
+  if (password_needs_rehash($u['password_hash'], PASSWORD_BCRYPT, GK_BCRYPT)) {
+    $rehash = password_hash($pass, PASSWORD_BCRYPT, GK_BCRYPT);
+    $rid = (int)$u['id'];
+    $st = $conn->prepare('UPDATE users SET password_hash = ? WHERE id = ? AND deleted_at IS NULL');
+    $st->bind_param('si', $rehash, $rid);
+    $st->execute();
   }
 
   $token = new_token();
@@ -228,7 +238,7 @@ function reset_password(mysqli $conn): void {
   $r = $stmt->get_result()->fetch_assoc();
   if (!$r) fail('This reset link is invalid or has expired.', 400);
 
-  $hash = password_hash($pass, PASSWORD_BCRYPT);
+  $hash = password_hash($pass, PASSWORD_BCRYPT, GK_BCRYPT);
   $uid = (int)$r['user_id'];
   $rid = (int)$r['id'];
 
@@ -477,7 +487,7 @@ function gk_gen_recovery(): array {
     $c = substr(bin2hex(random_bytes(5)), 0, 10); // 10 hex chars
     $code = substr($c, 0, 5) . '-' . substr($c, 5, 5);
     $plain[] = $code;
-    $hashed[] = password_hash($code, PASSWORD_BCRYPT);
+    $hashed[] = password_hash($code, PASSWORD_BCRYPT, GK_BCRYPT);
   }
   return [$plain, json_encode($hashed)];
 }
@@ -626,7 +636,7 @@ function ensure_seed(mysqli $conn): void {
     $plain = bin2hex(random_bytes(12)); // 24 random hex chars
     error_log("GAkinz seed super-admin created for $email with generated password: $plain — sign in, change it immediately, then set \$SEED_ADMIN_PASSWORD in config.php.");
   }
-  $hash = password_hash($plain, PASSWORD_BCRYPT);
+  $hash = password_hash($plain, PASSWORD_BCRYPT, GK_BCRYPT);
   $stmt = $conn->prepare('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)');
   $stmt->bind_param('ssss', $name, $email, $hash, $role);
   $stmt->execute();

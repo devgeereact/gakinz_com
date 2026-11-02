@@ -81,7 +81,7 @@ if ($method === 'POST' && $action === 'create') {
   $chk->execute();
   if ($chk->get_result()->fetch_assoc()) fail('A user with that email already exists.', 409);
 
-  $hash = password_hash($pass, PASSWORD_BCRYPT);
+  $hash = password_hash($pass, PASSWORD_BCRYPT, GK_BCRYPT);
   $stmt = $conn->prepare('INSERT INTO users (name, email, password_hash, role, client_id) VALUES (?, ?, ?, ?, ?)');
   $stmt->bind_param('ssssi', $name, $email, $hash, $role, $clientId);
   if (!$stmt->execute()) fail('Could not create the user.', 500);
@@ -110,7 +110,7 @@ if ($method === 'POST' && $action === 'invite') {
   if ($chk->get_result()->fetch_assoc()) fail('A user with that email already exists.', 409);
 
   $randomPass = bin2hex(random_bytes(16));
-  $hash = password_hash($randomPass, PASSWORD_BCRYPT);
+  $hash = password_hash($randomPass, PASSWORD_BCRYPT, GK_BCRYPT);
   $stmt = $conn->prepare('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)');
   $stmt->bind_param('ssss', $name, $email, $hash, $role);
   if (!$stmt->execute()) fail('Could not create the user.', 500);

@@ -62,6 +62,9 @@ function bearer_token(): string {
   return '';
 }
 
+/** bcrypt cost for every password and recovery-code hash, stated rather than left to the PHP version's default. */
+const GK_BCRYPT = ['cost' => 12];
+
 function new_token(): string {
   return bin2hex(random_bytes(32)); // 64 hex chars
 }
