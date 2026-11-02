@@ -43,14 +43,12 @@ define('OR_MODEL', 'openrouter/auto');              // a paid model; free (:free
 define('OR_SITE', 'https://gakinz.com');            // sent as HTTP-Referer to OpenRouter
 
 // ── CORS ─────────────────────────────────────────────────────────────────────
-// In dev the Vite app runs on localhost:5102 (project block 10 in the workspace
-// port scheme, ~/.claude/CLAUDE.md "Dev-server ports") and calls this live API. The dev port is pinned
-// with strictPort, so this list only ever needs the one localhost entry.
+// The live origins only. Development needs no entry: `npm run dev` proxies every .php call
+// through the Vite server (vite.config.ts), so the browser sees same-origin requests.
 // _bootstrap.php fatals without this constant — keep it defined.
 define('ALLOWED_ORIGINS', [
   'https://gakinz.com',
   'https://www.gakinz.com',
-  'http://localhost:5102',  // gakinz dev port — block 10, pinned in vite.config.ts
 ]);
 
 // ── Clerk sign-in (email code) ───────────────────────────────────────────────
@@ -66,7 +64,7 @@ define('CLERK_AUTHORIZED_PARTIES', ['https://gakinz.com', 'https://local.gakinz.
 define('CLERK_CACHE_DIR', '/home/REPLACE_cpanel_user/private-config/gakinz_com/cache');
 
 // ── Optional integrations ────────────────────────────────────────────────────
-define('OPENWEATHER_API_KEY', '');   // read by weather.php; no screen calls it since 2026-11-01
+define('OPENWEATHER_API_KEY', '');   // unused: weather.php was retired on 2026-11-01; leave empty
 define('OPENWEATHER_UNITS', 'metric'); // 'metric' (°C) or 'imperial' (°F)
 
 // ── Seed super-admin ── read by auth.php (only on an EMPTY users table) ───────
@@ -98,6 +96,10 @@ $IMAP_HOST = 'REPLACE_imap_host';        // hosting account mail server, or '' t
 $IMAP_PORT = 993;                        // 993 = IMAP over SSL
 $IMAP_USER = 'hello@gakinz.com';
 $IMAP_PASS = 'REPLACE_mailbox_password';
+// Check the mail server's TLS certificate for SMTP and IMAP. Off keeps the old behaviour (no check,
+// so the mailbox password could be read by anyone able to sit on the connection). Turn it on once
+// the certificate matches $SMTP_HOST and $IMAP_HOST, then send one test message and open the inbox.
+$MAIL_VERIFY_TLS = false;
 
 // ── Outbound SMS (Twilio) ── read by _sms.php / comms.php ─────────────────────
 // Powers the "Send SMS" button on SMS conversations in Comms. Leave any blank

@@ -33,7 +33,9 @@ function gk_smtp_send(array $cfg, string $rawMessage, array $rcpts): array {
   $user = $cfg['user']; $pass = $cfg['pass']; $from = $cfg['from'];
 
   $transport = ($secure === 'ssl') ? "ssl://$host" : "tcp://$host";
-  $ctx = stream_context_create(['ssl' => ['verify_peer' => false, 'verify_peer_name' => false]]);
+  // The mail host's certificate is checked only when $MAIL_VERIFY_TLS is true in config.php (see mail.php).
+  $verify = ($GLOBALS['MAIL_VERIFY_TLS'] ?? false) === true;
+  $ctx = stream_context_create(['ssl' => ['verify_peer' => $verify, 'verify_peer_name' => $verify]]);
   $fp = @stream_socket_client("$transport:$port", $errno, $errstr, 20, STREAM_CLIENT_CONNECT, $ctx);
   if (!$fp) return [false, "Connect failed: $errstr ($errno)"];
   stream_set_timeout($fp, 20);

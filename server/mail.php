@@ -38,8 +38,11 @@ if ($method === 'GET' && $action === 'status') {
 
 // ── IMAP helpers ─────────────────────────────────────────────────────────────
 function imap_mailbox_ref(string $host, int $port, string $mailbox = 'INBOX'): string {
-  // {host:993/imap/ssl/novalidate-cert}MAILBOX
-  return '{' . $host . ':' . $port . '/imap/ssl/novalidate-cert}' . $mailbox;
+  // {host:993/imap/ssl[/novalidate-cert]}MAILBOX. The certificate is checked only when
+  // $MAIL_VERIFY_TLS is true in config.php: switch it on once the host's certificate is known to
+  // match the IMAP hostname, or the inbox stops opening (go-live audit 2026-11-01).
+  $check = ($GLOBALS['MAIL_VERIFY_TLS'] ?? false) === true ? '' : '/novalidate-cert';
+  return '{' . $host . ':' . $port . '/imap/ssl' . $check . '}' . $mailbox;
 }
 
 function imap_connect_or_fail(): array {
