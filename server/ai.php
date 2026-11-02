@@ -25,6 +25,8 @@ const STAFF = ['super_admin', 'admin', 'manager', 'trainer', 'editor', 'employee
 $user = require_auth($conn, STAFF);
 
 // Per-role daily cap so a single signed-in account can't run up the AI bill. Counted from audit_log (no extra table); resets at midnight server time.
+// Every attempt that reaches a provider counts, including one that fails: the provider may still bill it
+// (K-122). The slot is taken under a per-user lock before the call, so parallel requests cannot all pass.
 const AI_DAILY_LIMITS = [
   'super_admin' => 1000,
   'admin'       => 1000,
@@ -33,16 +35,6 @@ const AI_DAILY_LIMITS = [
   'employee'    => 150,
 ];
 $limit = AI_DAILY_LIMITS[$user['role']] ?? 50;
-$stmt = $conn->prepare(
-  "SELECT COUNT(*) AS n FROM audit_log
-   WHERE user_id = ? AND action = 'ai_call' AND created_at >= CURDATE()"
-);
-$stmt->bind_param('i', $user['id']);
-$stmt->execute();
-$usedToday = (int)($stmt->get_result()->fetch_assoc()['n'] ?? 0);
-if ($usedToday >= $limit) {
-  fail("Daily AI limit reached ($limit requests). Try again tomorrow.", 429);
-}
 
 if (!ai_providers()) fail('AI is not configured on the server.', 503);
 
@@ -57,10 +49,38 @@ if ($system === '') {
     . 'Use UK English, plain and direct. No marketing filler, no em dashes.';
 }
 
-$out = ai_generate($system, $input);
-if ($out === null) fail('The AI providers did not answer. Please try again.', 502);
+// Take a slot: count and insert inside one named lock, so two requests never read the same count.
+$lockName = 'gk_ai_cap_' . $user['id'];
+$st = $conn->prepare('SELECT GET_LOCK(?, 10) AS got');
+$st->bind_param('s', $lockName);
+$st->execute();
+if ((int)($st->get_result()->fetch_assoc()['got'] ?? 0) !== 1) fail('AI is busy for this account. Please try again in a moment.', 429);
+$st = $conn->prepare(
+  "SELECT COUNT(*) AS n FROM audit_log
+   WHERE user_id = ? AND action = 'ai_call' AND created_at >= CURDATE()"
+);
+$st->bind_param('i', $user['id']);
+$st->execute();
+$usedToday = (int)($st->get_result()->fetch_assoc()['n'] ?? 0);
+$slotId = 0;
+if ($usedToday < $limit) {
+  audit($conn, $user['id'], 'ai_call', $task . ' pending');
+  $slotId = (int)$conn->insert_id;
+}
+$st = $conn->prepare('SELECT RELEASE_LOCK(?) AS released');
+$st->bind_param('s', $lockName);
+$st->execute();
+$st->get_result()->free(); // read the result, or the next statement fails "out of sync"
+if ($slotId === 0) fail("Daily AI limit reached ($limit requests). Try again tomorrow.", 429);
 
-// Record the call so the daily cap can count it.
-audit($conn, $user['id'], 'ai_call', $task . ' via ' . $out['provider']);
+$out = ai_generate($system, $input);
+
+// The slot stays counted either way; its detail says how the attempt ended.
+$detail = $out === null ? $task . ' failed' : $task . ' via ' . $out['provider'];
+$st = $conn->prepare("UPDATE audit_log SET detail = ? WHERE id = ? AND action = 'ai_call'");
+$st->bind_param('si', $detail, $slotId);
+$st->execute();
+
+if ($out === null) fail('The AI providers did not answer. Please try again.', 502);
 
 ok($out);

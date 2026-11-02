@@ -8,7 +8,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { AI_MODE, WORK_DIR } from "./env"
-import { api, clearProviderRequests, createClient, createUser, login, one, providerRequests, resetDb } from "./helpers"
+import { api, clearProviderRequests, createClient, createUser, login, one, providerRequests, resetDb, sql } from "./helpers"
 
 const OVERRIDES = path.join(WORK_DIR, "overrides.json")
 
@@ -87,11 +87,31 @@ describe("ai.php providers", () => {
     expect(r.json.provider).toBe("openrouter")
   })
 
-  it("answers 502 when both providers fail, and does not count the call", async () => {
+  it("answers 502 when both providers fail, and still counts the attempt (K-122)", async () => {
     mode({ anthropic: "error", openrouter: "error" })
     const r = await run(staff)
     expect(r.status).toBe(502)
     expect(r.json.error).toBeTruthy()
+    // A failed provider call may still be billed, so it uses up a slot.
+    expect(one("SELECT COUNT(*) FROM audit_log WHERE action = 'ai_call'")).toBe("1")
+    expect(one("SELECT detail FROM audit_log WHERE action = 'ai_call'")).toBe("test_draft failed")
+  })
+
+  it("stops at the daily cap even when every earlier call failed (K-122)", async () => {
+    mode({ anthropic: "refusal", openrouter: "error" })
+    const uid = one("SELECT id FROM users WHERE email = 'editor@example.test'")
+    // The editor cap is 250: 249 earlier attempts, then one more is allowed and the next is refused.
+    sql(`INSERT INTO audit_log (user_id, action, detail, ip) VALUES ` + Array.from({ length: 249 }, () => `(${uid}, 'ai_call', 'test_draft failed', '')`).join(","))
+    expect((await run(staff)).status).toBe(502)
+    clearProviderRequests()
+    const capped = await run(staff)
+    expect(capped.status).toBe(429)
+    expect(providerRequests()).toEqual([])
+  })
+
+  it("does not count a request refused before any provider is called", async () => {
+    const r = await api<AiOut>("ai.php", { token: staff, body: { task: "test_draft", input: "" } })
+    expect(r.status).toBe(400)
     expect(one("SELECT COUNT(*) FROM audit_log WHERE action = 'ai_call'")).toBe("0")
   })
 
