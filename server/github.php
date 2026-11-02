@@ -22,6 +22,8 @@ if (!preg_match('#github\.com[/:]([\w.-]+)/([\w.-]+?)(?:\.git)?/?$#i', $url, $m)
 }
 $owner = $m[1];
 $repo = $m[2];
+// '.' and '..' would be collapsed by curl and move the request (and the token) to another API path.
+if (in_array($owner, ['.', '..'], true) || in_array($repo, ['.', '..'], true)) fail('That is not a GitHub repository URL.');
 
 function gh_get(string $path) {
   $token = $GLOBALS['GITHUB_TOKEN'] ?? '';

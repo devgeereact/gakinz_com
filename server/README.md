@@ -71,7 +71,7 @@ of their own and are denied to direct requests by `.htaccess`. The file count is
 | `portal.php`, `support.php`, `feedback.php`, `comms.php`, `mail.php` | Client-facing. `portal.php` and the client branches of `support.php` and `feedback.php` serve `client`-role callers and are security-critical |
 | `blog.php`, `testimonials.php`, `content.php`, `knowledge.php`, `announcements.php`, `work.php`, `site.php` | Content. `work.php` also serves the public work ledger and the homepage hero; `site.php` serves published site copy publicly and drafts to editors |
 | `ai.php` | AI proxy: Anthropic first, OpenRouter as backup (`_ai.php`, D-054). Staff roles only, capped per role per day. Keys stay server-side |
-| `weather.php` | OpenWeather proxy. Staff roles only, cached 10 minutes. The key stays server-side |
+| `weather.php` | Retired 2026-11-01: a stub that answers 404, kept so a release replaces the old live copy |
 | `github.php`, `figma.php`, `slack.php` | External connectors |
 | `cron.php` | Scheduled jobs. Gated by `$CRON_KEY`, not by a user session. `job=retention_report` and `job=retention_apply` run from the command line only (2026-10-19). `retention_apply` is a dry run unless `--apply` is passed **and** `$RETENTION_APPLY = true` **and** the rule's period is set; it is not part of `job=all` |
 | `schema.sql` | Every table, plus the migration statements as comments in the `MIGRATIONS` block and dated blocks at the foot |

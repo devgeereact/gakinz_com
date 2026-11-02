@@ -142,7 +142,22 @@ function cron_chase(mysqli $conn): array {
   return ['sent' => $sent, 'skipped' => $skipped];
 }
 
+/**
+ * Monthly retainer invoices. The "already billed this month?" check and the insert are not atomic, so the
+ * whole job runs under a named lock: a second run that overlaps (the scheduled cron and a web call) skips
+ * instead of billing a client twice (go-live audit 2026-11-01).
+ */
 function cron_billing(mysqli $conn): array {
+  $got = $conn->query("SELECT GET_LOCK('gk_cron_billing', 0) AS got");
+  if (!$got || (int)($got->fetch_assoc()['got'] ?? 0) !== 1) return ['skipped' => 'another billing run is in progress'];
+  try {
+    return cron_billing_run($conn);
+  } finally {
+    if ($r = $conn->query("SELECT RELEASE_LOCK('gk_cron_billing')")) $r->free();
+  }
+}
+
+function cron_billing_run(mysqli $conn): array {
   $created = 0;
   $month = date('Y-m');
   $res = $conn->query("SELECT id, company FROM clients WHERE tag = 'retainer' AND retainer_amount > 0 AND deleted_at IS NULL");

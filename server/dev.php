@@ -61,6 +61,11 @@ if ($method === 'GET') {
   ok($rows);
 }
 
+/** Empty, or one http(s) address with no spaces or control characters. Stops javascript: and data: links (2026-11-01). */
+function dev_url_ok(string $u): bool {
+  return $u === '' || (preg_match('#^https?://[^\s<>"\x00-\x1f\x7f]+$#i', $u) === 1 && filter_var($u, FILTER_VALIDATE_URL) !== false);
+}
+
 if ($method === 'POST' && $action === 'meta') {
   $user = require_auth($conn, STAFF);
   $in = body();
@@ -69,6 +74,7 @@ if ($method === 'POST' && $action === 'meta') {
   $repo = str_field($in, 'repo_url', 500);
   $staging = str_field($in, 'staging_url', 500);
   $prod = str_field($in, 'prod_url', 500);
+  foreach ([$repo, $staging, $prod] as $u) if (!dev_url_ok($u)) fail('Links must start with https:// or http://.');
   // checklist is a {key:bool} object; store as compact JSON.
   $checklist = isset($in['checklist']) && is_array($in['checklist']) ? json_encode($in['checklist']) : null;
 
@@ -94,6 +100,7 @@ if ($method === 'POST' && $action === 'deploy') {
   $url = str_field($in, 'url', 500);
   $notes = str_field($in, 'notes', 500);
   if ($pid <= 0) fail('A project is required.');
+  if (!dev_url_ok($url)) fail('Links must start with https:// or http://.');
   if (!in_array($env, ['staging', 'production'], true)) fail('Invalid environment.');
   if (!in_array($status, ['success', 'failed', 'rolled_back'], true)) $status = 'success';
   $uid = $user['id'];

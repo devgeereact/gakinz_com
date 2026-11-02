@@ -16,6 +16,11 @@ if (is_file(__DIR__ . '/_reference.php')) require_once __DIR__ . '/_reference.ph
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') fail('Method not allowed.', 405);
 
+// JSON only. Another site can make a visitor's browser send text/plain or a form post here with no
+// CORS preflight; it cannot send application/json that way. The site's own form always sends JSON.
+$ctype = strtolower(trim(explode(';', (string)($_SERVER['CONTENT_TYPE'] ?? $_SERVER['HTTP_CONTENT_TYPE'] ?? ''))[0]));
+if ($ctype !== 'application/json') fail('Send the enquiry as JSON.', 415);
+
 // Rate limit. The form is public, so without this one script can fill the
 // leads pipeline. Modelled on the login throttle in auth.php: count this IP's
 // recent rows in audit_log, no new table and no extra dependency. Five
