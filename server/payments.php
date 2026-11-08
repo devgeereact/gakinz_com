@@ -158,14 +158,14 @@ if ($method === 'POST' && $action === 'webhook') {
         audit($conn, null, 'invoice_payment_mismatch',
           '#' . $invoiceId . " stripe paid $paidMinor $paidCcy, expected {$inv['total_minor']} {$inv['currency']}");
       } else {
-        $stmt = $conn->prepare(
-          'UPDATE invoices SET status = "paid", paid_at = NOW()
-           WHERE id = ? AND status <> "paid" AND deleted_at IS NULL'
-        );
-        $stmt->bind_param('i', $invoiceId);
-        $stmt->execute();
-        $outcome = $stmt->affected_rows > 0 ? 'marked_paid' : 'already_paid';
-        if ($outcome === 'marked_paid') audit($conn, null, 'invoice_paid_stripe', '#' . $invoiceId . ' via ' . $type);
+        // The provider's own reference (the payment intent on a Checkout Session, else the object's id).
+        $ref = substr((string)($obj['payment_intent'] ?? $obj['id'] ?? ''), 0, 100);
+        if (gk_mark_invoice_paid($conn, $invoiceId, 'stripe', $ref !== '' ? $ref : null, $paidMinor, null)) {
+          $outcome = 'marked_paid';
+          audit($conn, null, 'invoice_paid_stripe', '#' . $invoiceId . ' via ' . $type);
+        } else {
+          $outcome = 'already_paid'; // a parallel delivery got there first
+        }
       }
     }
     if ($eventId !== '') gk_payment_event_record($conn, 'stripe', $eventId, $invoiceId, $paidMinor, $paidCcy, $outcome);
@@ -299,10 +299,11 @@ if ($method === 'GET' && $action === 'paypal_return') {
     header("Location: $bounce?payfail=1"); exit;
   }
   if ($captured && (int)$custom === $invoiceId && $inv) {
-    $upd = $conn->prepare('UPDATE invoices SET status = "paid", paid_at = NOW() WHERE id = ? AND status <> "paid" AND deleted_at IS NULL');
-    $upd->bind_param('i', $invoiceId);
-    $upd->execute();
-    if ($upd->affected_rows > 0) audit($conn, null, 'invoice_paid_paypal', '#' . $invoiceId);
+    $captureRef = substr((string)($capture['id'] ?? ''), 0, 100);
+    if (gk_mark_invoice_paid($conn, $invoiceId, 'paypal', $captureRef !== '' ? $captureRef : null, $capMinor, null)) {
+      audit($conn, null, 'invoice_paid_paypal', '#' . $invoiceId);
+    }
+    // Not marked by this call means it was already paid (a parallel return): the same page for the customer.
     header("Location: $bounce?paid=1"); exit;
   }
   header("Location: $bounce?payfail=1"); exit;

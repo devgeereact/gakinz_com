@@ -25,24 +25,6 @@ const STAFF = ['super_admin', 'admin', 'manager'];
 const PAYMENT_METHODS = ['bank_transfer', 'cash', 'cheque', 'other'];
 const PAYMENT_NEEDS_REFERENCE = ['bank_transfer', 'cheque'];
 
-/**
- * True once the SQL 13 payment columns exist on `invoices`. Until that schema
- * step runs, every existing action works as before and record_payment answers
- * 503. Cached for the request.
- */
-function payment_cols_ready(mysqli $conn): bool {
-  static $ready = null;
-  if ($ready !== null) return $ready;
-  try {
-    // LIMIT 0 reads no rows; it only proves the columns are there.
-    $res = $conn->query('SELECT paid_method, paid_reference, paid_amount_pence, paid_recorded_by FROM invoices LIMIT 0');
-    $ready = $res !== false; // older mysqli reporting returns false instead of throwing
-  } catch (mysqli_sql_exception $e) {
-    if ($e->getCode() !== 1054) throw $e; // ER_BAD_FIELD_ERROR only
-    $ready = false;
-  }
-  return $ready;
-}
 
 /** The payment columns for a SELECT on alias `i`, or NULL placeholders before SQL 13. */
 function payment_cols_sql(mysqli $conn): string {
@@ -192,10 +174,20 @@ if ($method === 'POST' && $action === 'status') {
   $status = str_field($in, 'status', 20);
   if ($id <= 0) fail('An invoice id is required.');
   if (!in_array($status, ['draft', 'sent', 'paid'], true)) fail('Invalid status.');
+  // Looked up first: UPDATE reports 0 affected rows when nothing changes, which is not a missing invoice.
+  $inv = gk_invoice_payable($conn, $id);
+  if (!$inv) fail('Invoice not found.', 404);
 
   if ($status === 'paid') {
-    $stmt = $conn->prepare('UPDATE invoices SET status = "paid", paid_at = NOW() WHERE id = ? AND deleted_at IS NULL');
-    $stmt->bind_param('i', $id);
+    // The same recorded evidence as every other way an invoice becomes paid (K-131). A draft can be marked paid.
+    if ($inv['status'] === 'paid') fail('That invoice is already paid.', 409);
+    if ($inv['total_minor'] <= 0) fail('That invoice has nothing to pay.');
+    // The method is not known here (use Record payment for that), so it is stored as "other" with the invoice total.
+    if (!gk_mark_invoice_paid($conn, $id, 'other', null, $inv['total_minor'], (int)$user['id'])) {
+      fail('That invoice could not be marked paid. Reload and try again.', 409);
+    }
+    audit($conn, $user['id'], 'invoice_status', "#$id → paid (method not recorded)");
+    ok(['ok' => true]);
   } else {
     // Moving back from paid also forgets any recorded payment (SQL 13 columns).
     $clear = payment_cols_ready($conn)
@@ -205,7 +197,6 @@ if ($method === 'POST' && $action === 'status') {
     $stmt->bind_param('si', $status, $id);
   }
   $stmt->execute();
-  if ($stmt->affected_rows < 1) fail('Invoice not found.', 404);
   audit($conn, $user['id'], 'invoice_status', "#$id → $status");
   ok(['ok' => true]);
 }
