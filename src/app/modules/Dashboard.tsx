@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react"
+import { dashboardSources, type DashboardSource } from "./dashboardSources"
 import { useLoader } from "@/hooks/use-load"
 import { Link, useNavigate } from "react-router-dom"
 import {
@@ -143,6 +144,9 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const [errors, setErrors] = useState<string[]>([])
   const role = useAuth((s) => s.user?.role)
+  // Only the sources this role may call: an editor is not asked for invoices (manager-only), so that tile reads
+  // "not available to your role" and no error banner appears for something that was never going to load.
+  const sources = dashboardSources(role)
   const [todayView, setTodayView] = useState<TodayView>(initialTodayView)
   const [todayLoading, setTodayLoading] = useState(false)
 
@@ -172,8 +176,17 @@ export default function Dashboard() {
   // page waits for both. Announcements follow once the totals are in.
   const { loading, reload: load } = useLoader(
     async (active) => {
+      const ask = <T,>(source: DashboardSource, call: () => Promise<T>): Promise<T | null> =>
+        sources.load.includes(source) ? call() : Promise.resolve(null)
       const [lists] = await Promise.all([
-        Promise.all([leadsApi.list(), clientsApi.list(), projectsApi.list(), invoicesApi.list(), supportApi.list(), timeApi.list()]),
+        Promise.all([
+          ask("leads", () => leadsApi.list()),
+          ask("clients", () => clientsApi.list()),
+          ask("projects", () => projectsApi.list()),
+          ask("invoices", () => invoicesApi.list()),
+          ask("support", () => supportApi.list()),
+          ask("time", () => timeApi.list()),
+        ]),
         todayApi.get().then((res) => {
           if (active()) setTodayView((prev) => applyTodayResult(prev, res))
         }),
@@ -182,24 +195,37 @@ export default function Dashboard() {
     },
     ([l, c, p, inv, t, tm]) => {
       const errs: string[] = []
-      if (l.ok) setLeads(l.data)
-      else errs.push("leads")
-      if (c.ok) setClientCount(c.data.length)
-      else errs.push("clients")
-      if (p.ok) setProjects(p.data)
-      else errs.push("projects")
-      if (inv.ok) setInvoices(inv.data)
-      else errs.push("invoices")
-      if (t.ok) setTickets(t.data)
-      else errs.push("support")
-      if (tm.ok) setEntries(tm.data)
-      else errs.push("time")
+      // A null answer is a source this role is not asked for; it is not an error.
+      if (l) {
+        if (l.ok) setLeads(l.data)
+        else errs.push("leads")
+      }
+      if (c) {
+        if (c.ok) setClientCount(c.data.length)
+        else errs.push("clients")
+      }
+      if (p) {
+        if (p.ok) setProjects(p.data)
+        else errs.push("projects")
+      }
+      if (inv) {
+        if (inv.ok) setInvoices(inv.data)
+        else errs.push("invoices")
+      }
+      if (t) {
+        if (t.ok) setTickets(t.data)
+        else errs.push("support")
+      }
+      if (tm) {
+        if (tm.ok) setEntries(tm.data)
+        else errs.push("time")
+      }
       setErrors(errs)
       announcementsApi.list().then((r) => r.ok && setAnns(r.data.slice(0, 3)))
     },
     null,
     // A load that throws marks every source unavailable rather than leaving zeros (K-031).
-    () => setErrors(["leads", "clients", "projects", "invoices", "support", "time"]),
+    () => setErrors([...sources.load]),
   )
 
   const stats = useMemo(() => {
@@ -288,9 +314,10 @@ export default function Dashboard() {
 
   // A source that failed to load is shown as unavailable, never as zero, so a
   // failed invoices request cannot read as "£0 outstanding, all on time" (K-031).
-  const down = (source: string) => errors.includes(source)
+  const down = (source: string) => errors.includes(source) || (sources.notForRole as string[]).includes(source)
   const NA = "—"
   const NA_HINT = "Unavailable, refresh to retry"
+  const naHint = (source: string) => ((sources.notForRole as string[]).includes(source) ? "Not part of your role" : NA_HINT)
 
   const generateBrief = async () => {
     setBriefing(true)
@@ -371,28 +398,28 @@ export default function Dashboard() {
     {
       label: "Open leads",
       value: down("leads") ? NA : String(stats.openLeads),
-      hint: down("leads") ? NA_HINT : "In the pipeline",
+      hint: down("leads") ? naHint("leads") : "In the pipeline",
       to: "/app/leads",
       series: down("leads") ? undefined : spark.leads,
     },
     {
       label: "Active projects",
       value: down("projects") ? NA : String(stats.activeProjects),
-      hint: down("projects") ? NA_HINT : "Not yet launched",
+      hint: down("projects") ? naHint("projects") : "Not yet launched",
       to: "/app/projects",
       series: down("projects") ? undefined : spark.projects,
     },
     {
       label: "Cash received",
       value: down("invoices") ? NA : money(stats.paid),
-      hint: down("invoices") ? NA_HINT : "Paid invoices, all time",
+      hint: down("invoices") ? naHint("invoices") : "Paid invoices, all time",
       to: "/app/invoicing",
       series: down("invoices") ? undefined : spark.paid,
     },
     {
       label: "Invoiced, unpaid",
       value: down("invoices") ? NA : money(stats.outstanding),
-      hint: down("invoices") ? NA_HINT : stats.overdue ? `Sent, not paid. ${stats.overdue} overdue` : "Sent, not paid. None overdue",
+      hint: down("invoices") ? naHint("invoices") : stats.overdue ? `Sent, not paid. ${stats.overdue} overdue` : "Sent, not paid. None overdue",
       tone: !down("invoices") && stats.overdue ? ("down" as const) : undefined,
       to: "/app/invoicing",
       series: down("invoices") ? undefined : spark.outstanding,
@@ -400,14 +427,14 @@ export default function Dashboard() {
     {
       label: "Open tickets",
       value: down("support") ? NA : String(stats.openTickets),
-      hint: down("support") ? NA_HINT : "Needs a reply",
+      hint: down("support") ? naHint("support") : "Needs a reply",
       to: "/app/support",
       series: down("support") ? undefined : spark.tickets,
     },
     {
       label: "Billable (wk)",
       value: down("time") ? NA : `${stats.billableHours.toFixed(1)}h`,
-      hint: down("time") ? NA_HINT : `${stats.weekHours.toFixed(1)}h logged`,
+      hint: down("time") ? naHint("time") : `${stats.weekHours.toFixed(1)}h logged`,
       to: "/app/time",
       series: down("time") ? undefined : spark.billable,
     },
