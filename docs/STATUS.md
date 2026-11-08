@@ -26,13 +26,13 @@ Anything about signed-in use of the live system is NOT TESTED unless a row says 
 
 ## 0. Current measurements
 
-Measured on 2026-11-08 on the Mac on branch `phase-3/clerk-fixes` (from `main` at `e5335a2`) (the live checks and the host's PHP version the same day). Re-measure and update
+Measured on 2026-11-08 on the Mac on branch `phase-4/safe-writes` (from `main` at `00dbd4d`) (the live checks and the host's PHP version the same day). Re-measure and update
 this table when a count changes; the previous figures are in the history above.
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 613 tests in 55 files (`deploy-needed`, `files-download`, `fileShareModel`, `guardModel`, `projectStateModel`, `ticketPanelModel` tests added) |
-| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 569 tests in 44 files in 448 s on local MariaDB 11.4.13 (3 share-link tests added, K-128), run as `GK_TEST_DB=gakinz_p3full_test GK_TEST_PHP_PORT=5369 GK_TEST_PROVIDER_PORT=5370 npm run test:server`; CI (MySQL 8) passed on the previous release `7457e5e` |
+| Unit tests | `npm test` | **PASS.** 649 tests in 57 files (`access-drift`, `dashboardSources` tests added) |
+| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 600 tests in 46 files in 480 s on local MariaDB 11.4.13 (`safe-writes` 18 and `paid-state` 13 tests added, K-129 to K-131), run as `GK_TEST_DB=gakinz_p4full_test GK_TEST_PHP_PORT=5389 GK_TEST_PROVIDER_PORT=5390 npm run test:server`; CI (MySQL 8) passed on the previous release `b301ec7` |
 | Server suite on MySQL 8 | `npm run test:server` against MySQL 8.0 (`docs/OPERATIONS.md` section 8) | Last PASS 2026-10-20 (519 tests). MySQL 5.7 NOT TESTED; the live engine is UNVERIFIED (K-099) |
 | Type check and build | `npm run build` | **PASS.** 32 public pages and `app-shell.html` prerendered, `sitemap.xml` with 32 URLs |
 | Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 5 errors, 0 warnings. **`npm run lint` still fails** (K-002) |

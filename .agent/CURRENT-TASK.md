@@ -42,7 +42,14 @@ see CSP reports). PR #24 was already merged by GitHub.
    `docs/AUDIT.md`). K-127 staff downloads send the Clerk token; K-128 sharing keeps a public image's permanent link; K-140 the gate,
    the ticket panel and the project dropdown no longer hang. Owner: when a real file and a real project exist, try a download and a status
    change once; those two could not be tested live.
-4. Phases 1 to 3 are done. Next: Phase 4 (make writes safe: K-129, K-130, K-131, K-135).
+4. **Phase 4 (make writes safe), branch `phase-4/safe-writes`: built and verified, not yet released.** K-129 updates keep the
+   fields they are not sent (a blog edit no longer unpublishes a post); K-130 missing ids answer 404; K-131 every way an invoice
+   becomes paid records the same evidence (drafts stay payable: it is the owner's flow); K-135 a drift guard keeps `access.ts`
+   equal to the PHP role lists and the editor dashboard shows no permanent error banner. 649 unit and 600 server tests pass; each
+   fix was written test-first and mutation-checked. Needs the owner's go-ahead to release (PHP and CMS code only; no SQL,
+   `.htaccess` or config). Not testable live: the editor dashboard (only a super admin exists) and PayPal (ships off).
+5. Next: Phase 5 (retire the legacy sign-in), which first needs the owner's confirmation that every active user signs in
+   through Clerk (there is 1 active user today).
 
 ## Resume on another computer
 

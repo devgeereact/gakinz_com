@@ -193,6 +193,8 @@ By hand, after that branch merges, backup first:
   audit row (`login_failed` for `k123-probe-*@invalid.test`). Not changed: the origin still answers requests that carry
   any `CF-RAY` header; Cloudflare Authenticated Origin Pulls would close that and is a Cloudflare setting.
 
+The Phase 4 release (K-129, K-130, K-131, K-135) is PHP and CMS code only: no SQL, no `.htaccess`, no `config.php` key. `gk_mark_invoice_paid` writes the SQL 13 payment columns when they exist and only status and `paid_at` on a database without them.
+
 Nothing else is pending. SQL 1 to 19 ran on 2026-10-21 and SQL 20 on 2026-10-30; the
 current `server/.htaccess` went up on 2026-10-21; the Clerk keys were added on 2026-10-30. Since then
 `server/*.php` goes up with every release (section 1).
