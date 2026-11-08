@@ -17,21 +17,23 @@ sessions are in [HANDOFF.md](HANDOFF.md).
 **2026-11-08, branch `phase-1/release-readiness` (from `golive/2026-11`, local only):** release readiness for
 the 13 unreleased commits. `npm run verify` passes on the candidate, and so does the server suite (44 files,
 562 tests, throwaway local MariaDB 11.4). Added `npm run check:live`
-(`scripts/live-check.mjs`, read-only GETs, 14 tests written first). Run against production it passes 9 of 16
-checks; the 7 failures are exactly the unreleased hardening: no CSP header, `X-Powered-By` still sent,
-**`/assets/` and `/uploads/` return a live directory listing (K-125)**, no deny rules for `.md` and backup
-paths, and no one-year `immutable` cache on the bundle. Nothing was pushed, deployed or changed on the server.
+(`scripts/live-check.mjs`, read-only GETs, tests written first). Before any server change it passed 9 of 16
+checks; the 7 failures were the unreleased hardening, including **a live directory listing on `/assets/` and
+`/uploads/` (K-125)**.
+
+**Done with the owner's approval on 2026-11-08 (steps 1 and 2 of 3):** the K-121 query ran read-only (**0 accounts
+with app two-factor**, 1 active user); `server/.htaccess` was uploaded after a server-side backup
+(`~/backups/gakinz_com/htaccess.before-phase1.20261108T071024Z`) and smoke-tested; the listing is closed and
+`npm run check:live` now passes **16 of 16**. Step 3, pushing this branch so CI runs, was approved and follows this
+commit. Not merged, not deployed.
 
 ## Next actions, in order
 
-1. Owner: the live directory listing (K-125) is the most urgent item. It goes away when the `.htaccess` from the
-   branch is uploaded (`docs/DEPLOYMENT.md` section 5, backup first).
-2. Owner: run `SELECT id, role FROM users WHERE totp_enabled = 1 AND deleted_at IS NULL` (K-121) before merging.
-3. Owner: review the branch; approve push. Let CI (MySQL, gitleaks, Semgrep) pass, then approve the merge
-   (merging releases `dist/` and `server/*.php`). After it, run `npm run check:live`: all 16 must pass.
-4. Owner: the hand-applied list in `docs/DEPLOYMENT.md` section 5 (`.htaccess`, private config, stub), then
-   K-123 with the host.
-5. Owner: AI keys with `scripts/set-server-key.sh` (pending from the cleanup task).
+1. Owner: wait for CI on the pushed branch (MySQL tests, gitleaks, Semgrep). Then approve the fast-forward of
+   `main`, which releases `dist/` and `server/*.php`. After it, run `npm run check:live` again: 16 of 16.
+2. Owner: the remaining hand-applied items in `docs/DEPLOYMENT.md` section 5 (private config `CLERK_CACHE_DIR`,
+   remove the localhost origin, the mail TLS test, compare the live stub), then K-123 with the host.
+3. Owner: AI keys with `scripts/set-server-key.sh` (pending from the cleanup task).
 
 ## Resume on another computer
 

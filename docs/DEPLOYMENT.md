@@ -147,14 +147,20 @@ private `config.php`. A change that needs one of them records it here in the sam
 (not merged). The PHP goes up with the release; check first, for K-121:
 `SELECT id, role FROM users WHERE totp_enabled = 1 AND deleted_at IS NULL`. Any account listed must add a
 second factor in Clerk, or have app two-factor cleared by an admin, or its Clerk sign-in answers 403.
+**Checked 2026-11-08 (owner-approved, read-only): 0 accounts have app two-factor on**, out of 1 active user, so
+the K-121 lockout cannot happen on merge.
 By hand, after that branch merges, backup first:
-- **`server/.htaccess`** (K-033, K-058, K-125): a CSP enforced on the public pages and Report-Only on the app
+- **`server/.htaccess`** (K-033, K-058, K-125): **applied to the live host on 2026-11-08 (owner-approved).** Backup of
+  the previous file: `~/backups/gakinz_com/htaccess.before-phase1.20261108T071024Z`; restore with `cp -p` over
+  `~/gakinz.com/.htaccess`. Before the upload the live page's one executable inline script was checked against the
+  CSP hash (match), and after it `npm run check:live` passed 16 of 16. What it does: a CSP enforced on the public pages and Report-Only on the app
   shell; HSTS; COOP; `X-Powered-By` and `X-Turbo-Charged-By` removed; `ServerSignature Off`; directory requests
   answer 404 instead of a listing; a deny for dotfiles, backups, `*.example` and `config.php.*`; a one-year
   `immutable` cache for the hashed `/assets/*` files. Either order with the release is safe: the live pages'
   inline script had the same hash on 2026-11-01, and `npm run build` fails if a future build drifts from it. Checks after upload: `/`, `/work`,
-  `/services/web-design`, `/login`, `/app` 200; `/assets/` and `/uploads/` 404; `/config.php`, `/README.md`,
-  `/config.php.bak` 403; `/robots.txt`, `/llms.txt`, `/sitemap.xml` 200; `curl -sI https://gakinz.com/` shows
+  `/services/web-design`, `/login`, `/app` 200; `/assets/` and `/uploads/` 404; `/config.php` 403 (a real file); `/README.md` and
+  `/config.php.bak` are never uploaded, so they get 403, 404 or the app page, and the deny rule only matters if such a
+  file ever appears (a different real file served with 200 fails the check); `/robots.txt`, `/llms.txt`, `/sitemap.xml` 200; `curl -sI https://gakinz.com/` shows
   `content-security-policy` and `strict-transport-security`; `/api.php` has no `x-powered-by`; an
   `/assets/index-*.js` shows `cache-control: public, max-age=31536000, immutable` (Cloudflare's "Browser Cache
   TTL" must respect existing headers); sign in once and look at the browser console for CSP reports.
