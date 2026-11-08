@@ -1,7 +1,8 @@
 <?php
 /**
  * AI providers for ai.php: Anthropic first, OpenRouter when Anthropic has no key
- * or fails, so a single provider outage does not take AI away.
+ * or fails, so a single provider outage does not take AI away. On OpenRouter the
+ * default model is OR_MODEL and an optional cheaper OR_FALLBACK_MODEL is tried when it fails.
  *
  *   ai_providers()                  → the configured providers, in the order tried
  *   ai_generate($system, $input)    → ['text' => …, 'provider' => …] or null
@@ -15,7 +16,10 @@
 const AI_ANTHROPIC_VERSION = '2026-10-21';
 // Models that accept server-side refusal fallbacks in their "default" form.
 const AI_ANTHROPIC_FALLBACK_MODELS = ['claude-opus-5-5', 'claude-opus-5', 'claude-fable-5-1', 'claude-sonnet-5-5'];
-// Both attempts together stay under Cloudflare's 100-second proxy limit.
+// All attempts together (Anthropic, then each OpenRouter model) stay under Cloudflare's 100-second
+// proxy limit: a later attempt gets only the time left in the budget, and is skipped below the minimum.
+const AI_TOTAL_BUDGET = 90;
+const AI_MIN_ATTEMPT = 5;
 const AI_ANTHROPIC_TIMEOUT = 50;
 const AI_OPENROUTER_TIMEOUT = 40;
 
@@ -94,9 +98,17 @@ function ai_anthropic(string $system, string $input): ?string {
   return trim($text) === '' ? null : $text;
 }
 
-function ai_openrouter(string $system, string $input): ?string {
+/** OpenRouter models in the order tried: the default, then the backup when one is set and differs. */
+function ai_openrouter_models(): array {
+  $primary = ai_const('OR_MODEL', 'openrouter/auto');
+  $backup  = ai_const('OR_FALLBACK_MODEL', '');
+  return ($backup !== '' && $backup !== $primary) ? [$primary, $backup] : [$primary];
+}
+
+/** One model on OpenRouter, within $timeout seconds. */
+function ai_openrouter_call(string $model, string $system, string $input, int $timeout): ?string {
   $payload = [
-    'model' => ai_const('OR_MODEL', 'openrouter/auto'),
+    'model' => $model,
     'messages' => [
       ['role' => 'system', 'content' => $system],
       ['role' => 'user',   'content' => $input],
@@ -108,19 +120,31 @@ function ai_openrouter(string $system, string $input): ?string {
     'X-Title: GAkinzOS',
   ];
   $base = rtrim((string)($GLOBALS['AI_OPENROUTER_BASE'] ?? 'https://openrouter.ai/api'), '/');
-  [$code, $data, $err] = ai_post($base . '/v1/chat/completions', $headers, $payload, AI_OPENROUTER_TIMEOUT);
+  [$code, $data, $err] = ai_post($base . '/v1/chat/completions', $headers, $payload, $timeout);
   if ($code < 200 || $code >= 300 || !$data) {
-    error_log('GAkinz AI openrouter: ' . ($err !== '' ? "transport $err" : "HTTP $code"));
+    error_log('GAkinz AI openrouter ' . $model . ': ' . ($err !== '' ? "transport $err" : "HTTP $code"));
     return null;
   }
   $text = (string)($data['choices'][0]['message']['content'] ?? '');
   return trim($text) === '' ? null : $text;
 }
 
+/** Tries each OpenRouter model in turn until $deadline (a microtime). Null when every attempt failed. */
+function ai_openrouter(string $system, string $input, float $deadline): ?string {
+  foreach (ai_openrouter_models() as $model) {
+    $left = (int)floor($deadline - microtime(true));
+    if ($left < AI_MIN_ATTEMPT) break; // too little time left to try again
+    $text = ai_openrouter_call($model, $system, $input, min(AI_OPENROUTER_TIMEOUT, $left));
+    if ($text !== null) return $text;
+  }
+  return null;
+}
+
 /** Tries each configured provider in turn; null when every one failed. */
 function ai_generate(string $system, string $input): ?array {
+  $deadline = microtime(true) + AI_TOTAL_BUDGET;
   foreach (ai_providers() as $p) {
-    $text = $p === 'anthropic' ? ai_anthropic($system, $input) : ai_openrouter($system, $input);
+    $text = $p === 'anthropic' ? ai_anthropic($system, $input) : ai_openrouter($system, $input, $deadline);
     if ($text !== null) return ['text' => $text, 'provider' => $p];
   }
   return null;

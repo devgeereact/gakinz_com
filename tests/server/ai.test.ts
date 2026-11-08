@@ -81,6 +81,45 @@ describe("ai.php providers", () => {
     expect(providerRequests().map((s) => s.path)).toEqual(["/v1/chat/completions"])
   })
 
+  describe("OpenRouter backup model", () => {
+    const BACKUP = "test/backup-model"
+    const only = () => fs.writeFileSync(OVERRIDES, JSON.stringify({ TEST_ANTHROPIC_KEY: "", TEST_OR_FALLBACK_MODEL: BACKUP }))
+    const models = () => providerRequests().filter((s) => s.path === "/v1/chat/completions").map((s) => JSON.parse(s.body).model)
+
+    it("retries with the backup model when the default model fails", async () => {
+      only()
+      mode({ openrouter: "error-primary" })
+      const r = await run(staff)
+      expect(r.status).toBe(200)
+      expect(r.json).toEqual({ text: "Draft from OpenRouter.", provider: "openrouter" })
+      expect(models()).toEqual(["openrouter/auto", BACKUP])
+    })
+
+    it("does not call the backup model when the default model answers", async () => {
+      only()
+      const r = await run(staff)
+      expect(r.json.provider).toBe("openrouter")
+      expect(models()).toEqual(["openrouter/auto"])
+    })
+
+    it("answers 502 and records the attempt when the backup model fails too", async () => {
+      only()
+      mode({ openrouter: "error" })
+      const r = await run(staff)
+      expect(r.status).toBe(502)
+      expect(models()).toEqual(["openrouter/auto", BACKUP])
+      expect(one("SELECT detail FROM audit_log WHERE action = 'ai_call'")).toBe("test_draft failed")
+    })
+
+    it("makes one call when no backup model is configured", async () => {
+      fs.writeFileSync(OVERRIDES, JSON.stringify({ TEST_ANTHROPIC_KEY: "" }))
+      mode({ openrouter: "error" })
+      const r = await run(staff)
+      expect(r.status).toBe(502)
+      expect(models()).toEqual(["openrouter/auto"])
+    })
+  })
+
   it("treats a placeholder key as not set", async () => {
     fs.writeFileSync(OVERRIDES, JSON.stringify({ TEST_ANTHROPIC_KEY: "REPLACE_anthropic_key" }))
     const r = await run(staff)

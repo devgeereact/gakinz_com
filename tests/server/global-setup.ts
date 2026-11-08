@@ -79,6 +79,9 @@ if (is_array($__gk_over)) foreach ($__gk_over as $__k => $__v) $GLOBALS[$__k] = 
 // through overrides.json (TEST_ANTHROPIC_KEY, TEST_OPENROUTER_KEY).
 define('ANTHROPIC_KEY', (string)($GLOBALS['TEST_ANTHROPIC_KEY'] ?? 'test-anthropic-key'));
 define('OPENROUTER_KEY', (string)($GLOBALS['TEST_OPENROUTER_KEY'] ?? 'test-openrouter-key'));
+// Off unless a test asks for it through overrides.json (ai.test.ts), so other tests see one OpenRouter call.
+// This must come after overrides.json is read above.
+if (!empty($GLOBALS['TEST_OR_FALLBACK_MODEL'])) define('OR_FALLBACK_MODEL', (string)$GLOBALS['TEST_OR_FALLBACK_MODEL']);
 $AI_ANTHROPIC_BASE = '${PROVIDER_BASE}';
 $AI_OPENROUTER_BASE = '${PROVIDER_BASE}';
 $conn = @new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME, ${Number(DB_PORT) || 3306});
@@ -91,11 +94,17 @@ $OR_MODEL   = OR_MODEL;
 
 // Stand-ins for the Anthropic Messages API and OpenRouter. ai.test.ts picks each
 // one's answer by writing AI_MODE ({ anthropic, openrouter }: ok | error | refusal).
-function aiReply(url: string): { status: number; body: unknown } | null {
+function aiReply(url: string, reqBody = ""): { status: number; body: unknown } | null {
   const which = url.startsWith("/v1/messages") ? "anthropic" : url.startsWith("/v1/chat/completions") ? "openrouter" : null
   if (!which) return null
   let mode = "ok"
   try { mode = JSON.parse(fs.readFileSync(AI_MODE, "utf8"))[which] ?? "ok" } catch { /* default ok */ }
+  // "error-primary": OpenRouter refuses every model except the configured backup one.
+  if (mode === "error-primary") {
+    let model = ""
+    try { model = JSON.parse(reqBody).model ?? "" } catch { /* not JSON */ }
+    mode = model === "test/backup-model" ? "ok" : "error"
+  }
   if (mode === "error") return { status: 529, body: { type: "error", error: { type: "overloaded_error", message: "Overloaded" } } }
   if (which === "anthropic") {
     if (mode === "refusal") return { status: 200, body: { stop_reason: "refusal", stop_details: { type: "refusal", category: null }, content: [] } }
@@ -112,7 +121,7 @@ function startProvider(): http.Server {
     req.on("end", () => {
       fs.appendFileSync(PROVIDER_LOG, JSON.stringify({ path: req.url, headers: req.headers, body }) + "\n")
       res.setHeader("Content-Type", "application/json")
-      const ai = aiReply(req.url ?? "")
+      const ai = aiReply(req.url ?? "", body)
       if (ai) {
         res.statusCode = ai.status
         res.end(JSON.stringify(ai.body))
