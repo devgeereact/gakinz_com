@@ -26,13 +26,13 @@ Anything about signed-in use of the live system is NOT TESTED unless a row says 
 
 ## 0. Current measurements
 
-Measured on 2026-11-08 on the Mac on `main` at `983606c` (the live checks and the host's PHP version the same day). Re-measure and update
+Measured on 2026-11-08 on the Mac on branch `phase-3/clerk-fixes` (from `main` at `e5335a2`) (the live checks and the host's PHP version the same day). Re-measure and update
 this table when a count changes; the previous figures are in the history above.
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 575 tests in 49 files (`scripts/live-check.test.mjs` added, 19 tests) |
-| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 566 tests in 44 files in 443 s on local MariaDB 11.4.13 (4 backup-model tests added, D-056), run as `GK_TEST_DB=gakinz_aifull_test GK_TEST_PHP_PORT=5349 GK_TEST_PROVIDER_PORT=5350 npm run test:server`; CI (MySQL 8) also passed on `983606c` |
+| Unit tests | `npm test` | **PASS.** 613 tests in 55 files (`deploy-needed`, `files-download`, `fileShareModel`, `guardModel`, `projectStateModel`, `ticketPanelModel` tests added) |
+| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 569 tests in 44 files in 448 s on local MariaDB 11.4.13 (3 share-link tests added, K-128), run as `GK_TEST_DB=gakinz_p3full_test GK_TEST_PHP_PORT=5369 GK_TEST_PROVIDER_PORT=5370 npm run test:server`; CI (MySQL 8) passed on the previous release `7457e5e` |
 | Server suite on MySQL 8 | `npm run test:server` against MySQL 8.0 (`docs/OPERATIONS.md` section 8) | Last PASS 2026-10-20 (519 tests). MySQL 5.7 NOT TESTED; the live engine is UNVERIFIED (K-099) |
 | Type check and build | `npm run build` | **PASS.** 32 public pages and `app-shell.html` prerendered, `sitemap.xml` with 32 URLs |
 | Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 5 errors, 0 warnings. **`npm run lint` still fails** (K-002) |

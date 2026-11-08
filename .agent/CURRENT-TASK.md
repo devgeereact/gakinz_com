@@ -38,13 +38,12 @@ see CSP reports). PR #24 was already merged by GitHub.
 1. Done: the OpenRouter backup model was released as `983606c` (PR #25) and `OR_FALLBACK_MODEL=openai/gpt-oss-120b` is set; a live
    test answered on both models.
 2. Owner: set a monthly spending limit on the OpenRouter key in the OpenRouter dashboard (the key has none today).
-3. **Phase 2 (align docs, process and workspace): done 2026-11-08** except one question for the owner: `.superpowers/` (4.5 MB)
-   holds the 2026-10-18 "journeys" plan and about 30 task briefs, which is working history and not scratch (I first called it
-   brainstorm files, wrongly); delete it, or move it to `~/Backups/projects/gakinz_com/`, only on the owner's say-so. Done: docs
-   aligned, audit logged (K-127 to K-139), `.planning/` ignored, merged branches deleted (local and the two remote ones), the
-   release now waits for CI (K-138, `7457e5e`). Left in the workspace on purpose: `.local-test` (the local test database),
-   `node_modules`, `graphify-out`.
-4. Next: Phase 3 of the GSD roadmap (fix what Clerk broke: K-127 file downloads, K-128 share-token collision, hung screens).
+3. **Phase 3 (fix what Clerk broke), branch `phase-3/clerk-fixes`: built and verified, not yet released.** K-127 staff downloads
+   send the Clerk token; K-128 sharing a file keeps a public Work image's permanent link; K-140 the signed-in gate, the ticket
+   panel and the project status dropdown no longer hang or snap back. 613 unit and 569 server tests pass; every fix was
+   written test-first and mutation-checked. Needs the owner's go-ahead to release (push, PR, CI, fast-forward `main`), then
+   a signed-in look at Files, Support and Projects (an agent has not rendered these in a browser).
+4. Phase 2 is done. Next after Phase 3: Phase 4 (make writes safe: K-129, K-130, K-131, K-135).
 
 ## Resume on another computer
 

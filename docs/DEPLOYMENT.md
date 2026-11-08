@@ -22,6 +22,8 @@ by a person, and `server/.htaccess` is uploaded by hand. This is the single most
 
 ## 2. The deploy workflow
 
+**If the CI gate ever blocks a release** (K-138): the release is the `deploy` job of `ci.yml`, so a failing or cancelled check skips it. Fix the check and push again; to release anyway, start `Deploy` by hand from the Actions tab (workflow_dispatch skips the wait), or run `npm run release -- --go` from the Mac. To undo the gate itself, revert `7457e5e`. Documentation-only pushes run CI but do not release (`scripts/deploy-needed.mjs`).
+
 `.github/workflows/deploy.yml`:
 
 ```
