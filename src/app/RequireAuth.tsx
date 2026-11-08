@@ -8,6 +8,7 @@ import { clerkEnabled, clerkSignOut } from "@/lib/clerk"
 import ClerkSession from "@/app/ClerkSession"
 import { useAuth } from "@/store/auth.store"
 import { canAccess, defaultPathForRole, moduleKeyForPath } from "@/lib/access"
+import { guardView, meOutcome, needsUser } from "./guardModel"
 
 // Gates the /app CMS.
 //   • No token → redirect to /login (remembering where you were).
@@ -68,45 +69,76 @@ function ClerkGuard() {
   const setUser = useAuth((s) => s.setUser)
   const clear = useAuth((s) => s.clear)
   const [denied, setDenied] = useState(false)
+  const [failed, setFailed] = useState(false)
+  const state = { isLoaded, isSignedIn: !!isSignedIn, hasUser: !!user, denied, failed }
 
+  // A signed-out visitor holds no user.
   useEffect(() => {
-    if (!isLoaded) return
-    if (!isSignedIn) {
-      clear()
-      return
-    }
+    if (isLoaded && !isSignedIn) clear()
+  }, [isLoaded, isSignedIn, clear])
+
+  // Load the user whenever someone is signed in and none is held: on the first visit, and again after a 401
+  // cleared it mid-session (the old effect ran only when Clerk's own state changed, so that hung the screen).
+  // A refusal or a failure stops the loop until the person acts (guardModel.ts).
+  const wantUser = needsUser(state)
+  useEffect(() => {
+    if (!wantUser) return
     let alive = true
     auth.me().then((res) => {
       if (!alive) return
       if (res.ok) {
         setDenied(false)
+        setFailed(false)
         setUser(res.data.user)
-      } else if (res.status === 401 || res.status === 403) setDenied(true)
+      } else if (meOutcome(res) === "denied") setDenied(true)
+      else setFailed(true)
     })
     return () => {
       alive = false
     }
-  }, [isLoaded, isSignedIn, setUser, clear])
+  }, [wantUser, setUser])
 
-  if (!isLoaded) return <Spinner />
-  if (!isSignedIn) return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
-  if (denied) {
-    return (
-      <div className="grid min-h-dvh place-items-center p-6 text-center">
-        <div className="max-w-sm">
-          <h1 className="font-display text-xl font-semibold">No access yet</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            You are signed in, but this email is not set up in GAkinzOS. Ask the owner to add it, then sign in again.
-          </p>
-          <Button variant="outline" className="mt-4" onClick={() => clerkSignOut().then(() => setDenied(false))}>
+  switch (guardView(state)) {
+    case "loading":
+      return <Spinner />
+    case "login":
+      return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />
+    case "denied":
+      return (
+        <GateMessage
+          title="No access yet"
+          text="You are signed in, but this email is not set up in GAkinzOS. Ask the owner to add it, then sign in again."
+        >
+          <Button variant="outline" onClick={() => clerkSignOut().then(() => setDenied(false))}>
             Sign out
           </Button>
-        </div>
-      </div>
-    )
+        </GateMessage>
+      )
+    case "retry":
+      return (
+        <GateMessage title="Could not load GAkinzOS" text="The studio could not be reached just now. Check your connection and try again.">
+          <Button onClick={() => setFailed(false)}>Try again</Button>
+          <Button variant="outline" onClick={() => clerkSignOut().then(() => setFailed(false))}>
+            Sign out
+          </Button>
+        </GateMessage>
+      )
+    case "app":
+      return <RoleGate />
   }
-  if (!user) return <Spinner />
-  return <RoleGate />
+}
+
+/** A centred message with actions, for the states where the person must do something. */
+function GateMessage({ title, text, children }: { title: string; text: string; children: React.ReactNode }) {
+  return (
+    <div className="grid min-h-dvh place-items-center p-6 text-center">
+      <div className="max-w-sm">
+        <h1 className="font-display text-xl font-semibold">{title}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">{text}</p>
+        <div className="mt-4 flex flex-wrap justify-center gap-2">{children}</div>
+      </div>
+    </div>
+  )
 }
 
 function Spinner() {
