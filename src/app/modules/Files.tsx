@@ -23,8 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { files, projects as projectsApi, API_BASE, type FileRow, type Project } from "@/lib/api"
-import { getStoredToken } from "@/store/auth.store"
+import { downloadName, files, projects as projectsApi, type FileRow, type Project } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
 function humanSize(n: number) {
@@ -69,17 +68,10 @@ export default function Files() {
 
   const download = async (f: FileRow) => {
     setBusyId(f.id)
-    try {
-      const token = getStoredToken()
-      const res = await fetch(`${API_BASE}/files.php?download=${f.id}`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      })
-      if (!res.ok) throw new Error(`Download failed (${res.status})`)
-      saveAs(await res.blob(), f.name)
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Download failed.")
-    }
+    const res = await files.download(f.id)
     setBusyId(null)
+    if (res.ok) saveAs(res.data, downloadName(res.data, f.name))
+    else toast.error(res.error || "Could not download the file.")
   }
 
   const share = async (f: FileRow) => {

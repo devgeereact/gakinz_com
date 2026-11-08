@@ -1386,6 +1386,9 @@ export const files = {
   clientShare: (id: number, visible: boolean) =>
     api.post<{ id: number; client_visible: boolean; shared_at: string | null }>("/files.php?action=client_share", { id, visible }),
   remove: (id: number) => api.post<{ ok: boolean }>("/files.php?action=delete", { id }),
+  // The file itself, with the bearer attached the way every other call does it (legacy token, else Clerk). A plain
+  // fetch of the URL below sends no Clerk token (K-127).
+  download: (id: number) => api.download(`/files.php?download=${id}`, isFileReply),
   // Authenticated download URL (token is attached by the browser via the page,
   // so for direct links prefer a share link). Returns the absolute API path.
   downloadUrl: (id: number) => `${API_BASE}/files.php?download=${id}`,
