@@ -38,8 +38,11 @@ see CSP reports). PR #24 was already merged by GitHub.
 1. Done: the OpenRouter backup model was released as `983606c` (PR #25) and `OR_FALLBACK_MODEL=openai/gpt-oss-120b` is set; a live
    test answered on both models.
 2. Owner: set a monthly spending limit on the OpenRouter key in the OpenRouter dashboard (the key has none today).
-3. Next phase: Phase 2 of the GSD roadmap (align docs, process and workspace). `CLAUDE.md`, `README.md` and `AGENTS.md`
-   still name the old live commit and deploy scope.
+3. **Phase 2 (align docs, process and workspace), branch `phase-2/align-docs`:** docs done and committed (README, CLAUDE,
+   AGENTS, STATUS, WORKBOOK, the 2026-11-08 section of AUDIT, K-127 to K-139, `.planning/` ignored). Left, each needing the
+   owner's go-ahead: (a) make the deploy wait for CI (K-138) and fix the `pnpm release` text in `scripts/release.mjs`;
+   (b) clear workspace clutter (`.local-test` 191 MB, stale `graphify-out`, old `dist-ssr`; deletion only after the owner
+   has seen the list); (c) delete the two merged remote branches. Merged local branches were deleted on 2026-11-08.
 
 ## Resume on another computer
 

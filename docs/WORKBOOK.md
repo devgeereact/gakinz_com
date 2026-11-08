@@ -21,10 +21,12 @@ document disagree, the linked document wins and this page is wrong.
 | 2026-10-31 | `a907824` | The D-053 design finalisation | GitHub Actions, owner-approved |
 | 2026-10-31 | `fdc5d94` | Clerk's grey footer panel removed | GitHub Actions, owner-approved |
 | 2026-11-01 | `bde12c7` | Cleanup; AI on Anthropic first with OpenRouter as backup (D-054) | GitHub Actions, owner-approved ("push live") |
+| 2026-11-08 | `ae01cec` | The go-live hardening (13 commits, K-120 to K-126: Clerk second factor, CSP and HSTS, bcrypt, contact form, SEO schema) and `npm run check:live`; `.htaccess` uploaded by hand first | GitHub Actions, owner-approved at each gate; CI green on PR #24 |
+| 2026-11-08 | `983606c` | AI backup model: `OR_FALLBACK_MODEL` tried when `OR_MODEL` fails (D-056) | GitHub Actions, owner-approved; CI green on PR #25 |
 
 The checks of each release are in [AUDIT.md](AUDIT.md) (newest first). Measured counts are in
-[STATUS.md](STATUS.md) section 0. Signed-in use of the live system is NOT TESTED by an agent; the
-owner reports a working Clerk sign-in (2026-10-30).
+[STATUS.md](STATUS.md) section 0. Signed-in use of the live system is mostly NOT TESTED by an agent: on 2026-11-08 the
+owner signed in and an agent confirmed `/app` loads and 24 CMS screens render with no CSP violations or console errors; no data flow was exercised.
 
 Gated features ship switched off (D-050): `$RETENTION_APPLY`, `$REFERENCE_SIGNIN_ENABLED`,
 `$CLIENT_ANONYMISE_ENABLED`, PayPal, the ad slots.
@@ -57,11 +59,11 @@ The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md).
 
 ### 3b. Owner actions, in order
 
-0. **Go-live (2026-11-02):** run the `totp_enabled` query before merging (K-121, `docs/DEPLOYMENT.md` section 5);
-   read the host's client-IP trust setting and consider Authenticated Origin Pulls (K-123); after merging
-   `golive/2026-11`, upload `server/.htaccess` and work through the section 5 list (stub, `CLERK_CACHE_DIR`,
-   CORS entry, `$MAIL_VERIFY_TLS`); check `clients.email` for line breaks (K-120); the SEO copy list in
-   `docs/AUDIT.md`; the Rich Results Test on `/` and one service page after release.
+0. **Go-live: done 2026-11-08.** The `totp_enabled` query (0 accounts), `server/.htaccess`, the section 5 list
+   (stub, `CLERK_CACHE_DIR`, CORS entry, `$MAIL_VERIFY_TLS`) and K-123 (closed by a probe) are finished; `ae01cec` and
+   `983606c` are released. Still yours: set a monthly limit on the OpenRouter key; consider Cloudflare Authenticated
+   Origin Pulls (optional); check `clients.email` for line breaks (K-120); the SEO copy list in `docs/AUDIT.md`; the Rich
+   Results Test on `/` and one service page.
 
 1. **Safety.** Restore one backup somewhere isolated and agree recovery targets (K-010); record
    the live database engine (K-099); delete the Clerk user for `dev@gakinz.com` in the Clerk
