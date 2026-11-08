@@ -43,6 +43,7 @@ import {
 } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { CHECKLIST_OPTION, createOutcome, createPayload, parseTemplates, templatePreview } from "@/app/modules/projectTemplateModel"
+import { patchProject } from "@/app/modules/projectStateModel"
 
 // The Select needs a value for "no template"; createPayload() never sends it.
 const NO_TEMPLATE = "none"
@@ -157,7 +158,9 @@ export default function Projects() {
   }
 
   const setProjectStatus = async (p: Project, status: ProjectStatus) => {
-    setList((xs) => xs.map((x) => (x.id === p.id ? { ...x, status } : x)))
+    // The open board keeps its own copy of the project, so patch it too (its status dropdown snapped back before).
+    setList((xs) => patchProject(xs, null, p.id, { status }).list)
+    setSelected((sel) => patchProject<Project>([], sel, p.id, { status }).selected)
     const res = await projects.setStatus(p.id, status)
     if (!res.ok) {
       loadProjects()
@@ -166,8 +169,8 @@ export default function Projects() {
   }
 
   const setProjectStage = async (p: Project, stage: ProjectStage) => {
-    setList((xs) => xs.map((x) => (x.id === p.id ? { ...x, stage } : x)))
-    if (selected?.id === p.id) setSelected({ ...selected, stage })
+    setList((xs) => patchProject(xs, null, p.id, { stage }).list)
+    setSelected((sel) => patchProject<Project>([], sel, p.id, { stage }).selected)
     const res = await projects.setStage(p.id, stage)
     if (!res.ok) {
       loadProjects()

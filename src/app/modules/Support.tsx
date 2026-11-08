@@ -4,6 +4,7 @@ import { useLocation, useSearchParams } from "react-router-dom"
 import { AlertCircle, Clock, Loader2, Plus, RefreshCw, Send } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
+import { ticketPanelView } from "./ticketPanelModel"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -281,13 +282,27 @@ export default function Support() {
 
 function TicketPanel({ id, onChanged }: { id: number; onChanged: () => void }) {
   const [ticket, setTicket] = useState<TicketDetail | null>(null)
+  const [loadError, setLoadError] = useState<string | null>(null)
   const [reply, setReply] = useState("")
   const [sending, setSending] = useState(false)
-  // The latest ticket opened wins: a slow answer for an earlier one is dropped.
+  // The latest ticket opened wins: a slow answer for an earlier one is dropped. A failed load clears the ticket,
+  // so the panel never shows the previous ticket under the new id, and never spins for ever.
   const { loading, reload: load } = useLoader(
     () => support.get(id),
-    (res) => res.ok && setTicket(res.data),
+    (res) => {
+      if (res.ok) {
+        setTicket(res.data)
+        setLoadError(null)
+      } else {
+        setTicket(null)
+        setLoadError(res.error || "Could not load this ticket.")
+      }
+    },
     id,
+    () => {
+      setTicket(null)
+      setLoadError("Could not load this ticket.")
+    },
   )
 
   const changeStatus = async (status: TicketStatus) => {
@@ -318,13 +333,27 @@ function TicketPanel({ id, onChanged }: { id: number; onChanged: () => void }) {
     }
   }
 
-  if (loading || !ticket) {
+  const view = ticketPanelView({ loading, hasTicket: !!ticket })
+  if (view === "loading") {
     return (
       <div role="status" className="grid gap-3">
         <Skeleton className="h-4 w-40" />
         <Skeleton className="h-7 w-3/4" />
         <Skeleton className="h-20 w-full" />
         <span className="sr-only">Loading ticket…</span>
+      </div>
+    )
+  }
+  if (view === "error" || !ticket) {
+    return (
+      <div role="alert" className="grid gap-3">
+        <p className="flex items-start gap-2 text-sm">
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-bad" />
+          {loadError || "Could not load this ticket."}
+        </p>
+        <Button variant="outline" size="sm" className="w-fit" onClick={load}>
+          <RefreshCw className="h-4 w-4" /> Try again
+        </Button>
       </div>
     )
   }
