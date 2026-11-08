@@ -54,7 +54,7 @@ When this file and the code disagree, the code wins and this file is wrong.
 | Data model | `server/schema.sql` |
 | Design tokens | CMS: `src/index.css` and `tailwind.config.js`. Public site: `src/marketing/site.css` (D-046) |
 | Server configuration keys | `server/config.php.example` |
-| Release | `scripts/release.mjs` and `release.json`, run by `.github/workflows/deploy.yml` on a push to `main` |
+| Release | `scripts/release.mjs` and `release.json`, run by the `deploy` job of `.github/workflows/ci.yml` (which calls `deploy.yml`) on a push to `main`, after CI passes |
 | Hand-applied server work (SQL, `.htaccess`, `config.php`) | `docs/DEPLOYMENT.md` |
 | Current state | `docs/STATUS.md` |
 | Hosting, DNS, TLS, mail, ports | the operator's global notes, **not this repository** |
@@ -71,7 +71,7 @@ When this file and the code disagree, the code wins and this file is wrong.
 4. **A release sends `dist/` and the files in `server/` except Markdown, `*.example` and `/uploads/`.**
    `scripts/release.mjs` never uploads `config.php`, `.htaccess`, `.user.ini`, `php.ini`, `.env*`, SQL,
    `*.pem`, `*.key`, `error_log` or `.well-known/` (a protected-names list plus a banned-file guard), and
-   rolls back if a smoke check fails. A push to `main` with code changes releases, so merging is deploying. Work the
+   rolls back if a smoke check fails. A push to `main` with code changes releases once CI has passed, so merging is deploying. Work the
    release cannot carry (a schema change, a `config.php` key, `.htaccess`) is recorded in
    `docs/DEPLOYMENT.md` section 5 in the same change.
 5. **There is no migration runner.** A schema change goes at the foot of `server/schema.sql`

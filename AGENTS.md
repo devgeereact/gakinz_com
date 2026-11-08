@@ -36,7 +36,7 @@ One fact, one home. Where two documents disagree, the code is the authority.
 | Data model | `server/schema.sql`: `CREATE TABLE` blocks, then migrations as comments in the `MIGRATIONS` block and dated blocks at the foot |
 | Design tokens and utilities | `src/index.css` and `tailwind.config.js` |
 | Server configuration keys | `server/config.php.example` |
-| Client deploy | `.github/workflows/deploy.yml` |
+| Release | `.github/workflows/ci.yml` (job `deploy`, after the checks) calling `.github/workflows/deploy.yml` |
 | Server deploy and outstanding work | `docs/DEPLOYMENT.md` |
 | Current state, and every measured count | `docs/STATUS.md` |
 | Why things are as they are | `docs/DECISIONS.md` |

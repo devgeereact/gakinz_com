@@ -82,8 +82,9 @@ docs/            project documentation, flat, see below
 
 ## Deployment, in one paragraph
 
-A push to `main` that changes code runs `scripts/release.mjs --go` through GitHub Actions
-(`.github/workflows/deploy.yml`, settings in `release.json`): it builds, snapshots every live file it
+A push to `main` that changes more than documents, once every CI check has passed, runs
+`scripts/release.mjs --go` through GitHub Actions (the `deploy` job in `.github/workflows/ci.yml`, which
+calls `.github/workflows/deploy.yml`; settings in `release.json`): it builds, snapshots every live file it
 is about to change, uploads `dist/` and `server/*.php` over SSH without deleting anything, runs smoke
 checks and rolls back by itself if they fail. Never sent: `config.php`, `.htaccess`, `schema.sql`,
 Markdown and `*.example`. `.htaccess` changes and SQL migrations are still applied by hand, because there

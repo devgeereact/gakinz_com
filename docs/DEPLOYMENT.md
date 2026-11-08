@@ -10,7 +10,7 @@ Section 5 is the one list of server work a release cannot carry.
 
 | What moves | Mechanism | Trigger |
 |---|---|---|
-| `dist/` and `server/*.php` (not `config.php`, `.htaccess`, `schema.sql`, Markdown or `*.example`) | `scripts/release.mjs --go` over SSH (`release.json`): checks (typecheck, lint ratchet, Vitest, `php -l`), build with the live Clerk key, checksum upload, entry files last, never deletes, snapshot of every changed server file in `~/backups/gakinz_com/releases/`, automatic restore if the smoke test fails | Every push to `main` (`.github/workflows/deploy.yml`, restricted SSH deploy key, secrets `CPANEL_SSH_KEY` and `CPANEL_KNOWN_HOSTS`); docs-only pushes do not deploy. By hand: `npm run release`, then `npm run release -- --go` |
+| `dist/` and `server/*.php` (not `config.php`, `.htaccess`, `schema.sql`, Markdown or `*.example`) | `scripts/release.mjs --go` over SSH (`release.json`): checks (typecheck, lint ratchet, Vitest, `php -l`), build with the live Clerk key, checksum upload, entry files last, never deletes, snapshot of every changed server file in `~/backups/gakinz_com/releases/`, automatic restore if the smoke test fails | Every push to `main` that changes more than documents, after CI passes (the `deploy` job of `.github/workflows/ci.yml`, which calls `.github/workflows/deploy.yml`; restricted SSH deploy key, secrets `CPANEL_SSH_KEY` and `CPANEL_KNOWN_HOSTS`); documentation-only pushes do not deploy (`scripts/deploy-needed.mjs`). By hand: `npm run release`, then `npm run release -- --go` |
 | `server/.htaccess`, `config.php`, SQL | By a person, backup first | A decision, never automatic |
 
 On 2026-10-30 a dry run showed the live server equal to `main` (545 tests passed). The FTP workflow and `scripts/deploy-ftps.sh` were replaced; the owner deletes the FTP secrets and account.
@@ -25,7 +25,8 @@ by a person, and `server/.htaccess` is uploaded by hand. This is the single most
 `.github/workflows/deploy.yml`:
 
 ```
-on: push to main (not docs-only), or by hand (workflow_dispatch)
+on: called by ci.yml after verify, server and security have passed and the push changes more than documents,
+    or by hand (workflow_dispatch, which skips the wait)
   actions/checkout, setup-node 24, setup-php 8.4
   npm ci
   SSH config for host "cpanel" from secrets.CPANEL_SSH_KEY and secrets.CPANEL_KNOWN_HOSTS
@@ -99,7 +100,7 @@ Approved 2026-10-10. Until then CI ran no tests and the deploy did not wait for 
   lint blocking. `continue-on-error` alone is advisory, not a ratchet.
 - **Production deploys only after the required checks pass**, or through a deliberate,
   approved release trigger. Every push to `main` with code changes releases `dist/` and
-  `server/*.php`; documentation-only pushes do not (`paths-ignore` in `deploy.yml`).
+  `server/*.php`; documentation-only pushes do not (`scripts/deploy-needed.mjs`, called from `ci.yml`), and a failing CI job stops the release (K-138).
 - **SQL, `.htaccess` and `config.php` stay deliberate operator actions**, recorded in section 5
   with their evidence and rollback.
 - **Small reviewed batches**, one concern each, on feature branches. Never `npm audit fix
