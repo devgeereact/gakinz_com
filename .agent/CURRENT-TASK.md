@@ -14,14 +14,23 @@ live, then "make the best call for me ... fix all".
 Live: `bde12c7` (2026-11-01). The order of work is [WORKBOOK.md](../docs/WORKBOOK.md) section 3; finished
 sessions are in [HANDOFF.md](HANDOFF.md).
 
+**2026-11-08, branch `phase-1/release-readiness` (from `golive/2026-11`, local only):** release readiness for
+the 13 unreleased commits. `npm run verify` passes on the candidate. Added `npm run check:live`
+(`scripts/live-check.mjs`, read-only GETs, 14 tests written first). Run against production it passes 9 of 16
+checks; the 7 failures are exactly the unreleased hardening: no CSP header, `X-Powered-By` still sent,
+**`/assets/` and `/uploads/` return a live directory listing (K-125)**, no deny rules for `.md` and backup
+paths, and no one-year `immutable` cache on the bundle. Nothing was pushed, deployed or changed on the server.
+
 ## Next actions, in order
 
-1. Owner: run `SELECT id, role FROM users WHERE totp_enabled = 1 AND deleted_at IS NULL` (K-121) before merging.
-2. Owner: review the branch; approve push. Let CI (MySQL, gitleaks, Semgrep) pass, then approve the merge
-   (merging releases `dist/` and `server/*.php`).
-3. Owner: the hand-applied list in `docs/DEPLOYMENT.md` section 5 (`.htaccess`, private config, stub), then
+1. Owner: the live directory listing (K-125) is the most urgent item. It goes away when the `.htaccess` from the
+   branch is uploaded (`docs/DEPLOYMENT.md` section 5, backup first).
+2. Owner: run `SELECT id, role FROM users WHERE totp_enabled = 1 AND deleted_at IS NULL` (K-121) before merging.
+3. Owner: review the branch; approve push. Let CI (MySQL, gitleaks, Semgrep) pass, then approve the merge
+   (merging releases `dist/` and `server/*.php`). After it, run `npm run check:live`: all 16 must pass.
+4. Owner: the hand-applied list in `docs/DEPLOYMENT.md` section 5 (`.htaccess`, private config, stub), then
    K-123 with the host.
-4. Owner: AI keys with `scripts/set-server-key.sh` (pending from the cleanup task).
+5. Owner: AI keys with `scripts/set-server-key.sh` (pending from the cleanup task).
 
 ## Resume on another computer
 
