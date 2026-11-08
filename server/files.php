@@ -275,6 +275,19 @@ if ($method === 'POST' && $action === 'share') {
   $id = (int)($in['id'] ?? 0);
   $days = max(1, min(90, (int)($in['days'] ?? 7)));
   if ($id <= 0) fail('A file id is required.');
+  // A file that already has a link with no expiry keeps it. That is the state of an image shown on a public
+  // Work page (work.php ensure_public_share: never rotated, never expires). Writing a new token and a
+  // 7-day expiry here would break the portfolio page's link at once and lose it a week later (K-128).
+  $cur = $conn->prepare('SELECT share_token, expires_at FROM files WHERE id = ? AND deleted_at IS NULL LIMIT 1');
+  $cur->bind_param('i', $id);
+  $cur->execute();
+  $row = $cur->get_result()->fetch_assoc();
+  if (!$row) fail('File not found.', 404);
+  $existing = trim((string)($row['share_token'] ?? ''));
+  if ($existing !== '' && $row['expires_at'] === null) {
+    audit($conn, $user['id'], 'file_share', "#$id kept its permanent link");
+    ok(['token' => $existing, 'expires_at' => null]);
+  }
   $token = bin2hex(random_bytes(20));
   $expires = (new DateTime("+$days days"))->format('Y-m-d H:i:s');
   $stmt = $conn->prepare('UPDATE files SET share_token = ?, expires_at = ? WHERE id = ? AND deleted_at IS NULL');

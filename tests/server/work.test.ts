@@ -53,6 +53,46 @@ describe("work access", () => {
   })
 })
 
+describe("sharing a file that a Work page shows (K-128)", () => {
+  // A published image's public link has no expiry and is never rotated (work.php, ensure_public_share).
+  // The Files screen's "share" action must not undo that.
+  type Shared = { token: string; expires_at: string | null }
+  const row = (id: number) => ({ token: one(`SELECT share_token FROM files WHERE id = ${id}`), expires: one(`SELECT IFNULL(expires_at, 'NONE') FROM files WHERE id = ${id}`) })
+
+  it("keeps the permanent link of an image attached to a Work record", async () => {
+    const { json } = await create({ slug: "shared-image" })
+    const fileId = insertFile()
+    const attach = await api<{ share_token: string }>("work.php?action=addImage", { body: { work_id: json.id, file_id: fileId, alt: "Shot" }, token: editor })
+    expect(attach.status).toBe(201)
+    const before = row(fileId)
+    expect(before.expires).toBe("NONE")
+
+    const r = await api<Shared>("files.php?action=share", { body: { id: fileId, days: 7 }, token: editor })
+    expect(r.status).toBe(200)
+    expect(r.json.token).toBe(before.token)
+    expect(r.json.expires_at).toBeNull()
+    expect(row(fileId)).toEqual(before) // same token, still no expiry
+  })
+
+  it("still gives an expiring link to a file that has no permanent one", async () => {
+    const fileId = insertFile()
+    const r = await api<Shared>("files.php?action=share", { body: { id: fileId, days: 7 }, token: editor })
+    expect(r.status).toBe(200)
+    expect(r.json.token).toMatch(/^[0-9a-f]{40}$/)
+    expect(r.json.expires_at).not.toBeNull()
+    expect(row(fileId).expires).not.toBe("NONE")
+  })
+
+  it("still renews an earlier expiring link with a fresh token", async () => {
+    const oldToken = "a".repeat(40)
+    const fileId = insertFile({ token: oldToken, expires: "DATE_ADD(NOW(), INTERVAL 1 DAY)" })
+    const r = await api<Shared>("files.php?action=share", { body: { id: fileId, days: 30 }, token: editor })
+    expect(r.status).toBe(200)
+    expect(r.json.token).not.toBe(oldToken)
+    expect(r.json.expires_at).not.toBeNull()
+  })
+})
+
 describe("client consent", () => {
   it("refuses to create a published record that names a client without consent", async () => {
     const r = await create({ client_name: "Synthetic Ltd", status: "published" })
