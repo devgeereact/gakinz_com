@@ -1,14 +1,17 @@
-# Deploy on every push to main: the same `scripts/release.mjs --go` as on the Mac, over SSH (no FTP).
+# Release to the live site: the same `scripts/release.mjs --go` as on the Mac, over SSH (no FTP).
 # Checks and build run first; any failure stops before upload. A failed smoke test restores the
 # previous files automatically (snapshot in ~/backups/<project>/releases on the server).
-# Docs-only pushes do not deploy. A commit message with [skip ci] does not deploy.
+#
+# This workflow does not start on a push. ci.yml calls it, after typecheck, lint, unit tests, build,
+# the PHP and server tests, gitleaks and Semgrep have all passed and only when the push changes more
+# than documents (scripts/deploy-needed.mjs). So a failing check stops a release (K-138). It can also be
+# started by hand from the Actions tab (workflow_dispatch), which skips that wait on purpose.
+# A commit message with [skip ci] starts neither CI nor a release.
 # Secrets (set by ~/Backups/scripts/setup-github-deploy.zsh): CPANEL_SSH_KEY, CPANEL_KNOWN_HOSTS.
 name: Deploy
 
 on:
-  push:
-    branches: [main]
-    paths-ignore: ["docs/**", "**/*.md", ".agent/**"]
+  workflow_call:
   workflow_dispatch:
 
 permissions:

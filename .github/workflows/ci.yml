@@ -1,8 +1,8 @@
 name: CI
 
-# Until now the only workflow here was deploy.yml, which runs on push to main —
-# so the first thing to notice a broken build was the live site. Nothing ran on
-# a pull request at all.
+# Every push to main and every pull request is checked here. The release (deploy.yml) is the last
+# job of this workflow and runs only when all the checks passed (K-138), so the first thing to
+# notice a broken build is never the live site.
 
 # Every pull request is checked, including PRs stacked on another feature
 # branch, so each section is verified before it reaches main.
@@ -137,3 +137,37 @@ jobs:
           semgrep scan --metrics=off --error
           --config p/php --config p/react --config p/typescript --config p/secrets
           server src scripts
+
+  # Does this push change what a release sends or how it is built? A push that changes only documents
+  # does not release (the old `paths-ignore` rule, now tested in scripts/deploy-needed.test.mjs).
+  # Only on a push to main; on a pull request this job and the release below are skipped.
+  changes:
+    name: does this push need a release
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    outputs:
+      deploy: ${{ steps.range.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .node-version
+
+      - id: range
+        run: node scripts/deploy-needed.mjs "$BEFORE" "$GITHUB_SHA" >> "$GITHUB_OUTPUT"
+        env:
+          BEFORE: ${{ github.event.before }}
+
+  # The release. `needs` makes it wait for every check above: if any of them fails or is cancelled, this
+  # job is skipped and nothing is uploaded. The secrets are passed through to deploy.yml, which holds the
+  # SSH steps.
+  deploy:
+    name: release to gakinz.com
+    needs: [verify, server, security, changes]
+    if: needs.changes.outputs.deploy == 'true'
+    uses: ./.github/workflows/deploy.yml
+    secrets: inherit

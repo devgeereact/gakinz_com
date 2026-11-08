@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * Release over SSH to the cPanel host: `pnpm release` (dry run) then `pnpm release --go`.
+ * Release over SSH to the cPanel host: `npm run release` (dry run) then `npm run release -- --go`.
  * Settings: release.json at the project root (no secrets in it). Kit rule: no FTP, no GitHub Actions deploys.
  *
  *   1. Preflight: on main, clean, equal to origin/main.
@@ -274,4 +274,4 @@ console.log(`  ${(cfg.smoke ?? []).length} passed`);
 // ---- Keep the newest snapshots ----
 const old = snapshots().slice(0, -KEEP);
 for (const n of old) remote(`rm -rf -- ${snapRoot}/${n}`, { allowFail: true });
-console.log(`\nReleased ${short} (${utc}). Undo with: pnpm release --rollback --go`);
+console.log(`\nReleased ${short} (${utc}). Undo with: npm run release -- --rollback --go`);
