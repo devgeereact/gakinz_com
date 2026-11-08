@@ -82,6 +82,7 @@ npm test               # unit tests (src/)
 npm run test:server    # PHP endpoints against a throwaway local *_test database
 npm run lint:ratchet   # fails if the lint backlog (K-002) grows
 npm run docs:check     # links, and the document-sync rule in AGENTS.md
+npm run check:live     # after a release: read-only GETs against the live site (section 5 list)
 ```
 
 CI runs all five, plus `php -l` over `server/`, and the deploy waits for it.
@@ -156,7 +157,9 @@ By hand, after that branch merges, backup first:
   `/config.php.bak` 403; `/robots.txt`, `/llms.txt`, `/sitemap.xml` 200; `curl -sI https://gakinz.com/` shows
   `content-security-policy` and `strict-transport-security`; `/api.php` has no `x-powered-by`; an
   `/assets/index-*.js` shows `cache-control: public, max-age=31536000, immutable` (Cloudflare's "Browser Cache
-  TTL" must respect existing headers); sign in once and look at the browser console for CSP reports. Rollback:
+  TTL" must respect existing headers); sign in once and look at the browser console for CSP reports.
+  `npm run check:live` runs every status and header check in this list (anonymous GETs only, nothing is
+  changed; `scripts/live-check.mjs`). Only the signed-in console check stays manual. Rollback:
   restore the backup.
 - **Private config:** `CLERK_CACHE_DIR` pointing at a writable private folder (mode 700); remove
   `http://localhost:5102` from `ALLOWED_ORIGINS` if present; then try `$MAIL_VERIFY_TLS = true`, send one

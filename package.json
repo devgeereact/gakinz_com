@@ -15,7 +15,8 @@
     "test:watch": "vitest",
     "test:server": "vitest run -c vitest.server.config.ts",
     "lint:ratchet": "node scripts/lint-ratchet.mjs",
-    "docs:check": "node scripts/docs-check.mjs"
+    "docs:check": "node scripts/docs-check.mjs",
+    "check:live": "node scripts/live-check.mjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.11",
