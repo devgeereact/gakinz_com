@@ -23,6 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { shareNotice } from "./fileShareModel"
 import { downloadName, files, projects as projectsApi, type FileRow, type Project } from "@/lib/api"
 import { cn } from "@/lib/utils"
 
@@ -80,12 +81,13 @@ export default function Files() {
     setBusyId(null)
     if (res.ok) {
       const url = files.shareUrl(res.data.token)
+      let copied = true
       try {
         await navigator.clipboard.writeText(url)
-        toast.success("Share link copied (valid 7 days).")
       } catch {
-        toast.success("Share link created (valid 7 days).")
+        copied = false
       }
+      toast.success(shareNotice({ copied, expiresAt: res.data.expires_at, days: 7 }))
       load()
     } else toast.error(res.error || "Could not create a link.")
   }

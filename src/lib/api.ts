@@ -1381,7 +1381,8 @@ export const files = {
     if (params?.client_id) form.append("client_id", String(params.client_id))
     return api.upload<{ id: number }>("/files.php?action=upload", form)
   },
-  share: (id: number, days = 7) => api.post<{ token: string; expires_at: string }>("/files.php?action=share", { id, days }),
+  // expires_at is null when the file already had a link with no expiry (an image on a public Work page, K-128).
+  share: (id: number, days = 7) => api.post<{ token: string; expires_at: string | null }>("/files.php?action=share", { id, days }),
   // Show or hide a file in its client's portal (SQL 18; 503 until it runs).
   clientShare: (id: number, visible: boolean) =>
     api.post<{ id: number; client_visible: boolean; shared_at: string | null }>("/files.php?action=client_share", { id, visible }),
