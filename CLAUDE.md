@@ -68,9 +68,10 @@ When this file and the code disagree, the code wins and this file is wrong.
 3. **A `client`-role caller must never see another client's data.** `portal.php` and the
    client branch of `support.php` derive the client identifier from the token and ignore any
    parameter for that role. Treat any change to either file as security-critical.
-4. **A release sends `dist/` and `server/*.php`, nothing else.** `scripts/release.mjs` never
-   uploads `config.php`, `.htaccess`, SQL, Markdown or `*.example`, and rolls back if a smoke
-   check fails. A push to `main` with code changes releases, so merging is deploying. Work the
+4. **A release sends `dist/` and the files in `server/` except Markdown, `*.example` and `/uploads/`.**
+   `scripts/release.mjs` never uploads `config.php`, `.htaccess`, `.user.ini`, `php.ini`, `.env*`, SQL,
+   `*.pem`, `*.key`, `error_log` or `.well-known/` (a protected-names list plus a banned-file guard), and
+   rolls back if a smoke check fails. A push to `main` with code changes releases, so merging is deploying. Work the
    release cannot carry (a schema change, a `config.php` key, `.htaccess`) is recorded in
    `docs/DEPLOYMENT.md` section 5 in the same change.
 5. **There is no migration runner.** A schema change goes at the foot of `server/schema.sql`
@@ -113,7 +114,7 @@ The current state, what is left and the order of work are in **`docs/WORKBOOK.md
 counts are in `docs/STATUS.md` section 0. This file does not repeat them, so it cannot drift
 (consolidated 2026-10-21; the earlier text is in git history at `5d5f95b`).
 
-- `main` is live. The last code release was `fdc5d94` (2026-10-31) through `release.mjs`; each
+- `main` is live. The last code release was `983606c` (2026-11-08) through `release.mjs`; each
   release is recorded in `docs/WORKBOOK.md` section 1 and its checks in `docs/AUDIT.md`.
 - `npm run lint` still fails (K-002). `npm run lint:ratchet` holds the ceiling in
   `scripts/lint-ratchet.mjs`, and the count must not grow.

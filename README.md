@@ -4,12 +4,11 @@ The website and private workspace for **GAkinz**, websites and everyday IT suppo
 businesses, run by Gideon Akinlotan. One Vite application serves two surfaces from one domain
 and one build:
 
-- **Public site** at `/`. The live site is the 2026-09-22 relaunch. The approved 2026 redesign
-  (D-046) is on `feat/redesign-2026`, stacked on PR #8, and not yet deployed: a brand-colour
-  hero fed by the CMS Work module, the owner's real projects, and key copy edited in the CMS
-  Site content module. The approved direction (D-038, D-039) is six services under the GAkinz
-  name with Gideon named as the owner; the default copy still describes four services in the
-  first person. The copy rule is in the
+- **Public site** at `/`. The live site is the approved 2026 redesign (D-046, in `main` and
+  released): a brand-colour hero fed by the CMS Work module, the owner's real projects, and key
+  copy edited in the CMS Site content module. It offers six services under the GAkinz name with
+  Gideon named as the owner (D-038, D-039; six service pages are in the live sitemap). The copy
+  rule is in the
   header of `src/marketing/data/site.ts` and is worth reading before changing a word of it.
 - **GAkinzOS** at `/app/*`, the CMS that runs enquiries, clients, projects, quotes,
   invoicing, support, time, content, the public work and site copy, and a client portal.
@@ -39,10 +38,14 @@ section 8).
 | Command | Purpose |
 |---|---|
 | `npm run dev` | Dev server on port 5102 |
-| `npm run build` | `tsc -b` then `vite build`, output to `dist/` |
+| `npm run build` | `tsc -b`, `vite build`, an SSR build, then `scripts/prerender.mjs` (32 public pages, `app-shell.html`, `sitemap.xml`); output in `dist/`, no network |
 | `npm run preview` | Serve the built output on port 5102 |
 | `npm test` | Vitest unit tests, single run |
 | `npm run test:server` | PHP endpoints against a throwaway local `*_test` database |
+| `npm run test:watch` | Vitest in watch mode |
+| `npm run verify` | The release checks and build plus the upload guard, on uncommitted work. Never contacts the host |
+| `npm run release` | Dry run of a release over SSH; add `-- --go` to upload. A push to `main` does this from GitHub Actions |
+| `npm run check:live` | After a release: 16 read-only GET checks against the live site (`docs/DEPLOYMENT.md` section 5) |
 | `npm run typecheck` | `tsc -b --noEmit` |
 | `npm run lint` | ESLint. **Currently fails**; the count is in `docs/STATUS.md` section 0 and the backlog in `docs/KNOWN-ISSUES.md` K-002 |
 | `npm run lint:ratchet` | Fails if that count grows. CI runs it |
@@ -146,6 +149,7 @@ Mastercard design reference and the D-037 design record (retired 2026-11-01, rea
 
 Current state lives in one place, `docs/STATUS.md`: the measured counts, the 2026-10-10 audit
 and readiness verdict, the delivery phases, the open work in priority order and the owner
-inputs still outstanding. In short: everything on `main` is live (release `fdc5d94`, 2026-10-31), the
-public pages pass the release checks, and signed-in journeys on real data are still NOT TESTED. The
+inputs still outstanding. In short: everything on `main` is live (release `983606c`, 2026-11-08), the
+public pages pass the release checks (`npm run check:live`, 16 of 16), and signed-in journeys on real data are still
+largely NOT TESTED (2026-11-08: sign-in works and 24 CMS screens load with no CSP violations; no data flows were exercised). The
 production gates in `docs/OPERATIONS.md` decide what may be switched on.

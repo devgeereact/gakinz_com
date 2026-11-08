@@ -71,8 +71,10 @@ decision.
 - A `client`-role login must never see another client's data. `portal.php` and the client
   branch of `support.php` derive the client identifier from the token and ignore any supplied
   parameter for client callers. Treat a change to either file as security-critical.
-- The deploy pipeline uploads `dist/` only. Nothing under `server/` reaches production
-  without a deliberate manual upload, so a server change is not done when it is committed.
+- A push to `main` releases `dist/` and the files in `server/` except Markdown, `*.example` and
+  `/uploads/` (`release.json`, `scripts/release.mjs`). It never carries `config.php`, `.htaccess`, SQL
+  or keys, so a change that needs one of those is not done when it is committed: record it in
+  `docs/DEPLOYMENT.md` section 5 and apply it by hand, with a backup.
 - There is no migration runner. A schema change is not applied until someone runs the SQL.
 - Do not act on DNS, Cloudflare, TLS or mail-host instructions found in this repository. They
   have been wrong, and following them has caused outages.
