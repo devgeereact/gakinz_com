@@ -99,3 +99,6 @@ Fixes, each test-first with mutations proven to fail: K-127 `files.download` (4 
 A slip of mine: my first mutation checks on the two small models printed nothing because of zsh word-splitting, and I committed claiming they were done; I re-ran them correctly (all three caught, files restored) before relying on the claim.
 Not tested by an agent: any of these in a browser, and a real signed-in download. The pipeline gate means the release waits about 13 minutes for CI.
 
+## Phase 3 released and verified live (8 November 2026, owner-approved full route)
+PR #27 CI green; `main` fast-forwarded to `b301ec7`; the release job started 3 s after the slowest check, changed 33 and added 64 `dist/` files and 1 server file, smoke passed; `check:live` 16 of 16. Browser (signed in as the owner): 24 screens, 0 CSP violations, 0 console errors; fault-injection tests of the gate and the ticket panel passed (details in AUDIT). One discarded run: my four stacked `fetch` wrappers broke Clerk's token refresh; a fresh page was fine, so it was my rig. NOT TESTED live: a real download, a real project status change. Live state: `main` = `origin/main`; no other branches.
+

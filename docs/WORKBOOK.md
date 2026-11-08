@@ -23,6 +23,7 @@ document disagree, the linked document wins and this page is wrong.
 | 2026-11-01 | `bde12c7` | Cleanup; AI on Anthropic first with OpenRouter as backup (D-054) | GitHub Actions, owner-approved ("push live") |
 | 2026-11-08 | `ae01cec` | The go-live hardening (13 commits, K-120 to K-126: Clerk second factor, CSP and HSTS, bcrypt, contact form, SEO schema) and `npm run check:live`; `.htaccess` uploaded by hand first | GitHub Actions, owner-approved at each gate; CI green on PR #24 |
 | 2026-11-08 | `983606c` | AI backup model: `OR_FALLBACK_MODEL` tried when `OR_MODEL` fails (D-056) | GitHub Actions, owner-approved; CI green on PR #25 |
+| 2026-11-08 | `b301ec7` | Phase 3: staff downloads send the Clerk token, sharing keeps a public image's link, the gate and ticket panel no longer hang, the project dropdown keeps its value (K-127, K-128, K-140); the first release to wait for CI | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #27 |
 
 The checks of each release are in [AUDIT.md](AUDIT.md) (newest first). Measured counts are in
 [STATUS.md](STATUS.md) section 0. Signed-in use of the live system is mostly NOT TESTED by an agent: on 2026-11-08 the

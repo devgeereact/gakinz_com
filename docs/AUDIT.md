@@ -2,6 +2,10 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-08 (later) · Phase 3 released and checked live
+
+Released `b301ec7` (K-127, K-128, K-140), the first release to wait for CI by design: the release job started 3 s after the slowest check. `npm run check:live` 16 of 16. In the signed-in browser, with a passive `securitypolicyviolation` listener: 24 CMS screens walked client-side, 0 CSP violations, 0 console errors; Invoicing takes about 1 s to load (two calls of ~640 ms), not a hang. Two live fault-injection tests (page-side stubs, no writes, nothing stored): a 401 answered for one call to `/leads.php` made the app call `auth.php?action=me` and restore the user; a stubbed 500 for ticket 999 showed the server's message with Try again, and Try again asked again. **Test-rig note:** an earlier attempt stacked four `fetch` wrappers and Clerk's `getToken()` then timed out; a fresh page with native `fetch` gave a token in 0 ms, so that run was my rig and not the release, and I discarded it. NOT TESTED: a real file download, a real project status change.
+
 ## 2026-11-08 · Whole-codebase review, release check and signed-in check (`main`, read-only apart from the owner-approved server steps)
 
 **Scope:** what the app does, every screen, API route and table, what is connected, what is unused or

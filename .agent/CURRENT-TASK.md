@@ -38,12 +38,11 @@ see CSP reports). PR #24 was already merged by GitHub.
 1. Done: the OpenRouter backup model was released as `983606c` (PR #25) and `OR_FALLBACK_MODEL=openai/gpt-oss-120b` is set; a live
    test answered on both models.
 2. Owner: set a monthly spending limit on the OpenRouter key in the OpenRouter dashboard (the key has none today).
-3. **Phase 3 (fix what Clerk broke), branch `phase-3/clerk-fixes`: built and verified, not yet released.** K-127 staff downloads
-   send the Clerk token; K-128 sharing a file keeps a public Work image's permanent link; K-140 the signed-in gate, the ticket
-   panel and the project status dropdown no longer hang or snap back. 613 unit and 569 server tests pass; every fix was
-   written test-first and mutation-checked. Needs the owner's go-ahead to release (push, PR, CI, fast-forward `main`), then
-   a signed-in look at Files, Support and Projects (an agent has not rendered these in a browser).
-4. Phase 2 is done. Next after Phase 3: Phase 4 (make writes safe: K-129, K-130, K-131, K-135).
+3. **Phase 3 (fix what Clerk broke): released 2026-11-08 as `b301ec7` (PR #27) and checked live** (see the 2026-11-08 later section of
+   `docs/AUDIT.md`). K-127 staff downloads send the Clerk token; K-128 sharing keeps a public image's permanent link; K-140 the gate,
+   the ticket panel and the project dropdown no longer hang. Owner: when a real file and a real project exist, try a download and a status
+   change once; those two could not be tested live.
+4. Phases 1 to 3 are done. Next: Phase 4 (make writes safe: K-129, K-130, K-131, K-135).
 
 ## Resume on another computer
 
