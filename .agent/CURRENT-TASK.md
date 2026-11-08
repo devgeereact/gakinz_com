@@ -2,7 +2,7 @@
 
 ## Outcome
 
-**2026-11-01 to 02, branch `golive/2026-11` (local only: not pushed, not deployed).** Owner asked: get ready for
+**2026-11-01 to 02, branch `golive/2026-11` (released 2026-11-08, see below).** Owner asked: get ready for
 live, then "make the best call for me ... fix all".
 
 1. **First pass:** security audit (quick profile) and SEO audit; K-120 fixed; schema, sitemap, caching.
@@ -11,7 +11,7 @@ live, then "make the best call for me ... fix all".
    (CSP, HSTS, no version headers, no directory listing); `weather.php` retired; mail TLS switch; dependencies
    to 0 critical and 0 high; gitleaks and Semgrep in CI. Details and evidence: `docs/AUDIT.md`.
 
-Live: `bde12c7` (2026-11-01). The order of work is [WORKBOOK.md](../docs/WORKBOOK.md) section 3; finished
+Live: `ae01cec` (released 2026-11-08, snapshot `20261108T171442Z`; was `bde12c7`). The order of work is [WORKBOOK.md](../docs/WORKBOOK.md) section 3; finished
 sessions are in [HANDOFF.md](HANDOFF.md).
 
 **2026-11-08, branch `phase-1/release-readiness` (from `golive/2026-11`, local only):** release readiness for
@@ -21,19 +21,19 @@ the 13 unreleased commits. `npm run verify` passes on the candidate, and so does
 checks; the 7 failures were the unreleased hardening, including **a live directory listing on `/assets/` and
 `/uploads/` (K-125)**.
 
-**Done with the owner's approval on 2026-11-08 (steps 1 and 2 of 3):** the K-121 query ran read-only (**0 accounts
-with app two-factor**, 1 active user); `server/.htaccess` was uploaded after a server-side backup
-(`~/backups/gakinz_com/htaccess.before-phase1.20261108T071024Z`) and smoke-tested; the listing is closed and
-`npm run check:live` now passes **16 of 16**. Step 3, pushing this branch so CI runs, was approved and follows this
-commit. Not merged, not deployed.
+**Released 2026-11-08, owner-approved at each gate:** K-121 query (0 accounts with app two-factor); `server/.htaccess`
+uploaded after a backup; branch pushed; draft PR #24 ran CI (MySQL server tests, gitleaks, Semgrep, build: all green);
+`main` fast-forwarded to `ae01cec` and `deploy.yml` released it (smoke checks passed). `npm run check:live` on
+production: **16 of 16**. Phase 1 of the GSD roadmap is complete except the hand-applied items below.
 
 ## Next actions, in order
 
-1. Owner: wait for CI on the pushed branch (MySQL tests, gitleaks, Semgrep). Then approve the fast-forward of
-   `main`, which releases `dist/` and `server/*.php`. After it, run `npm run check:live` again: 16 of 16.
-2. Owner: the remaining hand-applied items in `docs/DEPLOYMENT.md` section 5 (private config `CLERK_CACHE_DIR`,
-   remove the localhost origin, the mail TLS test, compare the live stub), then K-123 with the host.
-3. Owner: AI keys with `scripts/set-server-key.sh` (pending from the cleanup task).
+1. Owner: the remaining hand-applied items in `docs/DEPLOYMENT.md` section 5: private config (`CLERK_CACHE_DIR`, remove
+   the localhost origin, the mail TLS test), compare the live stub, then K-123 with the host.
+2. Owner: AI keys with `scripts/set-server-key.sh` (pending from the cleanup task; `_ai.php` is now live).
+3. Owner: sign in once on the live site and check the browser console for CSP reports (the one manual check).
+4. Next phase: Phase 2 of the GSD roadmap (align docs, process and workspace). `CLAUDE.md`, `README.md` and `AGENTS.md`
+   still name the old live commit and deploy scope.
 
 ## Resume on another computer
 
