@@ -71,6 +71,19 @@ if ($method === 'POST' && $action === 'meta') {
   $in = body();
   $pid = (int)($in['project_id'] ?? 0);
   if ($pid <= 0) fail('A project is required.');
+  if (!gk_live_row($conn, 'projects', $pid, ['id'])) fail('Project not found.', 404);
+  // A field the request did not send keeps what is saved: a call that sets only the live address must not wipe the checklist.
+  $cur = $conn->prepare('SELECT repo_url, staging_url, prod_url, checklist FROM project_dev WHERE project_id = ?');
+  $cur->bind_param('i', $pid);
+  $cur->execute();
+  $saved = $cur->get_result()->fetch_assoc() ?: [];
+  $savedChecklist = json_decode((string)($saved['checklist'] ?? ''), true);
+  $in += [
+    'repo_url' => $saved['repo_url'] ?? '',
+    'staging_url' => $saved['staging_url'] ?? '',
+    'prod_url' => $saved['prod_url'] ?? '',
+    'checklist' => is_array($savedChecklist) ? $savedChecklist : null,
+  ];
   $repo = str_field($in, 'repo_url', 500);
   $staging = str_field($in, 'staging_url', 500);
   $prod = str_field($in, 'prod_url', 500);

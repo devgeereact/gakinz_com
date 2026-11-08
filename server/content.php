@@ -35,6 +35,13 @@ if ($method === 'GET') {
 if ($method === 'POST' && ($action === 'create' || $action === 'update')) {
   $user = require_auth($conn, EDITORS);
   $in = body();
+  if ($action === 'update') {
+    $updateId = (int)($in['id'] ?? 0);
+    if ($updateId <= 0) fail('A draft id is required.');
+    $stored = gk_live_row($conn, 'content_drafts', $updateId, ['topic', 'platform', 'title', 'body', 'hashtags', 'keywords']);
+    if (!$stored) fail('Draft not found.', 404);
+    $in += $stored; // a field the request did not send keeps its stored value
+  }
   $topic = str_field($in, 'topic', 300);
   if ($topic === '') fail('A topic is required.');
   $platform = str_field($in, 'platform', 30);

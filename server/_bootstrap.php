@@ -58,6 +58,22 @@ function str_field(array $src, string $key, int $max = 5000): string {
   return mb_substr($v, 0, $max);
 }
 
+/**
+ * One live (not soft-deleted) row of `$table` by id, or null when there is none. An update uses it twice:
+ * a null answers 404, and `$in += $row` gives every field the request did not send its stored value, so an
+ * update changes only what it was sent (K-129, K-130). `$table` and `$cols` are names written in the caller's
+ * source, never from a request; anything else is refused.
+ */
+function gk_live_row(mysqli $conn, string $table, int $id, array $cols): ?array {
+  foreach (array_merge([$table], $cols) as $name) {
+    if (!is_string($name) || !preg_match('/^[a-z_]+$/', $name)) throw new InvalidArgumentException('Bad table or column name.');
+  }
+  $stmt = $conn->prepare('SELECT ' . implode(', ', $cols) . " FROM $table WHERE id = ? AND deleted_at IS NULL LIMIT 1");
+  $stmt->bind_param('i', $id);
+  $stmt->execute();
+  return $stmt->get_result()->fetch_assoc() ?: null;
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 const VALID_ROLES = ['super_admin', 'admin', 'manager', 'trainer', 'editor', 'employee', 'client'];
 

@@ -90,6 +90,9 @@ if ($method === 'POST' && $action === 'meta') {
   $in = body();
   $id = (int)($in['id'] ?? 0);
   if ($id <= 0) fail('A lead id is required.');
+  $stored = gk_live_row($conn, 'enquiries', $id, ['tags', 'score']);
+  if (!$stored) fail('Lead not found.', 404);
+  $in += $stored; // a follow-up-only call keeps the tags and score
   $tags = str_field($in, 'tags', 255);
   $score = max(0, min(3, (int)($in['score'] ?? 0)));
 
@@ -120,12 +123,6 @@ if ($method === 'POST' && $action === 'meta') {
   $stmt = $conn->prepare('UPDATE enquiries SET tags = ?, score = ? WHERE id = ? AND deleted_at IS NULL');
   $stmt->bind_param('sii', $tags, $score, $id);
   $stmt->execute();
-  if ($stmt->affected_rows < 1) {
-    $chk = $conn->prepare('SELECT id FROM enquiries WHERE id = ? AND deleted_at IS NULL LIMIT 1');
-    $chk->bind_param('i', $id);
-    $chk->execute();
-    if (!$chk->get_result()->fetch_assoc()) fail('Lead not found.', 404);
-  }
 
   $out = ['ok' => true];
   if ($follow) {

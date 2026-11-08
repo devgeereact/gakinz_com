@@ -204,6 +204,9 @@ if ($method === 'POST' && $action === 'update') {
   $in = body();
   $id = (int)($in['id'] ?? 0);
   if ($id <= 0) fail('A client id is required.');
+  $stored = gk_live_row($conn, 'clients', $id, ['company', 'contact_name', 'email', 'phone', 'tag', 'retainer_amount', 'notes']);
+  if (!$stored) fail('Client not found.', 404);
+  $in += $stored; // a field the request did not send keeps its stored value (the retainer is not reset to 0)
   $company = str_field($in, 'company', 200);
   if ($company === '') fail('A company name is required.');
   $contact = str_field($in, 'contact_name', 200);

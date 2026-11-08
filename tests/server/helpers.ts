@@ -47,6 +47,9 @@ const TABLES = [
   "ticket_replies", "tickets", "work_images", "work", "files",
   "proposal_items", "proposals", "tasks", "projects", "posts", "users", "clients", "enquiries",
   "contracts", "certificates", "leave_entries", "time_entries", "reference_counters",
+  // Tables written by the K-129 / K-130 tests. Truncating `projects` with foreign keys off does not cascade to
+  // project_dev, so a leftover row would put a project's dev settings into the next test's project 1.
+  "project_dev", "testimonials", "content_drafts",
 ]
 
 /** Empty every table the tests touch. The work reference anchors (SQL 19) go back, as schema.sql seeds them. */

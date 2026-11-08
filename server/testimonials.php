@@ -58,6 +58,13 @@ if ($method === 'GET') {
 if ($method === 'POST' && ($action === 'create' || $action === 'update')) {
   $user = require_auth($conn, EDITORS);
   $in = body();
+  if ($action === 'update') {
+    $updateId = (int)($in['id'] ?? 0);
+    if ($updateId <= 0) fail('A testimonial id is required.');
+    $stored = gk_live_row($conn, 'testimonials', $updateId, ['author', 'role', 'company', 'quote', 'rating', 'approved', 'sort_order']);
+    if (!$stored) fail('Testimonial not found.', 404);
+    $in += $stored; // an update that omits `approved` must not unpublish a live testimonial
+  }
   $author = str_field($in, 'author', 120);
   $quote = str_field($in, 'quote', 600);
   if ($author === '') fail('An author name is required.');
@@ -99,6 +106,8 @@ if ($method === 'POST' && $action === 'approve') {
   $in = body();
   $id = (int)($in['id'] ?? 0);
   if ($id <= 0) fail('A testimonial id is required.');
+  // Looked up first: UPDATE reports 0 affected rows when nothing changes, which is not a missing id.
+  if (!gk_live_row($conn, 'testimonials', $id, ['id'])) fail('Testimonial not found.', 404);
   $approved = !empty($in['approved']) ? 1 : 0;
   $stmt = $conn->prepare('UPDATE testimonials SET approved = ? WHERE id = ? AND deleted_at IS NULL');
   $stmt->bind_param('ii', $approved, $id);

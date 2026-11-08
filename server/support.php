@@ -437,6 +437,8 @@ if ($method === 'POST' && $action === 'assign') {
   $id = (int)($in['id'] ?? 0);
   $assignee = isset($in['assignee_id']) && $in['assignee_id'] !== '' ? (int)$in['assignee_id'] : null;
   if ($id <= 0) fail('A ticket id is required.');
+  if (!gk_live_row($conn, 'tickets', $id, ['id'])) fail('Ticket not found.', 404);
+  if ($assignee !== null && !gk_live_row($conn, 'users', $assignee, ['id'])) fail('That person was not found.', 404);
   $stmt = $conn->prepare('UPDATE tickets SET assignee_id = ? WHERE id = ? AND deleted_at IS NULL');
   $stmt->bind_param('ii', $assignee, $id);
   $stmt->execute();
