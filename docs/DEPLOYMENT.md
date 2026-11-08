@@ -142,9 +142,12 @@ This is the one list of server work a release cannot carry: SQL, `server/.htacce
 private `config.php`. A change that needs one of them records it here in the same pull request
 (`AGENTS.md`, "Keeping documents current"; `npm run docs:check` enforces it in CI).
 
-**Pending as at 2026-11-01:** the AI keys (D-054): run `scripts/set-server-key.sh ANTHROPIC_KEY`, then
-`scripts/set-server-key.sh OPENROUTER_KEY` (`_ai.php` is live since `bde12c7`). From `golive/2026-11`
-(not merged). The PHP goes up with the release; check first, for K-121:
+**Status 2026-11-08:** `golive/2026-11` was released as `ae01cec` and every hand-applied item below is done, with
+one exception: the OpenRouter backup model needs its code released first (branch `ai/openrouter-backup-model`,
+D-056). **AI (D-056):** the OpenRouter key was already in the private config, so no key was entered; `OR_MODEL` was
+changed from `openai/gpt-oss-120b:free` to `anthropic/claude-sonnet-5.5` with `scripts/set-server-key.sh OR_MODEL`
+and a test call answered in 1.5 s. Anthropic has no key, so OpenRouter is the only provider. The original
+2026-11-01 notes follow. The K-121 check, run before the merge, was:
 `SELECT id, role FROM users WHERE totp_enabled = 1 AND deleted_at IS NULL`. Any account listed must add a
 second factor in Clerk, or have app two-factor cleared by an admin, or its Clerk sign-in answers 403.
 **Checked 2026-11-08 (owner-approved, read-only): 0 accounts have app two-factor on**, out of 1 active user, so
@@ -167,13 +170,25 @@ By hand, after that branch merges, backup first:
   `npm run check:live` runs every status and header check in this list (anonymous GETs only, nothing is
   changed; `scripts/live-check.mjs`). Only the signed-in console check stays manual. Rollback:
   restore the backup.
-- **Private config:** `CLERK_CACHE_DIR` pointing at a writable private folder (mode 700); remove
-  `http://localhost:5102` from `ALLOWED_ORIGINS` if present; then try `$MAIL_VERIFY_TLS = true`, send one
-  message and open the inbox, and turn it back off if either fails (K-126).
-- **Compare the live stub** `~/gakinz.com/config.php` with `server/config.stub.php.example`: it must `require`
-  the private file by an absolute path and hold no secret.
-- **Host, not this file:** `ServerTokens` cannot be set in `.htaccess`; Cloudflare already replaces the
-  `Server` header. Confirm the client-IP header is trusted from Cloudflare's ranges only (K-123).
+- **Private config: done 2026-11-08** (owner-approved; backup `~/backups/gakinz_com/config.php.before-phase1-config.20261108T205013Z`,
+  mode 600; edited as a copy, `php -l` checked, swapped in, health-checked).
+  - `CLERK_CACHE_DIR` is now `~/private-config/gakinz_com/cache` (mode 700, outside the web root). Before this, the code's
+    default was `~/gk_private/cache`, which did not exist, so signing keys were fetched on each call. After it, a signed-in
+    request created `clerk-jwks-*.json` there.
+  - The stale `http://localhost:5174` entry was removed from `ALLOWED_ORIGINS` (the docs said 5102; the dev server proxies
+    `.php` calls server-side, so CORS never applies to it).
+  - `$MAIL_VERIFY_TLS = true` (K-126). Evidence: with certificate checking on, PHP verified the chain and host name on
+    SMTP 465 and IMAP 993 (certificate valid to 2027-05-20), and the inbox opened read-only with validation on (message
+    count only). No test message was sent.
+- **Live stub: compared and aligned 2026-11-08.** `~/gakinz.com/config.php` holds no secret (3 lines, mode 600,
+  `return require '<absolute path>'`). The template's `ini_set('display_errors','0')` line was added (backup
+  `~/backups/gakinz_com/stub-config.php.before-phase1.20261108T210619Z`).
+- **Host, not this file (K-123): closed 2026-11-08 with evidence.** `ServerTokens` cannot be set in `.htaccess`;
+  Cloudflare already replaces the `Server` header. For the client IP: all 45 recent audit rows hold addresses outside
+  Cloudflare's ranges, so PHP sees the visitor; and one deliberate probe straight at the origin with a fake `CF-RAY`
+  and a forged `CF-Connecting-IP` recorded the real peer address, so the forged header was ignored. The probe left one
+  audit row (`login_failed` for `k123-probe-*@invalid.test`). Not changed: the origin still answers requests that carry
+  any `CF-RAY` header; Cloudflare Authenticated Origin Pulls would close that and is a Cloudflare setting.
 
 Nothing else is pending. SQL 1 to 19 ran on 2026-10-21 and SQL 20 on 2026-10-30; the
 current `server/.htaccess` went up on 2026-10-21; the Clerk keys were added on 2026-10-30. Since then

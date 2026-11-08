@@ -1054,3 +1054,14 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
    plain HTTP, and preload is hard to undo.
 
 **Evidence:** `docs/AUDIT.md`, 2026-11-01 (second section).
+
+## D-056 · AI runs on OpenRouter only: Sonnet 5.5 by default, a cheap paid model as backup
+**Date:** 2026-11-08 · **Status:** decided by the owner ("use the openrouter key ... the cheapest model as backup and Sonnet 5.5 as default"). The default model is **live** (private config, 2026-11-08). The backup model is built on branch `ai/openrouter-backup-model` and **not yet released**.
+
+1. **No Anthropic key.** `ANTHROPIC_KEY` stays undefined, so `ai_providers()` returns OpenRouter alone. D-054's Anthropic-first code stays for a future key. The OpenRouter key was already in the private config; no key was entered or shown.
+2. **Default `OR_MODEL = anthropic/claude-sonnet-5.5`** (OpenRouter list price on 2026-11-08: $2 in, $10 out per million tokens). A test call answered in 1.5 s, which also showed the account has credit.
+3. **Backup `OR_FALLBACK_MODEL = openai/gpt-oss-120b`** ($0.018 in, $0.067 out per million): the cheapest paid text model at the 100-billion-parameter class. Cheaper 3 to 8 billion models exist (for example `meta-llama/llama-3.1-8b-instruct`, $0.02/$0.04), but the Content Hub and daily brief ask for structured JSON, which tiny models do unreliably, and the saving is under a tenth of a cent per call. Change it with `scripts/set-server-key.sh OR_FALLBACK_MODEL`.
+4. **The backup runs only when the default fails**, inside a 90-second total budget so it cannot push a request past Cloudflare's 100-second limit (`AI_TOTAL_BUDGET` in `_ai.php`). A failed attempt still counts against the daily cap (K-122).
+5. **Spend control:** the per-role daily caps in `ai.php` stay; the key itself has no spending limit today, so set a monthly limit on it in the OpenRouter dashboard.
+
+**Why:** the key's model was `openai/gpt-oss-120b:free`, which OpenRouter rate-limits and withdraws without notice (D-054 already warned of this). **Supersedes** D-054 point 1 for this site.

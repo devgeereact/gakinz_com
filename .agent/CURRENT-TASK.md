@@ -26,13 +26,21 @@ uploaded after a backup; branch pushed; draft PR #24 ran CI (MySQL server tests,
 `main` fast-forwarded to `ae01cec` and `deploy.yml` released it (smoke checks passed). `npm run check:live` on
 production: **16 of 16**. Phase 1 of the GSD roadmap is complete except the hand-applied items below.
 
+**Hand-applied items finished 2026-11-08 (owner-approved):** private config (`CLERK_CACHE_DIR` set and in use,
+stale localhost origin removed, `MAIL_VERIFY_TLS` on after a verified SMTP and IMAP test), live stub aligned,
+K-123 closed by a direct-to-origin probe, AI default model `anthropic/claude-sonnet-5.5` live on the existing
+OpenRouter key (D-056). Signed-in check: the app loads for the owner, and 24 of 24 CMS screens visited client-side
+gave 0 CSP violations and 0 console errors (listener proven on a deliberate violation; the console tool alone cannot
+see CSP reports). PR #24 was already merged by GitHub.
+
 ## Next actions, in order
 
-1. Owner: the remaining hand-applied items in `docs/DEPLOYMENT.md` section 5: private config (`CLERK_CACHE_DIR`, remove
-   the localhost origin, the mail TLS test), compare the live stub, then K-123 with the host.
-2. Owner: AI keys with `scripts/set-server-key.sh` (pending from the cleanup task; `_ai.php` is now live).
-3. Owner: sign in once on the live site and check the browser console for CSP reports (the one manual check).
-4. Next phase: Phase 2 of the GSD roadmap (align docs, process and workspace). `CLAUDE.md`, `README.md` and `AGENTS.md`
+1. Owner: approve releasing branch `ai/openrouter-backup-model` (2 commits: backup-model code, 4 new server tests, 566 of
+   566 server tests pass, `verify` passes). After that release, run
+   `scripts/set-server-key.sh OR_FALLBACK_MODEL` with `openai/gpt-oss-120b`, then a test call. Until then the default model
+   has no backup (a failure answers "AI unavailable", as before).
+2. Owner: set a monthly spending limit on the OpenRouter key in the OpenRouter dashboard (the key has none today).
+3. Next phase: Phase 2 of the GSD roadmap (align docs, process and workspace). `CLAUDE.md`, `README.md` and `AGENTS.md`
    still name the old live commit and deploy scope.
 
 ## Resume on another computer
