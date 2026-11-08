@@ -25,8 +25,10 @@ export const CHECKS = [
   { name: "no directory listing for assets", path: "/assets/", status: 404 },
   { name: "no directory listing for uploads", path: "/uploads/", status: 404 },
   { name: "config.php is denied", path: "/config.php", status: 403 },
-  { name: "README.md is denied", path: "/README.md", status: 403 },
-  { name: "backup copies are denied", path: "/config.php.bak", status: 403 },
+  // `denied`: these files are not uploaded, so the server may answer 403/404 or just the app page.
+  // What must never happen is a real, different file being served.
+  { name: "README.md is not served", path: "/README.md", denied: true },
+  { name: "backup copies are not served", path: "/config.php.bak", denied: true },
   // `path` is filled in from the home page at run time. Keep this entry last.
   { name: BUNDLE_CHECK, path: null, status: 200, includes: { "cache-control": ["max-age=31536000", "immutable"] } },
 ]
@@ -40,6 +42,15 @@ export function findAssetPath(html) {
 /** Judge one response against one check. Pure: no network, no clock. */
 export function evaluate(check, response) {
   const { path } = check
+  if (check.denied) {
+    if (response.status === 403 || response.status === 404) return { ok: true, detail: `${path} ${response.status}` }
+    if (response.status === 200) {
+      return response.matchesFallback
+        ? { ok: true, detail: `${path} 200: no such file, the app page is served` }
+        : { ok: false, detail: `${path} is served as a real file (200)` }
+    }
+    return { ok: false, detail: `${path} answered ${response.status}, expected 403, 404 or the app page` }
+  }
   if (response.status !== check.status) {
     return { ok: false, detail: `${path} answered ${response.status}, expected ${check.status}` }
   }
@@ -57,10 +68,23 @@ export function evaluate(check, response) {
   return { ok: true, detail: `${path} ${response.status}` }
 }
 
+/** The body served for a path that cannot exist, or null when the server does not answer 200 for it. */
+async function fetchFallback(base, fetchFn) {
+  try {
+    const r = await fetchFn(new URL("/__gk-live-check-missing__", base).href, { method: "GET", redirect: "manual", signal: AbortSignal.timeout(10_000) })
+    return r.status === 200 ? await r.text() : null
+  } catch {
+    return null
+  }
+}
+
 /** Run every check against `base`. `fetchFn` is injectable so the tests need no network. */
 export async function runChecks(base, fetchFn = fetch) {
   const results = []
   let homeBody = null
+  let fallbackBody = null
+  let fallbackLoaded = false
+
   for (const check of CHECKS) {
     const isBundle = check.name === BUNDLE_CHECK
     const path = isBundle ? findAssetPath(homeBody) : check.path
@@ -71,6 +95,14 @@ export async function runChecks(base, fetchFn = fetch) {
     try {
       const response = await fetchFn(new URL(path, base).href, { method: "GET", redirect: "manual", signal: AbortSignal.timeout(10_000) })
       if (path === "/") homeBody = await response.text()
+      if (check.denied && response.status === 200) {
+        // What the server answers for a path that cannot exist: the app page. Fetched once.
+        if (!fallbackLoaded) {
+          fallbackBody = await fetchFallback(base, fetchFn)
+          fallbackLoaded = true
+        }
+        response.matchesFallback = fallbackBody !== null && (await response.text()) === fallbackBody
+      }
       const verdict = evaluate({ ...check, path }, response)
       results.push({ name: check.name, path, ...verdict })
     } catch (e) {

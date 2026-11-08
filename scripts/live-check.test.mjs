@@ -36,6 +36,27 @@ describe("evaluate", () => {
   })
 })
 
+describe("evaluate: denied paths", () => {
+  const denied = { path: "/README.md", denied: true }
+
+  it("passes a 403 or a 404", () => {
+    expect(evaluate(denied, res(403)).ok).toBe(true)
+    expect(evaluate(denied, res(404)).ok).toBe(true)
+  })
+
+  it("passes a 200 that is only the app's fallback page, because no such file exists", () => {
+    const r = evaluate(denied, { ...res(200), matchesFallback: true })
+    expect(r.ok).toBe(true)
+    expect(r.detail).toContain("no such file")
+  })
+
+  it("fails a 200 that is not the fallback page, because a real file is being served", () => {
+    const r = evaluate(denied, { ...res(200), matchesFallback: false })
+    expect(r.ok).toBe(false)
+    expect(r.detail).toBe("/README.md is served as a real file (200)")
+  })
+})
+
 describe("findAssetPath", () => {
   it("returns the first hashed index bundle referenced by the page", () => {
     const html = '<script type="module" src="/assets/index-BMBeNQHs.js"></script><link href="/assets/x.css">'
@@ -54,8 +75,9 @@ describe("CHECKS", () => {
     for (const p of ["/", "/work", "/services/web-design", "/login", "/app", "/robots.txt", "/llms.txt", "/sitemap.xml"]) {
       expect(byPath(p).some((c) => c.status === 200), p).toBe(true)
     }
-    for (const p of ["/config.php", "/README.md", "/config.php.bak"]) {
-      expect(byPath(p).some((c) => c.status === 403), p).toBe(true)
+    expect(byPath("/config.php").some((c) => c.status === 403)).toBe(true)
+    for (const p of ["/README.md", "/config.php.bak"]) {
+      expect(byPath(p).some((c) => c.denied === true), p).toBe(true)
     }
     for (const p of ["/assets/", "/uploads/"]) {
       expect(byPath(p).some((c) => c.status === 404), p).toBe(true)
@@ -101,6 +123,21 @@ describe("runChecks", () => {
     })
     expect(seen).toContain("/assets/index-ABC123.js")
     expect(results.find((r) => r.path === "/assets/index-ABC123.js").ok).toBe(true)
+  })
+
+  it("treats a denied path that returns the same page as a missing path as not a real file", async () => {
+    const fallback = { status: 200, body: "<div id=root>shell</div>" }
+    const results = await runChecks("https://example.test", fakeFetch({ "/": fallback, "/README.md": fallback, "/config.php.bak": fallback, "/__gk-live-check-missing__": fallback }))
+    expect(results.find((r) => r.path === "/README.md").ok).toBe(true)
+    expect(results.find((r) => r.path === "/config.php.bak").ok).toBe(true)
+  })
+
+  it("fails a denied path that returns a different page than a missing path", async () => {
+    const shell = { status: 200, body: "<div id=root>shell</div>" }
+    const results = await runChecks("https://example.test", fakeFetch({ "/": shell, "/README.md": { status: 200, body: "# internal readme" }, "/__gk-live-check-missing__": shell }))
+    const r = results.find((x) => x.path === "/README.md")
+    expect(r.ok).toBe(false)
+    expect(r.detail).toContain("real file")
   })
 
   it("reports a network failure as a failed check, not a crash", async () => {
