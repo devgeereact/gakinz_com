@@ -15,7 +15,8 @@ Live: `bde12c7` (2026-11-01). The order of work is [WORKBOOK.md](../docs/WORKBOO
 sessions are in [HANDOFF.md](HANDOFF.md).
 
 **2026-11-08, branch `phase-1/release-readiness` (from `golive/2026-11`, local only):** release readiness for
-the 13 unreleased commits. `npm run verify` passes on the candidate. Added `npm run check:live`
+the 13 unreleased commits. `npm run verify` passes on the candidate, and so does the server suite (44 files,
+562 tests, throwaway local MariaDB 11.4). Added `npm run check:live`
 (`scripts/live-check.mjs`, read-only GETs, 14 tests written first). Run against production it passes 9 of 16
 checks; the 7 failures are exactly the unreleased hardening: no CSP header, `X-Powered-By` still sent,
 **`/assets/` and `/uploads/` return a live directory listing (K-125)**, no deny rules for `.md` and backup
