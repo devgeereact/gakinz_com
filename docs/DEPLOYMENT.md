@@ -448,7 +448,7 @@ breaking the application.
 | `DB_*` | Required. Nothing works without it |
 | `ALLOWED_ORIGINS` | Required. `_bootstrap.php` fatals without the constant |
 | `ANTHROPIC_KEY`, `ANTHROPIC_MODEL`, `ANTHROPIC_EFFORT` | Every AI feature, tried first (D-054). Set with `scripts/set-server-key.sh` |
-| `OPENROUTER_KEY`, `OR_MODEL`, `OR_SITE` | Every AI feature when Anthropic has no key or fails. Use a paid `OR_MODEL`, not a `:free` one |
+| `OPENROUTER_KEY`, `OR_MODEL`, `OR_FALLBACK_MODEL`, `OR_SITE` | Every AI feature when Anthropic has no key or fails. Use a paid `OR_MODEL`, not a `:free` one. `OR_FALLBACK_MODEL` (optional, D-056) is tried only when `OR_MODEL` fails; set it with `scripts/set-server-key.sh OR_FALLBACK_MODEL` |
 | `OPENWEATHER_API_KEY` | `weather.php` only; no screen calls it since the weather pill was retired (2026-11-01) |
 | `$SMTP_*` | Outgoing mail, invoice chasing, invites, magic links, the weekly digest |
 | `$IMAP_*` | The in-app inbox. Also needs the PHP `imap` extension |

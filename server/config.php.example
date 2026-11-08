@@ -39,7 +39,8 @@ define('ANTHROPIC_KEY', 'REPLACE_anthropic_key');   // sk-ant-…
 define('ANTHROPIC_MODEL', 'claude-opus-5-5');       // optional; this is the default
 define('ANTHROPIC_EFFORT', 'low');                  // optional: low | medium | high (latency vs depth)
 define('OPENROUTER_KEY', 'REPLACE_openrouter_key'); // sk-or-v1-…
-define('OR_MODEL', 'openrouter/auto');              // a paid model; free (:free) models are rate-limited and withdrawn without notice
+define('OR_MODEL', 'anthropic/claude-sonnet-5.5');  // the default model on OpenRouter; use a paid one (free :free models are rate-limited and withdrawn without notice)
+define('OR_FALLBACK_MODEL', 'openai/gpt-oss-120b'); // optional: tried only when OR_MODEL fails; a cheap paid model. '' or the same as OR_MODEL = no second attempt
 define('OR_SITE', 'https://gakinz.com');            // sent as HTTP-Referer to OpenRouter
 
 // ── CORS ─────────────────────────────────────────────────────────────────────

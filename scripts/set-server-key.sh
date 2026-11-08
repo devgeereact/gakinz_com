@@ -5,7 +5,8 @@
 #   scripts/set-server-key.sh OPENROUTER_KEY     # OpenRouter, the backup
 #   scripts/set-server-key.sh                    # asks which
 #
-# Also takes ANTHROPIC_MODEL, ANTHROPIC_EFFORT and OR_MODEL (shown as you type).
+# Also takes ANTHROPIC_MODEL, ANTHROPIC_EFFORT, OR_MODEL and OR_FALLBACK_MODEL (the OpenRouter model tried when
+# OR_MODEL fails; shown as you type).
 #
 # The value is read with a hidden prompt and sent over SSH on standard input, so
 # it never appears on screen, in shell history, in a process list or in this
@@ -20,7 +21,7 @@
 set -euo pipefail
 
 HOST="${GK_SSH_HOST:-cpanel}"
-ALLOWED="ANTHROPIC_KEY OPENROUTER_KEY ANTHROPIC_MODEL ANTHROPIC_EFFORT OR_MODEL"
+ALLOWED="ANTHROPIC_KEY OPENROUTER_KEY ANTHROPIC_MODEL ANTHROPIC_EFFORT OR_MODEL OR_FALLBACK_MODEL"
 
 NAME="${1:-}"
 if [[ -z "$NAME" ]]; then
@@ -47,7 +48,7 @@ fi
 # Runs on the server. Reads the setting name from argv and the value from stdin.
 read -r -d '' REMOTE <<'PHP' || true
 $name = $argv[1] ?? '';
-$allowed = ['ANTHROPIC_KEY', 'OPENROUTER_KEY', 'ANTHROPIC_MODEL', 'ANTHROPIC_EFFORT', 'OR_MODEL'];
+$allowed = ['ANTHROPIC_KEY', 'OPENROUTER_KEY', 'ANTHROPIC_MODEL', 'ANTHROPIC_EFFORT', 'OR_MODEL', 'OR_FALLBACK_MODEL'];
 if (!in_array($name, $allowed, true)) { fwrite(STDERR, "Unknown setting.\n"); exit(2); }
 $value = trim((string)stream_get_contents(STDIN));
 if (!preg_match('~^[A-Za-z0-9._:/-]{1,400}$~', $value)) { fwrite(STDERR, "That value has characters a key never has; nothing was changed.\n"); exit(2); }
