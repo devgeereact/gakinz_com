@@ -1056,7 +1056,7 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 **Evidence:** `docs/AUDIT.md`, 2026-11-01 (second section).
 
 ## D-056 · AI runs on OpenRouter only: Sonnet 5.5 by default, a cheap paid model as backup
-**Date:** 2026-11-08 · **Status:** decided by the owner ("use the openrouter key ... the cheapest model as backup and Sonnet 5.5 as default"). The default model is **live** (private config, 2026-11-08). The backup model is built on branch `ai/openrouter-backup-model` and **not yet released**.
+**Date:** 2026-11-08 · **Status:** decided by the owner ("use the openrouter key ... the cheapest model as backup and Sonnet 5.5 as default"). Both models are **live**: the default was set in the private config on 2026-11-08; the backup code was released as `983606c` (PR #25, CI green) and `OR_FALLBACK_MODEL` was set the same day. A test on the server showed the default answering in 1.2 s, the backup in 0.5 s, and an invalid model refused.
 
 1. **No Anthropic key.** `ANTHROPIC_KEY` stays undefined, so `ai_providers()` returns OpenRouter alone. D-054's Anthropic-first code stays for a future key. The OpenRouter key was already in the private config; no key was entered or shown.
 2. **Default `OR_MODEL = anthropic/claude-sonnet-5.5`** (OpenRouter list price on 2026-11-08: $2 in, $10 out per million tokens). A test call answered in 1.5 s, which also showed the account has credit.

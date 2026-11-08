@@ -143,8 +143,8 @@ private `config.php`. A change that needs one of them records it here in the sam
 (`AGENTS.md`, "Keeping documents current"; `npm run docs:check` enforces it in CI).
 
 **Status 2026-11-08:** `golive/2026-11` was released as `ae01cec` and every hand-applied item below is done, with
-one exception: the OpenRouter backup model needs its code released first (branch `ai/openrouter-backup-model`,
-D-056). **AI (D-056):** the OpenRouter key was already in the private config, so no key was entered; `OR_MODEL` was
+the OpenRouter backup model, which was released after it as `983606c` (PR #25) and then configured
+(`OR_FALLBACK_MODEL=openai/gpt-oss-120b`, D-056). **AI (D-056):** the OpenRouter key was already in the private config, so no key was entered; `OR_MODEL` was
 changed from `openai/gpt-oss-120b:free` to `anthropic/claude-sonnet-5.5` with `scripts/set-server-key.sh OR_MODEL`
 and a test call answered in 1.5 s. Anthropic has no key, so OpenRouter is the only provider. The original
 2026-11-01 notes follow. The K-121 check, run before the merge, was:

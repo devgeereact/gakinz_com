@@ -11,7 +11,7 @@ live, then "make the best call for me ... fix all".
    (CSP, HSTS, no version headers, no directory listing); `weather.php` retired; mail TLS switch; dependencies
    to 0 critical and 0 high; gitleaks and Semgrep in CI. Details and evidence: `docs/AUDIT.md`.
 
-Live: `ae01cec` (released 2026-11-08, snapshot `20261108T171442Z`; was `bde12c7`). The order of work is [WORKBOOK.md](../docs/WORKBOOK.md) section 3; finished
+Live: `983606c` (released 2026-11-08, snapshot `20261108T212410Z`; before that `ae01cec`, and `bde12c7` on 2026-11-01). The order of work is [WORKBOOK.md](../docs/WORKBOOK.md) section 3; finished
 sessions are in [HANDOFF.md](HANDOFF.md).
 
 **2026-11-08, branch `phase-1/release-readiness` (from `golive/2026-11`, local only):** release readiness for
@@ -35,10 +35,8 @@ see CSP reports). PR #24 was already merged by GitHub.
 
 ## Next actions, in order
 
-1. Owner: approve releasing branch `ai/openrouter-backup-model` (2 commits: backup-model code, 4 new server tests, 566 of
-   566 server tests pass, `verify` passes). After that release, run
-   `scripts/set-server-key.sh OR_FALLBACK_MODEL` with `openai/gpt-oss-120b`, then a test call. Until then the default model
-   has no backup (a failure answers "AI unavailable", as before).
+1. Done: the OpenRouter backup model was released as `983606c` (PR #25) and `OR_FALLBACK_MODEL=openai/gpt-oss-120b` is set; a live
+   test answered on both models.
 2. Owner: set a monthly spending limit on the OpenRouter key in the OpenRouter dashboard (the key has none today).
 3. Next phase: Phase 2 of the GSD roadmap (align docs, process and workspace). `CLAUDE.md`, `README.md` and `AGENTS.md`
    still name the old live commit and deploy scope.
