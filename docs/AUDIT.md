@@ -2,6 +2,41 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-08 · Whole-codebase review, release check and signed-in check (`main`, read-only apart from the owner-approved server steps)
+
+**Scope:** what the app does, every screen, API route and table, what is connected, what is unused or
+half-finished, and what is inconsistent, judged from the code and not from the documents. Then the release of
+`golive/2026-11` (`983606c`) and the hand-applied server items in `docs/DEPLOYMENT.md` section 5.
+
+**Method:** nine readers covered the 421 tracked files in full (`api.ts`, many `lib` files and the 44 server test
+files were scanned or counted, not read line by line); I re-checked the headline findings myself. Marked below:
+**confirmed** (I read or ran it) and **reported** (from a full read, not re-checked; verify before fixing). A
+graphify structural graph of the code (2,676 nodes) found no orphan source file but cannot see the procedural PHP
+endpoints, so the endpoint and table maps were done with grep and the readers.
+
+| Item | Result | Evidence |
+|---|---|---|
+| Shape | 49 endpoint files and 17 helpers, 42 tables, 32 prerendered public pages, 25 CMS modules plus My account in seven destinations. Routes, `MODULE_ROLES`, navigation and search agree. Every `.php` path in `api.ts` exists. Every table the PHP queries is in the schema | grep and route files; **confirmed** |
+| Checks (on a copy, then on `main`) | PHP lint 66 of 66; `tsc -b` exit 0; unit 575 passed; server 566 passed (MariaDB 11.4.13); lint ratchet 5 of 5; `docs:check` PASS; `npm run verify` OK; CI green on PRs #24 and #25 | **confirmed** |
+| Live site | `npm run check:live` 9 of 16 before the release, **16 of 16 after**. The live `/assets/` and `/uploads/` directory listings (K-125, contents not read) closed by the `.htaccess` upload | **confirmed** |
+| Signed-in check | Owner signed in through Clerk; `/app` loads as Super admin; 24 CMS screens visited client-side: 0 CSP violations, 0 console errors. Mailbox skipped on purpose. The browser console tool cannot see CSP reports (proved with a deliberate violation), so an in-page `securitypolicyviolation` listener was used. Load-time violations on a full page load are not covered | **confirmed** |
+| K-121, K-123, K-126 | Closed with evidence: 0 accounts with app two-factor; a forged `CF-Connecting-IP` aimed at the origin was ignored; mail certificates verify and the inbox opens with validation | **confirmed** (`docs/DEPLOYMENT.md` section 5) |
+| New findings | K-127 to K-139 | below and in `docs/KNOWN-ISSUES.md` |
+| Not tested | Real default-model failure in production; any data flow on real data; Stripe, SMTP sends, Clerk sign-up; the live database against `schema.sql` | UNVERIFIED |
+
+**New findings (detail in the register):** K-127 staff file download probably sends no token under Clerk; K-128 a
+file share can expire a public portfolio image's token; K-129 updates that reset fields they were not sent;
+K-130 updates and deletes that report success for missing ids; K-131 "paid" is recorded differently on four paths;
+K-132 the forgot-password flow stores a token and never emails it; K-133 the legacy sign-in screen is unreachable in
+the Clerk build; K-134 certificates cannot be issued; K-135 role lists differ across endpoints; K-136 the contact
+form has only an IP limit; K-137 legal-page gaps and a stale cookie policy; K-138 the deploy does not wait for CI;
+K-139 dead code and schema drift.
+
+**Corrections to my own reports:** the first "no console messages" results were meaningless (above); `/README.md`
+and `/config.php.bak` answer 200 with the app page because the files are not uploaded, which is not an exposure
+(the live check was fixed to say so); my first smoke loop after the `.htaccess` swap had a shell bug and was re-run by
+hand at once, with no change needed.
+
 ## 2026-11-01 (continued into 2026-11-02) · Go-live hardening, second pass (`golive/2026-11`, local only)
 
 **Scope:** the owner's checklist (keys, environment, admin routes, authentication, access, forms, XSS, rate

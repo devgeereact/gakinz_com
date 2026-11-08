@@ -45,3 +45,6 @@ server/uploads/
 # local scratch (tests, temp, logs, recovery)
 .local-test/
 .local-state/
+
+# GSD planning notes (local only; the task file stays .agent/CURRENT-TASK.md)
+.planning/
