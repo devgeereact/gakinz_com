@@ -11,7 +11,7 @@ live, then "make the best call for me ... fix all".
    (CSP, HSTS, no version headers, no directory listing); `weather.php` retired; mail TLS switch; dependencies
    to 0 critical and 0 high; gitleaks and Semgrep in CI. Details and evidence: `docs/AUDIT.md`.
 
-Live: `983606c` (released 2026-11-08, snapshot `20261108T212410Z`; before that `ae01cec`, and `bde12c7` on 2026-11-01). The order of work is [WORKBOOK.md](../docs/WORKBOOK.md) section 3; finished
+Live: `cbfd527` (released 2026-11-09, snapshot `20261109T002637Z`; before that `b301ec7`, `983606c` and `ae01cec` on 2026-11-08). The order of work is [WORKBOOK.md](../docs/WORKBOOK.md) section 3; finished
 sessions are in [HANDOFF.md](HANDOFF.md).
 
 **2026-11-08, branch `phase-1/release-readiness` (from `golive/2026-11`, local only):** release readiness for
@@ -42,12 +42,9 @@ see CSP reports). PR #24 was already merged by GitHub.
    `docs/AUDIT.md`). K-127 staff downloads send the Clerk token; K-128 sharing keeps a public image's permanent link; K-140 the gate,
    the ticket panel and the project dropdown no longer hang. Owner: when a real file and a real project exist, try a download and a status
    change once; those two could not be tested live.
-4. **Phase 4 (make writes safe), branch `phase-4/safe-writes`: built and verified, not yet released.** K-129 updates keep the
-   fields they are not sent (a blog edit no longer unpublishes a post); K-130 missing ids answer 404; K-131 every way an invoice
-   becomes paid records the same evidence (drafts stay payable: it is the owner's flow); K-135 a drift guard keeps `access.ts`
-   equal to the PHP role lists and the editor dashboard shows no permanent error banner. 649 unit and 600 server tests pass; each
-   fix was written test-first and mutation-checked. Needs the owner's go-ahead to release (PHP and CMS code only; no SQL,
-   `.htaccess` or config). Not testable live: the editor dashboard (only a super admin exists) and PayPal (ships off).
+4. **Phase 4 (make writes safe): released 2026-11-09 as `cbfd527` (PR #28) and checked live** (see the 2026-11-09 section of
+   `docs/AUDIT.md`). Owner: when a real invoice is paid, look once that it shows the method and amount; PayPal and the editor
+   dashboard could not be tested live.
 5. Next: Phase 5 (retire the legacy sign-in), which first needs the owner's confirmation that every active user signs in
    through Clerk (there is 1 active user today).
 
