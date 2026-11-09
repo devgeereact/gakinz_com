@@ -102,12 +102,18 @@ export function createUser(opts: {
   return Number(one(`SELECT id FROM users WHERE email = ${q(opts.email)}`))
 }
 
-export async function login(email: string, code?: string): Promise<string> {
-  const r = await api<{ token?: string; error?: string }>("auth.php?action=login", {
-    body: { email, password: PASSWORD, ...(code ? { code } : {}) },
-  })
-  if (!r.json.token) throw new Error(`login failed for ${email}: ${r.status} ${JSON.stringify(r.json)}`)
-  return r.json.token
+/**
+ * A session for an existing user, minted directly in the database. The password sign-in endpoint is retired
+ * (Phase 5, D-057): people sign in through Clerk, and the server still accepts a stored session token, so a
+ * test can hold one without a sign-in call. Clerk's own tokens are covered in clerk.test.ts. The user must
+ * exist and not be deleted; this does not check status, which is require_auth()'s job.
+ */
+export async function login(email: string): Promise<string> {
+  const id = one(`SELECT id FROM users WHERE email = ${q(email)} AND deleted_at IS NULL`)
+  if (!id) throw new Error(`login: no user ${email}`)
+  const token = crypto.randomBytes(32).toString("hex")
+  sql(`INSERT INTO auth_tokens (user_id, token, expires_at) VALUES (${id}, ${q(tokenHash(token))}, DATE_ADD(NOW(), INTERVAL 30 DAY))`)
+  return token
 }
 
 export function createClient(company: string, email = `${company.toLowerCase().replace(/\W/g, "")}@example.test`): number {
