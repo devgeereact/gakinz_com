@@ -1079,7 +1079,7 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 **Supersedes** D-052 point 3 (a build without the Clerk key keeps the old sign-in: it now shows "Sign-in is not set up") and point 4 ("Not removed yet"). Google sign-in through Clerk (K-117) is unaffected; only the app's own `oauth.php` went. The reference sign-in plan in `docs/PRODUCT-SPEC.md` 6.1 is withdrawn.
 
 ## D-058 · Certificates are issued in the CMS, and the public check is uniform and throttled
-**Date:** 2026-11-09 · **Status:** decided by the owner ("build and fix certificate issuing", 2026-11-08); the design choices below were mine under that approval and the best-practice defaults the owner asked for. Code on branch `phase-6/certificates` (`b05da25`), not released yet.
+**Date:** 2026-11-09 · **Status:** decided by the owner ("build and fix certificate issuing", 2026-11-08); the design choices below were mine under that approval and the best-practice defaults the owner asked for. **Released 2026-11-09** (PR #30, CI green including MySQL 8; code `b05da25`, merged `01d2269`).
 
 1. **Who.** Super admin and admin only (`CERT_ROLES`). A certificate says someone completed something; the owner roles are the only ones who should say it or take it back.
 2. **Reference.** `GK-XXXX-XXXX-XXXX`, twelve characters from a 30-character alphabet without 0, 1, I, L, O or U, drawn with `random_int()` (60 bits). It carries no sequence, name or date, so one reference tells nobody another. A clash on the unique column retries up to five times.

@@ -25,6 +25,7 @@ document disagree, the linked document wins and this page is wrong.
 | 2026-11-08 | `983606c` | AI backup model: `OR_FALLBACK_MODEL` tried when `OR_MODEL` fails (D-056) | GitHub Actions, owner-approved; CI green on PR #25 |
 | 2026-11-08 | `b301ec7` | Phase 3: staff downloads send the Clerk token, sharing keeps a public image's link, the gate and ticket panel no longer hang, the project dropdown keeps its value (K-127, K-128, K-140); the first release to wait for CI | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #27 |
 | 2026-11-09 | `ed58064` | Phase 5: Clerk is the only sign-in; password, magic-link, Google and reference routes answer 404; My account opens Clerk's panel (D-057, K-132, K-133) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #29 |
+| 2026-11-09 | `01d2269` | Phase 6: certificates issued, listed and revoked in the CMS; `/verify` throttled, uniform and uncached (D-058, K-134, K-061) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #30 |
 | 2026-11-09 | `cbfd527` | Phase 4: updates keep unsent fields and missing ids answer 404 (K-129, K-130); one function records the same payment evidence on every path (K-131); a role-drift guard and a fixed editor dashboard (K-135) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #28 |
 
 The checks of each release are in [AUDIT.md](AUDIT.md) (newest first). Measured counts are in
@@ -36,8 +37,7 @@ Gated features ship switched off (D-050): `$RETENTION_APPLY`,
 
 ## 2. In progress
 
-The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md). **Phase 6 (certificates end to end, D-058)** is coded and
-checked on branch `phase-6/certificates`; not released until the owner approves (K-134 closes on release). Phase 5 (retire the legacy sign-in, D-057) was released as `ed58064`; nothing else is in progress.
+The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md). Phase 6 (certificates end to end, D-058) was released as `01d2269`; nothing else is in progress. Phase 5 (retire the legacy sign-in, D-057) was released as `ed58064`; nothing else is in progress.
 
 ## 3. What is left
 

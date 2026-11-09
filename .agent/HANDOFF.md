@@ -123,5 +123,6 @@ PR #28 CI green (MySQL 8); `main` fast-forwarded to `cbfd527`; the release job s
 - Done (not pushed): `server/certificates.php` (issue, list, revoke; super admin and admin), `server/verify.php` hardened (uniform 404, no-store, 20 misses in 10 minutes gives 429), `Certificates.tsx` + `certificatesModel.ts`, wiring (api, access, drift guard, nav, search, route), `/verify` reference form and 429 state. No schema change.
 - Evidence: red-first tests; 4 mutation checks caught; `tsc -b` clean; `npm test` 639/56; `npm run test:server` 583/45; lint ratchet 5/5; docs:check PASS.
 - NOT TESTED: the screens in a browser (Chrome extension was not connected); release; MySQL 8 (CI).
-- Open: owner approval to push, PR and release; then `npm run check:live`, the `/verify` and `/certificates.php` probes in `docs/DEPLOYMENT.md`, and one real issue then verify then revoke by the owner (that writes a real row, so only with the owner's say).
+- Open: the owner tries issue, verify and revoke once in a signed-in session (it writes a real row).
 - Throwaway MariaDB on port 3399 is running again; stop it with `mariadb-admin --no-defaults -h127.0.0.1 -P3399 -uroot shutdown`.
+- Released 2026-11-09 as `01d2269` (PR #30, CI green incl. MySQL 8); `check:live` 16 of 16; verify/certificates probes as designed; live table empty. Screens not seen in a browser. Stop the throwaway MariaDB (port 3399) when finished.

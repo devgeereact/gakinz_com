@@ -2,7 +2,7 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
-## 2026-11-09 (latest) · Phase 6 checked locally: certificates end to end (branch `phase-6/certificates`, not released)
+## 2026-11-09 (latest) · Phase 6 released and checked live: certificates end to end (`01d2269`)
 
 **Scope:** D-058, K-134 and the certificate part of K-061. **Method:** tests first (19 of 21 red against the old code), then code, then mutation checks on the guards, then the full gates.
 
@@ -16,7 +16,9 @@ Every audit, review and checklist run for this project, newest first. Add new re
 | Mutations | removing `revoked_at IS NULL`, raising the throttle limit, dropping the role list and dropping the future-date rule each made at least one test fail (all four applied) |
 | Model | `certificatesModel.test.ts`, 6 tests written red first |
 | Gates | `tsc -b` clean; `npm test` 639 in 56 files; `npm run test:server` 583 in 45 files (MariaDB 11.4; the retention and privacy tests that count certificates still pass); lint ratchet 5 of 5; `docs:check` PASS |
-| Not tested | The new screen and the `/verify` form in a browser (the Chrome extension was not connected); a release; MySQL 8 (CI) |
+| CI and release | PR #30: all jobs green including the server suite on MySQL 8; `main` fast-forwarded to `01d2269`; the release job succeeded |
+| Live (read-only) | `npm run check:live` 16 of 16; `verify.php?id=` an unknown reference gives 404 `No matching certificate.` with `Cache-Control: no-store`, no id gives 400, POST gives 405; `certificates.php` list and issue without a token give 401; `/verify` and `/verify/<ref>` give 200; the live `certificates` table is empty and the one `certificate_lookup_miss` row is my probe |
+| Not tested | The Certificates screen and the `/verify` form in a browser (the Chrome extension was not connected); a real issue, verify and revoke (it would write a real row) |
 
 ## 2026-11-09 (later) · Phase 5 released and checked live: the legacy sign-in is retired (`ed58064`)
 
