@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react"
-import { useParams } from "react-router-dom"
+import { useNavigate, useParams } from "react-router-dom"
 import { api } from "@/lib/api"
 import Seo from "@/marketing/components/Seo"
 import { PageHead } from "@/marketing/components/site-ui"
@@ -38,11 +38,15 @@ type Cert = {
   issued_at: string
 }
 
-type State = "loading" | "valid" | "invalid" | "error"
+type State = "idle" | "loading" | "valid" | "invalid" | "limited" | "error"
 
 export default function Verify() {
   const { id } = useParams()
-  const [state, setState] = useState<State>("loading")
+  const navigate = useNavigate()
+  const [typed, setTyped] = useState("")
+  const [fetched, setState] = useState<State>("loading")
+  // With no reference in the address there is nothing to check yet: derived, so no effect sets it.
+  const state: State = id ? fetched : "idle"
   const [cert, setCert] = useState<Cert | null>(null)
   const [attempt, setAttempt] = useState(0)
   const retry = useCallback(() => {
@@ -51,6 +55,7 @@ export default function Verify() {
   }, [])
 
   useEffect(() => {
+    if (!id) return
     let alive = true
     api.get<Cert>(`/verify.php?id=${encodeURIComponent(id || "")}`).then((res) => {
       if (!alive) return
@@ -59,6 +64,8 @@ export default function Verify() {
         setState("valid")
       } else if (res.ok || res.status === 404 || res.status === 400) {
         setState("invalid")
+      } else if (res.status === 429) {
+        setState("limited")
       } else {
         setState("error")
       }
@@ -80,15 +87,42 @@ export default function Verify() {
       <PageHead
         crumbs={[[null, "Verification"]]}
         title="Certificate check"
-        lede="Every certificate carries a reference. Enter it in the address and this page reports what the register holds against it."
+        lede="Every certificate carries a reference. Enter it here and this page reports what the register holds against it."
       />
 
       <section className="sec wrap" style={{ paddingTop: 56 }}>
         <div style={{ maxWidth: "36rem" }}>
-          <p className="mono mute">Reference</p>
-          <p className="mono" style={{ fontSize: 15, marginTop: 8, overflowWrap: "anywhere" }}>
-            {id || "none given"}
-          </p>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              const ref = typed.replace(/\s+/g, "")
+              if (ref) navigate(`/verify/${encodeURIComponent(ref)}`)
+            }}
+          >
+            <div className="field">
+              <label htmlFor="verify-ref">Reference</label>
+              <input
+                id="verify-ref"
+                name="reference"
+                className="mono"
+                autoComplete="off"
+                autoCapitalize="characters"
+                spellCheck={false}
+                placeholder="GK-XXXX-XXXX-XXXX"
+                value={typed}
+                onChange={(e) => setTyped(e.target.value)}
+              />
+            </div>
+            <button className="btn" type="submit" style={{ marginTop: 16 }}>
+              Check
+            </button>
+          </form>
+          {id && (
+            <p className="mono" style={{ fontSize: 15, marginTop: 28, overflowWrap: "anywhere" }}>
+              <span className="mute">Checked: </span>
+              {id}
+            </p>
+          )}
 
           <div aria-live="polite" aria-busy={state === "loading"} style={{ marginTop: 32 }}>
             {state === "loading" && <p className="lede">Checking the register…</p>}
@@ -121,6 +155,15 @@ export default function Verify() {
                 <h2 className="h-m">No matching certificate</h2>
                 <p className="mute" style={{ marginTop: 12 }}>
                   The register holds nothing against that reference. Check the code on the certificate and try again.
+                </p>
+              </div>
+            )}
+
+            {state === "limited" && (
+              <div className="notice notice--warn">
+                <h2 className="h-m">Too many checks</h2>
+                <p className="mute" style={{ marginTop: 12 }}>
+                  This connection has made a lot of checks that found nothing. Wait a few minutes and try again.
                 </p>
               </div>
             )}

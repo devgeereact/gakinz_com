@@ -1562,6 +1562,24 @@ export const testimonials = {
   remove: (id: number) => api.post<{ ok: boolean }>("/testimonials.php?action=delete", { id }),
 }
 
+// ── Certificates (certificates.php, super admin and admin; verify.php is the public check) ─
+export type Certificate = {
+  id: number
+  public_id: string
+  recipient: string
+  programme: string
+  issued_at: string
+  revoked_at: string | null
+  created_at: string
+}
+
+export const certificates = {
+  list: () => api.get<Certificate[]>("/certificates.php"),
+  issue: (p: { recipient: string; programme: string; issued_at?: string }) =>
+    api.post<{ id: number; public_id: string }>("/certificates.php?action=issue", p),
+  revoke: (id: number) => api.post<{ ok: boolean }>("/certificates.php?action=revoke", { id }),
+}
+
 // ── Content Hub (AI multi-platform drafts) ───────────────────────────────────
 export type ContentDraft = {
   id: number

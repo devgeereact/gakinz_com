@@ -37,6 +37,7 @@ import {
   Sparkles,
   Newspaper,
   Quote,
+  BadgeCheck,
   Briefcase,
   PanelTop,
   HeartPulse,
@@ -89,6 +90,7 @@ const COMMANDS: Cmd[] = [
   { key: "content", label: "Content Hub", path: "/app/content", icon: Sparkles },
   { key: "blog", label: "Blog", path: "/app/blog", icon: Newspaper },
   { key: "testimonials", label: "Testimonials", path: "/app/testimonials", icon: Quote },
+  { key: "certificates", label: "Certificates", path: "/app/certificates", icon: BadgeCheck, keywords: ["verify", "issue", "revoke"] },
   { key: "work", label: "Work", path: "/app/work", icon: Briefcase },
   {
     key: "site",

@@ -43,6 +43,7 @@ export const publicRoute: RouteObject = {
     { path: "privacy", element: <Privacy /> },
     { path: "terms", element: <Terms /> },
     { path: "cookies", element: <Cookies /> },
+    { path: "verify", element: <Verify /> },
     { path: "verify/:id", element: <Verify /> },
     { path: "*", element: <PublicNotFound /> },
   ],

@@ -41,6 +41,7 @@ const FOLLOWS: Record<string, Gate[]> = {
   content: [["content.php", "EDITORS"]],
   blog: [["blog.php", "EDITORS"]],
   testimonials: [["testimonials.php", "EDITORS"]],
+  certificates: [["certificates.php", "CERT_ROLES"]],
   work: [["work.php", "EDITORS"]],
   site: [["site.php", "EDITORS"]],
   files: [["files.php", "STAFF"]],

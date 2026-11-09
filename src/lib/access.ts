@@ -51,6 +51,8 @@ export const MODULE_ROLES: Record<string, Role[]> = {
   content: ["super_admin", "admin", "manager", "editor"],
   blog: ["super_admin", "admin", "manager", "editor"],
   testimonials: ["super_admin", "admin", "manager", "editor"],
+  // certificates.php CERT_ROLES: a certificate states that someone completed something, so only the owner roles
+  certificates: ["super_admin", "admin"],
   // work.php EDITORS — the portfolio record type behind the public /work pages
   work: ["super_admin", "admin", "manager", "editor"],
   // site.php EDITORS, labelled "Site content": the public site's editable copy
@@ -105,6 +107,7 @@ export function moduleKeyForPath(pathname: string): string | null {
     content: "content",
     blog: "blog",
     testimonials: "testimonials",
+    certificates: "certificates",
     work: "work",
     site: "site",
     files: "files",
