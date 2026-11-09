@@ -312,7 +312,7 @@ if ($method === 'POST' && $action === 'chase') {
     error_log('GAkinz invoice chase (smtp): ' . ($sent['error'] ?? 'unknown error'));
     fail('Could not send the reminder. Please try again.', 502);
   }
-  audit($conn, $user['id'], 'invoice_chase', "$num → {$inv['email']}");
+  audit($conn, $user['id'], 'invoice_chase', gk_chase_detail($id, $num, (string)$inv['email']));
   ok(['ok' => true, 'sent_to' => $inv['email']]);
 }
 

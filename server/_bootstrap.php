@@ -172,3 +172,12 @@ function audit(mysqli $conn, ?int $userId, string $action, string $detail = ''):
   $stmt->bind_param('isss', $userId, $action, $detail, $ip);
   $stmt->execute();
 }
+
+/**
+ * The audit line for an invoice payment reminder, the same whether cron.php or a person sent it, so the
+ * chase job can tell a reminder was already sent (D-059). The id is in it because invoice numbers are
+ * free text and nothing makes them unique.
+ */
+function gk_chase_detail(int $invoiceId, string $number, string $email): string {
+  return "$number → $email (#$invoiceId)";
+}

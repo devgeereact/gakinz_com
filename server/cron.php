@@ -10,9 +10,10 @@
  *
  *   wget -qO- "https://gakinz.com/cron.php?key=YOUR_CRON_KEY&job=all"
  *
- *   ?job=chase    email reminders for every overdue invoice
+ *   ?job=chase    email a reminder for each overdue invoice, at most one per invoice per
+ *                $CHASE_INTERVAL_DAYS (default 7; a reminder sent by hand counts)
  *   ?job=billing  raise this month's invoice for each retainer/care-plan client
- *   ?job=digest   email a KPI digest to $REPORT_RECIPIENTS
+ *   ?job=digest   email a KPI digest to $REPORT_RECIPIENTS, at most once every 6 days
  *   ?job=uptime   ping every care-plan prod URL, record HTTP + SSL-expiry
  *   ?job=prune    delete sessions, magic links and reset links a day past expiry
  *   ?job=all      run them all (default)
@@ -119,27 +120,66 @@ function cron_prune(mysqli $conn): array {
   return $out;
 }
 
+/** Days between two reminders for one invoice: $CHASE_INTERVAL_DAYS, 1 to 90, default 7 (Phase 7, D-059). */
+function cron_chase_interval_days(): int {
+  $d = (int)($GLOBALS['CHASE_INTERVAL_DAYS'] ?? 7);
+  return $d >= 1 && $d <= 90 ? $d : 7;
+}
+
+/**
+ * Has this exact reminder (same invoice, same address) been sent inside the interval, by this job or by hand?
+ * The memory is the audit log, so there is no schema change; `$detail` is written identically by both senders.
+ */
+function cron_chase_recent(mysqli $conn, string $detail, int $days): bool {
+  $stmt = $conn->prepare(
+    "SELECT 1 FROM audit_log WHERE action IN ('cron_chase', 'invoice_chase') AND detail = ?
+       AND created_at > (NOW() - INTERVAL $days DAY) LIMIT 1"
+  );
+  $stmt->bind_param('s', $detail);
+  $stmt->execute();
+  return (bool)$stmt->get_result()->fetch_row();
+}
+
+/**
+ * Overdue-invoice reminders. One per invoice per interval, so a daily cron no longer re-emails the same client
+ * every day. The whole job runs under a named lock (a second run that overlaps skips instead of sending a
+ * duplicate), and a send that fails writes no audit row, so the next run tries again.
+ */
 function cron_chase(mysqli $conn): array {
   if (empty($GLOBALS['SMTP_HOST'])) return ['skipped' => 'no smtp'];
+  $got = $conn->query("SELECT GET_LOCK('gk_cron_chase', 0) AS got");
+  if (!$got || (int)($got->fetch_assoc()['got'] ?? 0) !== 1) return ['skipped' => 'another chase run is in progress'];
+  try {
+    return cron_chase_run($conn);
+  } finally {
+    if ($r = $conn->query("SELECT RELEASE_LOCK('gk_cron_chase')")) $r->free();
+  }
+}
+
+function cron_chase_run(mysqli $conn): array {
   require_once __DIR__ . '/_smtp.php';
-  $sent = 0; $skipped = 0;
+  $days = cron_chase_interval_days();
+  $sent = 0; $skipped = 0; $already = 0;
   $sql = 'SELECT i.id, i.number, i.due_at, c.company, c.email,
                  (SELECT COALESCE(SUM(qty*unit_price),0) FROM invoice_items it WHERE it.invoice_id=i.id) AS sub, i.vat_rate
           FROM invoices i JOIN clients c ON c.id = i.client_id
-          WHERE i.status = "sent" AND i.due_at IS NOT NULL AND i.due_at < CURRENT_DATE AND i.deleted_at IS NULL';
+          WHERE i.status = "sent" AND i.due_at IS NOT NULL AND i.due_at < CURRENT_DATE AND i.deleted_at IS NULL
+          ORDER BY i.id';
   if ($res = $conn->query($sql)) {
     while ($r = $res->fetch_assoc()) {
       if (empty($r['email'])) { $skipped++; continue; }
-      $total = round((float)$r['sub'] * (1 + (float)$r['vat_rate'] / 100), 2);
       $num = $r['number'] ?: ('#' . $r['id']);
+      $detail = gk_chase_detail((int)$r['id'], $num, (string)$r['email']);
+      if (cron_chase_recent($conn, $detail, $days)) { $already++; continue; }
+      $total = round((float)$r['sub'] * (1 + (float)$r['vat_rate'] / 100), 2);
       $body = "Hello {$r['company']},\n\nInvoice $num for £" . number_format($total, 2)
             . " was due on {$r['due_at']} and remains unpaid. Please arrange payment. "
             . "If already paid, thank you — disregard this note.\n\nGAkinz";
       $ok = gk_send_email(['to' => $r['email'], 'subject' => "Payment reminder — invoice $num", 'body' => $body]);
-      if (!empty($ok['ok'])) { $sent++; audit($conn, null, 'cron_chase', "$num → {$r['email']}"); } else { $skipped++; }
+      if (!empty($ok['ok'])) { $sent++; audit($conn, null, 'cron_chase', $detail); } else { $skipped++; }
     }
   }
-  return ['sent' => $sent, 'skipped' => $skipped];
+  return ['sent' => $sent, 'skipped' => $skipped, 'already_reminded' => $already];
 }
 
 /**
@@ -218,6 +258,21 @@ function cron_digest(mysqli $conn): array {
   $recips = $GLOBALS['REPORT_RECIPIENTS'] ?? '';
   if ($recips === '' || empty($GLOBALS['SMTP_HOST'])) return ['skipped' => 'no recipients/smtp'];
   require_once __DIR__ . '/_smtp.php';
+
+  // "Weekly" means weekly: a daily cron must not mail it daily. Six days, not seven, so a run a few minutes
+  // earlier than last week's still goes. The lock stops two overlapping runs both passing this check.
+  $got = $conn->query("SELECT GET_LOCK('gk_cron_digest', 0) AS got");
+  if (!$got || (int)($got->fetch_assoc()['got'] ?? 0) !== 1) return ['skipped' => 'another digest run is in progress'];
+  try {
+    $recent = $conn->query("SELECT 1 FROM audit_log WHERE action = 'cron_digest' AND created_at > (NOW() - INTERVAL 6 DAY) LIMIT 1");
+    if ($recent && $recent->fetch_row()) return ['skipped' => 'already sent this week'];
+    return cron_digest_send($conn, $recips);
+  } finally {
+    if ($r = $conn->query("SELECT RELEASE_LOCK('gk_cron_digest')")) $r->free();
+  }
+}
+
+function cron_digest_send(mysqli $conn, string $recips): array {
 
   $val = function (string $sql) use ($conn) {
     $r = @$conn->query($sql);
