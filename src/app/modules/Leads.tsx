@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react"
 import { useLoad } from "@/hooks/use-load"
-import { leadsLink, linkMark, linkRevision, recordElementId } from "@/lib/deepLink"
+import { leadsLink, linkMark, linkRevision, proposalsPath, recordElementId } from "@/lib/deepLink"
 import { useApplyLink, useReveal } from "@/hooks/use-reveal"
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
-import { Loader2, Download, RefreshCw, Mail, UserPlus, Tag, CalendarClock, Inbox, Phone, Plus, Trash2 } from "lucide-react"
+import { Loader2, Download, RefreshCw, Mail, UserPlus, Tag, CalendarClock, Inbox, Phone, Plus, Trash2, FileText } from "lucide-react"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -649,6 +649,9 @@ export default function Leads() {
                   size="default"
                   input={`New enquiry from ${openLead.name}${openLead.company ? ` at ${openLead.company}` : ""} (${openLead.email}).${openLead.project_type ? `\nProject type: ${openLead.project_type}.` : ""}${openLead.budget ? `\nBudget: ${openLead.budget}.` : ""}\n\nTheir message:\n"${openLead.message}"\n\nDraft GAkinz's first reply email: thank them, show we understood the project, ask one or two sharp scoping questions, and propose a short call. Sign off as the GAkinz studio team.`}
                 />
+                <Button variant="outline" onClick={() => navigate(proposalsPath(openLead.id))}>
+                  <FileText /> Draft a quote
+                </Button>
                 <Button onClick={() => convert(openLead)} disabled={converting === openLead.id}>
                   {converting === openLead.id ? <Loader2 className="animate-spin" /> : <UserPlus />}
                   Convert to client

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react"
 import { useLocation, useSearchParams } from "react-router-dom"
-import { Loader2, Download, RefreshCw, Plus, Building2, Search, FileJson, UserX } from "lucide-react"
+import { Loader2, Download, RefreshCw, Plus, Building2, Search, FileJson, UserX, Pencil } from "lucide-react"
 import { saveAs } from "file-saver"
 import { downloadCsv, downloadXlsx } from "@/lib/csv"
 import { toast } from "sonner"
@@ -46,6 +46,7 @@ import { exportOutcome, PRIVACY_NOT_AVAILABLE } from "@/app/modules/privacyTools
 import { clientsLink, linkMark } from "@/lib/deepLink"
 import { useApplyLink } from "@/hooks/use-reveal"
 import { useLoad } from "@/hooks/use-load"
+import { clientFormFrom, clientFormProblem, clientPatch, type ClientForm } from "@/app/modules/clientEditModel"
 
 const TIMELINE_LABEL: Record<ClientDetail["timeline"][number]["type"], string> = {
   enquiry: "Enquiry",
@@ -134,6 +135,32 @@ export default function Clients() {
   })
 
   const set = (k: keyof ClientInput, v: string) => setForm((f) => ({ ...f, [k]: v }))
+
+  // Editing the client shown in the detail sheet (Phase 7): only the changed fields are sent.
+  const [editing, setEditing] = useState<Client | null>(null)
+  const [editForm, setEditForm] = useState<ClientForm | null>(null)
+  const [savingEdit, setSavingEdit] = useState(false)
+  const startEdit = (c: Client) => {
+    setEditing(c)
+    setEditForm(clientFormFrom(c))
+  }
+  const setEdit = <K extends keyof ClientForm>(k: K, v: ClientForm[K]) => setEditForm((f) => (f ? { ...f, [k]: v } : f))
+  const saveEdit = async () => {
+    if (!editing || !editForm) return
+    const problem = clientFormProblem(editForm)
+    if (problem) return toast.error(problem)
+    const patch = clientPatch(editing, editForm)
+    if (Object.keys(patch).length === 0) return setEditing(null)
+    setSavingEdit(true)
+    const res = await clients.update(editing.id, patch)
+    setSavingEdit(false)
+    if (!res.ok) return toast.error(res.error || "Could not save the client.")
+    toast.success("Client saved.")
+    setEditing(null)
+    load()
+    const fresh = await clients.get(editing.id) // the sheet shows the saved values
+    if (fresh.ok) setDetail(fresh.data)
+  }
 
   const save = async () => {
     if (!form.company.trim()) {
@@ -343,6 +370,76 @@ export default function Clients() {
       )}
 
       {/* Client detail: lifetime value and account history */}
+      <Dialog open={editing !== null} onOpenChange={(o) => !o && !savingEdit && setEditing(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit client</DialogTitle>
+          </DialogHeader>
+          {editForm && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <Label htmlFor="edit-company">Company</Label>
+                <Input id="edit-company" value={editForm.company} onChange={(e) => setEdit("company", e.target.value)} className="mt-1.5" />
+              </div>
+              <div>
+                <Label htmlFor="edit-contact">Contact name</Label>
+                <Input id="edit-contact" value={editForm.contact_name} onChange={(e) => setEdit("contact_name", e.target.value)} className="mt-1.5" />
+              </div>
+              <div>
+                <Label htmlFor="edit-email">Email</Label>
+                <Input id="edit-email" type="email" value={editForm.email} onChange={(e) => setEdit("email", e.target.value)} className="mt-1.5" />
+                <p className="mt-1 text-xs text-muted-foreground">Invoice reminders and messages go to this address.</p>
+              </div>
+              <div>
+                <Label htmlFor="edit-phone">Phone</Label>
+                <Input id="edit-phone" value={editForm.phone} onChange={(e) => setEdit("phone", e.target.value)} className="mt-1.5" />
+              </div>
+              <div>
+                <Label htmlFor="edit-tag">Tag</Label>
+                <Select value={editForm.tag} onValueChange={(v) => setEdit("tag", v as ClientTag)}>
+                  <SelectTrigger id="edit-tag" className="mt-1.5">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TAGS.map((t) => (
+                      <SelectItem key={t} value={t}>
+                        {TAG_LABEL[t]}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label htmlFor="edit-retainer">Care plan / retainer (£ per month)</Label>
+                <Input
+                  id="edit-retainer"
+                  type="number"
+                  min="0"
+                  step="10"
+                  value={String(editForm.retainer_amount)}
+                  onChange={(e) => setEdit("retainer_amount", parseFloat(e.target.value) || 0)}
+                  className="mt-1.5"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">Billed automatically each month if above 0.</p>
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="edit-notes">Notes</Label>
+                <Textarea id="edit-notes" rows={3} value={editForm.notes} onChange={(e) => setEdit("notes", e.target.value)} className="mt-1.5" />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)} disabled={savingEdit}>
+              Cancel
+            </Button>
+            <Button onClick={saveEdit} disabled={savingEdit}>
+              {savingEdit && <Loader2 className="animate-spin" />}
+              Save changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
         <SheetContent className="flex flex-col gap-0 p-0 sm:p-0">
           <SheetHeader className="border-b p-5 pb-4 text-left">
@@ -441,6 +538,11 @@ export default function Clients() {
             {anonPreview && detail && anonPreview.id === detail.client.id && (
               <Button variant="destructive" onClick={() => setAnonOpen(true)}>
                 <UserX /> Anonymise
+              </Button>
+            )}
+            {detail && (
+              <Button variant="outline" onClick={() => startEdit(detail.client)}>
+                <Pencil /> Edit
               </Button>
             )}
             <Button variant="outline" onClick={() => setDetailOpen(false)}>

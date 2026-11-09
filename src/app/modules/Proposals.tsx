@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { useLoad } from "@/hooks/use-load"
-import { useNavigate } from "react-router-dom"
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom"
 import { Loader2, Plus, RefreshCw, Trash2, Send, Check, X, Share2, Link2Off, Eye, AlertCircle, FileText } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
@@ -32,14 +32,19 @@ import {
 } from "@/components/ui/table"
 import {
   proposals,
+  leads as leadsApi,
   clients as clientsApi,
   type Proposal,
   type ProposalItemInput,
   type Client,
+  type Lead,
   type AcceptanceEvidence,
   type AcceptanceMethod,
 } from "@/lib/api"
 import { localIsoDate } from "@/lib/format"
+import { linkMark, projectsPath, proposalsLink } from "@/lib/deepLink"
+import { useApplyLink } from "@/hooks/use-reveal"
+import { quotePrefill } from "./quotePrefillModel"
 import { isDirty } from "@/lib/dirty-model"
 import { useUnsavedGuard } from "@/hooks/use-unsaved-guard"
 import { UnsavedGuardDialog } from "@/components/unsaved-guard-dialog"
@@ -102,9 +107,34 @@ export default function Proposals() {
   // The list loads on open; Refresh, Retry and a save call load again.
   const { data: items, setData: setItems, error, loading, reload: load } = useLoad<Proposal[]>(() => proposals.list(), [])
 
+  const [clientsLoaded, setClientsLoaded] = useState(false)
   useEffect(() => {
-    clientsApi.list().then((r) => r.ok && setClientList(r.data))
+    clientsApi.list().then((r) => {
+      if (r.ok) setClientList(r.data)
+      setClientsLoaded(true)
+    })
   }, [])
+
+  // ?enquiry=<id> (from Enquiries, "Draft a quote") opens a new quote with what the enquiry already tells us
+  // (quotePrefillModel.ts). It is applied once per link, so closing the dialog sticks.
+  const [searchParams] = useSearchParams()
+  const location = useLocation()
+  const link = proposalsLink(searchParams)
+  const [enquiries, setEnquiries] = useState<Lead[] | null>(null)
+  useEffect(() => {
+    if (link.enquiry === null) return
+    leadsApi.list().then((r) => setEnquiries(r.ok ? r.data : []))
+  }, [link.enquiry])
+  useApplyLink(linkMark(link, location.state), link.enquiry !== null && enquiries !== null && clientsLoaded, () => {
+    const lead = enquiries?.find((l) => l.id === link.enquiry)
+    if (!lead) return toast.error("That enquiry could not be found.")
+    const q = quotePrefill(lead, clientList)
+    setTitle(q.title)
+    setClientId(q.clientId)
+    setLines(q.lines)
+    setOpen(true)
+    if (q.needsClient) toast("This enquiry is not a client yet. Convert it to attach the quote to a client.")
+  })
 
   const draftTotal = lines.reduce(
     (sum, l) => sum + (parseFloat(l.qty) || 0) * (parseFloat(l.unit_price) || 0),
@@ -239,7 +269,7 @@ export default function Proposals() {
       } else {
         toast.success(`Accepted. ${made}`)
       }
-      navigate("/app/projects")
+      navigate(projectsPath(res.data.project_id)) // land on the project this quote just started
     } else {
       // Shown inside the dialog, as the Record payment dialog does, so it sits beside the fields to correct.
       setAcceptError(res.error || "Could not accept.")

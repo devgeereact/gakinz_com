@@ -11,6 +11,9 @@ import {
   linkNonce,
   linkRevision,
   projectsLink,
+  projectsPath,
+  proposalsLink,
+  proposalsPath,
   recordElementId,
   supportLink,
 } from "./deepLink"
@@ -156,5 +159,22 @@ describe("clientsLink", () => {
     expect(isNewLink(first, linkMark(clientsLink(p("client=7")), null))).toBe(false)
     expect(isNewLink(first, linkMark(clientsLink(p("client=7")), linkNavigationState()))).toBe(true)
     expect(isNewLink(first, linkMark(clientsLink(p("client=8")), null))).toBe(true)
+  })
+})
+
+describe("quote links (Phase 7)", () => {
+  it("opens the project a quote became", () => {
+    expect(projectsPath(12)).toBe("/app/projects?project=12")
+  })
+  it("falls back to the plain projects screen without a project id", () => {
+    expect(projectsPath(undefined)).toBe("/app/projects")
+    expect(projectsPath(0)).toBe("/app/projects")
+    expect(projectsPath(null)).toBe("/app/projects")
+  })
+  it("builds and reads a draft-quote-from-enquiry link", () => {
+    expect(proposalsPath(5)).toBe("/app/proposals?enquiry=5")
+    expect(proposalsLink(p("enquiry=5"))).toEqual({ enquiry: 5 })
+    expect(proposalsLink(p("enquiry=abc"))).toEqual({ enquiry: null })
+    expect(proposalsLink(p(""))).toEqual({ enquiry: null })
   })
 })

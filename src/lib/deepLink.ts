@@ -8,12 +8,13 @@
  *   /app/projects?project=<id>[&task=<id> | &asset=<id>]
  *   /app/invoicing?invoice=<id>
  *   /app/leads?enquiry=<id>                 (also with the existing ?due=1)
+ *   /app/proposals?enquiry=<id>             (opens a new quote drafted from that enquiry)
  *   /app/leads?view=calls&call=<id>
  *   /app/clients?client=<id>               (opens the client's detail sheet)
  *   /app/support?ticket=<id>               (opens the ticket, e.g. from its time on /app/time)
  *
  * Quotes have no detail view on /app/proposals, so the search opens that
- * screen plainly.
+ * screen plainly. After a quote is accepted the screen lands on the new project.
  */
 
 const ID = /^[1-9]\d{0,9}$/
@@ -34,6 +35,18 @@ export function projectsLink(params: URLSearchParams): ProjectsLink {
   const project = idParam(params, "project")
   if (project === null) return { project: null, task: null, asset: null }
   return { project, task: idParam(params, "task"), asset: idParam(params, "asset") }
+}
+
+/** Where to land after a quote is accepted: the new project when its id is known, else the project list. */
+export function projectsPath(projectId: number | null | undefined): string {
+  return projectId && projectId > 0 ? `/app/projects?project=${projectId}` : "/app/projects"
+}
+
+/** A new quote drafted from an enquiry (Phase 7). */
+export const proposalsPath = (enquiryId: number) => `/app/proposals?enquiry=${enquiryId}`
+
+export function proposalsLink(params: URLSearchParams): { enquiry: number | null } {
+  return { enquiry: idParam(params, "enquiry") }
 }
 
 export function invoicingLink(params: URLSearchParams): { invoice: number | null } {

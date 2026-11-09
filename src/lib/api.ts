@@ -295,7 +295,8 @@ export const clients = {
   list: () => api.get<Client[]>("/clients.php"),
   get: (id: number) => api.get<ClientDetail>(`/clients.php?id=${id}`),
   create: (payload: ClientInput) => api.post<{ id: number }>("/clients.php?action=create", payload),
-  update: (id: number, payload: ClientInput) =>
+  // Only the fields sent change (K-129); the server keeps the rest.
+  update: (id: number, payload: Partial<ClientInput>) =>
     api.post<{ ok: boolean }>("/clients.php?action=update", { id, ...payload }),
   convertLead: (leadId: number) =>
     api.post<{ id: number; existing?: boolean }>("/clients.php?action=convert", { lead_id: leadId }),
@@ -487,6 +488,9 @@ export const tasks = {
     api.post<{ id: number }>("/tasks.php?action=create", payload),
   setStatus: (id: number, status: TaskStatus) =>
     api.post<{ ok: boolean }>("/tasks.php?action=status", { id, status }),
+  // Only the fields sent change; an empty assignee or due_date clears it.
+  update: (id: number, patch: { title?: string; assignee?: string; due_date?: string }) =>
+    api.post<{ ok: boolean }>("/tasks.php?action=update", { id, ...patch }),
 }
 
 // Proposals & quotes (§6 Proposals).

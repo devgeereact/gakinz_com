@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useLoad } from "@/hooks/use-load"
 import { useLocation, useSearchParams } from "react-router-dom"
-import { AlertCircle, FolderKanban, Loader2, Plus, RefreshCw } from "lucide-react"
+import { AlertCircle, FolderKanban, Loader2, Pencil, Plus, RefreshCw } from "lucide-react"
 import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -44,6 +44,7 @@ import {
 import { cn } from "@/lib/utils"
 import { CHECKLIST_OPTION, createOutcome, createPayload, parseTemplates, templatePreview } from "@/app/modules/projectTemplateModel"
 import { patchProject } from "@/app/modules/projectStateModel"
+import { taskFormFrom, taskFormProblem, taskPatch, type TaskForm } from "@/app/modules/taskEditModel"
 
 // The Select needs a value for "no template"; createPayload() never sends it.
 const NO_TEMPLATE = "none"
@@ -468,6 +469,32 @@ function ProjectBoard({
   const { data: items, setData: setItems, loading, reload: load } = useLoad<Task[]>(() => tasksApi.list(project.id), [], project.id)
   const [newTitle, setNewTitle] = useState("")
   const [adding, setAdding] = useState(false)
+  // The task being edited, and its form: title, assignee and due date (Phase 7).
+  const [editing, setEditing] = useState<Task | null>(null)
+  const [editForm, setEditForm] = useState<TaskForm>({ title: "", assignee: "", due_date: "" })
+  const [savingEdit, setSavingEdit] = useState(false)
+
+  const startEdit = (task: Task) => {
+    setEditing(task)
+    setEditForm(taskFormFrom(task))
+  }
+
+  const saveEdit = async () => {
+    if (!editing) return
+    const problem = taskFormProblem(editForm)
+    if (problem) return toast.error(problem)
+    const patch = taskPatch(editing, editForm)
+    if (Object.keys(patch).length === 0) return setEditing(null)
+    setSavingEdit(true)
+    const res = await tasksApi.update(editing.id, patch)
+    setSavingEdit(false)
+    if (res.ok) {
+      toast.success("Task saved.")
+      setEditing(null)
+      load()
+      onTasksChanged()
+    } else toast.error(res.error || "Could not save the task.")
+  }
 
   useReveal(linkedTask !== null && items.some((t) => t.id === linkedTask) ? recordElementId("task", linkedTask) : null, !loading, linkRevision)
 
@@ -576,7 +603,12 @@ function ProjectBoard({
                     task.id === linkedTask && LINKED_RECORD,
                   )}
                 >
-                  <b className="min-w-0 font-semibold [overflow-wrap:anywhere]">{task.title}</b>
+                  <span className="flex items-start justify-between gap-2">
+                    <b className="min-w-0 font-semibold [overflow-wrap:anywhere]">{task.title}</b>
+                    <Button variant="ghost" size="sm" className="-mr-1.5 -mt-1 h-7 px-1.5" onClick={() => startEdit(task)} aria-label={`Edit ${task.title}`} title="Edit, assign or set a date">
+                      <Pencil />
+                    </Button>
+                  </span>
                   <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[12.5px] text-muted-foreground">
                     <span className="min-w-0 [overflow-wrap:anywhere]">{task.assignee || "Unassigned"}</span>
                     {fmt(task.due_date) && <span className="font-mono tabular-nums">{fmt(task.due_date)}</span>}
@@ -617,6 +649,38 @@ function ProjectBoard({
           Add
         </Button>
       </div>
+
+      <Dialog open={editing !== null} onOpenChange={(o) => !o && !savingEdit && setEditing(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit task</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="task-title">Title</Label>
+              <Input id="task-title" value={editForm.title} maxLength={300} onChange={(e) => setEditForm((f) => ({ ...f, title: e.target.value }))} className="mt-1.5" />
+            </div>
+            <div>
+              <Label htmlFor="task-assignee">Assigned to</Label>
+              <Input id="task-assignee" value={editForm.assignee} maxLength={120} placeholder="A name, or leave empty" onChange={(e) => setEditForm((f) => ({ ...f, assignee: e.target.value }))} className="mt-1.5" />
+            </div>
+            <div>
+              <Label htmlFor="task-due">Due date</Label>
+              <Input id="task-due" type="date" value={editForm.due_date} onChange={(e) => setEditForm((f) => ({ ...f, due_date: e.target.value }))} className="mt-1.5" />
+              <p className="mt-1.5 text-[13px] text-muted-foreground">Clear it to remove the date.</p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditing(null)} disabled={savingEdit}>
+              Cancel
+            </Button>
+            <Button onClick={saveEdit} disabled={savingEdit}>
+              {savingEdit && <Loader2 className="animate-spin" />}
+              Save task
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </section>
   )
 }
