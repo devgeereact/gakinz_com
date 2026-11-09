@@ -43,7 +43,7 @@ section 4.
 | `auth_tokens` | Legacy session tokens, stored hashed. **Retired 2026-11-09 (D-057): nothing writes new rows; existing rows still authenticate until they expire, `cron.php` `prune` deletes them a day later, and the table is dropped in Phase 9.** Was: session tokens | The browser holds 64 hex characters; the row holds `token_hash()` of them (62 characters) since 2026-10-17, or the raw value for an older session (K-059). `user_agent`, `ip`, `last_seen_at` drive the active-sessions list |
 | `magic_links` | Passwordless sign-in. **Retired 2026-11-09 (D-057), unused; dropped in Phase 9** | Was short lived and single use; also held the reference sign-in links of `client_access.php` (never switched on) |
 | `password_resets` | Reset and invite tokens. **Retired 2026-11-09 (D-057), unused; dropped in Phase 9** | Invites no longer write a row: they email how to sign in |
-| `audit_log` | Record of sensitive actions | Also doubles as the store for the AI daily cap and the certificate-lookup throttle (it held the login throttle until D-057). See section 5 |
+| `audit_log` | Record of sensitive actions | Also doubles as the store for the AI daily cap, the certificate-lookup throttle and the memory of reminders and digests already sent (it held the login throttle until D-057). See section 5 |
 
 ### Sales
 
@@ -230,7 +230,7 @@ SELECT share_token, COUNT(*) c FROM files
 See `docs/DEPLOYMENT.md` for the order, and `docs/DECISIONS.md` D-029 for why the index
 matters.
 
-## 5. Three load-bearing uses of `audit_log`
+## 5. Four load-bearing uses of `audit_log`
 
 Worth knowing before anyone prunes that table.
 
@@ -243,7 +243,14 @@ Worth knowing before anyone prunes that table.
    `certificate_lookup_miss` row (IP, no detail) per failed lookup and answers 429 once an IP has 20
    in the last 10 minutes. A hit writes nothing.
 
-Truncating `audit_log` therefore resets every AI quota and every certificate throttle.
+4. **Reminder and digest memory (2026-11-09, Phase 7, D-059).** `cron.php` skips an overdue invoice if an
+   `invoice_chase` or `cron_chase` row with the same detail, `<number> → <email> (#<invoice id>)`, is newer than
+   `$CHASE_INTERVAL_DAYS` (default 7), and skips the digest if a `cron_digest` row is newer than 6 days. This replaces
+   a `last_chased_at` column, so there is no schema change. Pruning `audit_log` to less than the interval would let a
+   reminder repeat.
+
+Truncating `audit_log` therefore resets every AI quota, every certificate throttle and the memory of which
+reminders and digests were sent.
 
 ## 6. Degradation before migration
 

@@ -126,3 +126,10 @@ PR #28 CI green (MySQL 8); `main` fast-forwarded to `cbfd527`; the release job s
 - Open: the owner tries issue, verify and revoke once in a signed-in session (it writes a real row).
 - Throwaway MariaDB on port 3399 is running again; stop it with `mariadb-admin --no-defaults -h127.0.0.1 -P3399 -uroot shutdown`.
 - Released 2026-11-09 as `01d2269` (PR #30, CI green incl. MySQL 8); `check:live` 16 of 16; verify/certificates probes as designed; live table empty. Screens not seen in a browser. Stop the throwaway MariaDB (port 3399) when finished.
+
+## Handoff: Phase 7, daily-flow speed-ups (9 November 2026, branch `phase-7/daily-flow`, D-059)
+- Done (not pushed): reminders and digest remember what they sent (`cron.php`, `gk_chase_detail` in `_bootstrap.php`, memory = audit log, no schema change); `tasks.php` update plus date validation and the same-status fix; client edit dialog; task edit dialog; quote accept lands on `/app/projects?project=<id>`; Draft a quote on enquiries with a prefilled new quote; optional `$CHASE_INTERVAL_DAYS`.
+- Evidence: red-first tests (cron-reminders 13 with a fake SMTP server, tasks 12, 21 model/link tests); mutation checks caught; `tsc -b` clean; `npm test` 660/59; `npm run test:server` 608/47; lint ratchet 5/5; docs:check PASS.
+- NOT TESTED: the new dialogs and landing in a browser; release; MySQL 8 (CI); the live cron schedule.
+- Open: owner approval to push, PR and release; read-only `crontab -l` first.
+- Throwaway MariaDB on port 3399 is running; stop it with `mariadb-admin --no-defaults -h127.0.0.1 -P3399 -uroot shutdown`.

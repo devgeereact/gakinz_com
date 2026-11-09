@@ -95,6 +95,7 @@ Errors here are visible to clients and hard to reverse.
   in `invoices.php`, `portal.php`, `clients.php` and `cron.php`, so a change to one must not
   drift from the others.
 - Proposal acceptance producing the 40, 30, 30 invoice schedule.
+- Overdue-invoice reminders and the weekly digest (2026-11-09, Phase 7): `tests/server/cron-reminders.test.ts`, 13 tests against a fake SMTP server on 127.0.0.1 (one reminder per invoice per interval, a hand-sent reminder counts, a configurable interval, a failed send is retried, the named lock, the digest at most once in 6 days, `job=all` mails nobody twice). `tests/server/tasks.test.ts`, 12 tests: task update, date validation, staff-only, and a move to the same status.
 - The Stripe webhook: a valid signature, a bad signature, a replayed timestamp, a
   `checkout.session.completed` that is not `payment_status = paid`, and a repeat of an event
   for an already-paid invoice.

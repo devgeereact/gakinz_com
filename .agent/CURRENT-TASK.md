@@ -52,7 +52,11 @@ see CSP reports). PR #24 was already merged by GitHub.
 6. **Phase 6 (certificates end to end, D-058): released 2026-11-09 as `01d2269` (PR #30) and probed live read-only.** `certificates.php`
    (issue, list, revoke), a hardened `verify.php`, the Certificates screen and a reference form on `/verify`. Not seen in a browser yet. Owner: open Certificates, issue one,
    check it on `/verify`, then revoke it, once and in a signed-in session; and confirm each recipient agrees to being public on `/verify` (K-061).
-7. Next after that: Phase 7 (daily-flow speed-ups).
+7. **Phase 7 (daily-flow speed-ups, D-059): coded and checked on branch `phase-7/daily-flow`, NOT released.** Reminders and the digest
+   remember what they sent (no schema change), edit a client, edit/assign/date a task, accepting a quote opens the new project, a quote can
+   start from an enquiry. Needs the owner's approval to push, PR and release; first check the live cron schedule (read-only). Not seen in a
+   browser. Owner: try each once in a signed-in session.
+8. Next after that: Phase 8 (public site trust, needs the owner's legal inputs), then Phase 9.
 
 ## Resume on another computer
 

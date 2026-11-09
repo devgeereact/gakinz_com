@@ -1090,3 +1090,16 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 7. **Out:** payments, bulk import, a printable certificate, email delivery and a reinstate action. The screen copies the public link for the owner to send.
 
 **Why:** `/verify` read a table nothing could write (K-134), the old ids were short and unthrottled (K-061), and a verify page without data implied accreditation that did not exist.
+
+## D-059 · The daily flow: reminders and the digest remember, and four dead ends are closed
+**Date:** 2026-11-09 · **Status:** decided by the owner (roadmap Phase 7, approved 2026-11-08, "Next" 2026-11-09). Code on branch `phase-7/daily-flow`, not released yet.
+
+1. **One reminder per invoice per interval.** `cron.php job=chase` used to email every overdue invoice on every run, so a daily cron meant a daily nag to each client. It now sends at most one reminder per invoice per `$CHASE_INTERVAL_DAYS` (optional, 1 to 90, default 7). A reminder sent by hand counts, so the cron does not repeat what a person just sent.
+2. **The memory is the audit log, not a new column.** A reminder is an `audit_log` row (`cron_chase` or `invoice_chase`) whose detail is `<number> → <email> (#<invoice id>)`, written by one function for both senders. This needs no SQL on the live database. The cost: a retention rule that deletes audit rows sooner than the interval would let a reminder repeat; none is set (K-062), and a `last_reminded_at` column is the clean fix if one ever is. A failed send writes no row, so the next run retries. The job runs under a named lock so an overlapping run cannot send twice.
+3. **The weekly digest goes at most once every 6 days**, under its own lock (6, not 7, so a run a few minutes earlier than last week's still goes). It no longer rides on every `job=all`.
+4. **Edit what you create.** Clients can be edited from the detail sheet; tasks can be edited, assigned (a free-text name) and dated on the board. Both send only the fields that changed. A task move to the status it already had no longer answers 404.
+5. **Accepting a quote lands on the project it started**, not the project list.
+6. **A quote can start from an enquiry.** "Draft a quote" on the enquiry opens a new quote with a title, the client the enquiry was converted into (if any) and one line for the kind of work. It copies nothing private: not the message, budget or email. Prices, VAT and notes stay the owner's, and nothing is sent.
+7. **Out:** automatic sending of anything new, a reminder ladder (first, second, final), per-client intervals, a "last reminded" column in the invoice list.
+
+**Why:** these were the places where the enquiry-to-paid-invoice flow stopped or repeated itself. Item 1 is the one that touches clients, so it comes with the strongest tests (a fake mail server; 13 tests).

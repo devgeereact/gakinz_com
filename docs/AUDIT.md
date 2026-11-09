@@ -2,6 +2,20 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-09 (Phase 7) · Daily-flow speed-ups checked locally (branch `phase-7/daily-flow`, not released)
+
+**Scope:** D-059, K-141 to K-144. **Method:** tests first for every logic change, a fake mail server for the reminder tests, mutation checks on the guards, then the full gates.
+
+| Check | Result |
+|---|---|
+| Reminders | `tests/server/cron-reminders.test.ts` (13 tests, written red: 10 failed against the old code): an overdue invoice is emailed once and the next run sends nothing; again only after the interval (6 days no, 8 days yes); `$CHASE_INTERVAL_DAYS` honoured; a hand-sent reminder counts; each invoice has its own memory, even for one client; a failed send is retried; paid, draft, not-yet-due and no-email invoices are left alone; a held lock makes a second run skip; no mail host does nothing |
+| Digest | sends once, not again for 5 days, again after 7; a failed send is retried; quiet without recipients; `job=all` mails nobody twice |
+| Mutations | removing the dedupe check (6 tests failed), shortening the digest window to 0 (2 failed) and ignoring hand-sent reminders (1 failed) were each caught; removing the unsent-field merge, the status lookup and the date check in `tasks.php` were each caught |
+| Tasks | `tests/server/tasks.test.ts` (12 tests, 11 red first): update title/assignee/due date, only sent fields change, empty clears, trimmed and capped, bad title/date refused with nothing written, 404 for missing/deleted, 403 for trainer and client, 401 signed out; create refuses a malformed date; a move to the same status is 200 |
+| Client models | `clientEditModel`, `taskEditModel`, `quotePrefillModel` (written red first) and the new `deepLink` helpers: 21 tests |
+| Gates | `tsc -b` clean; `npm test` 660 in 59 files; `npm run test:server` 608 in 47 files (MariaDB 11.4); lint ratchet 5 of 5; `docs:check` PASS |
+| Not tested | The edit dialogs, the quote landing and the prefilled quote in a browser; a release; MySQL 8 (CI); whether the live cron runs daily; a real reminder to a real client (never sent by an agent) |
+
 ## 2026-11-09 (latest) · Phase 6 released and checked live: certificates end to end (`01d2269`)
 
 **Scope:** D-058, K-134 and the certificate part of K-061. **Method:** tests first (19 of 21 red against the old code), then code, then mutation checks on the guards, then the full gates.

@@ -145,6 +145,14 @@ This is the one list of server work a release cannot carry: SQL, `server/.htacce
 private `config.php`. A change that needs one of them records it here in the same pull request
 (`AGENTS.md`, "Keeping documents current"; `npm run docs:check` enforces it in CI).
 
+**Phase 7 (2026-11-09, D-059, not yet released): no SQL, no `.htaccess` and no `config.php` change is needed.** The release replaces
+`cron.php`, `tasks.php`, `invoices.php`, `_bootstrap.php` and the front end. `$CHASE_INTERVAL_DAYS` is optional (default 7) and is
+documented in `server/config.php.example`; leave it out. **Before release, read-only:** check that the live cron job exists and how often it
+runs (`crontab -l` on the host, owner-approved), because the reminder change matters most if it runs daily. After release the next cron
+run sends no reminder for an invoice reminded in the last 7 days, and no digest if one went in the last 6 (an invoice reminded by hand
+before the release has an old-format audit line, so it may be reminded once more at the first run). Rollback: `npm run release --
+--rollback --go`; nothing in the database changes.
+
 **Phase 6 (2026-11-09, D-058, released as `01d2269`): no SQL, no `.htaccess` and no `config.php` change is needed.** The release adds
 `certificates.php` and replaces `verify.php` and the front end; the `certificates` table already exists (`schema.sql`).
 Check it after release, read-only: `GET /verify.php?id=GK-AAAA-BBBB-CCCC` answers 404 `{"error":"No matching certificate."}`
@@ -458,6 +466,7 @@ breaking the application.
 | `$GITHUB_TOKEN`, `$FIGMA_TOKEN`, `$SLACK_WEBHOOK_URL`, `$CALENDLY_URL` | The four external connectors |
 | `$RETENTION_ENQUIRY_MONTHS`, `$RETENTION_CLIENT_MONTHS`, `$RETENTION_INVOICE_MONTHS`, `$RETENTION_AUDIT_MONTHS`, `$RETENTION_SUPPORT_MONTHS`, `$RETENTION_COMMS_MONTHS`, `$RETENTION_STAFF_MONTHS`, `$RETENTION_CERTIFICATE_MONTHS`, `$RETENTION_DELETED_FILE_DAYS` | What the read-only retention report counts. All `null` in the template; a missing key is the same as `null`. The enquiry and deleted-file periods are also what the gated executor deletes by, only with `$RETENTION_APPLY` and `--apply` too (section 5.4) |
 | `$RETENTION_APPLY` | The retention executor's switch. `false` in the template; keep it `false` (section 5.4) |
+| `$CHASE_INTERVAL_DAYS` | Optional. Days between two payment reminders for one overdue invoice, 1 to 90, default 7 (D-059). Leave it out |
 | `$CLIENT_ANONYMISE_ENABLED` | Client anonymisation (`privacy.php`, `_anonymise.php`). `false` in the template; keep it `false` until the gates in section 5.4 hold |
 | `$REFERENCE_SIGNIN_ENABLED`, `$GOOGLE_*` | Retired 2026-11-09 (D-057); ignored if still present |
 

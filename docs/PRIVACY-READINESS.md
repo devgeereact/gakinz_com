@@ -144,7 +144,7 @@ business is a sole trader or a company, so they are left blank on purpose.
 | Client, project, contract records | delivery, claims | `clients`, `projects`, `contracts` | owner to set | end of engagement | delete or anonymise | as above | LEGAL REVIEW (limitation periods) |
 | Invoices and payments | tax | `invoices`, `payment_events` | **set by HMRC rules for the trading form** | end of the relevant tax year | delete | as above | OWNER INPUT, LEGAL REVIEW |
 | Sessions, magic links, reset tokens | access | `auth_tokens`, `magic_links`, `password_resets` | one day after expiry | expiry | delete | n/a | **built 2026-10-17** (`cron.php` `prune`), still runs; no new rows are written since 2026-11-09 (D-057) and the tables are dropped in Phase 9 |
-| Audit log | security | `audit_log` | 12 months | entry date | delete, or strip email and IP | as above | OWNER DECISION |
+| Audit log | security | `audit_log` | 12 months | entry date | delete, or strip email and IP | as above | OWNER DECISION. Keep it at least as long as `$CHASE_INTERVAL_DAYS` (default 7 days): the reminder rows are the memory that stops a client being emailed twice (D-059) |
 | Portal messages, feedback | support | `tickets`, `client_feedback` | with the client record | end of engagement | delete | as above | OWNER DECISION |
 | Comms, Mailbox | correspondence | database, mailbox | owner to set | last message | delete | mailbox provider's own | OWNER DECISION |
 | Staff records, leave | employment | `users`, `leave_entries` | owner to set | end of employment | delete | as above | LEGAL REVIEW (employment and health data) |

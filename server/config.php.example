@@ -125,7 +125,10 @@ $APP_URL = 'https://gakinz.com';
 // ── Scheduled jobs (cron.php) — optional. ───────────────────────────────────────
 // Set a long random $CRON_KEY, then add a cPanel cron entry, e.g. daily:
 //   wget -qO- "https://gakinz.com/cron.php?key=YOUR_CRON_KEY&job=all"
-// $REPORT_RECIPIENTS is a comma list that receives the weekly digest.
+// $REPORT_RECIPIENTS is a comma list that receives the weekly digest (sent at most once every 6 days).
+// $CHASE_INTERVAL_DAYS (optional, 1 to 90, default 7): the days between two payment reminders for one
+// overdue invoice. A reminder sent by hand counts. Leave it out to keep the default.
+// $CHASE_INTERVAL_DAYS = 7;
 $CRON_KEY          = '';
 $REPORT_RECIPIENTS = '';  // e.g. 'founder@gakinz.com, ops@gakinz.com'
 

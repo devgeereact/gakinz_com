@@ -377,7 +377,7 @@ CI runs gitleaks over the full history and Semgrep on every push and pull reques
 
 ## 10. Audit trail
 
-`audit()` writes user, action, detail and IP to `audit_log` on every mutation. Two non-mutation rows are written on purpose, as counters: `ai_call` and `certificate_lookup_miss` (docs/DATA-MODEL.md section 5).
+`audit()` writes user, action, detail and IP to `audit_log` on every mutation. Two non-mutation rows are written on purpose, as counters: `ai_call` and `certificate_lookup_miss` (docs/DATA-MODEL.md section 5). The scheduled `cron_chase` and `cron_digest` rows, and the hand-sent `invoice_chase` row, are also read back as the memory that stops a client being reminded, or the digest mailed, twice (D-059). `cron_chase` runs under the lock `gk_cron_chase` so two overlapping runs cannot both send.
 `audit.php` exposes it to admins only. `require_auth()` also touches `auth_tokens.last_seen_at`
 so the active-sessions list shows real times, and `auth.php` offers session listing and
 revocation.

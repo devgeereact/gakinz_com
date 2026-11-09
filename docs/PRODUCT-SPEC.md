@@ -273,10 +273,10 @@ screens is in `docs/STATUS.md` section 0.
 | Module key | Route | Component | In the original brief? |
 |---|---|---|---|
 | `dashboard` | `/app` | `Dashboard.tsx` | Yes, module 1 |
-| `leads` | `/app/leads` | `Leads.tsx` | Yes, module 2 |
-| `clients` | `/app/clients` | `Clients.tsx` | Yes, module 3 |
-| `projects` | `/app/projects` | `Projects.tsx` | Yes, module 4 |
-| `proposals` | `/app/proposals` | `Proposals.tsx` | Yes, module 5 |
+| `leads` | `/app/leads` | `Leads.tsx` | Yes, module 2. The enquiry drawer has a Draft a quote button (2026-11-09, D-059) |
+| `clients` | `/app/clients` | `Clients.tsx` | Yes, module 3. The detail sheet has an Edit button (2026-11-09, D-059) |
+| `projects` | `/app/projects` | `Projects.tsx` | Yes, module 4. A task card can be edited: title, assignee, due date (2026-11-09, D-059) |
+| `proposals` | `/app/proposals` | `Proposals.tsx` | Yes, module 5. `?enquiry=<id>` opens a new quote prefilled from that enquiry; accepting a quote opens the new project (2026-11-09, D-059) |
 | `invoicing` | `/app/invoicing` | `Invoicing.tsx` | Yes, module 6 |
 | `portal` | `/app/portal` | `Portal.tsx` | Yes, module 7 |
 | `time` | `/app/time` | `Time.tsx` | Yes, module 8 |
@@ -361,7 +361,7 @@ offers one obvious next action.
 | Discovery call | Booking link or requested time, time zone, status and linked enquiry | A request is clearly different from a confirmed call; time zone and daylight-saving cases and reschedule tested |
 | Quote | Scope, inclusions and exclusions, GBP total, VAT decision, expiry and agreed schedule | Saved quote equals the preview, PDF and shared view; an expired or revoked link fails appropriately |
 | Acceptance | Record who accepted, when and which version; create one project and the agreed invoices | Double-click and concurrent requests do not duplicate client, project or invoices |
-| Delivery | Tasks, due date, next milestone, client-visible update and requested assets | An internal note stays private; the client sees only the intended status |
+| Delivery | Tasks (edit, assign, due date: `tasks.php` `update`, 2026-11-09), due date, next milestone, client-visible update and requested assets | An internal note stays private; the client sees only the intended status |
 | Payment | Accurate invoice, hosted provider or verified manual receipt, recorded reference | Correct total and currency, mismatch rejected, retries safe, receipt reconciled |
 | Support | Client-owned issue and reply, clear status and owner reply | Client A cannot read or reply to B's ticket, file or invoice through altered IDs |
 | Publish | Draft, preview, permission, publish and unpublish, metadata | Unpublished content is absent from public routes and the sitemap; a refresh shows current content |
@@ -888,7 +888,7 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 | Stripe charges the VAT-inclusive total; webhook checks amount and currency | Stops silent VAT loss | Fixed in source 2026-10-10 (K-025) | 1 | M | Sandbox fixtures |
 | PayPal hidden until it has a webhook | Avoids unrecorded payments | Switched off 2026-10-10 (K-026) | 1 | S | None |
 | Manual payment record: reference, date, amount | Bank transfers reconciled simply | Built 2026-10-18 (`invoices.php`); needs SQL 13 | 2 | S | None |
-| Owner-triggered payment reminder | Chase money without automation | Partly | 2 | S | Mail sink for tests |
+| Owner-triggered payment reminder | Chase money without automation | Built. The scheduled chase sends at most one reminder per invoice per `$CHASE_INTERVAL_DAYS` (default 7) and counts a hand-sent one; the weekly digest goes at most once every 6 days (2026-11-09, D-059; `tests/server/cron-reminders.test.ts`) | 2 | S | Fake SMTP server in the tests |
 | Safe CSV export with formula prefixes neutralised | Spreadsheet safety | Fixed 2026-10-10 (K-030) | 2 | S | None |
 
 ### Projects and IT jobs

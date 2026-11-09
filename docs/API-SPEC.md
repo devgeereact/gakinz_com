@@ -127,7 +127,7 @@ Treat these as the internet-facing attack surface.
 | `payments.php` | GET `?action=paypal_return` | PayPal capture on return. Marks the invoice paid only on a completed capture whose `custom_id`, amount and currency match. Not gated by `$PAYPAL_ENABLED`, but with checkout switched off no new order is created |
 | `oauth.php` | any | Retired 2026-11-09 (D-057). A 404 JSON stub `{"error":"Not found."}`; Google sign-in is now a Clerk setting |
 | `client_access.php` | any | Retired 2026-11-09 (D-057). A 404 JSON stub `{"error":"Not found."}`. Client sign-in by work reference and email (2026-10-19) was never switched on |
-| `cron.php` | GET `?key=&job=` | Scheduled jobs. Gated by a shared secret with `hash_equals`, not by a user session. `retention_report` and `retention_apply` (2026-10-19) answer 400 over the web even with the key; they run from the command line only (`docs/OPERATIONS.md` section 2) |
+| `cron.php` | GET `?key=&job=` | Scheduled jobs. Gated by a shared secret with `hash_equals`, not by a user session. `retention_report` and `retention_apply` (2026-10-19) answer 400 over the web even with the key; they run from the command line only (`docs/OPERATIONS.md` section 2). Since 2026-11-09 (Phase 7, D-059) `job=chase` sends at most one reminder per invoice per `$CHASE_INTERVAL_DAYS` (default 7) and `job=digest` at most once every 6 days; results `{sent, skipped, already_reminded}` and `{skipped: "already sent this week"}`, and a second overlapping run answers `{skipped: "another chase run is in progress"}` (or digest) |
 | `api.php` | GET | Read-only health check. Returns `{ ok, php, db }`, touches no application table and mutates nothing. Any other method is 405 |
 
 `api.php` used to list and INSERT rows in `items` with no authentication. Both branches were
@@ -302,7 +302,7 @@ Work references (2026-10-19, SQL 19, `docs/PRODUCT-SPEC.md` section 6.1, D-049):
 | Endpoint | Actions | Roles |
 |---|---|---|
 | `projects.php` | GET list, GET `?action=templates`, `create` (optionally from a template), `status`, `stage` | STAFF |
-| `tasks.php` | GET list, `create`, `status` | STAFF |
+| `tasks.php` | GET list, `create`, `update` (2026-11-09, D-059: `{id, title?, assignee?, due_date?}`; unsent fields keep their value, an empty `assignee` or `due_date` clears it, 400 for an empty title or a date that is not a real `YYYY-MM-DD`, 404 for a missing or deleted task, audit `task_update`), `status` (a move to the status the task already has answers 200, not 404). `create` validates `due_date` the same way | STAFF |
 | `design.php` | GET list with optional `?project_id=`, `create`, `status`, `delete` | STAFF. Two rounds maximum |
 | `dev.php` | GET `?project_id=`, GET list, `meta`, `deploy` | STAFF. Links must be empty or http(s), else 400 (2026-11-01) |
 | `resourcing.php` | GET list, `leave`, `delete` | STAFF. Weekly capacity constant is 2400 minutes |
@@ -406,6 +406,8 @@ is security-critical):
 | Endpoint | Actions | Roles |
 |---|---|---|
 | `invoices.php` | GET list, GET `?id=`, `create`, `status`, `chase`, `record_payment` | STAFF |
+
+`invoices.php?action=chase` (manager and above) emails one reminder by hand and audits `invoice_chase` with the same detail as the scheduled job, `<number> → <email> (#<invoice id>)` (`gk_chase_detail()` in `_bootstrap.php`), so the scheduled chase counts it and does not repeat it inside `$CHASE_INTERVAL_DAYS`.
 | `payments.php` | `link`, `paypal_link` | PAY_STAFF |
 | `reports.php` | GET `?report=profitability` | STAFF |
 

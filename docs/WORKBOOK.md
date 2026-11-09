@@ -37,7 +37,7 @@ Gated features ship switched off (D-050): `$RETENTION_APPLY`,
 
 ## 2. In progress
 
-The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md). Phase 6 (certificates end to end, D-058) was released as `01d2269`; nothing else is in progress. Phase 5 (retire the legacy sign-in, D-057) was released as `ed58064`; nothing else is in progress.
+The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md). **Phase 7 (daily-flow speed-ups, D-059)** is coded and checked on branch `phase-7/daily-flow`; not released until the owner approves (K-141 to K-144 close on release). Phase 6 was released as `01d2269`. Phase 5 (retire the legacy sign-in, D-057) was released as `ed58064`; nothing else is in progress.
 
 ## 3. What is left
 

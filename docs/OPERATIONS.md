@@ -61,10 +61,10 @@ wget -qO- "https://gakinz.com/cron.php?key=<CRON_KEY>&job=all"
 
 | Job | What it does | Skips when |
 |---|---|---|
-| `chase` | Emails a reminder for every overdue invoice | No SMTP configured |
+| `chase` | Emails one reminder per overdue invoice, at most once per `$CHASE_INTERVAL_DAYS` (optional config key, 1 to 90, default 7). A reminder sent by hand from Invoicing counts. The memory is the audit log (`cron_chase` and `invoice_chase` rows), so there is no schema change; a retention rule that deletes audit rows sooner than the interval would let a reminder repeat. Runs under the named lock `gk_cron_chase`; a failed send writes no row, so the next run retries. Result `{sent, skipped, already_reminded}` (2026-11-09, Phase 7, D-059) | No SMTP configured |
 | `billing` | Raises this month's invoice for each client with `retainer_amount > 0`. Idempotent per month | Column missing |
 | `uptime` | Pings every `project_dev.prod_url`, records HTTP status and TLS days remaining | No rows with a production URL |
-| `digest` | Emails a KPI digest to `$REPORT_RECIPIENTS` | No SMTP or no recipients |
+| `digest` | Emails a KPI digest to `$REPORT_RECIPIENTS`, at most once every 6 days (a `cron_digest` audit row is the memory), under the lock `gk_cron_digest`. A daily `job=all` therefore mails it weekly (2026-11-09, D-059) | No SMTP or no recipients, or already sent this week |
 | `prune` | Deletes legacy sessions, magic links and reset links more than a day past expiry (2026-10-17, K-062). Since 2026-11-09 (D-057) nothing writes those rows, so it only clears the soak backlog; it stays until the tables are dropped in Phase 9. No business record is touched | Never |
 | `all` | Runs all five. This is the default | |
 | `retention_report` | Prints, as plain text, how many rows each proposed retention rule would affect (2026-10-19, `_retention.php`, K-062). Counts only: it never changes a row. Not part of `all` | Command line only: over the web it answers 400, even with the key |
