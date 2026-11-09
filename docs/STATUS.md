@@ -26,13 +26,13 @@ Anything about signed-in use of the live system is NOT TESTED unless a row says 
 
 ## 0. Current measurements
 
-Measured on 2026-11-08 on the Mac on branch `phase-4/safe-writes` (from `main` at `00dbd4d`) (the live checks and the host's PHP version the same day). Re-measure and update
+Measured on 2026-11-09 on the Mac on branch `phase-5/clerk-only` (from `main` at `e84f31f`) (the live checks and the host's PHP version the same day). Re-measure and update
 this table when a count changes; the previous figures are in the history above.
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 649 tests in 57 files (`access-drift`, `dashboardSources` tests added) |
-| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 600 tests in 46 files in 480 s on local MariaDB 11.4.13 (`safe-writes` 18 and `paid-state` 13 tests added, K-129 to K-131), run as `GK_TEST_DB=gakinz_p4full_test GK_TEST_PHP_PORT=5389 GK_TEST_PROVIDER_PORT=5390 npm run test:server`; CI (MySQL 8) passed on the previous release `b301ec7` |
+| Unit tests | `npm test` | **PASS.** 632 tests in 55 files (Phase 5 removed the legacy client helpers and their tests and added `auth.store.test.ts`) |
+| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 562 tests in 44 files on local MariaDB 11.4.13 (Phase 5: `legacy-retired` 25 tests added; `auth`, `client-access` and `password-rehash` removed, `account`, `token-hashing`, `security-hardening`, `references` and `client-anonymise` adapted), run as `GK_TEST_DB=gakinz_p4full_test GK_TEST_PHP_PORT=5389 GK_TEST_PROVIDER_PORT=5390 npm run test:server`; CI (MySQL 8) passed on the previous release `b301ec7` |
 | Server suite on MySQL 8 | `npm run test:server` against MySQL 8.0 (`docs/OPERATIONS.md` section 8) | Last PASS 2026-10-20 (519 tests). MySQL 5.7 NOT TESTED; the live engine is UNVERIFIED (K-099) |
 | Type check and build | `npm run build` | **PASS.** 32 public pages and `app-shell.html` prerendered, `sitemap.xml` with 32 URLs |
 | Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 5 errors, 0 warnings. **`npm run lint` still fails** (K-002) |
@@ -110,11 +110,7 @@ On 2026-10-14 the owner approved the redesign that replaces D-037's visual direc
 - [ ] Deletion requests from clients (K-095): should "Data deletion request" tickets be
       created at high priority, carry a due date, show in Today, or email the owner? A request
       has a legal response deadline, generally one month, to be confirmed with an adviser.
-- [ ] **Switch on client sign-in by reference and email?** (spec 6.1, D-050). Built switched
-      off on 2026-10-19. First confirm the client sign-in policy (who may sign in this way,
-      for which work, and whether password sign-in stays the default), then the three
-      technical gates in `docs/DEPLOYMENT.md` section 5.4 (early finish or fast SMTP, a
-      `purpose` column on `magic_links`, the real client IP behind Cloudflare). Decided:
+- [x] **Client sign-in by reference and email** was withdrawn on 2026-11-09 (D-057): Clerk is the only sign-in, so there is nothing to switch on.
 - [ ] **Adviser review of the client anonymisation rules** (K-108). Built 2026-10-20 and
       switched off. Before `$CLIENT_ANONYMISE_ENABLED = true`, an adviser confirms the
       decision table in the header of `server/_anonymise.php`: signed contracts do not block;

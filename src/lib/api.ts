@@ -1396,7 +1396,6 @@ export type IntegrationStatus = {
   openrouter: boolean
   stripe: boolean
   twilio: boolean
-  google: boolean
   openweather: boolean
   cron: boolean
   reports: boolean

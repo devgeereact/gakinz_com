@@ -30,12 +30,13 @@ The checks of each release are in [AUDIT.md](AUDIT.md) (newest first). Measured 
 [STATUS.md](STATUS.md) section 0. Signed-in use of the live system is mostly NOT TESTED by an agent: on 2026-11-08 the
 owner signed in and an agent confirmed `/app` loads and 24 CMS screens render with no CSP violations or console errors; no data flow was exercised.
 
-Gated features ship switched off (D-050): `$RETENTION_APPLY`, `$REFERENCE_SIGNIN_ENABLED`,
-`$CLIENT_ANONYMISE_ENABLED`, PayPal, the ad slots.
+Gated features ship switched off (D-050): `$RETENTION_APPLY`,
+`$CLIENT_ANONYMISE_ENABLED`, PayPal, the ad slots. (`$REFERENCE_SIGNIN_ENABLED` is gone: the reference sign-in was retired, D-057.)
 
 ## 2. In progress
 
-The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md).
+The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md). **Phase 5 (retire the legacy sign-in, D-057)** is coded and
+checked on branch `phase-5/clerk-only`; it is not released until the owner approves (K-132, K-133 close on release).
 
 ## 3. What is left
 
@@ -78,14 +79,13 @@ The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md).
 5. **Business facts** still shown as labelled placeholders: [STATUS.md](STATUS.md) section 5.
 6. **Adviser sign-offs:** anonymisation rules (K-108), retention periods (K-062), legal pages
    (K-021), lawful bases.
-7. **Switch-on decisions** for features that ship off: reference sign-in (D-050 and the gates in
-   DEPLOYMENT section 5.4), the ad pilot (K-104 to K-107), client anonymisation.
+7. **Switch-on decisions** for features that ship off: the ad pilot (K-104 to K-107), client anonymisation.
 
 ### 3c. Not tested or unverified
 
 - Signed-in journeys on the live host for every role, uploads, cron under cPanel, PHP and
   database time zones (K-067, K-075, K-085), the real client IP behind Cloudflare (K-101, K-102).
-- Browser runs of reference sign-in, ad slots, contract and invoice PDFs.
+- Browser runs of ad slots, contract and invoice PDFs.
 - Real assistive technology on the public site and the CMS.
 - The motion on real devices, Safari and trackpads.
 

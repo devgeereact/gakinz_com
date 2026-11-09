@@ -4,8 +4,8 @@
 (stacked on PR #8). It is verified by source inspection of every PHP file in `server/`. **No endpoint has
 been exercised against production.** Some areas are also covered by local integration tests in
 `tests/server/`, run with `npm run test:server` against a throwaway `*_test` database: the
-Stripe link and webhook, PayPal being switched off, magic links and two-factor, My account
-self-service, quote acceptance, blog editing, create endpoints returning the new id, enquiry
+Stripe link and webhook, PayPal being switched off, the retired legacy sign-in (404 stubs, D-057), My account
+`me`, quote acceptance, blog editing, create endpoints returning the new id, enquiry
 follow-ups, the client branch of `support.php`, the work hero actions and `site.php`
 (2026-10-14), and `work.php` (`tests/server/work.test.ts`, 2026-10-11). Everything else
 below is source inspection only. `work.php` and `site.php` have run only against local test
@@ -63,9 +63,9 @@ include can only run when an endpoint requires it.
 |---|---|
 | 200, 201 | Success. 201 on create, and every create returns the new record's `id` |
 | 204 | Preflight only |
-| 400 | Validation failure, an invalid or expired magic link, or a Stripe webhook with a bad signature or a timestamp outside the replay window |
-| 401 | Not authenticated, expired session, or a two-factor code is required |
-| 403 | Authenticated but not allowed, inactive account, a bad cron key, or a magic link redeemed by a non-client or two-factor account |
+| 400 | Validation failure, or a Stripe webhook with a bad signature or a timestamp outside the replay window |
+| 401 | Not authenticated or expired session |
+| 403 | Authenticated but not allowed, inactive account, or a bad cron key |
 | 404 | Not found, or an expired or invalid share token |
 | 405 | Method not allowed |
 | 409 | A work slug is already in use; a work record names a client and has no stored consent, so it may not be published; a draft work record is put in the hero, a sixth is switched on, or a hero order does not list exactly the records in the hero; a site section with no saved draft is published; a quote that is not sent, has expired or is no longer open is accepted; or an accepted quote is given a new status |
@@ -92,7 +92,6 @@ server; `src/lib/access.ts` is the client mirror and is not a boundary.
 | `EDITORS` | super_admin, admin, manager, editor | `blog.php`, `testimonials.php`, `content.php`, `work.php`, `site.php` |
 | `PORTAL_PREVIEW_ROLES` | super_admin, admin, manager | `portal.php` staff branch. Narrowed on 2026-09-22 |
 | `STAFF_OR_CLIENT` | `support.php`'s STAFF plus `client` | `support.php` GET, `create` and `reply`, so a client caller reaches its own branch. Added 2026-10-10 |
-| `MAGIC_ROLES` | client | `auth.php` magic links |
 
 `STAFF` is not one list. Its value per file:
 
@@ -125,8 +124,8 @@ Treat these as the internet-facing attack surface.
 | `site.php` | GET `?action=get` | Published site copy as `{section: data}`, never a draft. `{}` when nothing is published or the table does not exist. `Cache-Control: public, max-age=60`. See section 7a |
 | `payments.php` | POST `?action=webhook` | Stripe webhook. HMAC verified, 5 minute replay window. Marks an invoice paid only when the amount and currency Stripe took match the VAT-inclusive payable total. See section 5, Money |
 | `payments.php` | GET `?action=paypal_return` | PayPal capture on return. Marks the invoice paid only on a completed capture whose `custom_id`, amount and currency match. Not gated by `$PAYPAL_ENABLED`, but with checkout switched off no new order is created |
-| `oauth.php` | GET `?action=status`, `start`, `callback` | Google SSO. Matches an existing active user only, never provisions. Refuses an account with two-factor on, redirecting with `#sso_error=two_factor`, so Google never stands in for the second factor. Carries a CSRF `state` parameter in a short-lived HttpOnly cookie, and validates the id_token's `aud` and `iss` |
-| `client_access.php` | GET `?action=status`, POST `?action=request`, POST `?action=redeem` | Client sign-in by work reference and email (2026-10-19, spec 6.1 phase 2). **Switched off by default: while `$REFERENCE_SIGNIN_ENABLED` is not the boolean `true`, every action and method answers 404 `{"error":"Not found."}`.** See "Client sign-in by reference" in section 5. Not uploaded |
+| `oauth.php` | any | Retired 2026-11-09 (D-057). A 404 JSON stub `{"error":"Not found."}`; Google sign-in is now a Clerk setting |
+| `client_access.php` | any | Retired 2026-11-09 (D-057). A 404 JSON stub `{"error":"Not found."}`. Client sign-in by work reference and email (2026-10-19) was never switched on |
 | `cron.php` | GET `?key=&job=` | Scheduled jobs. Gated by a shared secret with `hash_equals`, not by a user session. `retention_report` and `retention_apply` (2026-10-19) answer 400 over the web even with the key; they run from the command line only (`docs/OPERATIONS.md` section 2) |
 | `api.php` | GET | Read-only health check. Returns `{ ok, php, db }`, touches no application table and mutates nothing. Any other method is 405 |
 
@@ -143,49 +142,23 @@ Grouped by area. Actions are the `?action=` value on POST unless stated.
 
 | Endpoint | Actions | Roles |
 |---|---|---|
-| `auth.php` | `login`, `me`, `logout`, `forgot`, `reset`, `sessions`, `revoke`, `twofa_setup`, `twofa_enable`, `twofa_disable`, `twofa_recodes`, `magic_request`, `magic_consume` | Public for login, forgot, reset and the magic-link pair. `logout` deletes whichever bearer token it is sent and always returns `{ ok: true }`. The rest need a valid token |
-| `users.php` | GET list, `create`, `invite`, `role`, `rate`, `status` | ADMINS |
+| `auth.php` | `me` (GET) | Needs a valid token. Every other former action (`login`, `logout`, `forgot`, `reset`, `sessions`, `revoke`, `twofa_*`, `magic_*`) was retired 2026-11-09 (D-057) and answers 404 "Unknown auth action." |
+| `users.php` | GET list, `create`, `invite`, `role`, `rate`, `status` | ADMINS. `create` takes `{ name, email, role, client_id? }` and ignores any `password`; `invite` takes `{ name, email, role }` for staff, creates the user and emails them to sign in with that address, and answers 201 `{ id, emailed }`. Both store the unusable hash `!`: everyone signs in with the Clerk email code |
 | `audit.php` | GET | ADMINS |
 | `integrations.php` | GET | ADMINS. Returns booleans only, never a key |
 
-`auth.php` rules worth knowing:
+`auth.php` rules worth knowing (D-057, 2026-11-09):
 
 - `GET ?action=me` returns `{ user, totp_enabled }`. `user` has `id`, `name`, `email`, `role`,
-  `client_id` and `status`, the row `require_auth()` reads; `totp_enabled` is the caller's own
-  two-factor state, read separately and `null` if the column is missing on an un-migrated
-  database. It is the cheapest way to check a token, and My account reads it.
-- `sessions`, `revoke`, `twofa_setup`, `twofa_enable`, `twofa_disable` and `twofa_recodes` act
-  on the caller's own account only, for every role including `client`
-  (`tests/server/account.test.ts`). They back My account at `/app/account`.
-- `login` takes `{ email, password, code? }`. An account with two-factor on gets a 401 with
-  `two_factor_required: true` until a valid authenticator code or an unused recovery code is
-  sent. Failed passwords and failed codes
-  both count towards the throttle.
-- Magic links are for the `client` role only (`MAGIC_ROLES`), and never for an account with
-  two-factor on. `magic_request` always answers `{ ok: true }` and sends a link only to an
-  active client account without two-factor, so it reveals nothing about who has an account.
-  `magic_consume` redeems a link once, within 15 minutes, and checks the role and two-factor
-  again at redemption: a non-client or two-factor account gets a 403 and an audit row
-  `login_magic_refused`.
-- Google sign-in in `oauth.php` follows the same rule, see section 4.
-
-### Client sign-in by reference (`client_access.php`, 2026-10-19, switched off)
-
-Public, with no `require_auth()`: it runs before sign-in, like `auth.php` login. The rules and
-threat model are in `docs/SECURITY.md` section 2. Every response sends `Cache-Control:
-no-store`, `Referrer-Policy: no-referrer` and `X-Robots-Tag: noindex, nofollow`.
-
-| Action | Request | Answer |
-|---|---|---|
-| Any, while off | anything | 404 `{"error":"Not found."}`. The switch is checked before anything else, so nothing is read, sent or audited |
-| `status` | GET | `{ enabled: true }`. The sign-in page shows the reference form only on a 200 with `enabled === true`; a 404 or an error means off, silently |
-| `request` | POST `{ reference, email }` | Always 200 `{ ok: true, message }` with the same message, whether or not anything matched. A link goes only to an active `client`-role user without two-factor whose client owns the referenced live project, or was converted from the referenced enquiry. 400 when either field is missing, the email is not valid, or the reference does not match `GK-E-` or `GK-P-YYYY-NNNN`; those checks never touch stored data. 429 past 5 requests per address and IP, 15 per address or 20 per IP in 15 minutes, counted on requests only |
-| `redeem` | POST `{ token }` | `{ token, expires, user }`, the same shape as `auth.php` `magic_consume`: a 30-day client session. 400 "This sign-in link is invalid or has expired." for a malformed, unknown, used or expired link. 403 for an inactive account, a non-client role or two-factor on, and the link is burned. 429 after 20 failed redemptions per IP in 15 minutes, but a valid unused link is claimed before that check |
-
-The emailed link is `$APP_URL/login#access=<token>`. `src/lib/api.ts` calls it as
-`clientAccess`; `src/lib/clientAccess.ts` decides from the status answer and turns a 404 on
-redeem into "That sign-in link is invalid or expired.". Links live in `magic_links`, so
-`magic_consume` can also redeem one (K-100).
+  `client_id` and `status`, the row `require_auth()` reads. The bearer is a Clerk session token;
+  a stored legacy session token is still accepted until it expires (the soak ends in Phase 9).
+  `totp_enabled` is the old app two-factor flag, now unused, and `null` if the column is missing.
+- Any other action answers 404 "Unknown auth action." (`tests/server/legacy-retired.test.ts`).
+- On an empty `users` table `auth.php` seeds one `super_admin` from `$SEED_ADMIN_EMAIL`, with the
+  unusable hash `!`; with no email configured it seeds nothing.
+- Password sign-in, reset, magic links, app two-factor, session list and revoke, Google sign-in
+  in `oauth.php` and client sign-in by reference in `client_access.php` are all retired. History:
+  `docs/DECISIONS.md` D-057.
 
 ### Sales
 
@@ -315,12 +288,11 @@ Work references (2026-10-19, SQL 19, `docs/PRODUCT-SPEC.md` section 6.1, D-049):
   belongs to the same client as the quote, invoice or contract, so a record linked to another
   client's project shows nothing. Every field is `null` before SQL 19, between its two steps,
   or while `_reference.php` is missing, and creation works the same.
-- **A reference is never an input**, with one switched-off exception. No endpoint reads
+- **A reference is never an input**, with no exception. No endpoint reads
   `reference`, `ref` or `project_reference` from a request to look a record up, nothing looks
-  a record up by it without staff sign-in, and nothing signs anyone in with it unless
-  `client_access.php` is switched on (section 5, "Client sign-in by reference"), where a
-  reference plus the registered email only decides whether a link is emailed. A static test
-  enforces this, allowing only that branch and the two payment and acceptance branches, and probes with a
+  a record up by it without staff sign-in, and nothing signs anyone in with it (the
+  reference sign-in in `client_access.php` was retired 2026-11-09, D-057). A static test
+  enforces this, allowing only the two payment and acceptance branches, and probes with a
   reference in 13 URL shapes, signed out and as a client, leak nothing. Covered by
   `tests/server/references.test.ts`.
 

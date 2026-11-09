@@ -23,7 +23,6 @@ ok([
   'openrouter' => in_array('openrouter', ai_providers(), true),
   'stripe'     => $has('STRIPE_SECRET'),
   'twilio'     => $has('TWILIO_SID') && $has('TWILIO_TOKEN'),
-  'google'     => $has('GOOGLE_CLIENT_ID') && $has('GOOGLE_CLIENT_SECRET'),
   'openweather'=> $has('OPENWEATHER_API_KEY'),
   'cron'       => $has('CRON_KEY'),
   'reports'    => $has('REPORT_RECIPIENTS'),

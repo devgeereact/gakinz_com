@@ -158,7 +158,7 @@ hero, services, process, pricing, FAQs and contact copy come from published Site
 | `/privacy`, `/terms`, `/cookies` | Legal | `Legal.tsx` |
 | `/verify/:id` | Certificate check | `verify.php` |
 | `/p/:token` | Read-only shared proposal | `proposals.php` share token |
-| `/login`, `/set-password` | Owner, staff and client sign-in; invite and reset completion | `auth.php` |
+| `/login` (`/set-password` redirects to it since 2026-11-09) | Owner, staff and client sign-in by Clerk email code | Clerk; `auth.php` `me` |
 
 ### 4.2 Page requirements
 
@@ -297,7 +297,7 @@ screens is in `docs/STATUS.md` section 0.
 | `site` | `/app/site` | `Site.tsx` | No. Site content: the public site's hero, services, process, pricing, FAQs and contact copy, saved as drafts and published (2026-10-14, D-046) |
 | `files` | `/app/files` | `Files.tsx` | No. Per-project and per-client file storage |
 | `careplan` | `/app/careplan` | `CarePlan.tsx` | No. Uptime, TLS expiry, care-plan revenue |
-| `account` | `/app/account` | `Account.tsx` | No. My account for every role, client included: profile, two-factor, own sessions (2026-10-10) |
+| `account` | `/app/account` | `Account.tsx` | No. My account for every role, client included: profile and a Sign-in security card that opens Clerk's account panel (2026-10-10; sign-in security moved to Clerk 2026-11-09, D-057) |
 
 Module presence is verified. Feature completeness inside each module is **NOT TESTED** except
 where `docs/STATUS.md` records a test.
@@ -650,22 +650,22 @@ publishes them section by section. Checked against mocked API responses only (K-
 
 Separate owner business settings from user account settings. Business: trading identity,
 invoice defaults, contact and social links, enabled integrations and operational status. My
-account: name, password and reset, own sessions, and two-factor with a recovery path (K-023,
-K-024). Keep the seven server roles and simplify how they are presented.
+account: name, sign-in security and signed-in devices through Clerk (K-023,
+K-024; the app's own password, sessions and two-factor were retired 2026-11-09, D-057). Keep the seven server roles and simplify how they are presented.
 
 No configurable automation. Disabled integrations stay quiet and explain their setup only in
 Settings. API keys stay on the server. Audit entries answer who changed what and when, without
 logging message bodies or passwords.
 
-Acceptance: every signed-in role can manage its own sessions and security through
-independently checked ownership; none can manage another user's; the owner sees no unusable
+Acceptance: every signed-in role can manage its own sign-in security through
+independently checked ownership (Clerk); none can manage another user's; the owner sees no unusable
 account links.
 
 **As built on 2026-10-10 (not deployed):** My account at `/app/account` for every role, client
-included, with a read-only profile, two-factor setup and recovery codes, and signed-in devices
-with revoke; the user menu links there (K-023, K-024). Server tests confirm each action
-touches only the caller. Name and password changes from My account, and the business-settings
-split of Platform, are not built.
+included, with a read-only profile; the user menu links there (K-023, K-024). The two-factor,
+recovery-code and signed-in-device panels it first held were replaced on 2026-11-09 (D-057) by a
+Sign-in security card that opens Clerk's account panel. Name changes from My account, and the
+business-settings split of Platform, are not built.
 
 #### Analytics and Time
 
@@ -720,22 +720,14 @@ agreed documents and portal. A reference identifies work; it is not a password a
 authorises access by itself. Never reveal a name, invoice, project existence or message
 because a visitor knows or guesses a reference.
 
-**Phase 1 uses the existing client password sign-in only** (D-043). The reference plus email
-link comes later, and only after scenario J03 passes (`docs/TEST-PLAN.md`). When it does: ask
-for the reference and the registered email, return the same neutral response whether they
-match or not, and send a verified email link into the existing client-role portal. No second
-account platform. The final owner and client sign-in policy is confirmed before that work
-starts.
+**Sign-in is Clerk's email code for every role, client included** (D-052, D-057). The password
+sign-in of D-043 and the reference plus email link built on 2026-10-19 (`server/client_access.php`,
+never switched on, scenarios J02 and J03) were retired on 2026-11-09 and the endpoint answers 404.
+A reference still identifies work only; it never signs anyone in.
 
-On 2026-10-19, at the owner's instruction, the flow was built ahead of that policy, in
-`server/client_access.php` and the sign-in page, **switched off** (`$REFERENCE_SIGNIN_ENABLED`,
-D-050). J02 and J03 pass locally. While off, every route answers 404 and the sign-in page is
-unchanged. The policy confirmation and the pre-enable gates in `docs/DEPLOYMENT.md` section
-5.4 now gate **switching it on**, not the build. Phase 1 access is still password sign-in.
-
-Owner access honours two-factor on every route, and customer-only links never become owner
-sign-in or account recovery. The magic-link and Google sign-in bypass is fixed in source
-(K-027, D-033). Existing sign-in availability is not evidence that a new flow is safe.
+Customer-only links never become owner sign-in or account recovery. The old magic-link and Google
+sign-in bypass (K-027, D-033) went with those flows. Existing sign-in availability is not evidence
+that a new flow is safe.
 
 Use securely generated tokens, store their hashes, limit expiry and attempts, consume once
 atomically and revoke sessions when appropriate. Keep tokens out of analytics, logs and shared
@@ -860,7 +852,7 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 | "Unavailable, retry" instead of £0 when a source fails | Stops false reassurance such as "All on time" | Fixed in source 2026-10-10 (K-031) | 1 | S | None |
 | Seven-item navigation | Fewer decisions; other tools sit inside records | Grouped into seven, 2026-10-10 (K-032); tools not yet inside records | 3 | M | None; URLs kept |
 | Record search across clients and projects | Find a client quickly from a phone | Built 2026-10-19 (`search.php`, `_like.php`): a Records group in Cmd or Ctrl+K for clients, projects, enquiries, invoices and quotes, gated per type by role; needs the upload. Quotes open the plain Proposals screen (K-077) | 3 | M | Safe search endpoint |
-| My account for every role: profile, password, two-factor, own sessions | Fixes two dead links and admin-only security (K-023, K-024) | Built 2026-10-10 without name or password change | 2 | M | Ownership checks |
+| My account for every role: profile, password, two-factor, own sessions | Fixes two dead links and admin-only security (K-023, K-024) | Built 2026-10-10 without name or password change; password, two-factor and sessions retired 2026-11-09 in favour of Clerk's account panel (D-057) | 2 | M | Ownership checks |
 
 ### Enquiries and bookings
 
@@ -883,7 +875,7 @@ day or less of focused work, M is a few days; both are rough planning guides, no
 | Client messages through support tickets | Two-way conversation without a new chat system | Built 2026-10-10 (K-039) | 2 | M | Client branch in `support.php` |
 | Request an update, request a call, supply assets | Fewer chasing emails | Built 2026-10-18 (`support.php`, `bookings.php`, `assets.php`); calls need SQL 9 and 10, assets need SQL 15. Supply is a note, not an upload (K-072) | 2 | M | Client messages |
 | Private delivery feedback, with separate permission to publish | Honest feedback and lawful testimonials | Built 2026-10-16 (`feedback.php`); needs SQL 11. The excerpt-approval request is not built | 2 | S | Client messages |
-| Project reference on documents; reference plus email link sign-in | Access without another password | Reference on documents built 2026-10-19, not uploaded: `GK-E` and `GK-P` references on the contact thank-you, Enquiries, Projects, quotes, invoices, contracts, the portal and staff search; needs SQL 19 (D-049). Never used for lookup. Reference plus email link sign-in built 2026-10-19 **switched off** (`client_access.php`, D-050), not uploaded: J03 and J02 pass locally; switching it on is gated by the owner's sign-in policy and the four pre-enable gates (`docs/DEPLOYMENT.md` section 5.4, K-100 to K-102). Not run in a browser. No acknowledgement email (K-097) | After J03 | M | K-027 fixed and J03 passing |
+| Project reference on documents; reference plus email link sign-in | Access without another password | Reference on documents built 2026-10-19, not uploaded: `GK-E` and `GK-P` references on the contact thank-you, Enquiries, Projects, quotes, invoices, contracts, the portal and staff search; needs SQL 19 (D-049). Never used for lookup. Reference plus email link sign-in was built 2026-10-19 **switched off** (`client_access.php`, D-050) and **retired 2026-11-09** (D-057); the endpoint is a 404 stub. No acknowledgement email (K-097) | After J03 | M | K-027 fixed and J03 passing |
 
 ### Quotes and money
 

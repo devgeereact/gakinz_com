@@ -110,3 +110,10 @@ Evidence: 649 unit tests (57 files), 600 server tests (46 files, throwaway Maria
 ## Phase 4 released and verified live (9 November 2026, owner-approved full route)
 PR #28 CI green (MySQL 8); `main` fast-forwarded to `cbfd527`; the release job started 3 s after the slowest check; smoke passed; `check:live` 16 of 16. Browser (signed in as the owner): 24 screens, 0 CSP violations, 0 console errors, no dashboard banner; nine routes answered 404 for an id that cannot exist. NOT TESTED live: a real payment, PayPal, the editor dashboard. Rollback: `npm run release -- --rollback --go`. Next: Phase 5 (retire the legacy sign-in) once the owner confirms every active user signs in through Clerk.
 
+
+## Handoff: Phase 5, retire the legacy sign-in (9 November 2026, branch `phase-5/clerk-only`, D-057)
+- Done (not pushed, not released): server `48a6f3a` (auth.php `me` only; oauth.php and client_access.php 404 stubs; users create/invite set no password; integrations drops `google`), client `10f8418` (Login/RequireAuth Clerk only, auth store persists the user only, lock screen, set-password, two-factor and sessions panels and reference sign-in deleted, `SignInSecurity` card, one "Add user" action), docs commit follows.
+- Evidence: `tsc -b` clean; `npm test` 632 in 55 files; `npm run test:server` 562 in 44 files (local MariaDB 11.4, `legacy-retired` 25 new; `auth`, `client-access`, `password-rehash` tests removed, five more adapted); lint ratchet 5 of 5; `npm run verify` and `docs:check` pass.
+- NOT TESTED: a signed-in browser run of the new Login and My account card (Clerk needs the live origin); the server suite on MySQL 8 (CI runs it).
+- Open: owner approval to push, PR and release; confirm every active user signs in through Clerk first. After release run `npm run check:live` and the checks in `docs/DEPLOYMENT.md` 5.6 item 17. Phase 9 drops the legacy tables and `users.totp_*`.
+- Throwaway MariaDB on port 3399 is still running; stop it with `mariadb-admin --no-defaults -h127.0.0.1 -P3399 -uroot shutdown`.

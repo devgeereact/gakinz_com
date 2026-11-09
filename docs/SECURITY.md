@@ -25,100 +25,50 @@ That is the main thing to check in review.
 
 ## 2. Authentication
 
+Since 2026-11-09 (D-057) Clerk is the only sign-in. GAkinzOS keeps no password, session list or
+second factor of its own for new sign-ins, so none of the credential handling below applies to a
+new session.
+
 | Element | Implementation |
 |---|---|
-| Password storage | `password_hash(..., PASSWORD_BCRYPT, GK_BCRYPT)` at cost 12 (`_bootstrap.php`), verified with `password_verify`; a hash at a lower cost is replaced at the next correct password sign-in (2026-11-01) |
-| Session token | `bin2hex(random_bytes(32))`, 64 hex characters, opaque. Since 2026-10-17 only a hash is stored (`token_hash()` in `_bootstrap.php`, the first 62 hex characters of SHA-256), for sessions, reset links and magic links; rows written raw before that still match until they expire (K-059) |
-| Transport | `Authorization: Bearer`, re-exposed by `server/.htaccess` because CGI strips it |
-| Lifetime | 30 days (`TOKEN_TTL_DAYS`) |
-| Validation | Joins `auth_tokens` to `users`, requires an unexpired token, `deleted_at IS NULL` and `status = 'active'` |
-| Reset tokens | 60 minutes (`RESET_TTL_MINUTES`) |
-| Two-factor codes | One use each: the accepted 30-second step is stored in `users.totp_last_step` and an equal or earlier step is refused, once SQL 12 has run (K-057) |
-| Magic links | 15 minutes (`MAGIC_TTL_MINUTES`), single use, claimed by a guarded `UPDATE`. `client` role only (`MAGIC_ROLES`), never for an account with two-factor on (K-027). Since 2026-10-19 the reference sign-in links of `client_access.php` share the `magic_links` table and its cap of 3 links per user in 15 minutes, so a reference link can also be redeemed at `auth.php?action=magic_consume`, under the same rules and still once only (K-100) |
-| Clerk sign-in | RS256 session token checked in `_clerk.php` (issuer, `azp`, `exp`, `nbf`, `sub`, key from the issuer's JWKS). Since 2026-11-01 a `pending` session is refused, and an account with app two-factor on is accepted only when the token shows a verified Clerk second factor (`fva[1] >= 0`), so Clerk never stands in for two-factor (K-027, K-121) |
+| Clerk sign-in | Email code. RS256 session token checked in `_clerk.php` (issuer, `azp`, `exp`, `nbf`, `sub`, key from the issuer's JWKS). A `pending` session is refused. An account whose old app two-factor flag (`users.totp_enabled`) is still on is accepted only when the token shows a verified Clerk second factor (`fva[1] >= 0`, `needs_second_factor`), so Clerk never stands in for it (K-027, K-121); nobody can switch that flag on any more, and 0 accounts had it on on 2026-11-08. The email is matched to an active `users` row; no match answers 401 and the screen says the email is not set up |
+| Transport | `Authorization: Bearer` (a Clerk session token), re-exposed by `server/.htaccess` because CGI strips it |
+| Validation | `require_auth()` resolves the token to `users`, requires `deleted_at IS NULL` and `status = 'active'`, then the endpoint's role list |
+| Stored session tokens (soak) | A token stored in `auth_tokens` before D-057 (hashed with `token_hash()`, the first 62 hex characters of SHA-256; older rows raw) still authenticates until it expires (30 days at most). Nothing writes new rows. The soak ends and the tables are dropped in Phase 9 |
+| Passwords | None. `users.password_hash` holds the unusable value `!` for new, invited and anonymised users, so no password can match. `users` create and invite ignore any password |
+| Retired | Password login and reset, magic links, app two-factor (TOTP, recovery codes), session list and revoke, Google sign-in in `oauth.php`, client sign-in by reference in `client_access.php`, the idle lock screen. `auth.php` answers only `me`; the other actions, `oauth.php` and `client_access.php` answer 404 (`tests/server/legacy-retired.test.ts`) |
 
-The token lives in browser storage and is read by `getStoredToken()` in `src/lib/api.ts`.
-It is not an `HttpOnly` cookie, so it is reachable by any script that runs on the origin.
-That is a deliberate trade for a token-based SPA, and it makes cross-site scripting the
-highest-value attack on this system (K-033).
+The token is a Clerk session token held by Clerk's script, read for each request through
+`getToken()` in `src/lib/api.ts`; `gk-auth` in localStorage keeps only the account details, not
+a credential. Browser storage is not an `HttpOnly` cookie, so it is reachable by any script that
+runs on the origin. That is a deliberate trade for a token-based SPA, and it makes cross-site
+scripting the highest-value attack on this system (K-033).
 
-The idle lock screen is a `sessionStorage` flag, not a sign-out. Since 2026-10-10 a successful
-unlock revokes the previous token through `auth.php?action=logout`, and a wrong password on the
-lock screen no longer clears the session (client change, not deployed).
+Two-factor, devices and sign-in protection are managed in Clerk's account panel, opened from My
+account. A staff member invited from Settings, Team gets an email saying to sign in with that
+address; the invite carries no link or secret.
 
-### Client sign-in by reference and email (2026-10-19, switched off)
+### Retired sign-in routes (history)
 
-`server/client_access.php` (spec 6.1 phase 2, `docs/TEST-PLAN.md` J02 and J03) lets a client ask
-for a sign-in link by typing a work reference and their registered email. **It is off unless
-the live `config.php` sets `$REFERENCE_SIGNIN_ENABLED = true`**; only the boolean `true` counts,
-and `1`, `"true"` or a missing key leave it off. While off, every route answers 404 and the
-sign-in page shows nothing new. Built and tested locally, not uploaded, not switched on.
+These existed until 2026-11-09 and are kept here only as a record. Their threat models were
+closed by removing them (K-027, K-056 to K-059, K-100 to K-102, K-132, K-133).
 
-- **The reference is never the credential.** It only narrows who may be sent a link: an
-  active `client`-role user whose client owns that live project, or the client converted from
-  that enquiry. The reference alone, the email alone, or another client's reference with this
-  email sends nothing. The person proves themselves by opening the mailbox.
-- **Neutral answers.** Every outcome of `request` (match, unknown reference, another
-  client's reference, unknown or staff address, suspended or two-factor account) returns the
-  same 200 body. Where the host finishes the response early (`fastcgi_finish_request` or
-  `litespeed_finish_request`) the answer goes before any lookup; otherwise every answer is
-  held to a 1000 ms floor. The early-finish path and timing on the live host are NOT TESTED
-  (K-101).
-- **Throttles**, counted on requests and never on matches, so a 429 reveals nothing: 5 per
-  address and IP, 15 per address from anywhere, 20 per IP, all over 15 minutes; 20 failed
-  redemptions per IP. A well-formed, unused, unexpired link is claimed before any throttle,
-  so a valid link is never blocked. The per-IP counts read `REMOTE_ADDR` (K-102).
-- **Links.** 256 random bits, stored only as `token_hash()` in `magic_links`, 15 minutes on
-  the database clock, single use through a guarded `UPDATE` that must change exactly one row.
-  The link is `$APP_URL/login#access=<token>`: the fragment never reaches a server, the page
-  clears the address bar and posts the token in the body, and the URL never comes from the
-  `Host` header. Redemption gives a normal 30-day session, only for role `client` with a
-  client id and two-factor off; a staff account or a two-factor account gets 403 and the
-  link is burned. It changes no password and is not account recovery.
-- **No leaks.** Responses carry `Cache-Control: no-store`, `Referrer-Policy: no-referrer` and
-  `X-Robots-Tag: noindex, nofollow`. The audit rows (`client_access_request`,
-  `client_access_link`, `login_client_access`, `client_access_refused`,
-  `client_access_redeem_failed`) hold no token, link or reference; the address is a truncated
-  SHA-256 fingerprint, not keyed, because there is no server secret to key it with.
-- **No SMTP, or no SQL 19**: no link is sent (there is no `mail()` fallback) and the answer
-  stays neutral.
-
-**Before switching it on**, all four gates in `docs/DEPLOYMENT.md` section 5.4 must hold:
-early finish or SMTP faster than the floor, a `purpose` column on `magic_links` (K-100), the
-real client IP behind Cloudflare (K-102), and the owner's client sign-in policy (spec 6.1).
-Covered by `tests/server/client-access.test.ts` and `src/lib/clientAccess.test.ts`; the Login
-form and the `#access` redemption have not been run in a browser.
-
-### Brute-force throttle
-
-`auth.php` counts `login_failed` rows in `audit_log` for the same email **or** the same IP in
-the last 15 minutes, and returns 429 at 10 or more. Note the consequence recorded in
-`docs/DATA-MODEL.md`: truncating `audit_log` resets the throttle.
-
-### Two-factor
-
-TOTP, implemented in `auth.php` without a library. Every role, client included, self-enrols
-under My account (`/app/account`, K-024); the self-service actions act on the caller's own
-account only. Enabling issues 10 recovery codes, shown once and stored as bcrypt hashes in
-`users.totp_recovery`. Login checks the TOTP code, then falls back to consuming a recovery
-code. Code comparison uses `hash_equals`. A login that needs a code returns 401 with
-`two_factor_required: true` rather than a generic failure, and `src/lib/api.ts` deliberately
-does not clear auth state on that one case.
-
-### Google SSO
-
-`oauth.php` runs the authorisation-code flow and **matches an existing active user by email
-only**. There is no auto-provisioning, so holding a Google account is not enough to get in. It
-refuses an account with two-factor on (K-027), carries a CSRF `state` parameter in a
-short-lived HttpOnly cookie, and validates the id_token's `aud` and `iss`.
-The token is returned to the SPA in the URL fragment (`#sso_token`), which keeps it out of
-server logs and referrers but does put it in browser history.
+- **Brute-force throttle** on `login_failed` rows in `audit_log` (10 in 15 minutes by email or
+  IP). Gone with the password sign-in. Truncating `audit_log` no longer resets anything.
+- **Two-factor** (TOTP in `auth.php`, bcrypt recovery codes, one-use code steps in
+  `users.totp_last_step`). Gone; the `users.totp_*` columns remain until Phase 9, and `_clerk.php` still reads `totp_enabled` as above.
+- **Magic links** (15 minutes, single use, `client` role only) and **client sign-in by
+  reference** (`client_access.php`, built 2026-10-19 and never switched on). Gone. A reference
+  still identifies work; it never signs anyone in.
+- **Google SSO** (`oauth.php`, existing active users only). Gone; Google is a Clerk setting if
+  the owner enables it there.
+- **Idle lock screen** (a `sessionStorage` flag). Gone with the password it unlocked.
 
 ## 3. Authorisation
 
 Seven roles, in `VALID_ROLES`. Per-endpoint constants define who may call what; the full
 matrix is in `docs/API-SPEC.md` section 3. `src/lib/access.test.ts` covers the client mirror,
-including the client-isolation rules. Server behaviour for sign-in, payments, quote
+including the client-isolation rules. Server behaviour for the retired sign-in, payments, quote
 acceptance, blog editing, My account and the `support.php` client branch is covered by
 `npm run test:server` (`tests/server/`). Test counts are in `docs/STATUS.md` section 0.
 
@@ -204,18 +154,15 @@ clients.
   i.client_id`), and `portal.php` keeps depending on `_bootstrap.php` only (its own probe, not
   `_reference.php`). Quotes, invoices and contracts show a project reference only for a live
   project of the same client. No endpoint looks a record up by a reference from a request, so
-  nothing can be found or opened by guessing one. Nothing signs in by reference **unless the
-  switch is on**: spec 6.1 phase 2 is built in `client_access.php` but answers 404 until
-  `$REFERENCE_SIGNIN_ENABLED = true` (section 2), and even then the reference only narrows who
-  may be emailed a link. A static test in the server suite fails if any
+  nothing can be found or opened by guessing one. Nothing signs in by reference: the
+  `client_access.php` flow was retired 2026-11-09 (D-057, section 2). A static test in the server suite fails if any
   `server/*.php` reads `reference`, `ref` or `project_reference` from request input outside
-  the three allowed branches (`invoices.php` `record_payment`, where it is the payment
-  reference, `proposals.php` `accept`, where it is the acceptance evidence, and
-  `client_access.php` `request`, switched off by default). The numbers
+  the two allowed branches (`invoices.php` `record_payment`, where it is the payment
+  reference, and `proposals.php` `accept`, where it is the acceptance evidence). The numbers
   are sequential, so one reveals roughly how many enquiries or projects came before it that
   year (K-094). Covered by `tests/server/references.test.ts`.
 
-A client also reaches its own account through `auth.php` (sessions, two-factor). Every other
+A client also reaches its own record through `auth.php` `me`. Every other
 resource endpoint is staff only, including the staff routes of `bookings.php` and `assets.php`
 and the new `invoices.php?action=record_payment` (super_admin, admin, manager). Since
 2026-10-19 `support.php?action=log_time` is the `STAFF` list of `support.php` (super_admin,
@@ -256,7 +203,7 @@ None of these serves the `client` role, and none is uploaded (`docs/DEPLOYMENT.m
   cannot add a link, image, heading or HTML.
 - **`privacy.php` export** is super_admin and admin only, checked by `require_auth` before any
   read; the CMS shows "Export data" to those two roles only. It names every column it selects,
-  so password hashes, token values and hashes, 2FA secrets, share tokens, file contents and
+  so password hashes, token values and hashes, 2FA secrets (unused since D-057), share tokens, file contents and
   configuration never leave, and only the subject's own rows are read. On audit rows the
   subject did not write, the author's user id and IP are removed. The response is
   `Cache-Control: private, no-store`. Each export writes a `privacy_export` audit row naming

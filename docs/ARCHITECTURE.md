@@ -110,7 +110,7 @@ Measured on the local build of 2026-09-22:
 
 The paths are `/`, `/work`, `/services`, `/pricing`, `/about`, `/resources`, `/contact`,
 `/sectors`, `/privacy`, `/terms`, `/cookies`, and a detail page for every built-in project,
-service and post: 30 pages on 2026-10-16. The CMS (`/app/*`), `/login`, `/set-password`,
+service and post: 30 pages on 2026-10-16. The CMS (`/app/*`), `/login`,
 `/p/:token` and `/verify/:id` are never prerendered.
 
 **The build makes no network request.** Data hooks fetch only inside effects, which
@@ -198,7 +198,7 @@ mirrors them for navigation only.
    the JSON content type, sends `X-Content-Type-Options: nosniff`, `Referrer-Policy:
    strict-origin-when-cross-origin` and `X-Frame-Options: DENY`, and short-circuits `OPTIONS`
    with 204.
-4. `require_auth()` reads the bearer token (a Clerk session token, D-052, or a GAkinzOS session token), resolves it to `users`, rejects an expired
+4. `require_auth()` reads the bearer token (a Clerk session token, D-052; a stored GAkinzOS session token issued before D-057 is still accepted until it expires), resolves it to `users`, rejects an expired
    token, a soft-deleted user or a non-active account, then enforces the role list.
 5. The endpoint runs, and mutations call `audit()` to write to `audit_log`.
 
@@ -217,12 +217,12 @@ A schema change is written but not applied until someone runs it. See `docs/DEPL
 |---|---|---|
 | Anthropic, then OpenRouter (D-054) | `ai.php` via `_ai.php`, every AI feature | 503 with neither key, feature hidden; 502 if both fail |
 | OpenWeather | `weather.php` | Widget hidden |
-| SMTP mailbox | `_smtp.php`, `mail.php`, `comms.php`, `invoices.php`, `cron.php`, `auth.php` | PHP `mail()`, then a clear error |
+| SMTP mailbox | `_smtp.php`, `mail.php`, `comms.php`, `invoices.php`, `cron.php`, `users.php` | PHP `mail()`, then a clear error |
 | IMAP mailbox | `mail.php` | Inbox banner, compose still works |
 | Twilio | `_sms.php`, `comms.php` | Button reports not configured |
 | Stripe | `payments.php` | Manual mark as paid |
 | PayPal | `payments.php` | Manual mark as paid |
-| Google OAuth | `oauth.php` | SSO button hidden |
+| Google sign-in | Clerk (retired from `oauth.php` 2026-11-09, D-057) | Clerk offers it only when enabled there |
 | GitHub | `github.php` | Dev Pipeline panel empty |
 | Figma | `figma.php` | Preview button reports not configured |
 | Slack | `_slack.php`, `slack.php` | Announcement still posts locally |
@@ -262,13 +262,13 @@ On the branches stacked into PR #8; none of it is deployed, and server parts nee
 | Area | Shape | Where |
 |---|---|---|
 | Navigation | Seven groups (Today, Enquiries, Clients, Projects, Money, Website, Settings), filtered per role by `canAccess`; an empty group is hidden; URLs unchanged | `app-sidebar.tsx`, `nav-main.tsx`, `global-search.tsx` |
-| My account | `/app/account` for every role, client included: profile, two-factor, own sessions. Reuses the panels moved out of Platform | `src/app/modules/Account.tsx`, `src/app/components/AccountSecurity.tsx`, `auth.php` |
+| My account | `/app/account` for every role, client included: profile and a Sign-in security card that opens Clerk's account panel (2026-11-09, D-057; the app's own two-factor and sessions panels were deleted) | `src/app/modules/Account.tsx`, `src/app/components/SignInSecurity.tsx`, `auth.php` `me` |
 | Portal messages | The portal's Messages area calls `clientMessages` in `api.ts`, which hits the client branch of `support.php`; the client id comes from the token | `Portal.tsx`, `server/support.php` |
 | Enquiry follow-ups | Next-action date, note and priority on `enquiries`; due and overdue marks on the board and a card on Today; degrades on an un-migrated database | `Leads.tsx`, `Dashboard.tsx`, `src/lib/format.ts`, `server/leads.php` |
 | Payments | One payable-total calculation in `_money.php`; the webhook checks amount and currency and records events in `payment_events` | `server/payments.php`, `server/_money.php` |
 | Public data | A successful CMS answer, empty included, decides what shows; the static fallback is used only on failure | `src/marketing/data/cmsResult.ts`, `blog.ts`, `work.ts` |
 | Article format | A small parser for headings, lists, bold and safe links, rendered as React elements without raw HTML | `src/marketing/lib/articleFormat.ts`, `ResourceDetail.tsx` |
-| Lock screen | Unlock revokes the previous token; a 401 from the login call no longer clears the session | `LockScreen.tsx`, `src/lib/session-revoke.ts`, `api.ts` |
+| Lock screen | Retired 2026-11-09 (D-057) with the password sign-in it unlocked; `LockScreen.tsx` and `session-revoke.ts` are deleted | n/a |
 | Public design | The public surface on D-037 (superseded by D-046, below) | `docs/DESIGN-SYSTEM.md` |
 | Documentation check | `npm run docs:check` in CI: links, and the document-sync rule | `scripts/docs-check.mjs`, `.github/workflows/ci.yml` |
 

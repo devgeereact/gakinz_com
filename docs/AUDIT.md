@@ -2,6 +2,21 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-09 (later) · Phase 5 checked locally: the legacy sign-in is retired (branch `phase-5/clerk-only`, not released)
+
+**Scope:** D-057. Clerk is the only sign-in; K-132 and K-133 fixed in code. **Method:** tests written first (red against the old code, then green), mutation-free review of every deleted route, then the full gates.
+
+| Check | Result |
+|---|---|
+| Retired actions | `tests/server/legacy-retired.test.ts`, 25 tests: login, forgot, reset, magic request/consume, logout, revoke, twofa_*, sessions answer 404 "Unknown auth action."; `oauth.php` and `client_access.php` answer 404; `me` still 200 or 401 |
+| Users | create ignores a password (hash `!`); invite creates the row, writes no reset token, audits `user_invite`, returns `{id, emailed}`; client role 400, duplicate 409, admin inviting a super admin 403; seed only from `$SEED_ADMIN_EMAIL` on an empty table |
+| Stored sessions | A raw or hashed stored token still authenticates until it expires (`token-hashing.test.ts`); an anonymised client's session is refused |
+| Auth store | `auth.store.test.ts`: the old persisted token is discarded, the user is kept (version 2 migration) |
+| Gates | `tsc -b` clean; `npm test` 632 in 55 files; `npm run test:server` 562 in 44 files (MariaDB 11.4); lint ratchet 5 of 5; `php -l` on changed files; `npm run verify` and `docs:check` PASS |
+| Not tested | A signed-in browser run of the new `/login` and the My account card (Clerk needs the live origin); the suite on MySQL 8 (CI); a release |
+
+**Left:** after release, `npm run check:live` plus the Phase 5 checks in `docs/DEPLOYMENT.md` 5.6 item 17, then a signed-in look at My account.
+
 ## 2026-11-09 · Phase 4 released and checked live
 
 Released `cbfd527` (K-129, K-130, K-131, K-135; PR #28): the release job started 3 s after the slowest check (CI ran the server tests on MySQL 8 as well as the local MariaDB 11.4), changed 33 and added 64 `dist/` files and changed 11 server files; smoke passed; `npm run check:live` 16 of 16. Signed-in browser walk with a passive CSP listener: 24 screens, all landed, none still loading after 6 s, 0 CSP violations, 0 console errors, no dashboard error banner. Nine routes sent an id that cannot exist (999999999, with the owner's own session, nothing created or changed) each answered 404 with a clear message. **Not tested live:** a real invoice paid by Stripe or by hand (no invoice exists to pay without taking a real payment, and none was made), PayPal's return path (ships off, no fake), and the editor dashboard (the only live account is a super admin). **Self-corrections:** my first design refused to pay or chase draft invoices; the existing journey test showed that breaks the owner's flow and would leave real money unrecorded, so I reverted that part before committing. My new tests leaked a `project_dev` row into an older test until I added three tables to the test reset.

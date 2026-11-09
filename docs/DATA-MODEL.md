@@ -39,11 +39,11 @@ section 4.
 
 | Table | Purpose | Notes |
 |---|---|---|
-| `users` | Staff and client logins | `role` is one of the seven roles. `client_id` binds a `client` login to one client. `cost_rate` feeds profitability. `totp_secret`, `totp_enabled`, `totp_recovery` carry 2FA. `clerk_user_id` (SQL 20, unique, null until the first Clerk email-code sign-in) is the Clerk `sub` the row is linked to (D-052); the column is in the `CREATE TABLE`, and the `ALTER` for existing databases is a comment at the foot of `schema.sql` (K-111). `deleted_at` is set when an account is retired: the dev@gakinz.com login was retired this way on 2026-10-30. After a client is anonymised (Task 26, switched off, K-108) its logins read `status` suspended, `email` `anonymised-<user id>@invalid`, `name` "Former client #id", `password_hash` `!anonymised` and 2FA cleared |
-| `auth_tokens` | Session tokens, stored hashed | The browser holds 64 hex characters; the row holds `token_hash()` of them (62 characters) since 2026-10-17, or the raw value for an older session (K-059). `user_agent`, `ip`, `last_seen_at` drive the active-sessions list |
-| `magic_links` | Passwordless sign-in | Short lived, single use. Since 2026-10-19 also holds the reference sign-in links of `client_access.php` (switched off), so `magic_consume` can redeem them too; a `purpose` column is a gate before switching on (K-100) |
-| `password_resets` | Reset and invite tokens | |
-| `audit_log` | Record of sensitive actions | Also doubles as the store for the login throttle and the AI daily cap. See section 5 |
+| `users` | Staff and client logins | `role` is one of the seven roles. `client_id` binds a `client` login to one client. `cost_rate` feeds profitability. `totp_secret`, `totp_enabled`, `totp_recovery` carried the app's own 2FA, retired 2026-11-09 (D-057): nothing writes them now, `_clerk.php` still reads `totp_enabled`, and they are dropped in Phase 9. `password_hash` holds `!` for every user created or invited since D-057. `clerk_user_id` (SQL 20, unique, null until the first Clerk email-code sign-in) is the Clerk `sub` the row is linked to (D-052); the column is in the `CREATE TABLE`, and the `ALTER` for existing databases is a comment at the foot of `schema.sql` (K-111). `deleted_at` is set when an account is retired: the dev@gakinz.com login was retired this way on 2026-10-30. After a client is anonymised (Task 26, switched off, K-108) its logins read `status` suspended, `email` `anonymised-<user id>@invalid`, `name` "Former client #id", `password_hash` `!anonymised` and 2FA cleared |
+| `auth_tokens` | Legacy session tokens, stored hashed. **Retired 2026-11-09 (D-057): nothing writes new rows; existing rows still authenticate until they expire, `cron.php` `prune` deletes them a day later, and the table is dropped in Phase 9.** Was: session tokens | The browser holds 64 hex characters; the row holds `token_hash()` of them (62 characters) since 2026-10-17, or the raw value for an older session (K-059). `user_agent`, `ip`, `last_seen_at` drive the active-sessions list |
+| `magic_links` | Passwordless sign-in. **Retired 2026-11-09 (D-057), unused; dropped in Phase 9** | Was short lived and single use; also held the reference sign-in links of `client_access.php` (never switched on) |
+| `password_resets` | Reset and invite tokens. **Retired 2026-11-09 (D-057), unused; dropped in Phase 9** | Invites no longer write a row: they email how to sign in |
+| `audit_log` | Record of sensitive actions | Also doubles as the store for the AI daily cap (it held the login throttle until D-057). See section 5 |
 
 ### Sales
 
@@ -192,11 +192,11 @@ Outstanding statements, grouped as they appear in the file:
 | VAT | `invoices.vat_rate`, `proposals.vat_rate` |
 | Project stages | `projects.stage` |
 | Timesheet approval | `time_entries.status`, plus an `UPDATE` grandfathering existing rows to `approved` |
-| Session device tracking | `auth_tokens.user_agent`, `.ip`, `.last_seen_at` |
-| Finance and 2FA | `users.cost_rate`, `.totp_secret`, `.totp_enabled` |
+| Session device tracking (retired 2026-11-09, D-057) | `auth_tokens.user_agent`, `.ip`, `.last_seen_at` |
+| Finance and 2FA (2FA retired 2026-11-09, D-057) | `users.cost_rate`, `.totp_secret`, `.totp_enabled` |
 | Recurring billing and monitoring | `clients.retainer_amount`, `project_dev.last_http_status`, `.ssl_days_left`, `.last_checked_at` |
 | Lead depth and proposal sharing | `enquiries.tags`, `.score`, `.lost_reason`; `proposals.share_token`, `.views`, `.last_viewed_at`, plus a unique key on `share_token` |
-| 2FA recovery and magic links | `users.totp_recovery`, plus the `magic_links` table |
+| 2FA recovery and magic links (retired 2026-11-09, D-057) | `users.totp_recovery`, plus the `magic_links` table |
 | Later module tables | `design_reviews`, `project_dev`, `deploys`, `leave_entries`, `contracts`, `files`, `announcements`, `kb_articles`, `posts`, `testimonials`, `content_drafts` |
 | Work ledger, 2026-09-22 | `work`, `work_images`. Both are `CREATE TABLE IF NOT EXISTS`, so they are safe to run as they stand |
 | Share-token collision guard, 2026-09-22 | `ALTER TABLE files ADD UNIQUE KEY uk_file_share (share_token)` |
@@ -234,18 +234,17 @@ matters.
 
 Worth knowing before anyone prunes that table.
 
-1. **Login throttle.** `auth.php` counts `login_failed` rows for the same email or IP in the
-   last 15 minutes and returns 429 at 10 or more.
+1. **Login throttle. Retired 2026-11-09 (D-057).** `auth.php` used to count `login_failed` rows
+   for the same email or IP and return 429 at 10 or more. Nothing counts them now; Clerk throttles sign-in.
 2. **AI daily cap.** `ai.php` counts `ai_call` rows for the user since `CURDATE()` and returns
    429 past the per-role limit.
 
-Truncating `audit_log` therefore resets both the brute-force throttle and every AI quota.
+Truncating `audit_log` therefore resets every AI quota.
 
 ## 6. Degradation before migration
 
 Several endpoints prepare a statement with the newer columns, and fall back to a narrower
-query if the prepare fails. `auth.php` does this for the TOTP columns and for the session
-device columns, and its `me` action answers `totp_enabled: null` without the column;
+query if the prepare fails. `auth.php` `me` answers `totp_enabled: null` without the TOTP column;
 `require_auth()` does it for `last_seen_at`. `leads.php` lists enquiries without the follow-up
 columns and answers `followup: false` on `meta` when they are missing (tested in
 `tests/server/leads.test.ts`). The effect is that an

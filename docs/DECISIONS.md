@@ -1065,3 +1065,15 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 5. **Spend control:** the per-role daily caps in `ai.php` stay; the key itself has no spending limit today, so set a monthly limit on it in the OpenRouter dashboard.
 
 **Why:** the key's model was `openai/gpt-oss-120b:free`, which OpenRouter rate-limits and withdraws without notice (D-054 already warned of this). **Supersedes** D-054 point 1 for this site.
+
+## D-057 · Clerk is the only sign-in; the legacy sign-in is retired
+**Date:** 2026-11-09 · **Status:** decided by the owner ("Clerk works fine", roadmap approval 2026-11-08; "Go ahead" for Phase 5). Code on branch `phase-5/clerk-only` (`48a6f3a`, `10f8418`). Not released until the owner approves the release.
+
+1. **What goes.** Password sign-in, forgot and reset, magic links, app two-factor (setup, enable, disable, recovery codes), the session list and revoke, server logout, Google OAuth (`oauth.php`), sign-in by work reference (`client_access.php`), the lock screen, the set-password page and the Settings Security and My sessions tabs. `auth.php` keeps one action, `me`; the others answer 404 "Unknown auth action.". `oauth.php` and `client_access.php` become 404 JSON stubs because a release never deletes server files (the `weather.php` pattern).
+2. **Nobody has a password.** `users` create ignores any password and stores the unusable hash `!`; `invite` creates the same row and emails "sign in with this email address". A person is added by email and signs in with the Clerk email code (D-052). The first super admin still comes from `$SEED_ADMIN_EMAIL` on an empty `users` table, with hash `!`.
+3. **Sessions already stored keep working until they expire.** `require_auth` still accepts a stored token (hashed or raw) so a signed-in person is not cut off mid-session. Phase 9 drops `auth_tokens`, `magic_links`, `password_resets` and `users.totp_*` after about 30 days with no sign-in through them.
+4. **`_clerk.php` still refuses a Clerk session for an account with `users.totp_enabled = 1`** unless Clerk shows a second factor (K-121). Nobody can set the flag any more and 0 accounts had it on (2026-11-08), so the check stays harmlessly until Phase 9 removes the columns.
+5. **Sign-in security is Clerk's.** My account shows a "Sign-in security" card that opens Clerk's account panel. The auth store persists only the user (version 2 discards the old token). Old `/set-password` links redirect to `/login`.
+6. **Why.** Two sign-in systems meant two attack surfaces, a reset flow that never emailed (K-132) and handlers unreachable in the Clerk build (K-133). One owner is the only active user and already signs in through Clerk.
+
+**Supersedes** D-052 point 3 (a build without the Clerk key keeps the old sign-in: it now shows "Sign-in is not set up") and point 4 ("Not removed yet"). Google sign-in through Clerk (K-117) is unaffected; only the app's own `oauth.php` went. The reference sign-in plan in `docs/PRODUCT-SPEC.md` 6.1 is withdrawn.

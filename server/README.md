@@ -59,9 +59,8 @@ of their own and are denied to direct requests by `.htaccess`. The file count is
 | `contact.php` | Public enquiry form, writes to `enquiries` |
 | `verify.php` | Public certificate verification |
 | `book.php` | Public. Returns the configured Calendly URL, or empty |
-| `auth.php` | Login, session, reset, two-factor, magic link, sessions and revoke |
-| `oauth.php` | Google SSO. Matches existing active users only |
-| `client_access.php` | Client sign-in by work reference and email (2026-10-19): `status`, `request` (always one neutral answer) and `redeem` (a single-use 15-minute link from `magic_links`, client role only, two-factor off). Public, before sign-in, like `auth.php` login. **Switched off**: every route answers 404 unless `config.php` sets `$REFERENCE_SIGNIN_ENABLED = true`. Needs `_bootstrap.php` with `token_hash()` and `_smtp.php`; `_reference.php` optional. Gates before switching on: `docs/DEPLOYMENT.md` section 5.4 |
+| `auth.php` | `me` only: the signed-in user and their own app two-factor flag. Sign-in itself is Clerk (`_clerk.php`); every former action answers 404 (retired 2026-11-09, D-057) |
+| `oauth.php`, `client_access.php` | Retired 2026-11-09 (D-057): 404 JSON stubs, kept because a release never deletes server files |
 | `users.php`, `audit.php`, `integrations.php` | Platform administration. Admins only |
 | `leads.php`, `clients.php`, `bookings.php`, `proposals.php`, `contracts.php` | Sales. `bookings.php` also has a client branch for portal call requests and the client's own calendar file (2026-10-18), security-critical |
 | `projects.php`, `tasks.php`, `design.php`, `dev.php`, `resourcing.php`, `time.php`, `careplan.php`, `files.php`, `assets.php`, `briefs.php` | Delivery. `assets.php` (2026-10-18) is the project asset checklist, with a client branch to list and supply items, security-critical. `briefs.php` (2026-10-19, SQL 16) is the project brief, measurements and the sanitised GEE OS handoff, staff only. Since 2026-10-19 `files.php` also has a client branch (`mine`, `mine_download`, SQL 18), security-critical, and `projects.php` creates projects from templates |

@@ -65,7 +65,7 @@ wget -qO- "https://gakinz.com/cron.php?key=<CRON_KEY>&job=all"
 | `billing` | Raises this month's invoice for each client with `retainer_amount > 0`. Idempotent per month | Column missing |
 | `uptime` | Pings every `project_dev.prod_url`, records HTTP status and TLS days remaining | No rows with a production URL |
 | `digest` | Emails a KPI digest to `$REPORT_RECIPIENTS` | No SMTP or no recipients |
-| `prune` | Deletes sessions, magic links and reset links more than a day past expiry (2026-10-17, K-062). No business record is touched | Never |
+| `prune` | Deletes legacy sessions, magic links and reset links more than a day past expiry (2026-10-17, K-062). Since 2026-11-09 (D-057) nothing writes those rows, so it only clears the soak backlog; it stays until the tables are dropped in Phase 9. No business record is touched | Never |
 | `all` | Runs all five. This is the default | |
 | `retention_report` | Prints, as plain text, how many rows each proposed retention rule would affect (2026-10-19, `_retention.php`, K-062). Counts only: it never changes a row. Not part of `all` | Command line only: over the web it answers 400, even with the key |
 | `retention_apply` | The retention executor (2026-10-19, `_erasure.php`). Acts on two rules only: enquiries that never became a client, older than `$RETENTION_ENQUIRY_MONTHS`, and soft-deleted files older than `$RETENTION_DELETED_FILE_DAYS`. A dry run by default: it lists the ids that would go and why others are kept. It deletes only with `--apply` AND `$RETENTION_APPLY = true` in `config.php` AND that rule's period set, then writes one `retention_apply` audit row with counts. Not part of `all` | Command line only: over the web it answers 400, even with the key. Unknown flags, or `--apply` with `--dry-run`, exit 2 |
@@ -141,7 +141,7 @@ falls back to PHP `mail()` when no host is configured.
 | Path | Trigger |
 |---|---|
 | Mailbox module | Staff read and reply to the studio mailbox in-app, over IMAP and SMTP |
-| Automated sends | Invoice chasing, team invites, password resets, magic links, the weekly digest, and Comms email sends |
+| Automated sends | Invoice chasing, team invites (a plain "sign in with this email" message), the weekly digest, and Comms email sends |
 
 The inbox needs the PHP `imap` extension. `mail.php?action=status` reports `smtp`, `imap` and
 `imap_ext` as booleans so the interface can show an accurate banner rather than failing.
@@ -167,7 +167,7 @@ Nothing here is automated. This is a suggested rhythm, not an implemented one.
 | Each server upload | Record the file in `docs/DEPLOYMENT.md` and confirm it responds |
 | Weekly | Care Plan module for a site returning a non-2xx status or a certificate close to expiry |
 | Weekly | Platform, Integrations, for a connector that has silently stopped being configured |
-| Monthly | Active sessions under Platform, Security, and revoke anything unrecognised |
+| Monthly | Signed-in devices in Clerk's account panel (My account, Sign-in security), and revoke anything unrecognised. Sessions are Clerk's since 2026-11-09 (D-057) |
 | Monthly | `audit.php` for unexpected actions |
 
 ## 7. Incident notes
@@ -288,8 +288,8 @@ recorded evidence. Status on 2026-10-10: every gate is open, and production read
 
 | Gate | Required proof before claiming readiness |
 |---|---|
-| Authentication | Every sign-in route honours the approved two-factor policy; one-time links expire, are consumed atomically and cannot enumerate customers; sessions revoke correctly |
-| Credentials | Owner confirmation of the required rotation, active-session revocation, two-factor and recovery set-up, and seed artefact checks (K-001, K-015) |
+| Authentication | Sign-in is Clerk only (D-057); the retired `auth.php` actions, `oauth.php` and `client_access.php` answer 404; an unknown email gets no access; sessions revoke in Clerk |
+| Credentials | Owner confirmation of the required rotation, active-session revocation, Clerk two-factor and recovery set-up, and seed artefact checks (K-001, K-015) |
 | Deployment | Approved PHP file manifest with hashes and dates, schema version evidence, debug off, correct configuration and dependencies; client and server compatibility established (K-006) |
 | Recovery | An automated or reliably scheduled backup to a protected destination, covering the database and files, with an actual restoration and checks (K-010) |
 | Client isolation | Synthetic Client A and B attempts across the portal, ticket replies, files and downloads, invoices and payment links, and public tokens |

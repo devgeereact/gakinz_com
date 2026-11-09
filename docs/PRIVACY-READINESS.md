@@ -37,7 +37,7 @@ call; whether each key is set in production is UNVERIFIED.
 | Activity | Data | Subject | Collected at | Purpose | Stored in | Recipients | Retention and deletion today | Disclosed? |
 |---|---|---|---|---|---|---|---|---|
 | Enquiry form | name, email, company (optional), budget (optional), message, IP address, time | prospects | `/contact` (`Contact.tsx`, `contact.php`) | reply, spam control | `enquiries`; `audit_log` copy of email and IP | hosting | kept indefinitely; since 2026-10-19 (not uploaded) a super admin can erase one that never became a client, and `retention_apply` can delete old ones once enabled (section 6) | partly (fixed 2026-10-17, K-063) |
-| Staff and client sign-in | email, password hash, 2FA secret and recovery hashes, sessions with IP and user agent | staff, clients | `/login`, `/set-password`, My account | access control, security | `users`, `auth_tokens`, `magic_links`, `password_resets`, `audit_log` | Google (if Google sign-in used); mail provider for invites and magic links | sessions 30 days, but expired rows are never pruned; users are suspended, never deleted | no |
+| Staff and client sign-in | email, name and role in `users`; Clerk holds the sign-in itself (email code, sessions, devices). Since 2026-11-09 (D-057) the app stores no password, session or 2FA secret for new sign-ins | staff, clients | `/login`, My account | access control, security | `users`, `audit_log`; Clerk (processor). The unused `auth_tokens`, `magic_links`, `password_resets` and `users.totp_*` remain until Phase 9 | Clerk; mail provider for invites | old session rows expire and `cron.php` `prune` removes them a day later; users are suspended, never deleted | no |
 | Client records | contact name, email, phone, company, notes, retainer; since 2026-10-19 which files were shared to the client's portal and when (`files.client_visible`, `files.shared_at`, SQL 18) and the IT support time logged from their tickets (`time_entries.ticket_id`, SQL 17) | clients | CMS, staff entry | delivering work, billing | `clients`, `projects`, `tasks`, `files`, `time_entries` | hosting; a shared file is visible to the client's own portal users | indefinite; no delete; soft-deleted files stay on disk; hiding a file clears `shared_at` | no |
 | Invoices and payments | client email, amounts, payment events | clients | CMS, Stripe or PayPal checkout | billing, tax records | `invoices`, `payment_events` | Stripe; PayPal (switched off, K-026) | indefinite | no |
 | Proposals | client company, scope, prices; view count and last view time | clients | CMS; `/p/:token` | selling work | `proposals` | anyone holding the link (K-060) | indefinite; link never expires | no |
@@ -68,7 +68,7 @@ Article 9. REQUIRES LEGAL REVIEW for the condition relied on and staff-facing in
 | Twilio | phone number and message text | `_sms.php`, `comms.php` | **owner to confirm** | likely |
 | Anthropic | free text from staff | `ai.php` (first, D-054) | **owner to confirm** (K-064) | likely |
 | OpenRouter | free text from staff | `ai.php` (backup, D-054) | **owner to confirm** (K-064) | likely |
-| Google (sign-in) | sign-in email | `oauth.php` | **owner to confirm** | likely |
+| Clerk (sign-in) | sign-in email, session and device details; Google too if enabled in Clerk | `src/app/ClerkLogin.tsx`, `server/_clerk.php` (D-052, D-057; replaces `oauth.php`, retired 2026-11-09) | **owner to confirm** | likely |
 | Slack | announcement text | `_slack.php` | **owner to confirm** | likely |
 | Calendly | nothing from the site; the visitor follows a link | `book.php` | link only | n/a |
 | OpenWeather, GitHub, Figma | no personal data expected | `weather.php`, `github.php`, `figma.php` | **owner to confirm** | n/a |
@@ -84,9 +84,10 @@ request left for another domain. The CMS rows come from source, not from a signe
 
 | Name | Type | Provider | Purpose | Set when | Lasts | Category (provisional) | Consent likely needed? |
 |---|---|---|---|---|---|---|---|
-| `gk-auth` | localStorage | first party | sign-in token and basic account details | sign-in | until sign-out; token valid 30 days | strictly necessary | no |
-| `gk-locked` | sessionStorage | first party | inactivity lock | CMS lock screen | tab session | strictly necessary (security) | no |
-| `gk_oauth_state` | cookie, HttpOnly, Secure, Lax | first party | forgery protection for Google sign-in | Google sign-in starts | 10 minutes, deleted at the end | strictly necessary (security) | no |
+| `gk-auth` | localStorage | first party | basic account details (name, email, role). Since 2026-11-09 it holds no token: the Clerk session is the credential, and a stored legacy token is dropped on first load | sign-in | until sign-out | strictly necessary | no |
+| `gk-locked` | sessionStorage | first party | inactivity lock | Retired 2026-11-09 (lock screen deleted); no longer set | n/a | n/a | n/a |
+| `gk_oauth_state` | cookie, HttpOnly, Secure, Lax | first party | forgery protection for Google sign-in | Retired 2026-11-09 (`oauth.php` is a 404 stub); no longer set | n/a | n/a | n/a |
+| Clerk session storage | cookies and localStorage, set by Clerk's script | Clerk | keeps the sign-in session | sign-in page and `/app` only | set by Clerk | strictly necessary | **owner to confirm the exact names and lifetimes against Clerk's documentation** |
 | `sidebar_state` | cookie, set by script | first party | side menu open or closed | CMS menu toggled | 7 days | preference (appearance) | REQUIRES LEGAL REVIEW |
 | `gkos-groups` | localStorage | first party | which menu groups are open | CMS menu used | until cleared | preference (appearance) | REQUIRES LEGAL REVIEW |
 | `theme` | localStorage | first party (`next-themes`) | light or dark | theme changed | until cleared | preference (appearance) | REQUIRES LEGAL REVIEW |
@@ -110,7 +111,7 @@ live in `src/marketing/lib/monetisation.ts` and ship as `consent.mode` "none" an
 cookies or storage, shows no banner and renders no ad slot; the build fails if any prerendered
 page carries a third-party script, frame, ad slot or consent marker. When switched on, a
 certified CMP (from an allow-listed host) loads on public pages only, never on `/app`,
-`/verify`, `/p`, `/login` or `/set-password`, and the CMP sets its own storage. That storage,
+`/verify`, `/p` or `/login`, and the CMP sets its own storage. That storage,
 and AdSense's, must be added to the table above, the cookie notice and the privacy notice
 before the switch is made. The loader takes a URL only, and some CMPs need extra attributes or
 calls (OneTrust `data-domain-script`, Cookiebot `data-cbid` and `data-framework`, Google's
@@ -121,7 +122,7 @@ consent, a business choice that also suppresses Google's limited ads for visitor
 ## 5. Marketing and analytics
 
 - No marketing email, newsletter, subscription, list import or unsubscribe exists. The contact
-  form does not subscribe anyone. Transactional mail (invites, magic links, invoice reminders,
+  form does not subscribe anyone. Transactional mail (invites, invoice reminders,
   call changes) is the only outbound mail.
 - No analytics, conversion tracking, heatmap, session replay or error monitoring exists, client
   or server side. The CMS "Analytics" module is internal business reporting over the site's own
@@ -142,7 +143,7 @@ business is a sole trader or a company, so they are left blank on purpose.
 | Enquiry that did not become a client | reply | `enquiries` | 12 to 24 months | last contact | delete row and audit copies | age out with backup rotation | OWNER DECISION, LEGAL REVIEW |
 | Client, project, contract records | delivery, claims | `clients`, `projects`, `contracts` | owner to set | end of engagement | delete or anonymise | as above | LEGAL REVIEW (limitation periods) |
 | Invoices and payments | tax | `invoices`, `payment_events` | **set by HMRC rules for the trading form** | end of the relevant tax year | delete | as above | OWNER INPUT, LEGAL REVIEW |
-| Sessions, magic links, reset tokens | access | `auth_tokens`, `magic_links`, `password_resets` | one day after expiry | expiry | delete | n/a | **built 2026-10-17** (`cron.php` `prune`), not uploaded |
+| Sessions, magic links, reset tokens | access | `auth_tokens`, `magic_links`, `password_resets` | one day after expiry | expiry | delete | n/a | **built 2026-10-17** (`cron.php` `prune`), still runs; no new rows are written since 2026-11-09 (D-057) and the tables are dropped in Phase 9 |
 | Audit log | security | `audit_log` | 12 months | entry date | delete, or strip email and IP | as above | OWNER DECISION |
 | Portal messages, feedback | support | `tickets`, `client_feedback` | with the client record | end of engagement | delete | as above | OWNER DECISION |
 | Comms, Mailbox | correspondence | database, mailbox | owner to set | last message | delete | mailbox provider's own | OWNER DECISION |
