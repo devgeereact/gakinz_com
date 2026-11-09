@@ -45,11 +45,10 @@ see CSP reports). PR #24 was already merged by GitHub.
 4. **Phase 4 (make writes safe): released 2026-11-09 as `cbfd527` (PR #28) and checked live** (see the 2026-11-09 section of
    `docs/AUDIT.md`). Owner: when a real invoice is paid, look once that it shows the method and amount; PayPal and the editor
    dashboard could not be tested live.
-5. **Phase 5 (retire the legacy sign-in, D-057): coded and checked on branch `phase-5/clerk-only`, NOT released.** Clerk is the only
+5. **Phase 5 (retire the legacy sign-in, D-057): released 2026-11-09 as `ed58064` (PR #29) and checked live.** Clerk is the only
    sign-in; `auth.php` answers `me` only; `oauth.php` and `client_access.php` are 404 stubs; nobody has a password; My account opens
-   Clerk's panel (see the 2026-11-09 Phase 5 section of `docs/AUDIT.md`). Needs the owner's approval to push, open the PR and release,
-   and first the owner's confirmation that every active user signs in through Clerk (1 active user on 2026-11-08). After release:
-   `npm run check:live` and the Phase 5 checks in `docs/DEPLOYMENT.md` 5.6 item 17. Not tested in a browser before release.
+   Clerk's panel (see the 2026-11-09 Phase 5 section of `docs/AUDIT.md`). `npm run check:live` 16 of 16 and the retired routes answer 404.
+   Owner: sign out and sign in once by email code to confirm the fresh path (an agent only saw the existing session).
 6. Next after that: Phase 6 (certificates end to end, K-134).
 
 ## Resume on another computer

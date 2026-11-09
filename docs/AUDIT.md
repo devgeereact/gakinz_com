@@ -2,7 +2,7 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
-## 2026-11-09 (later) · Phase 5 checked locally: the legacy sign-in is retired (branch `phase-5/clerk-only`, not released)
+## 2026-11-09 (later) · Phase 5 released and checked live: the legacy sign-in is retired (`ed58064`)
 
 **Scope:** D-057. Clerk is the only sign-in; K-132 and K-133 fixed in code. **Method:** tests written first (red against the old code, then green), mutation-free review of every deleted route, then the full gates.
 
@@ -13,9 +13,10 @@ Every audit, review and checklist run for this project, newest first. Add new re
 | Stored sessions | A raw or hashed stored token still authenticates until it expires (`token-hashing.test.ts`); an anonymised client's session is refused |
 | Auth store | `auth.store.test.ts`: the old persisted token is discarded, the user is kept (version 2 migration) |
 | Gates | `tsc -b` clean; `npm test` 632 in 55 files; `npm run test:server` 562 in 44 files (MariaDB 11.4); lint ratchet 5 of 5; `php -l` on changed files; `npm run verify` and `docs:check` PASS |
-| Not tested | A signed-in browser run of the new `/login` and the My account card (Clerk needs the live origin); the suite on MySQL 8 (CI); a release |
-
-**Left:** after release, `npm run check:live` plus the Phase 5 checks in `docs/DEPLOYMENT.md` 5.6 item 17, then a signed-in look at My account.
+| CI and release | PR #29: all jobs green including the server suite on MySQL 8; `main` fast-forwarded to `ed58064`; the release job succeeded |
+| Live | `npm run check:live` 16 of 16; `client_access.php` and `oauth.php` 404 `Not found.`; `auth.php?action=login` GET and POST 404 `Unknown auth action.`; `?action=me` without a token 401 |
+| Signed in (owner's Chrome, the old persisted session) | `/app/account` loads with the Profile and Sign-in security cards; **Manage sign-in and devices opens Clerk's account panel** (Profile, Security); Settings shows Team & roles, Announcements, Integrations, Audit log, Privacy (no Security or My sessions tab) and no 2FA column |
+| Not tested | A fresh sign-out and email-code sign-in on `/login`; the Add user dialog with a real invite (it would email); CSP report listener on these two screens; a client-role sign-in |
 
 ## 2026-11-09 · Phase 4 released and checked live
 

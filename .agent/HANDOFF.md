@@ -117,3 +117,4 @@ PR #28 CI green (MySQL 8); `main` fast-forwarded to `cbfd527`; the release job s
 - NOT TESTED: a signed-in browser run of the new Login and My account card (Clerk needs the live origin); the server suite on MySQL 8 (CI runs it).
 - Open: owner approval to push, PR and release; confirm every active user signs in through Clerk first. After release run `npm run check:live` and the checks in `docs/DEPLOYMENT.md` 5.6 item 17. Phase 9 drops the legacy tables and `users.totp_*`.
 - Throwaway MariaDB on port 3399 is still running; stop it with `mariadb-admin --no-defaults -h127.0.0.1 -P3399 -uroot shutdown`.
+- Released 2026-11-09 as `ed58064` (PR #29, CI green incl. MySQL 8); live checks 16 of 16, retired routes 404, My account opens Clerk's panel in the owner's signed-in Chrome. Stop the throwaway MariaDB (port 3399) when finished.

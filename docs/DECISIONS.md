@@ -1067,7 +1067,7 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 **Why:** the key's model was `openai/gpt-oss-120b:free`, which OpenRouter rate-limits and withdraws without notice (D-054 already warned of this). **Supersedes** D-054 point 1 for this site.
 
 ## D-057 · Clerk is the only sign-in; the legacy sign-in is retired
-**Date:** 2026-11-09 · **Status:** decided by the owner ("Clerk works fine", roadmap approval 2026-11-08; "Go ahead" for Phase 5). Code on branch `phase-5/clerk-only` (`48a6f3a`, `10f8418`). Not released until the owner approves the release.
+**Date:** 2026-11-09 · **Status:** decided by the owner ("Clerk works fine", roadmap approval 2026-11-08; "Go ahead" for Phase 5). Code on branch `phase-5/clerk-only` (`48a6f3a`, `10f8418`). **Released 2026-11-09 as `ed58064`** (PR #29, CI green including MySQL 8).
 
 1. **What goes.** Password sign-in, forgot and reset, magic links, app two-factor (setup, enable, disable, recovery codes), the session list and revoke, server logout, Google OAuth (`oauth.php`), sign-in by work reference (`client_access.php`), the lock screen, the set-password page and the Settings Security and My sessions tabs. `auth.php` keeps one action, `me`; the others answer 404 "Unknown auth action.". `oauth.php` and `client_access.php` become 404 JSON stubs because a release never deletes server files (the `weather.php` pattern).
 2. **Nobody has a password.** `users` create ignores any password and stores the unusable hash `!`; `invite` creates the same row and emails "sign in with this email address". A person is added by email and signs in with the Clerk email code (D-052). The first super admin still comes from `$SEED_ADMIN_EMAIL` on an empty `users` table, with hash `!`.

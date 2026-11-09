@@ -145,10 +145,9 @@ This is the one list of server work a release cannot carry: SQL, `server/.htacce
 private `config.php`. A change that needs one of them records it here in the same pull request
 (`AGENTS.md`, "Keeping documents current"; `npm run docs:check` enforces it in CI).
 
-**Phase 5 (2026-11-09, D-057, not yet released): no SQL, no `.htaccess` and no `config.php` change is needed.**
+**Phase 5 (2026-11-09, D-057, released as `ed58064`): no SQL, no `.htaccess` and no `config.php` change is needed.**
 The release replaces `auth.php`, `oauth.php`, `client_access.php`, `users.php`, `integrations.php` and the front end.
-Before it goes, the owner confirms every active user can sign in through Clerk (on 2026-11-08 there was 1 active user,
-the owner, with 0 app two-factor accounts). Tables and columns the retired code used (`auth_tokens`, `magic_links`,
+Before it went, a read-only query on 2026-11-09 showed 1 active user (super admin, linked to Clerk, app two-factor off). Tables and columns the retired code used (`auth_tokens`, `magic_links`,
 `password_resets`, `users.totp_*`) stay in place; a stored session token keeps working until it expires, and Phase 9
 drops them after about 30 days. `$REFERENCE_SIGNIN_ENABLED` and `$GOOGLE_*` in the live `config.php` become unused.
 Rollback: `npm run release -- --rollback --go` restores the previous release; no data changes.
