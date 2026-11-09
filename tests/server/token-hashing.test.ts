@@ -1,6 +1,7 @@
 /**
  * K-059: tokens are stored hashed. A copy of the database holds no working
- * credential, and sessions issued before the change keep working.
+ * credential, and sessions issued before the change keep working. Sign-in itself is Clerk (D-057); only
+ * stored session tokens are still read, for the soak.
  */
 import crypto from "node:crypto"
 import { beforeEach, describe, expect, it } from "vitest"
@@ -24,21 +25,8 @@ describe("hashed tokens", () => {
     const legacy = crypto.randomBytes(32).toString("hex")
     sql(`INSERT INTO auth_tokens (user_id, token, expires_at) VALUES (${id}, ${q(legacy)}, NOW() + INTERVAL 1 DAY)`)
     expect((await api("auth.php?action=me", { token: legacy })).status).toBe(200)
-
-    const sessions = await api<Array<{ current: boolean }>>("auth.php?action=sessions", { token: legacy })
-    expect(sessions.json.some((s) => s.current)).toBe(true)
-
-    expect((await api("auth.php?action=logout", { token: legacy, body: {} })).status).toBe(200)
-    expect(one(`SELECT COUNT(*) FROM auth_tokens WHERE user_id = ${id}`)).toBe("0")
-  })
-
-  it("marks the current session and logs out by the hashed row", async () => {
-    const id = createUser({ email: "owner@example.test", role: "super_admin" })
-    const token = await login("owner@example.test")
-    const sessions = await api<Array<{ current: boolean }>>("auth.php?action=sessions", { token })
-    expect(sessions.json).toHaveLength(1)
-    expect(sessions.json[0].current).toBe(true)
-    await api("auth.php?action=logout", { token, body: {} })
-    expect(one(`SELECT COUNT(*) FROM auth_tokens WHERE user_id = ${id}`)).toBe("0")
+    // Once it expires it stops working (the soak ends with Phase 9, D-057).
+    sql(`UPDATE auth_tokens SET expires_at = NOW() - INTERVAL 1 DAY WHERE user_id = ${id}`)
+    expect((await api("auth.php?action=me", { token: legacy })).status).toBe(401)
   })
 })

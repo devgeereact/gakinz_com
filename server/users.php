@@ -3,7 +3,8 @@
  * User & role management (GAkinzOS §6.11 Platform). Admin only.
  *
  *   GET  /users.php                 → list users
- *   POST /users.php?action=create   {name, email, password, role}
+ *   POST /users.php?action=create   {name, email, role[, client_id]}   (no password: people sign in through Clerk)
+ *   POST /users.php?action=invite   {name, email, role}                (create a staff account and email a sign-in notice)
  *   POST /users.php?action=role     {id, role}
  *   POST /users.php?action=status   {id, status}   status: active | suspended
  *
@@ -55,11 +56,9 @@ if ($method === 'POST' && $action === 'create') {
   $in = body();
   $name  = str_field($in, 'name', 200);
   $email = strtolower(str_field($in, 'email', 200));
-  $pass  = (string)($in['password'] ?? '');
   $role  = str_field($in, 'role', 30);
   if ($name === '') fail('A name is required.');
   if (!filter_var($email, FILTER_VALIDATE_EMAIL)) fail('A valid email is required.');
-  if (strlen($pass) < 8) fail('Password must be at least 8 characters.');
   if (!in_array($role, VALID_ROLES, true)) fail('Invalid role.');
   // Only a super_admin may create another super_admin.
   if ($role === 'super_admin' && $admin['role'] !== 'super_admin') fail('Only a super admin can create a super admin.', 403);
@@ -81,7 +80,9 @@ if ($method === 'POST' && $action === 'create') {
   $chk->execute();
   if ($chk->get_result()->fetch_assoc()) fail('A user with that email already exists.', 409);
 
-  $hash = password_hash($pass, PASSWORD_BCRYPT, GK_BCRYPT);
+  // No password: '!' is not a valid hash, so nothing can match it. The person signs in through Clerk with
+  // this email, and the row's role is what they get.
+  $hash = '!';
   $stmt = $conn->prepare('INSERT INTO users (name, email, password_hash, role, client_id) VALUES (?, ?, ?, ?, ?)');
   $stmt->bind_param('ssssi', $name, $email, $hash, $role, $clientId);
   if (!$stmt->execute()) fail('Could not create the user.', 500);
@@ -90,8 +91,9 @@ if ($method === 'POST' && $action === 'create') {
   ok(['id' => $newId], 201);
 }
 
-// Invite a staff member: create the account with a random password, then email a
-// set-password link (7-day token) instead of handing over a temporary password.
+// Invite a staff member: create the account, then email a notice that they can sign in. There is no link or
+// password to send: they sign in through Clerk with this address. The account exists even if the email
+// cannot be sent, and the answer says whether it was.
 if ($method === 'POST' && $action === 'invite') {
   $admin = require_auth($conn, ADMINS);
   $in = body();
@@ -102,38 +104,28 @@ if ($method === 'POST' && $action === 'invite') {
   if (!filter_var($email, FILTER_VALIDATE_EMAIL)) fail('A valid email is required.');
   if (!in_array($role, VALID_ROLES, true) || $role === 'client') fail('Pick a staff role.');
   if ($role === 'super_admin' && $admin['role'] !== 'super_admin') fail('Only a super admin can invite a super admin.', 403);
-  if (($GLOBALS['SMTP_HOST'] ?? '') === '') fail('Email is not configured, so invites cannot be sent.', 503);
 
   $chk = $conn->prepare('SELECT id FROM users WHERE email = ? LIMIT 1');
   $chk->bind_param('s', $email);
   $chk->execute();
   if ($chk->get_result()->fetch_assoc()) fail('A user with that email already exists.', 409);
 
-  $randomPass = bin2hex(random_bytes(16));
-  $hash = password_hash($randomPass, PASSWORD_BCRYPT, GK_BCRYPT);
+  $hash = '!';
   $stmt = $conn->prepare('INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)');
   $stmt->bind_param('ssss', $name, $email, $hash, $role);
   if (!$stmt->execute()) fail('Could not create the user.', 500);
   $uid = $conn->insert_id;
 
-  // Set-password token (reuses password_resets; 7-day window for an invite).
-  $token = bin2hex(random_bytes(32));
-  $exp = (new DateTime('+7 days'))->format('Y-m-d H:i:s');
-  $ins = $conn->prepare('INSERT INTO password_resets (user_id, token, expires_at) VALUES (?, ?, ?)');
-  $stored = token_hash($token);
-  $ins->bind_param('iss', $uid, $stored, $exp);
-  $ins->execute();
+  audit($conn, $admin['id'], 'user_invite', "$email ($role)");
 
   $appUrl = rtrim($GLOBALS['APP_URL'] ?? 'https://gakinz.com', '/');
-  $link = "$appUrl/set-password#token=$token";
   require_once __DIR__ . '/_smtp.php';
-  gk_send_email([
+  $sent = gk_send_email([
     'to' => $email,
-    'subject' => 'You have been invited to GAkinzOS',
-    'body' => "Hello $name,\n\nYou have been added to the GAkinz studio platform. Set your password to get started (link valid 7 days):\n$link\n\nGAkinz",
+    'subject' => 'You have been added to GAkinzOS',
+    'body' => "Hello $name,\n\nYou have been added to the GAkinz studio platform. Open $appUrl/login and sign in with this email address ($email). A one-time code is emailed to you, or you can use Google with the same address.\n\nGAkinz",
   ]);
-  audit($conn, $admin['id'], 'user_invite', "$email ($role)");
-  ok(['id' => $uid], 201);
+  ok(['id' => $uid, 'emailed' => !empty($sent['ok'])], 201);
 }
 
 if ($method === 'POST' && $action === 'role') {

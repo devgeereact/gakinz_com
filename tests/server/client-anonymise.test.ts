@@ -14,7 +14,7 @@ import fs from "node:fs"
 import path from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
 import { WORK_DIR } from "./env"
-import { api, createUser, login, one, PASSWORD, q, resetDb, sql, tokenHash } from "./helpers"
+import { api, createUser, login, one, q, resetDb, sql, tokenHash } from "./helpers"
 
 const OVERRIDES = path.join(WORK_DIR, "overrides.json")
 const switchOn = () => fs.writeFileSync(OVERRIDES, JSON.stringify({ CLIENT_ANONYMISE_ENABLED: true }))
@@ -297,19 +297,18 @@ describe("client anonymisation", () => {
       expect(one(`SELECT company FROM enquiries WHERE id = ${a.enquiryId}`)).toBe("Acme Ltd")
     })
 
-    it("locks the logins out: old session, password and magic link all fail", async () => {
+    it("locks the logins out: old session and any session minted afterwards fail, and no link survives", async () => {
       const link = magicLink(a.boss)
       expect((await anonymise(owner, { id: a.cid, confirm: a.company })).status).toBe(200)
       expect((await api("portal.php", { token: bossSession })).status).toBe(401)
-      for (const email of ["boss@acme.test", "team@acme.test", `anonymised-${a.boss}@invalid`]) {
-        const r = await api<{ token?: string }>("auth.php?action=login", { body: { email, password: PASSWORD } })
-        expect(r.status).toBe(401)
-        expect(r.json.token).toBeUndefined()
-      }
+      // The rows are suspended with an unusable hash, so even a session minted for them is refused (403, suspended).
+      expect(one(`SELECT CONCAT(status, '|', password_hash) FROM users WHERE id = ${a.boss}`)).toBe("suspended|!anonymised")
+      const afterwards = await login(`anonymised-${a.boss}@invalid`)
+      expect((await api("portal.php", { token: afterwards })).status).toBe(403)
+      // The retired sign-in endpoints answer nothing for them (D-057) and the link table is empty.
       const consumed = await api<{ token?: string }>("auth.php?action=magic_consume", { body: { token: link } })
-      expect(consumed.status).toBe(400)
+      expect(consumed.status).toBe(404)
       expect(consumed.json.token).toBeUndefined()
-      await api("auth.php?action=magic_request", { body: { email: `anonymised-${a.boss}@invalid` } })
       expect(one(`SELECT COUNT(*) FROM magic_links WHERE user_id = ${a.boss}`)).toBe("0")
       // The other client's login still works.
       expect(await login("boss@other.test")).toMatch(/\w+/)
