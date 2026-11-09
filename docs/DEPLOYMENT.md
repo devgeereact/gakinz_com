@@ -147,8 +147,8 @@ private `config.php`. A change that needs one of them records it here in the sam
 
 **Phase 7 (2026-11-09, D-059, not yet released): no SQL, no `.htaccess` and no `config.php` change is needed.** The release replaces
 `cron.php`, `tasks.php`, `invoices.php`, `_bootstrap.php` and the front end. `$CHASE_INTERVAL_DAYS` is optional (default 7) and is
-documented in `server/config.php.example`; leave it out. **Before release, read-only:** check that the live cron job exists and how often it
-runs (`crontab -l` on the host, owner-approved), because the reminder change matters most if it runs daily. After release the next cron
+documented in `server/config.php.example`; leave it out. **Read-only check done 2026-11-09 (owner-approved): the host's crontab has no GAkinz entry, so `cron.php` is not scheduled at all (K-145);
+the reminder change therefore has no live effect until a cron entry is added, which is a separate owner decision.** After a cron entry exists the next cron
 run sends no reminder for an invoice reminded in the last 7 days, and no digest if one went in the last 6 (an invoice reminded by hand
 before the release has an old-format audit line, so it may be reminded once more at the first run). Rollback: `npm run release --
 --rollback --go`; nothing in the database changes.

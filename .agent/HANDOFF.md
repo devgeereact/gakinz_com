@@ -133,3 +133,4 @@ PR #28 CI green (MySQL 8); `main` fast-forwarded to `cbfd527`; the release job s
 - NOT TESTED: the new dialogs and landing in a browser; release; MySQL 8 (CI); the live cron schedule.
 - Open: owner approval to push, PR and release; read-only `crontab -l` first.
 - Throwaway MariaDB on port 3399 is running; stop it with `mariadb-admin --no-defaults -h127.0.0.1 -P3399 -uroot shutdown`.
+- Finding 2026-11-09: read-only `crontab -l` shows no GAkinz cron entry (K-145). Reminders/billing/digest/uptime/prune are not scheduled live. Needs an owner decision before adding one.

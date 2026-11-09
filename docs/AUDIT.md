@@ -14,7 +14,8 @@ Every audit, review and checklist run for this project, newest first. Add new re
 | Tasks | `tests/server/tasks.test.ts` (12 tests, 11 red first): update title/assignee/due date, only sent fields change, empty clears, trimmed and capped, bad title/date refused with nothing written, 404 for missing/deleted, 403 for trainer and client, 401 signed out; create refuses a malformed date; a move to the same status is 200 |
 | Client models | `clientEditModel`, `taskEditModel`, `quotePrefillModel` (written red first) and the new `deepLink` helpers: 21 tests |
 | Gates | `tsc -b` clean; `npm test` 660 in 59 files; `npm run test:server` 608 in 47 files (MariaDB 11.4); lint ratchet 5 of 5; `docs:check` PASS |
-| Not tested | The edit dialogs, the quote landing and the prefilled quote in a browser; a release; MySQL 8 (CI); whether the live cron runs daily; a real reminder to a real client (never sent by an agent) |
+| Live cron | Read-only `crontab -l` on the host (owner-approved, keys redacted): **no GAkinz cron entry exists**, only other projects and a backup script. So nothing was re-emailing clients, and equally no retainer billing, uptime check, prune or digest runs (K-145) |
+| Not tested | The edit dialogs, the quote landing and the prefilled quote in a browser; a release; MySQL 8 (CI); a real reminder to a real client (never sent by an agent) |
 
 ## 2026-11-09 (latest) · Phase 6 released and checked live: certificates end to end (`01d2269`)
 
