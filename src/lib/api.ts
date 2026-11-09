@@ -3,7 +3,7 @@
 // in development the Vite server proxies `/*.php` to the live API
 // (vite.config.ts), so the browser never makes a cross-origin call and the live
 // ALLOWED_ORIGINS list does not need a localhost entry.
-import { getStoredToken, useAuth, type AuthUser, type Role } from "@/store/auth.store"
+import { useAuth, type AuthUser, type Role } from "@/store/auth.store"
 import { clerkEnabled, clerkToken } from "@/lib/clerk"
 
 export const API_BASE = ""
@@ -96,10 +96,9 @@ const bodyError = (body: unknown): string | undefined =>
     ? (body as { error: string }).error
     : undefined
 
-/** The bearer for the next request: a legacy session token (magic link, reference sign-in) if one is held, else a fresh Clerk token. */
+/** The bearer for the next request: a fresh Clerk session token (the only sign-in, D-057), or none. */
 async function authToken(): Promise<string | null> {
-  const stored = getStoredToken()
-  if (stored || !clerkEnabled) return stored
+  if (!clerkEnabled) return null
   const r = await clerkToken()
   return r.kind === "token" ? r.token : null
 }
@@ -1032,21 +1031,17 @@ export type ManagedUser = {
 }
 export const users = {
   list: () => api.get<ManagedUser[]>("/users.php"),
-  create: (payload: {
-    name: string
-    email: string
-    password: string
-    role: Role
-    client_id?: number | null
-  }) => api.post<{ id: number }>("/users.php?action=create", payload),
+  // Adds a person by email. There is no password: they sign in with the Clerk email code (D-057).
+  create: (payload: { name: string; email: string; role: Role; client_id?: number | null }) =>
+    api.post<{ id: number }>("/users.php?action=create", payload),
   setRole: (id: number, role: Role) => api.post<{ ok: boolean }>("/users.php?action=role", { id, role }),
   setStatus: (id: number, status: UserStatus) =>
     api.post<{ ok: boolean }>("/users.php?action=status", { id, status }),
   setRate: (id: number, cost_rate: number) =>
     api.post<{ ok: boolean }>("/users.php?action=rate", { id, cost_rate }),
-  // Invite a staff member (emails a set-password link instead of a temp password).
+  // Add a staff member and email them how to sign in. `emailed` is false when the email could not be sent.
   invite: (payload: { name: string; email: string; role: Role }) =>
-    api.post<{ id: number }>("/users.php?action=invite", payload),
+    api.post<{ id: number; emailed: boolean }>("/users.php?action=invite", payload),
 }
 
 // Audit log (§6.1).
@@ -1128,69 +1123,11 @@ export type ClientAnonymisation = {
 export type EnquiryErasePreview = { id: number; other_enquiries: number; blocked: string | null; message: string | null }
 export type EnquiryErasure = { erased: true; id: number; bookings: number; booking_events: number; audit_scrubbed: number }
 
-// Client sign-in by reference and email (client_access.php, spec 6.1). Switched
-// off on the server by default: every route answers 404 and the sign-in page
-// shows nothing. The token goes in the POST body, never in a URL.
-export const clientAccess = {
-  status: () => api.get<{ enabled?: unknown }>("/client_access.php?action=status"),
-  request: (reference: string, email: string) =>
-    api.post<{ ok: boolean; message: string }>("/client_access.php?action=request", { reference, email }),
-  redeem: (token: string) => api.post<LoginResponse>("/client_access.php?action=redeem", { token }),
-}
-
-// Auth (§6.1). Token + user persisted in the auth store; api attaches the bearer.
-export type LoginResponse = { token: string; expires: string; user: AuthUser }
+// Who is signed in. Sign-in itself is Clerk (D-052, D-057): the server links a Clerk session to a users row by
+// email and answers `me` with that row. totp_enabled is the caller's own app two-factor state; absent on a
+// server that predates it, null on a DB without the totp columns.
 export const auth = {
-  // `code` is the 6-digit TOTP, sent only when the account has 2FA enabled. A
-  // first attempt without it returns 401 + details.two_factor_required.
-  login: (email: string, password: string, code?: string) =>
-    api.post<LoginResponse>("/auth.php?action=login", { email, password, ...(code ? { code } : {}) }),
-  twofaSetup: () => api.post<{ secret: string; otpauth: string }>("/auth.php?action=twofa_setup", {}),
-  twofaEnable: (code: string) => api.post<{ ok: boolean; recovery_codes: string[] }>("/auth.php?action=twofa_enable", { code }),
-  twofaDisable: (code: string) => api.post<{ ok: boolean }>("/auth.php?action=twofa_disable", { code }),
-  twofaRecodes: (code: string) => api.post<{ ok: boolean; recovery_codes: string[] }>("/auth.php?action=twofa_recodes", { code }),
-  // Passwordless magic-link login.
-  magicRequest: (email: string) => api.post<{ ok: boolean }>("/auth.php?action=magic_request", { email }),
-  magicConsume: (token: string) => api.post<LoginResponse>("/auth.php?action=magic_consume", { token }),
-  ssoStatus: () => api.get<{ google: boolean }>("/oauth.php?action=status"),
-  // totp_enabled is the caller's own two-factor state; absent on a server that
-  // predates it, null on a DB without the totp columns.
   me: () => api.get<{ user: AuthUser; totp_enabled?: boolean | null }>("/auth.php?action=me"),
-  logout: () => api.post<{ ok: boolean }>("/auth.php?action=logout", {}),
-  // Revokes a token other than the stored one (K-033: the token held before the
-  // lock screen was unlocked). Sends that token explicitly and, unlike
-  // `request`, never clears the stored session, which belongs to the new token.
-  revokeToken: async (token: string): Promise<ApiResult<{ ok: boolean }>> => {
-    try {
-      const res = await fetch(`${API_BASE}/auth.php?action=logout`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: "{}",
-      })
-      const text = await res.text()
-      const body = parseJsonBody(text) ?? null
-      if (!res.ok) return { ok: false, error: bodyError(body) || statusError(res.status), status: res.status }
-      return { ok: true, data: body as { ok: boolean } }
-    } catch {
-      return { ok: false, error: NETWORK_ERROR }
-    }
-  },
-  forgot: (email: string) => api.post<{ ok: boolean }>("/auth.php?action=forgot", { email }),
-  reset: (token: string, password: string) =>
-    api.post<{ ok: boolean }>("/auth.php?action=reset", { token, password }),
-  sessions: () => api.get<Session[]>("/auth.php?action=sessions"),
-  revokeSession: (id: number) => api.post<{ ok: boolean }>("/auth.php?action=revoke", { id }),
-}
-
-// Active login sessions (device tracking) for the signed-in user.
-export type Session = {
-  id: number
-  user_agent: string | null
-  ip: string | null
-  last_seen_at: string | null
-  created_at: string
-  expires_at: string
-  current: boolean
 }
 
 // Design Workspace — Figma review rounds per project (2-round limit) + sign-off.

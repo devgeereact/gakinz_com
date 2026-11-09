@@ -181,8 +181,8 @@ describe("portal is narrowed to match server/portal.php", () => {
 })
 
 describe("My account (K-023, K-024)", () => {
-  // auth.php's sessions, revoke and twofa_* actions take no role list and act
-  // only on the caller's own user id, so every signed-in role gets the screen.
+  // auth.php me takes no role list and answers only for the caller's own user, so
+  // every signed-in role gets the screen.
   it("opens for every signed-in role, client included", () => {
     for (const role of [...STAFF_ROLES, "client" as Role]) {
       expect(canAccess(role, "account"), `${role} should reach My account`).toBe(true)

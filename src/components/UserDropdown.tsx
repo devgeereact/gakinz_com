@@ -13,7 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { auth as authApi } from "@/lib/api"
 import { ROLE_LABEL } from "@/lib/access"
 import { useAuth } from "@/store/auth.store"
 
@@ -39,7 +38,6 @@ export function UserDropdown() {
   const role = user ? ROLE_LABEL[user.role] ?? user.role : ""
 
   const logout = async () => {
-    await authApi.logout()
     clear()
     if (clerkEnabled) await clerkSignOut().catch(() => {})
     navigate("/login", { replace: true })

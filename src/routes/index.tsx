@@ -1,5 +1,5 @@
 import type { ComponentType } from "react"
-import { createBrowserRouter } from "react-router-dom"
+import { createBrowserRouter, Navigate } from "react-router-dom"
 
 // 🌐 PUBLIC CORPORATE SITE: eager, and shared with the build-time prerender
 import { publicRoute } from "./public"
@@ -25,8 +25,8 @@ export const router = createBrowserRouter([
   // 🔗 Public read-only proposal (share link) — standalone, lazy
   { path: "p/:token", lazy: lz(() => import("@/marketing/pages/ProposalView")) },
 
-  // 🔑 Set / reset password (invite + forgot flows) — standalone, lazy
-  { path: "set-password", lazy: lz(() => import("@/app/SetPassword")) },
+  // 🔑 Old set-password links (invites and resets sent before D-057) now land on the one sign-in.
+  { path: "set-password", element: <Navigate to="/login" replace /> },
 
   // 🌐 PUBLIC CORPORATE SITE (gakinz.com), prerendered at build time
   publicRoute,

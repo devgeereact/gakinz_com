@@ -72,9 +72,8 @@ export const MODULE_ROLES: Record<string, Role[]> = {
   // The client branch is unchanged and remains the security boundary: it
   // derives the client id from the token and ignores any supplied parameter.
   portal: ["super_admin", "admin", "manager", "client"],
-  // My account: every signed-in role, client included. auth.php's sessions,
-  // revoke and twofa_* actions call require_auth($conn) with no role list and
-  // act only on the caller's own user id, so this mirrors the server.
+  // My account: every signed-in role, client included. It shows only the caller's own
+  // record (auth.php me, no role list) and opens Clerk's account panel (D-057).
   account: [...ALL_STAFF, "client"],
 }
 

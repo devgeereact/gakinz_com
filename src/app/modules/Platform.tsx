@@ -36,7 +36,6 @@ import { TableSkeleton } from "@/app/components/TableSkeleton"
 import { users, audit, announcements, integrations, privacy, downloadName, clients as clientsApi, type RetentionReport, type ManagedUser, type AuditEntry, type Client, type Announcement, type IntegrationStatus } from "@/lib/api"
 import { useAuth, type Role } from "@/store/auth.store"
 import { exportOutcome, PRIVACY_NOT_AVAILABLE, RETENTION_NOT_AVAILABLE, retentionState } from "@/app/modules/privacyToolsModel"
-import { TwoFactorPanel, SessionsPanel } from "@/app/components/AccountSecurity"
 
 const ROLES: Role[] = ["super_admin", "admin", "manager", "trainer", "editor", "employee", "client"]
 const ROLE_LABEL: Record<Role, string> = {
@@ -118,27 +117,19 @@ export default function Platform() {
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="mb-5 flex w-full">
           <TabsTrigger value="team">Team &amp; roles</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
           <TabsTrigger value="announcements">Announcements</TabsTrigger>
           <TabsTrigger value="integrations">Integrations</TabsTrigger>
-          <TabsTrigger value="sessions">My sessions</TabsTrigger>
           <TabsTrigger value="audit">Audit log</TabsTrigger>
           <TabsTrigger value="privacy">Privacy</TabsTrigger>
         </TabsList>
         <TabsContent value="team" className="mt-0">
           <TeamTab open={addOpen} setOpen={setAddOpen} />
         </TabsContent>
-        <TabsContent value="security" className="mt-0">
-          <TwoFactorPanel />
-        </TabsContent>
         <TabsContent value="announcements" className="mt-0">
           <AnnouncementsTab />
         </TabsContent>
         <TabsContent value="integrations" className="mt-0">
           <IntegrationsTab />
-        </TabsContent>
-        <TabsContent value="sessions" className="mt-0">
-          <SessionsPanel />
         </TabsContent>
         <TabsContent value="audit" className="mt-0">
           <AuditTab />
@@ -154,7 +145,7 @@ export default function Platform() {
 function TeamTab({ open, setOpen }: { open: boolean; setOpen: (open: boolean) => void }) {
   const me = useAuth((s) => s.user)
   const { data: items, error, loading, reload: load, setData: setItems } = useLoad<ManagedUser[]>(() => users.list(), [])
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "employee" as Role, client_id: "" })
+  const [form, setForm] = useState({ name: "", email: "", role: "employee" as Role, client_id: "" })
   const [clientList, setClientList] = useState<Client[]>([])
   const [saving, setSaving] = useState(false)
 
@@ -163,53 +154,37 @@ function TeamTab({ open, setOpen }: { open: boolean; setOpen: (open: boolean) =>
     clientsApi.list().then((r) => r.ok && setClientList(r.data))
   }, [])
 
-  const createUser = async () => {
-    if (!form.name.trim() || !form.email.trim() || form.password.length < 8) {
-      toast.error("Name, email and an 8+ character password are required.")
+  // One action. Staff are added and emailed how to sign in; a client account is bound to its client record and
+  // is not emailed. Nobody gets a password: everyone signs in with the Clerk email code (D-057).
+  const addUser = async () => {
+    if (!form.name.trim() || !form.email.trim()) {
+      toast.error("Name and email are required.")
       return
     }
-    if (form.role === "client" && !form.client_id) {
+    const isClient = form.role === "client"
+    if (isClient && !form.client_id) {
       toast.error("Pick the client this account belongs to.")
       return
     }
     setSaving(true)
-    const res = await users.create({
-      name: form.name,
-      email: form.email,
-      password: form.password,
-      role: form.role,
-      client_id: form.role === "client" ? Number(form.client_id) : null,
-    })
+    const res = isClient
+      ? await users.create({ name: form.name, email: form.email, role: form.role, client_id: Number(form.client_id) })
+      : await users.invite({ name: form.name, email: form.email, role: form.role })
     setSaving(false)
     if (res.ok) {
-      toast.success("User created.")
-      setForm({ name: "", email: "", password: "", role: "employee", client_id: "" })
+      const emailed = "emailed" in res.data ? res.data.emailed : false
+      toast.success(
+        isClient
+          ? "Client account added. Tell them to sign in with this email address."
+          : emailed
+            ? "User added. They have been emailed how to sign in."
+            : "User added, but the email could not be sent. Tell them to sign in with this email address."
+      )
+      setForm({ name: "", email: "", role: "employee", client_id: "" })
       setOpen(false)
       load()
     } else {
-      toast.error(res.error || "Could not create the user.")
-    }
-  }
-
-  const inviteUser = async () => {
-    if (!form.name.trim() || !form.email.trim()) {
-      toast.error("Name and email are required to invite.")
-      return
-    }
-    if (form.role === "client") {
-      toast.error("Invites are for staff. Create a client account from the client record.")
-      return
-    }
-    setSaving(true)
-    const res = await users.invite({ name: form.name, email: form.email, role: form.role })
-    setSaving(false)
-    if (res.ok) {
-      toast.success("Invite sent. They'll get a set-password link by email.")
-      setForm({ name: "", email: "", password: "", role: "employee", client_id: "" })
-      setOpen(false)
-      load()
-    } else {
-      toast.error(res.error || "Could not send the invite.")
+      toast.error(res.error || "Could not add the user.")
     }
   }
 
@@ -249,10 +224,6 @@ function TeamTab({ open, setOpen }: { open: boolean; setOpen: (open: boolean) =>
               <Input id="uemail" type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} className="mt-1.5" />
             </div>
             <div>
-              <Label htmlFor="upass">Temporary password</Label>
-              <Input id="upass" type="text" value={form.password} onChange={(e) => setForm((f) => ({ ...f, password: e.target.value }))} className="mt-1.5" placeholder="8+ characters" />
-            </div>
-            <div>
               <Label htmlFor="platform-sel1">Role</Label>
               <Select value={form.role} onValueChange={(v) => setForm((f) => ({ ...f, role: v as Role }))}>
                 <SelectTrigger id="platform-sel1" className="mt-1.5">
@@ -289,12 +260,9 @@ function TeamTab({ open, setOpen }: { open: boolean; setOpen: (open: boolean) =>
             )}
           </div>
           <DialogFooter className="flex-wrap gap-2 sm:gap-2">
-            <Button variant="outline" onClick={inviteUser} disabled={saving} title="Email a set-password link instead of setting a password">
-              Send invite
-            </Button>
-            <Button onClick={createUser} disabled={saving}>
+            <Button onClick={addUser} disabled={saving}>
               {saving && <Loader2 className="animate-spin" />}
-              Create user
+              Add user
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -326,7 +294,6 @@ function TeamTab({ open, setOpen }: { open: boolean; setOpen: (open: boolean) =>
                 <TableHead>Name</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead className="text-right">Cost £/h</TableHead>
-                <TableHead>2FA</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>
                   <span className="sr-only">Action</span>
@@ -371,9 +338,6 @@ function TeamTab({ open, setOpen }: { open: boolean; setOpen: (open: boolean) =>
                         user={u}
                         onSaved={(rate) => setItems((xs) => xs.map((x) => (x.id === u.id ? { ...x, cost_rate: rate } : x)))}
                       />
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={u.totp_enabled ? "ok" : "warn"}>{u.totp_enabled ? "On" : "Off"}</Badge>
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={u.status} />

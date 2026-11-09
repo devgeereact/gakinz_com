@@ -20,37 +20,37 @@ export type AuthUser = {
 }
 
 type AuthState = {
-  token: string | null
   user: AuthUser | null
-  setAuth: (token: string, user: AuthUser) => void
   setUser: (user: AuthUser) => void
   clear: () => void
 }
 
-// Persisted to localStorage under "gk-auth". lib/api.ts reads the token from the
-// same key to attach the Authorization header (avoids an import cycle).
+// Persisted to localStorage under "gk-auth": only the user (name, email, role), for a fast first paint. The
+// session itself is Clerk's, and lib/api.ts asks Clerk for a fresh token on each request (D-057). Nothing
+// here is a credential.
 export const AUTH_STORAGE_KEY = "gk-auth"
+
+/**
+ * What survives from an older stored sign-in. Before Phase 5 the store also held a session token; a browser
+ * that still has one drops it here and keeps only the user. Anything unusable means signed out.
+ */
+export function migrateAuthState(persisted: unknown): { user: AuthUser | null } {
+  const user = persisted && typeof persisted === "object" && !Array.isArray(persisted) ? (persisted as { user?: unknown }).user : null
+  return { user: user && typeof user === "object" && !Array.isArray(user) ? (user as AuthUser) : null }
+}
 
 export const useAuth = create<AuthState>()(
   persist(
     (set) => ({
-      token: null,
       user: null,
-      setAuth: (token, user) => set({ token, user }),
       setUser: (user) => set({ user }),
-      clear: () => set({ token: null, user: null }),
+      clear: () => set({ user: null }),
     }),
-    { name: AUTH_STORAGE_KEY },
+    {
+      name: AUTH_STORAGE_KEY,
+      version: 2,
+      partialize: (state) => ({ user: state.user }),
+      migrate: (persisted) => migrateAuthState(persisted) as unknown as AuthState,
+    },
   ),
 )
-
-// Plain accessor for non-React code (api layer).
-export function getStoredToken(): string | null {
-  try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY)
-    if (!raw) return null
-    return JSON.parse(raw)?.state?.token ?? null
-  } catch {
-    return null
-  }
-}

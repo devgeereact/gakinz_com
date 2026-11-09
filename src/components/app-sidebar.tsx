@@ -16,7 +16,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import { useSidebar } from "@/components/ui/sidebar-context"
-import { auth, leads as leadsApi, support as supportApi } from "@/lib/api"
+import { leads as leadsApi, support as supportApi } from "@/lib/api"
 import { canAccess } from "@/lib/access"
 import { useAuth, type Role } from "@/store/auth.store"
 
@@ -82,7 +82,6 @@ export function AppSidebar({ onHoverChange, ...props }: AppSidebarProps) {
   }, [location.pathname, setOpenMobile])
 
   const onLogout = async () => {
-    await auth.logout() // best-effort: the server deletes the token
     clear() // drop the local session regardless
     if (clerkEnabled) await clerkSignOut().catch(() => {})
     navigate("/login", { replace: true })

@@ -10,7 +10,6 @@ import { UserDropdown } from "@/components/UserDropdown"
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar"
 import { useSidebar } from "@/components/ui/sidebar-context"
 import ClockPill from "@/app/components/ClockPill"
-import LockScreen from "@/app/components/LockScreen"
 import NotificationBell from "@/app/components/NotificationBell"
 import { cn } from "@/lib/utils"
 
@@ -77,7 +76,6 @@ export default function AppLayout() {
 
   return (
     <SidebarProvider open={isExpanded} onOpenChange={setOpen}>
-      <LockScreen />
       <AppSidebar onHoverChange={setHovered} />
 
       <SidebarInset className="min-w-0 bg-background">

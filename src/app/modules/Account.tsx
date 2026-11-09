@@ -1,15 +1,14 @@
 import { useEffect } from "react"
 import { useLocation } from "react-router-dom"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TwoFactorPanel, SessionsPanel } from "@/app/components/AccountSecurity"
+import SignInSecurity from "@/app/components/SignInSecurity"
 import { DeletionRequestCard } from "@/app/components/DeletionRequest"
 import { PageHeader } from "@/app/components/page-kit"
 import { useAuth } from "@/store/auth.store"
 import { ROLE_LABEL } from "@/lib/access"
 
 // My account (K-023, K-024). Open to every signed-in role, client included.
-// Everything here acts on the caller's own account only: auth.php resolves the
-// user from the bearer token and ignores any user id in the request.
+// Everything here acts on the caller's own account only. Sign-in security is Clerk's (D-057).
 export default function Account() {
   const me = useAuth((s) => s.user)
   const { hash } = useLocation()
@@ -22,7 +21,7 @@ export default function Account() {
 
   return (
     <div>
-      <PageHeader title="My account" subtitle="Your profile, sign-in security and signed-in devices." />
+      <PageHeader title="My account" subtitle="Your profile and sign-in security." />
 
       <div className="grid items-start gap-4 min-[901px]:grid-cols-2">
         <Card aria-labelledby="account-profile">
@@ -48,14 +47,12 @@ export default function Account() {
           </CardContent>
         </Card>
 
-        {/* TwoFactorPanel is shared with Settings; `bare` drops its own frame
-            so this card is the only one. */}
         <Card id="security" aria-labelledby="account-security" className="scroll-mt-20">
           <CardHeader className="flex-row items-center gap-2.5 space-y-0">
             <CardTitle id="account-security">Sign-in security</CardTitle>
           </CardHeader>
           <CardContent>
-            <TwoFactorPanel bare />
+            <SignInSecurity />
           </CardContent>
         </Card>
       </div>
@@ -65,13 +62,6 @@ export default function Account() {
           <DeletionRequestCard email={me.email} />
         </div>
       )}
-
-      <section aria-labelledby="account-sessions" className="mt-6 min-w-0">
-        <h2 id="account-sessions" className="mb-3 font-display text-[1.05rem] font-semibold leading-tight tracking-[-0.01em]">
-          Signed-in devices
-        </h2>
-        <SessionsPanel />
-      </section>
     </div>
   )
 }
