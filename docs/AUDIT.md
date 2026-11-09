@@ -2,7 +2,7 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
-## 2026-11-09 (Phase 7) · Daily-flow speed-ups checked locally (branch `phase-7/daily-flow`, not released)
+## 2026-11-09 (Phase 7) · Daily-flow speed-ups released and checked live (`825600e`)
 
 **Scope:** D-059, K-141 to K-144. **Method:** tests first for every logic change, a fake mail server for the reminder tests, mutation checks on the guards, then the full gates.
 
@@ -15,7 +15,8 @@ Every audit, review and checklist run for this project, newest first. Add new re
 | Client models | `clientEditModel`, `taskEditModel`, `quotePrefillModel` (written red first) and the new `deepLink` helpers: 21 tests |
 | Gates | `tsc -b` clean; `npm test` 660 in 59 files; `npm run test:server` 608 in 47 files (MariaDB 11.4); lint ratchet 5 of 5; `docs:check` PASS |
 | Live cron | Read-only `crontab -l` on the host (owner-approved, keys redacted): **no GAkinz cron entry exists**, only other projects and a backup script. So nothing was re-emailing clients, and equally no retainer billing, uptime check, prune or digest runs (K-145) |
-| Not tested | The edit dialogs, the quote landing and the prefilled quote in a browser; a release; MySQL 8 (CI); a real reminder to a real client (never sent by an agent) |
+| CI and release | PR #31: all jobs green including the server suite on MySQL 8 (the fake-mail tests too); `main` fast-forwarded to `825600e`; the release job succeeded; `npm run check:live` 16 of 16; `tasks.php?action=update` and `clients.php?action=update` without a token give 401; `cron.php` over the web without a key gives 403 |
+| Not tested | The edit dialogs, the quote landing and the prefilled quote in a browser; MySQL 8 (CI); a real reminder to a real client (never sent by an agent) |
 
 ## 2026-11-09 (latest) · Phase 6 released and checked live: certificates end to end (`01d2269`)
 

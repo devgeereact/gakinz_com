@@ -145,7 +145,7 @@ This is the one list of server work a release cannot carry: SQL, `server/.htacce
 private `config.php`. A change that needs one of them records it here in the same pull request
 (`AGENTS.md`, "Keeping documents current"; `npm run docs:check` enforces it in CI).
 
-**Phase 7 (2026-11-09, D-059, not yet released): no SQL, no `.htaccess` and no `config.php` change is needed.** The release replaces
+**Phase 7 (2026-11-09, D-059, released as `825600e`): no SQL, no `.htaccess` and no `config.php` change is needed.** The release replaces
 `cron.php`, `tasks.php`, `invoices.php`, `_bootstrap.php` and the front end. `$CHASE_INTERVAL_DAYS` is optional (default 7) and is
 documented in `server/config.php.example`; leave it out. **Read-only check done 2026-11-09 (owner-approved): the host's crontab has no GAkinz entry, so `cron.php` is not scheduled at all (K-145);
 the reminder change therefore has no live effect until a cron entry is added, which is a separate owner decision.** After a cron entry exists the next cron

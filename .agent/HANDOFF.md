@@ -134,3 +134,4 @@ PR #28 CI green (MySQL 8); `main` fast-forwarded to `cbfd527`; the release job s
 - Open: owner approval to push, PR and release; read-only `crontab -l` first.
 - Throwaway MariaDB on port 3399 is running; stop it with `mariadb-admin --no-defaults -h127.0.0.1 -P3399 -uroot shutdown`.
 - Finding 2026-11-09: read-only `crontab -l` shows no GAkinz cron entry (K-145). Reminders/billing/digest/uptime/prune are not scheduled live. Needs an owner decision before adding one.
+- Released 2026-11-09 as `825600e` (PR #31, CI green incl. MySQL 8); `check:live` 16 of 16; update routes 401 anonymously; web cron 403. Dialogs not seen in a browser. Stop the throwaway MariaDB (port 3399) when finished.
