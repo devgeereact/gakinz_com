@@ -1077,3 +1077,16 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 6. **Why.** Two sign-in systems meant two attack surfaces, a reset flow that never emailed (K-132) and handlers unreachable in the Clerk build (K-133). One owner is the only active user and already signs in through Clerk.
 
 **Supersedes** D-052 point 3 (a build without the Clerk key keeps the old sign-in: it now shows "Sign-in is not set up") and point 4 ("Not removed yet"). Google sign-in through Clerk (K-117) is unaffected; only the app's own `oauth.php` went. The reference sign-in plan in `docs/PRODUCT-SPEC.md` 6.1 is withdrawn.
+
+## D-058 · Certificates are issued in the CMS, and the public check is uniform and throttled
+**Date:** 2026-11-09 · **Status:** decided by the owner ("build and fix certificate issuing", 2026-11-08); the design choices below were mine under that approval and the best-practice defaults the owner asked for. Code on branch `phase-6/certificates` (`b05da25`), not released yet.
+
+1. **Who.** Super admin and admin only (`CERT_ROLES`). A certificate says someone completed something; the owner roles are the only ones who should say it or take it back.
+2. **Reference.** `GK-XXXX-XXXX-XXXX`, twelve characters from a 30-character alphabet without 0, 1, I, L, O or U, drawn with `random_int()` (60 bits). It carries no sequence, name or date, so one reference tells nobody another. A clash on the unique column retries up to five times.
+3. **Revoke, never delete.** Revoking sets `revoked_at`; the row stays in the register and in the audit log. It cannot be undone from the screen; a mistake is fixed by issuing a new certificate. No reinstate action (out of scope).
+4. **Public check shows only** the reference, recipient, programme and the issue date. A revoked, unknown, malformed or wildcard reference all get the same 404 "No matching certificate.", so the answer never says which. The answer is `no-store`, so a revoke takes effect at once.
+5. **Throttle.** Each miss writes one `certificate_lookup_miss` audit row (IP, no detail, so the guess is not kept). Twenty misses in ten minutes from one connection gives 429 for every lookup, a real reference included, until the window passes. Hits write nothing. The limit is per connection and Cloudflare's edge address can be shared (K-102), so it is deliberately generous.
+6. **No schema change.** The `certificates` table already had everything needed. There is no `created_by`; who issued or revoked is in `audit_log` (`certificate_issue`, `certificate_revoke`, detail = the reference, never the recipient's name).
+7. **Out:** payments, bulk import, a printable certificate, email delivery and a reinstate action. The screen copies the public link for the owner to send.
+
+**Why:** `/verify` read a table nothing could write (K-134), the old ids were short and unthrottled (K-061), and a verify page without data implied accreditation that did not exist.

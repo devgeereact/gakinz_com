@@ -43,7 +43,7 @@ section 4.
 | `auth_tokens` | Legacy session tokens, stored hashed. **Retired 2026-11-09 (D-057): nothing writes new rows; existing rows still authenticate until they expire, `cron.php` `prune` deletes them a day later, and the table is dropped in Phase 9.** Was: session tokens | The browser holds 64 hex characters; the row holds `token_hash()` of them (62 characters) since 2026-10-17, or the raw value for an older session (K-059). `user_agent`, `ip`, `last_seen_at` drive the active-sessions list |
 | `magic_links` | Passwordless sign-in. **Retired 2026-11-09 (D-057), unused; dropped in Phase 9** | Was short lived and single use; also held the reference sign-in links of `client_access.php` (never switched on) |
 | `password_resets` | Reset and invite tokens. **Retired 2026-11-09 (D-057), unused; dropped in Phase 9** | Invites no longer write a row: they email how to sign in |
-| `audit_log` | Record of sensitive actions | Also doubles as the store for the AI daily cap (it held the login throttle until D-057). See section 5 |
+| `audit_log` | Record of sensitive actions | Also doubles as the store for the AI daily cap and the certificate-lookup throttle (it held the login throttle until D-057). See section 5 |
 
 ### Sales
 
@@ -86,7 +86,7 @@ section 4.
 | `comm_threads`, `comm_messages` | Conversation log tied to a client or project | `channel` is email, sms, whatsapp, call, meeting, client or internal. `direction` is out, in or note. Most messages are **recorded**, not sent. Email, SMS and WhatsApp can genuinely send |
 | `files` | File metadata | Binary lives on disk under `server/uploads/`, which is gitignored. Optional `share_token`, expiring when issued by `files.php?action=share` and **non-expiring** when issued by `work.php?action=addImage`. See section 7. `client_visible` (TINYINT 1, default 0) and `shared_at` (TIMESTAMP, null) were added 2026-10-19 (SQL 18): staff switch a file on for the client's portal with `files.php?action=client_share`, and `shared_at` keeps the first time it was shown (cleared when hidden). Off by default, so nothing already stored becomes visible. This is separate from `share_token`: a visible file is still reached only by its client, signed in |
 | `client_feedback` | Private delivery feedback, added 2026-10-16 | `client_id`, optional `project_id` (must belong to that client), `source` (portal or owner), optional `rating` 1 to 5, `went_well`, `could_improve`, `follow_up_ok`. `may_publish` is the client's separate permission to quote it and defaults to 0; `attribution` is kept only with it. `follow_up` (new, following_up, closed) and `owner_note` are the owner's. **Never returned to any client**, not even its author |
-| `certificates` | Publicly verifiable certificates | `public_id` is the reference used by `/verify/:id`. `revoked_at` hides a revoked one |
+| `certificates` | Publicly verifiable certificates | `public_id` is the reference used by `/verify/:id`, shaped `GK-XXXX-XXXX-XXXX` (a 30-character alphabet, 60 random bits; built by `certificates.php` since 2026-11-09, D-058). `revoked_at` hides a revoked one. No issuer column: who issued or revoked is in `audit_log` (`certificate_issue`, `certificate_revoke`). Nothing links it to a client |
 
 ### Content and platform
 
@@ -230,7 +230,7 @@ SELECT share_token, COUNT(*) c FROM files
 See `docs/DEPLOYMENT.md` for the order, and `docs/DECISIONS.md` D-029 for why the index
 matters.
 
-## 5. Two load-bearing uses of `audit_log`
+## 5. Three load-bearing uses of `audit_log`
 
 Worth knowing before anyone prunes that table.
 
@@ -239,7 +239,11 @@ Worth knowing before anyone prunes that table.
 2. **AI daily cap.** `ai.php` counts `ai_call` rows for the user since `CURDATE()` and returns
    429 past the per-role limit.
 
-Truncating `audit_log` therefore resets every AI quota.
+3. **Certificate lookup throttle (2026-11-09, D-058).** `verify.php` writes one
+   `certificate_lookup_miss` row (IP, no detail) per failed lookup and answers 429 once an IP has 20
+   in the last 10 minutes. A hit writes nothing.
+
+Truncating `audit_log` therefore resets every AI quota and every certificate throttle.
 
 ## 6. Degradation before migration
 

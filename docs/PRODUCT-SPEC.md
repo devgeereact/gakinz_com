@@ -156,7 +156,7 @@ hero, services, process, pricing, FAQs and contact copy come from published Site
 | `/resources`, `/resources/:slug` | Resources index and article | `site.ts` `insights` plus live blog |
 | `/contact` | Contact | `site.ts`, posts to `contact.php` |
 | `/privacy`, `/terms`, `/cookies` | Legal | `Legal.tsx` |
-| `/verify/:id` | Certificate check | `verify.php` |
+| `/verify`, `/verify/:id` | Certificate check: a reference form, then the result (found, no match, too many checks, could not be reached); never prerendered or indexed | `verify.php` (Phase 6, D-058) |
 | `/p/:token` | Read-only shared proposal | `proposals.php` share token |
 | `/login` (`/set-password` redirects to it since 2026-11-09) | Owner, staff and client sign-in by Clerk email code | Clerk; `auth.php` `me` |
 
@@ -177,7 +177,7 @@ hero, services, process, pricing, FAQs and contact copy come from published Site
 | Contact | Name, email and message required; optional company, service and budget; privacy notice, response intent and working hours; booking link if configured | Clear errors and save state; keeps typed data after a failure; double submit guarded; no live sends in QA |
 | Privacy, Terms, Cookies | Accurate trading identity, actual processing and providers, lawful basis, retention, rights, contact and genuine review dates | Owner reviewed, with professional review as appropriate; the notice matches the actual trackers and terms |
 | Shared proposal | Recipient-friendly scope, exact total, version, expiry and acceptance route | No public indexing, no unrelated client data, revoked or expired link handled |
-| Certificate verification | Keep only if certificates are actually issued; disclose minimum verification data | No searchable private information or implied accreditation |
+| Certificate verification | Built end to end 2026-11-09 (D-058): issued and revoked in the CMS, checked on `/verify` by an unguessable reference. Discloses the minimum: recipient, programme and date | No searchable private information or implied accreditation; no list, search or enumeration, and lookups are throttled |
 | Login and reset | Clear owner and client sign-in, reset guidance, accessible errors, brand-compatible styling | Valid, expired and used reset cases tested; no demo credentials or staff-only wording for clients |
 | Not found and errors | Useful explanation, return links, no technical paths or stack detail | A genuine HTTP status strategy for missing public records; private error pages stay private |
 
@@ -293,6 +293,7 @@ screens is in `docs/STATUS.md` section 0.
 | `content` | `/app/content` | `Content.tsx` | No. AI content hub |
 | `blog` | `/app/blog` | `Blog.tsx` | No. Public blog authoring |
 | `testimonials` | `/app/testimonials` | `Testimonials.tsx` | No. Public testimonials |
+| `certificates` | `/app/certificates` | `Certificates.tsx` | No. Issue a certificate, copy its public link, revoke it. Super admin and admin only (2026-11-09, D-058). Website group |
 | `work` | `/app/work` | `Work.tsx` | No. The public work ledger, and which records lead the homepage hero (2026-10-14) |
 | `site` | `/app/site` | `Site.tsx` | No. Site content: the public site's hero, services, process, pricing, FAQs and contact copy, saved as drafts and published (2026-10-14, D-046) |
 | `files` | `/app/files` | `Files.tsx` | No. Per-project and per-client file storage |

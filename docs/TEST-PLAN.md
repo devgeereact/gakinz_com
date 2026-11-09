@@ -106,7 +106,7 @@ VAT agreement and the remaining webhook cases are still open.
 
 ### Priority 4 · Public entry points
 
-`contact.php`, `verify.php`, `blog.php`, `testimonials.php`, and the two token endpoints. For
+`contact.php`, `verify.php`, `blog.php`, `testimonials.php`, and the two token endpoints. `verify.php` and `certificates.php` are covered since 2026-11-09 by `tests/server/certificates.test.ts` (21 tests: issue, roles, validation, revoke, uniform 404, throttle and its window, no guess in the audit log) and `src/app/modules/certificatesModel.test.ts` (6). For
 each: the happy path, a malformed input, and for the token endpoints an invalid, an expired and
 a deleted target.
 

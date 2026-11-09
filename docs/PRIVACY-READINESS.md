@@ -46,7 +46,7 @@ call; whether each key is set in production is UNVERIFIED.
 | Communications | email and SMS text, recipient address or number | clients, prospects | CMS Comms, Mailbox | correspondence | `comm_threads`, `comm_messages`; the owner's mailbox | mail provider (SMTP, IMAP); Twilio for SMS and WhatsApp | indefinite | no |
 | AI drafting | any text a staff member sends: enquiry, client and message text | prospects, clients | CMS AI actions (`ai.php`) | drafting replies and content | not stored by the site | OpenRouter and the model provider it routes to (K-064) | vendor terms unknown | no |
 | Contracts | signer name, email, typed name, staff IP | clients | CMS | agreements | `contracts` | hosting | soft delete | no |
-| Certificates | recipient name, programme, date | trainees | public `/verify/:id` | public verification | `certificates` | anyone with the ID (K-061) | indefinite | no |
+| Certificates | recipient name, programme, date | trainees | CMS (`/app/certificates`, super admin and admin); public `/verify/:id` | public verification | `certificates` | anyone with the reference, which is unguessable and whose lookups are throttled (2026-11-09, D-058); a revoked one shows nothing | indefinite | no |
 | Testimonials | author, role, company, quote, rating | clients | CMS | marketing | `testimonials` | public site | soft delete; no source or consent stored (K-065) | no |
 | Staff HR | cost rate, leave type and note (sickness is health data) | staff | CMS | resourcing | `users`, `leave_entries` | hosting | indefinite | no staff notice found |
 | Audit trail | user id, action, free text (emails, recipients, subjects), IP | everyone | every mutation | security, accountability | `audit_log` | hosting | indefinite | no |
@@ -264,7 +264,7 @@ DRAFT, 2026-10-17. Text in [square brackets] is a required owner input. Clauses 
 > - If you have a client login: your sign-in details and a record of your sessions, including
 >   the device and internet address, to keep your account secure.
 > - If you hold a training certificate I issued: your name, the programme and the date, which
->   anyone with the certificate number can check. [Confirm recipients are told this.]
+>   anyone with the certificate reference can check. The reference is a random code, not a number you can count from, and I can withdraw a certificate so it no longer shows. [Confirm recipients are told this.]
 >
 > **Who else handles it.** [Confirm each:] my web host and database provider [name, location];
 > Cloudflare, which carries traffic to the site; my email provider [name]; Stripe [and PayPal]

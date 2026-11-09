@@ -36,7 +36,8 @@ Gated features ship switched off (D-050): `$RETENTION_APPLY`,
 
 ## 2. In progress
 
-The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md). Phase 5 (retire the legacy sign-in, D-057) was released as `ed58064`; nothing else is in progress.
+The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md). **Phase 6 (certificates end to end, D-058)** is coded and
+checked on branch `phase-6/certificates`; not released until the owner approves (K-134 closes on release). Phase 5 (retire the legacy sign-in, D-057) was released as `ed58064`; nothing else is in progress.
 
 ## 3. What is left
 
@@ -50,7 +51,7 @@ The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md). Phase 5 (retir
 3. **Demo status in the CMS.** A Work record can only be Live or In build; add a demo flag to
    `server/work.php` and the Work screen before Priya's Kitchen, Dhemmyn Food and Okafor Joinery
    are published from the CMS.
-4. **Buildable leftovers:** K-072, K-074, K-077, K-078, K-083, K-061 certificate IDs, K-020
+4. **Buildable leftovers:** K-072, K-074, K-077, K-078, K-083, K-020
    strict tsc configs.
 5. **Design questions J1 and J2** ([DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) section 6), and the
    Safari and phone checks of the live design.

@@ -46,7 +46,7 @@ Every data need becomes a PHP endpoint plus a call through `src/lib/api.ts`.
 | Public surface | `src/marketing/` |
 | Public design system (D-046) | `src/marketing/site.css`, `src/marketing/components/site-ui.tsx` |
 | Public per-route metadata | `src/marketing/components/Seo.tsx` |
-| CMS surface | `src/app/`, lazy modules in `src/app/modules/`, plus My account |
+| CMS surface | `src/app/`, 26 lazy modules in `src/app/modules/` (Certificates added 2026-11-09, D-058), plus My account |
 | CMS shell | `src/layouts/AppLayout.tsx` |
 | Shared UI | `src/components/`, shadcn and Radix primitives under `src/components/ui/` |
 | Tokens | `src/index.css`, `tailwind.config.js` |
@@ -111,7 +111,7 @@ Measured on the local build of 2026-09-22:
 The paths are `/`, `/work`, `/services`, `/pricing`, `/about`, `/resources`, `/contact`,
 `/sectors`, `/privacy`, `/terms`, `/cookies`, and a detail page for every built-in project,
 service and post: 30 pages on 2026-10-16. The CMS (`/app/*`), `/login`,
-`/p/:token` and `/verify/:id` are never prerendered.
+`/p/:token`, `/verify` and `/verify/:id` are never prerendered.
 
 **The build makes no network request.** Data hooks fetch only inside effects, which
 `renderToString` never runs, and the script replaces `fetch` and `XMLHttpRequest` with
@@ -269,6 +269,7 @@ On the branches stacked into PR #8; none of it is deployed, and server parts nee
 | Public data | A successful CMS answer, empty included, decides what shows; the static fallback is used only on failure | `src/marketing/data/cmsResult.ts`, `blog.ts`, `work.ts` |
 | Article format | A small parser for headings, lists, bold and safe links, rendered as React elements without raw HTML | `src/marketing/lib/articleFormat.ts`, `ResourceDetail.tsx` |
 | Lock screen | Retired 2026-11-09 (D-057) with the password sign-in it unlocked; `LockScreen.tsx` and `session-revoke.ts` are deleted | n/a |
+| Certificates | `certificates.php` (super admin and admin: issue, list, revoke) and the public `verify.php` (uniform 404, no-store, throttled by `certificate_lookup_miss` audit rows); the CMS module is `/app/certificates`, and `/verify` has a reference form | `server/certificates.php`, `server/verify.php`, `src/app/modules/Certificates.tsx`, `certificatesModel.ts`, `src/marketing/pages/Verify.tsx` |
 | Public design | The public surface on D-037 (superseded by D-046, below) | `docs/DESIGN-SYSTEM.md` |
 | Documentation check | `npm run docs:check` in CI: links, and the document-sync rule | `scripts/docs-check.mjs`, `.github/workflows/ci.yml` |
 

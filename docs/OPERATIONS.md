@@ -168,7 +168,7 @@ Nothing here is automated. This is a suggested rhythm, not an implemented one.
 | Weekly | Care Plan module for a site returning a non-2xx status or a certificate close to expiry |
 | Weekly | Platform, Integrations, for a connector that has silently stopped being configured |
 | Monthly | Signed-in devices in Clerk's account panel (My account, Sign-in security), and revoke anything unrecognised. Sessions are Clerk's since 2026-11-09 (D-057) |
-| Monthly | `audit.php` for unexpected actions |
+| Monthly | `audit.php` for unexpected actions. `certificate_issue` and `certificate_revoke` should each match something you did; a run of `certificate_lookup_miss` from one IP is someone guessing references (the throttle stops them at 20 in 10 minutes) |
 
 ## 7. Incident notes
 

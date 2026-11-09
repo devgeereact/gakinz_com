@@ -240,6 +240,24 @@ None of these serves the `client` role, and none is uploaded (`docs/DEPLOYMENT.m
   `privacy.php?action=erase_preview` is super_admin only and read only. The audit scrub
   briefly scans and locks `audit_log` rows that may name the address (K-096).
 
+### Certificates (2026-11-09, D-058)
+
+`certificates.php` is for `super_admin` and `admin` only (`CERT_ROLES`): issue, list and revoke, each audited
+with the reference and never the recipient. The public check, `verify.php`, is the one unauthenticated read of
+personal data on the site (a name, a programme and a date), so it is built not to be enumerable:
+
+- **Unguessable reference.** `GK-` plus 12 characters from a 30-character alphabet (no 0, 1, I, L, O, U), each
+  drawn with `random_int()`: 60 bits, no sequence, name or date. It is the only key; there is no list or search.
+- **One answer for every miss.** A revoked, unknown, malformed or wildcard reference all return the same 404
+  `No matching certificate.`; only a well-formed reference reaches the database, by prepared equality.
+- **Throttled.** Each miss writes an `audit_log` row `certificate_lookup_miss` (IP, no detail, so the guess is not
+  kept). 20 misses in 10 minutes from one connection give 429 for every lookup, a real reference included. Hits write
+  nothing. Behind Cloudflare the counted address is the edge's until the real client IP is restored (K-102).
+- **Never cached.** `Cache-Control: no-store`, so a revoke takes effect at once. The page is `noindex`.
+
+Covered by `tests/server/certificates.test.ts` (roles, uniform answers, throttle and its window, no guess in the
+log) and mutation-checked on the revoked filter, the throttle limit, the role gate and the future-date rule.
+
 ## 4. Input handling and injection
 
 - **Prepared statements** throughout, with one exception. `files.php` builds its list query
@@ -359,7 +377,7 @@ CI runs gitleaks over the full history and Semgrep on every push and pull reques
 
 ## 10. Audit trail
 
-`audit()` writes user, action, detail and IP to `audit_log` on every mutation.
+`audit()` writes user, action, detail and IP to `audit_log` on every mutation. Two non-mutation rows are written on purpose, as counters: `ai_call` and `certificate_lookup_miss` (docs/DATA-MODEL.md section 5).
 `audit.php` exposes it to admins only. `require_auth()` also touches `auth_tokens.last_seen_at`
 so the active-sessions list shows real times, and `auth.php` offers session listing and
 revocation.

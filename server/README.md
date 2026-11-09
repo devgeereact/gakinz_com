@@ -57,7 +57,8 @@ of their own and are denied to direct requests by `.htaccess`. The file count is
 | `_templates.php` | The five project templates, pure data, loaded on first use by `projects.php`; without it only the template routes answer 503 (2026-10-19) |
 | `api.php` | Unauthenticated read-only health check: confirms PHP runs and the database answers. No writes, no application tables |
 | `contact.php` | Public enquiry form, writes to `enquiries` |
-| `verify.php` | Public certificate verification |
+| `verify.php` | Public certificate check (Phase 6, D-058): one uniform 404 for a revoked, unknown or malformed reference, `no-store`, and 429 after 20 misses in 10 minutes from one connection |
+| `certificates.php` | Issue, list and revoke certificates (super admin and admin, 2026-11-09). References are `GK-XXXX-XXXX-XXXX`, random, 60 bits |
 | `book.php` | Public. Returns the configured Calendly URL, or empty |
 | `auth.php` | `me` only: the signed-in user and their own app two-factor flag. Sign-in itself is Clerk (`_clerk.php`); every former action answers 404 (retired 2026-11-09, D-057) |
 | `oauth.php`, `client_access.php` | Retired 2026-11-09 (D-057): 404 JSON stubs, kept because a release never deletes server files |

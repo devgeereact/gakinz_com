@@ -2,6 +2,22 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-09 (latest) · Phase 6 checked locally: certificates end to end (branch `phase-6/certificates`, not released)
+
+**Scope:** D-058, K-134 and the certificate part of K-061. **Method:** tests first (19 of 21 red against the old code), then code, then mutation checks on the guards, then the full gates.
+
+| Check | Result |
+|---|---|
+| Issue | `tests/server/certificates.test.ts` (21 tests): 201 with a `GK-XXXX-XXXX-XXXX` reference, no look-alike characters, 25 issued with no repeat, date defaults to today, blank/impossible/future dates refused with nothing written, audit row `certificate_issue` with the issuer and the reference |
+| Roles | list, issue and revoke refused (403) for manager, trainer, editor, employee and client, 401 signed out; super admin and admin allowed |
+| Revoke | verify then 404; 404 for a missing id, 409 for a second revoke with one audit row |
+| Verify | returns only id, recipient, programme, issued date; lower-case and spaced input accepted; a revoked, unknown, malformed, wildcard, injection-shaped and 500-character reference all give the identical 404; `no-store`; POST 405 |
+| Throttle | 5 hits write nothing; 20 misses then 429, even for a real reference, with no more rows written; allowed again after the window; the guess is not stored |
+| Mutations | removing `revoked_at IS NULL`, raising the throttle limit, dropping the role list and dropping the future-date rule each made at least one test fail (all four applied) |
+| Model | `certificatesModel.test.ts`, 6 tests written red first |
+| Gates | `tsc -b` clean; `npm test` 639 in 56 files; `npm run test:server` 583 in 45 files (MariaDB 11.4; the retention and privacy tests that count certificates still pass); lint ratchet 5 of 5; `docs:check` PASS |
+| Not tested | The new screen and the `/verify` form in a browser (the Chrome extension was not connected); a release; MySQL 8 (CI) |
+
 ## 2026-11-09 (later) · Phase 5 released and checked live: the legacy sign-in is retired (`ed58064`)
 
 **Scope:** D-057. Clerk is the only sign-in; K-132 and K-133 fixed in code. **Method:** tests written first (red against the old code, then green), mutation-free review of every deleted route, then the full gates.

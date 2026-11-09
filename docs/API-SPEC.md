@@ -5,7 +5,7 @@
 been exercised against production.** Some areas are also covered by local integration tests in
 `tests/server/`, run with `npm run test:server` against a throwaway `*_test` database: the
 Stripe link and webhook, PayPal being switched off, the retired legacy sign-in (404 stubs, D-057), My account
-`me`, quote acceptance, blog editing, create endpoints returning the new id, enquiry
+`me`, certificates and their public check (`tests/server/certificates.test.ts`, Phase 6, D-058), quote acceptance, blog editing, create endpoints returning the new id, enquiry
 follow-ups, the client branch of `support.php`, the work hero actions and `site.php`
 (2026-10-14), and `work.php` (`tests/server/work.test.ts`, 2026-10-11). Everything else
 below is source inspection only. `work.php` and `site.php` have run only against local test
@@ -71,7 +71,7 @@ include can only run when an endpoint requires it.
 | 409 | A work slug is already in use; a work record names a client and has no stored consent, so it may not be published; a draft work record is put in the hero, a sixth is switched on, or a hero order does not list exactly the records in the hero; a site section with no saved draft is published; a quote that is not sent, has expired or is no longer open is accepted; or an accepted quote is given a new status |
 | 413 | Upload over 20 MB |
 | 415 | Upload whose extension is outside the allowlist, or whose sniffed type contradicts it |
-| 429 | Login throttle, the contact-form IP throttle, or the per-role AI daily cap |
+| 429 | The contact-form IP throttle, the certificate-lookup throttle (`verify.php`, 20 misses in 10 minutes), or the per-role AI daily cap |
 | 500 | Write failed |
 | 502 | Upstream provider error |
 | 503 | Integration not configured on the server, PayPal checkout switched off, or a 2026-10-14 feature (work hero, site content) used before its schema step has run |
@@ -85,6 +85,7 @@ server; `src/lib/access.ts` is the client mirror and is not a boundary.
 |---|---|---|
 | `ALL_STAFF` | every role except `client` | `announcements.php` read |
 | `ADMINS` | super_admin, admin | `users.php`, `integrations.php`, `slack.php`. `audit.php` uses the same two roles as an inline list |
+| `CERT_ROLES` | super_admin, admin | `certificates.php` (2026-11-09, D-058): a certificate states that someone completed something, so only the owner roles issue or revoke one |
 | `AUTHORS` | super_admin, admin, manager | `announcements.php` write |
 | `MAIL_ROLES` | super_admin, admin, manager | `mail.php` |
 | `PAY_STAFF` | super_admin, admin, manager | `payments.php` |
@@ -112,7 +113,7 @@ Treat these as the internet-facing attack surface.
 | Endpoint | Method | Purpose |
 |---|---|---|
 | `contact.php` | POST | Public enquiry form. Validates name, email and a message of at least 10 characters, then inserts into `enquiries` with the caller IP. JSON only: any other `Content-Type` answers 415 (2026-11-01). Throttled per IP from `audit_log`, modelled on the login throttle; over the limit it returns 429. Answers `{ id, reference }` with 201; `reference` is the enquiry's `GK-E-YYYY-NNNN` once SQL 19 has run and `_reference.php` is up, else `null` (2026-10-19, see Work references in section 5) |
-| `verify.php` | GET `?id=` | Certificate lookup by `public_id`, excluding revoked ones |
+| `verify.php` | GET `?id=` | Certificate check (Phase 6, D-058). Upper-cases the reference and strips spaces, and answers `{ id, recipient, programme, issued_at }` (the date as `1 November 2026`) and nothing else. A revoked, unknown or malformed reference all get the same 404 `{"error":"No matching certificate."}`; an empty one gets 400. `Cache-Control: no-store`, so a revoke shows at once. GET only (405 otherwise). **Throttled:** each miss writes an `audit_log` row `certificate_lookup_miss` (IP, no detail, so the guess is not kept); 20 misses in 10 minutes from one connection answer 429 to every lookup, a real reference included, until the window passes. A hit writes nothing. Covered by `tests/server/certificates.test.ts` |
 | `book.php` | GET | Returns the configured Calendly URL, or an empty string |
 | `blog.php` | GET, and GET `?slug=` | Published posts without their body, and one published post with its body |
 | `testimonials.php` | GET | Approved testimonials |
@@ -529,6 +530,7 @@ security-critical):
 |---|---|---|
 | `blog.php` | GET `?all=1`, GET `?id=`, `create`, `update`, `publish`, `delete` | EDITORS. `?all=1` lists every post without its body; `?id=` returns one post at any status with its body, for the edit form. An `update` that omits `excerpt` or `body` keeps the stored value, so saving other fields never wipes the article |
 | `testimonials.php` | GET `?all=1`, `create`, `update`, `approve`, `delete` | EDITORS |
+| `certificates.php` | GET list, `issue`, `revoke` | CERT_ROLES (super_admin, admin). GET lists every certificate, newest first, revoked ones included (limit 500). `issue` takes `{ recipient, programme, issued_at? }` (recipient and programme required, 200 characters each; `issued_at` a real `YYYY-MM-DD` date, today when left out, 400 for a malformed or future one) and answers 201 `{ id, public_id }`. The reference is `GK-` and three groups of four characters from a 30-character alphabet without 0, 1, I, L, O or U, drawn with `random_int()` (60 bits), so it carries no sequence, name or date; a clash on the unique column retries up to five times. `revoke` takes `{ id }` and answers `{ ok: true }`: 404 for a missing id, 409 if already revoked (nothing rewritten, no second audit row). Audit actions `certificate_issue` and `certificate_revoke`, detail the reference, never the recipient. No schema change; the issuer is in `audit_log`, not on the row. Covered by `tests/server/certificates.test.ts` |
 | `content.php` | GET list, `create`, `update`, `delete` | EDITORS |
 | `work.php` | `listAll`, `getAdmin`, `create`, `update`, `publish`, `remove`, `reorder`, `addImage`, `removeImage`, `setHero`, `heroOrder` | EDITORS. See section 7 |
 | `site.php` | GET `?action=draft`, `save`, `publish` | EDITORS. See section 7a |

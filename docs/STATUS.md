@@ -26,18 +26,18 @@ Anything about signed-in use of the live system is NOT TESTED unless a row says 
 
 ## 0. Current measurements
 
-Measured on 2026-11-09 on the Mac on branch `phase-5/clerk-only` (from `main` at `e84f31f`) (the live checks and the host's PHP version the same day). Re-measure and update
+Measured on 2026-11-09 on the Mac on branch `phase-6/certificates` (from `main` at `b656957`) (the live checks and the host's PHP version the same day). Re-measure and update
 this table when a count changes; the previous figures are in the history above.
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 632 tests in 55 files (Phase 5 removed the legacy client helpers and their tests and added `auth.store.test.ts`) |
-| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 562 tests in 44 files on local MariaDB 11.4.13 (Phase 5: `legacy-retired` 25 tests added; `auth`, `client-access` and `password-rehash` removed, `account`, `token-hashing`, `security-hardening`, `references` and `client-anonymise` adapted), run as `GK_TEST_DB=gakinz_p4full_test GK_TEST_PHP_PORT=5389 GK_TEST_PROVIDER_PORT=5390 npm run test:server`; CI (MySQL 8) passed on the previous release `b301ec7` |
+| Unit tests | `npm test` | **PASS.** 639 tests in 56 files (Phase 6: `certificatesModel.test.ts` added) |
+| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 583 tests in 45 files on local MariaDB 11.4.13 (Phase 6: `certificates` 21 tests added), run as `GK_TEST_DB=gakinz_p4full_test GK_TEST_PHP_PORT=5389 GK_TEST_PROVIDER_PORT=5390 npm run test:server`; CI (MySQL 8) passed on the previous release `b301ec7` |
 | Server suite on MySQL 8 | `npm run test:server` against MySQL 8.0 (`docs/OPERATIONS.md` section 8) | Last PASS 2026-10-20 (519 tests). MySQL 5.7 NOT TESTED; the live engine is UNVERIFIED (K-099) |
 | Type check and build | `npm run build` | **PASS.** 32 public pages and `app-shell.html` prerendered, `sitemap.xml` with 32 URLs |
 | Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 5 errors, 0 warnings. **`npm run lint` still fails** (K-002) |
 | Documentation | `npm run docs:check` | **PASS.** 24 documents |
-| PHP files | `ls server/*.php`, `php -l` | 66: 49 endpoints and 17 `_`-prefixed includes (`_ai.php` added), all passing `php -l` (PHP 8.5.12 locally; the host runs 8.4.27, checked 2026-11-08) |
+| PHP files | `ls server/*.php`, `php -l` | 67: 50 endpoints and 17 `_`-prefixed includes (`_ai.php` added), all passing `php -l` (PHP 8.5.12 locally; the host runs 8.4.27, checked 2026-11-08) |
 | Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 42 |
 | CMS screens | `src/routes/index.tsx` under `/app` | 26: Today, 24 module routes and My account, in seven navigation groups |
 | Client API groups | `grep -cE "^export const [a-zA-Z]+ *= *\{" src/lib/api.ts` | 46 (the unused `weather` group removed 2026-11-01) |

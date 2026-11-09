@@ -145,6 +145,12 @@ This is the one list of server work a release cannot carry: SQL, `server/.htacce
 private `config.php`. A change that needs one of them records it here in the same pull request
 (`AGENTS.md`, "Keeping documents current"; `npm run docs:check` enforces it in CI).
 
+**Phase 6 (2026-11-09, D-058, not yet released): no SQL, no `.htaccess` and no `config.php` change is needed.** The release adds
+`certificates.php` and replaces `verify.php` and the front end; the `certificates` table already exists (`schema.sql`).
+Check it after release, read-only: `GET /verify.php?id=GK-AAAA-BBBB-CCCC` answers 404 `{"error":"No matching certificate."}`
+with `Cache-Control: no-store`; `GET /certificates.php` without a token answers 401. Rollback: `npm run release -- --rollback --go`;
+issued certificates stay in the table and nothing is lost.
+
 **Phase 5 (2026-11-09, D-057, released as `ed58064`): no SQL, no `.htaccess` and no `config.php` change is needed.**
 The release replaces `auth.php`, `oauth.php`, `client_access.php`, `users.php`, `integrations.php` and the front end.
 Before it went, a read-only query on 2026-11-09 showed 1 active user (super admin, linked to Clerk, app two-factor off). Tables and columns the retired code used (`auth_tokens`, `magic_links`,
