@@ -71,7 +71,7 @@ Prepared in this run: the scripts, tests and instructions below. None of these w
 | c | ~~Cron entry~~ **done 2026-11-10.** Still yours: `$REPORT_RECIPIENTS` if you want the weekly digest (K-145) | item 9 | exact line and checks in `docs/OPERATIONS.md` section 2 |
 | d | ~~Restore the host's latest backup~~ **done 2026-11-10**; engine recorded (MariaDB 11.4.13). **Targets agreed (D-062).** Still open: decide how dumps get off the host (K-010) | item 8 | steps in `docs/OPERATIONS.md` section 10 |
 | e | ~~OpenRouter limit~~ owner chose none (D-062), but **rotate the exposed key**; delete the Clerk user for `dev@gakinz.com`; rename the `TEST owner` row (name needed) | safety | Clerk and OpenRouter dashboards; one `UPDATE` in `docs/DEPLOYMENT.md` section 5 |
-| f | ~~One live walk~~ **done 2026-11-10 for steps 1, 2, 3, 5, 7** (`docs/VERIFICATION.md`). Left: a test client sign-in (steps 4, 6), the invoice PDF, a real phone | gate 6 (real browser and phone) | `docs/VERIFICATION.md` "Owner walk" |
+| f | ~~One live walk~~ **done 2026-11-10, all seven steps** (`docs/VERIFICATION.md`). Left: the invoice PDF, a real phone | gate 6 (real browser and phone) | `docs/VERIFICATION.md` "Owner walk" |
 | g | ~~`$OWNER_ALERTS`~~ **done 2026-11-10** (`hello@gakinz.com`, SMTP login proven). Confirmed by the owner: the TEST email arrived | item 3 live | `docs/DEPLOYMENT.md` section 5 |
 
 ## Parking lot (V1.1 and later)
@@ -99,7 +99,9 @@ opens a new scope. Nothing here was deleted from the code or the issue list.
 - A due-date column and a Today item for data deletion requests (K-095 remainder).
 - An index on `audit_log (action, created_at)`: the heartbeat, the contact throttle and the reminder memory all filter on `action`; fine at today's size, schema change when it grows.
 - Owner alerts: a retry or queue if a send fails (today: audited, the item is in Leads or Support either way).
+- Stripe: switch on pay links (owner steps in `docs/DEPLOYMENT.md`, then test mode, then live).
 - Real assistive-technology pass on the public site and the CMS.
+- One-step "Grant portal access" (CMS client account plus Clerk user) and a friendlier message than Clerk's "Couldn't find your account"; the manual steps are in `docs/OPERATIONS.md` 10.2.
 - Quotes list "Total" is the amount before VAT (label it, or show the VAT-inclusive total); Invoicing tiles refresh after "Mark paid" without a reload.
 
 ## Cut (decided not to build for V1; the code stays)

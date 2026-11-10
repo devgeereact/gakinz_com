@@ -352,6 +352,16 @@ an isolated environment must check the database and uploaded files together, the
 relationships and their permissions (K-010). Financial records are never deleted on an
 arbitrary data-protection timer.
 
+## 10.2 Giving a client portal access
+
+A client record alone cannot sign in. Three things must all exist, and the first live attempt (2026-11-10) stopped at the third:
+
+1. **The client record** (Clients, or Convert on an enquiry).
+2. **A CMS client account** (Settings, then add a user: role `Client`, linked to that client, same email). It carries no password. `portal.php` trusts its `client_id` for isolation.
+3. **A Clerk user with the same email.** The production Clerk instance has `sign_up_mode: restricted`, so Clerk answers "Couldn't find your account" to anyone not created there, and the sign-in code is never sent. Create the user in the Clerk dashboard (Users, Create user, email only), or send a Clerk invitation. `server/_clerk.php` then links the Clerk user to the account by verified email on first sign-in.
+
+Removing access is the reverse: delete the CMS client account, then the Clerk user. Nothing creates any of these automatically (parked: a "Grant portal access" button that does steps 2 and 3, and a clearer message than Clerk's for someone who is not set up).
+
 ## 11. Production change discipline
 
 Before any future production change, record its rollback: the previous client build, the

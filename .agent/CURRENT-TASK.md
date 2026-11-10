@@ -22,7 +22,8 @@ open items in the owner's order, park the rest, cut the documents' sprawl by mer
 
 1. Business facts still missing (`npm run build && npm run check:facts`) and the adviser's retention periods (K-062). The owner is working on these.
 2. **Rotate the OpenRouter key** (it was shown in a session log by mistake). The owner chose no spending limit (D-062).
-3. Walk steps 4 and 6 (a client signs in to the portal; "Ask to delete my data") are NOT TESTED: the TEST client was deleted at your request. Do them with the first real client, or ask for a fresh TEST client.
+3. TEST data on live now: clients `TEST Client A` and `TEST Client B`, their quotes, projects, invoices 0001 to 0006, deletion ticket #1, CMS client user `gakinz101+clienta@gmail.com`. Ask for them to be cleared (backup first, numbering reset) and delete that user in Clerk yourself. Walk steps 1 to 7 are all done.
+3b. Stripe is not connected: follow "Connecting Stripe" in `docs/DEPLOYMENT.md` (test mode first).
 4. Say what to rename the `TEST owner` row to (the `dev@gakinz.com` row is gone; Clerk has no such user).
 5. Tomorrow after 03:30 server time (EST, five hours behind UTC): `~/backups/gakinz_com/backup.log` has an `ok` line. The first scheduled run failed on cron's PATH and was fixed; this is the proof.
 6. Set `$REPORT_RECIPIENTS` if you want the weekly digest. Decide how dumps get off the host (K-010).
