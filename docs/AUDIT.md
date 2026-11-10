@@ -2,6 +2,25 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-10 · Tailwind v3 to v4 and npm to pnpm (D-060, local, not pushed)
+
+**Scope:** `chore/tailwind-v4`, four commits on `main` at `d30e95b`. **Method:** a before and after comparison with an offline harness (kept in `.local-test/`, untracked): the real build with Clerk stubbed and the API mocked (a signed-in super admin, empty lists), served locally; 128 captures per browser (34 public pages and 27 CMS routes at 1280 and 375 px, plus six CMS routes in dark), computed style of every element, element boxes and screenshots, baseline against final. Reduced motion on; two baseline runs gave identical styles (0 differences in 128).
+
+| Check | Result |
+|---|---|
+| Baseline (v3, npm) | `tsc -b` clean; lint ratchet 5 of 5; `npm test` 660 in 59 files; build prerenders 32 pages; `docs:check` PASS. There is no browser test in this project. `test:server` not run (no PHP changed) |
+| Final (v4, pnpm) | the same five: `tsc -b` clean; ratchet 5 of 5; `pnpm test` 660 in 59 files; build with 32 pages; `docs:check` PASS; `pnpm verify` "Verified ... Nothing was sent" |
+| Layout | Chromium: **0 element boxes moved** in 128 captures. WebKit 27.2: **0 moved** in 128 |
+| Pixels | Chromium: no screenshot differs on more than 0.1 percent of pixels (128 of 128). WebKit: 126 of 128; the other two (0.45 and 0.16 percent) have identical computed styles and boxes, and baseline against baseline is identical, so they are rasterisation |
+| Style differences left | Only the `space-y` margin moving from the later child to the earlier one (equal total gap), v4 `border-radius` for `rounded-full` (9999px against 33554400px, same circle), zero-width ring layers in `box-shadow`, and `option` padding. Colours compared after normalising oklab to RGB (tolerance 2 of 255) |
+| Opened overlays | The command palette and the account menu: every descendant's box, font size, line height, colours, animation name, duration and easing identical (Chromium) |
+| Utility in built CSS | `.wrap-anywhere{overflow-wrap:anywhere}` and `.shadow-xs` (v4 names) in `dist/assets/index-*.css`; CSS 126.7 kB before, 146.2 kB after (gzip 30.4 kB); no `style=` or inline `<style>` added, so `style-src 'self' 'unsafe-inline'` is unaffected |
+| Animations | All 27 `animate-in`, `fade-*`, `zoom-*`, `slide-*` utilities used in `src/` are in the built CSS (the upgrade tool had dropped them: 0 matches) |
+
+**Defects found and fixed:** the upgrade tool corrupted `"outline"` variants and one sentence of public copy (6 places); it dropped the animate plugin; `space-y` plus `mb-0` lost 16px on Analytics and Care plan; v4 line-height ratios shrank a menu label row by 4px; `duration-*` would have slowed the dialog and sheet.
+
+**NOT TESTED:** Firefox (the installed build does not launch); Safari on a real device; signed-in screens with real data and every non-empty state (the harness returns empty lists, so tables with rows, open dialogs other than the two checked, the Sheet on mobile and the proposal page `/p/:token` were not captured); the `.gk-public` palette in a browser; CI and the deploy workflow on GitHub with pnpm (not pushed); `test:server`.
+
 ## 2026-11-09 (Phase 7) · Daily-flow speed-ups released and checked live (`825600e`)
 
 **Scope:** D-059, K-141 to K-144. **Method:** tests first for every logic change, a fake mail server for the reminder tests, mutation checks on the guards, then the full gates.

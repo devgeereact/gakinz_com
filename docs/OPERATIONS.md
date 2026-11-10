@@ -14,8 +14,8 @@ operator's global notes, and a second copy has drifted and caused outages before
 ## 1. Local development
 
 ```bash
-npm install          # first time
-npm run dev          # http://localhost:5102
+pnpm install          # first time
+pnpm run dev          # http://localhost:5102
 ```
 
 Port 5102 is pinned with `strictPort: true` on both `server` and `preview` in
@@ -30,16 +30,16 @@ to exercise the server is the synthetic test path in section 8.
 
 | Command | Purpose |
 |---|---|
-| `npm run dev` | Vite dev server, port 5102 |
-| `npm run build` | `tsc -b` then `vite build`, output to `dist/` |
-| `npm run preview` | Serve the built output, port 5102 |
-| `npm test` | Vitest unit tests, single run |
-| `npm run test:watch` | Vitest, watch mode |
-| `npm run test:server` | PHP endpoints against a throwaway local `*_test` database (section 8) |
-| `npm run lint` | ESLint. Currently fails, see `docs/KNOWN-ISSUES.md` K-002 |
-| `npm run lint:ratchet` | Fails if the lint backlog grows |
-| `npm run typecheck` | Type check only |
-| `npm run docs:check` | Fails on a broken document link, or with `-- --base <ref>` on a server or schema change without its documents |
+| `pnpm run dev` | Vite dev server, port 5102 |
+| `pnpm run build` | `tsc -b` then `vite build`, output to `dist/` |
+| `pnpm run preview` | Serve the built output, port 5102 |
+| `pnpm test` | Vitest unit tests, single run |
+| `pnpm run test:watch` | Vitest, watch mode |
+| `pnpm run test:server` | PHP endpoints against a throwaway local `*_test` database (section 8) |
+| `pnpm run lint` | ESLint. Currently fails, see `docs/KNOWN-ISSUES.md` K-002 |
+| `pnpm run lint:ratchet` | Fails if the lint backlog grows |
+| `pnpm run typecheck` | Type check only |
+| `pnpm run docs:check` | Fails on a broken document link, or with `--base <ref>` on a server or schema change without its documents |
 | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` | PHP syntax gate |
 
 ## 2. Scheduled jobs
@@ -163,7 +163,7 @@ Nothing here is automated. This is a suggested rhythm, not an implemented one.
 
 | Cadence | Check |
 |---|---|
-| Each change | `npm run build`, `npm test`, and `php -l` on any touched PHP |
+| Each change | `pnpm run build`, `pnpm test`, and `php -l` on any touched PHP |
 | Each server upload | Record the file in `docs/DEPLOYMENT.md` and confirm it responds |
 | Weekly | Care Plan module for a site returning a non-2xx status or a certificate close to expiry |
 | Weekly | Platform, Integrations, for a connector that has silently stopped being configured |
@@ -203,7 +203,7 @@ Approved in D-042 and implemented for the server in D-036.
 - **Nothing in a test reaches production.** UI tests use API fixtures and a network rule that
   fails any request outside local test origins. Server tests run the real PHP from a temporary
   copy of `server/` against a local database whose name must end in `_test`, and refuse any
-  non-local host (`npm run test:server`, `tests/server/`).
+  non-local host (`pnpm run test:server`, `tests/server/`).
 - **Synthetic data only.** Two unrelated fake clients plus the owner and representative staff
   roles. Never an exported real client database, live mailbox credentials, copied sessions or
   live provider keys.
@@ -215,7 +215,7 @@ Approved in D-042 and implemented for the server in D-036.
 
 ### Running the server tests on any computer
 
-`npm run test:server` needs, on the computer itself:
+`pnpm run test:server` needs, on the computer itself:
 
 - PHP 8 on the `PATH` with the `mysqli`, `curl` and `mbstring` extensions (`php -m`).
 - A local MySQL 8 or MariaDB server and a database user that may create and drop databases
@@ -253,7 +253,7 @@ docker run -d --name gk-mysql8 -e MYSQL_ROOT_PASSWORD=<local test password> \
   -p 127.0.0.1:3308:3306 mysql:8.0 --default-authentication-plugin=mysql_native_password
 GK_TEST_DB_HOST=127.0.0.1 GK_TEST_DB_PORT=3308 GK_TEST_DB_USER=root \
   GK_TEST_DB_PASS=<local test password> GK_TEST_DB=gakinz_mysql8_test \
-  GK_TEST_PHP_PORT=5427 GK_TEST_PROVIDER_PORT=5428 npm run test:server
+  GK_TEST_PHP_PORT=5427 GK_TEST_PROVIDER_PORT=5428 pnpm run test:server
 docker rm -f gk-mysql8 && colima stop
 ```
 

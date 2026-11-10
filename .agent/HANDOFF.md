@@ -135,3 +135,9 @@ PR #28 CI green (MySQL 8); `main` fast-forwarded to `cbfd527`; the release job s
 - Throwaway MariaDB on port 3399 is running; stop it with `mariadb-admin --no-defaults -h127.0.0.1 -P3399 -uroot shutdown`.
 - Finding 2026-11-09: read-only `crontab -l` shows no GAkinz cron entry (K-145). Reminders/billing/digest/uptime/prune are not scheduled live. Needs an owner decision before adding one.
 - Released 2026-11-09 as `825600e` (PR #31, CI green incl. MySQL 8); `check:live` 16 of 16; update routes 401 anonymously; web cron 403. Dialogs not seen in a browser. Stop the throwaway MariaDB (port 3399) when finished.
+
+## Tailwind v4 and pnpm (10 November 2026, branch `chore/tailwind-v4`, D-060)
+Local only: not pushed, not deployed, no server, `release.json` or `goal/finish` worktree touched. Four code commits plus the documents on `main` at `d30e95b`: pnpm, `@tailwindcss/upgrade` (reviewed), `@tailwindcss/vite`, `tw-animate-css` with `@theme inline`.
+Evidence: `tsc -b` clean, lint ratchet 5/5, `pnpm test` 660/59, build 32 pages, `docs:check` PASS, `pnpm verify` PASS. Offline before/after harness: 0 boxes moved in 128 captures in Chromium and in WebKit, no screenshot over 0.1 percent different in Chromium. Details and the NOT TESTED list: `docs/AUDIT.md` 2026-11-10.
+Traps found: the upgrade tool rewrote `"outline"` to `"outline-solid"` in variant strings and public copy, and dropped the animate plugin; v4 `space-y` margins sit on the earlier child (a child's `mb-0` kills the gap); v4 line heights are ratios.
+Open: owner approval to push; first CI run with pnpm; ESLint to Biome; a Playwright suite; run the signed-in screens with real data once.

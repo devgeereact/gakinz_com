@@ -11,12 +11,12 @@ pass (section 7).
 
 | Layer | Tool | Coverage | Result |
 |---|---|---|---|
-| Types | `tsc -b`, inside `npm run build` | Whole client | **PASS**, 2026-10-10 |
-| Unit | Vitest, `npm test` | `src/lib/access.ts`, `csv.ts`, `format.ts`, `session-revoke.ts`, `src/marketing/lib/articleFormat.ts`, `src/marketing/data/cmsResult.ts` | **PASS**, 2026-10-10 |
-| Server integration | Vitest, `npm run test:server` | Sign-in, My account, payments, quote acceptance, blog editing, create ids, enquiry follow-ups, the work ledger (`work.php`), the enquiry-to-paid-deposit journey and the `support.php` client branch, against a local `*_test` database (D-036) | **PASS**, 2026-10-10 |
+| Types | `tsc -b`, inside `pnpm run build` | Whole client | **PASS**, 2026-10-10 |
+| Unit | Vitest, `pnpm test` | `src/lib/access.ts`, `csv.ts`, `format.ts`, `session-revoke.ts`, `src/marketing/lib/articleFormat.ts`, `src/marketing/data/cmsResult.ts` | **PASS**, 2026-10-10 |
+| Server integration | Vitest, `pnpm run test:server` | Sign-in, My account, payments, quote acceptance, blog editing, create ids, enquiry follow-ups, the work ledger (`work.php`), the enquiry-to-paid-deposit journey and the `support.php` client branch, against a local `*_test` database (D-036) | **PASS**, 2026-10-10 |
 | PHP syntax | `php -l` | Every server file | **PASS**, 2026-10-10 |
-| Lint | ESLint, `npm run lint`, held by `npm run lint:ratchet` | Whole client | **FAIL**; the ratchet passes (K-002) |
-| Documentation | `npm run docs:check` | Links and the document-sync rule (`AGENTS.md`) | **PASS**, 2026-10-10 |
+| Lint | ESLint, `pnpm run lint`, held by `pnpm run lint:ratchet` | Whole client | **FAIL**; the ratchet passes (K-002) |
+| Documentation | `pnpm run docs:check` | Links and the document-sync rule (`AGENTS.md`) | **PASS**, 2026-10-10 |
 | Accessibility | axe-core 4.10.2 in Chrome, plus computed contrast, focus, reflow and target-size sweeps | All 16 public routes | **PASS**, 0 violations, 2026-09-22. `docs/AUDIT.md` |
 | Performance | Chrome DevTools trace and Lighthouse, production build served locally | Public surface | **PARTIAL.** Lab only, no field data, 2026-09-22. `docs/AUDIT.md` |
 | Component | none | n/a | **NOT TESTED** |
@@ -34,11 +34,11 @@ Run them all. Report the real output, including a failure. CI runs the same set 
 waits for it (`docs/DEPLOYMENT.md` section 2).
 
 ```bash
-npm run build                                              # tsc -b then vite build
-npm test                                                   # unit tests
-npm run test:server                                        # PHP endpoints, local *_test database
-npm run lint:ratchet                                       # the lint backlog must not grow
-npm run docs:check                                         # documents current, links resolve
+pnpm run build                                              # tsc -b then vite build
+pnpm test                                                   # unit tests
+pnpm run test:server                                        # PHP endpoints, local *_test database
+pnpm run lint:ratchet                                       # the lint backlog must not grow
+pnpm run docs:check                                         # documents current, links resolve
 find server -name '*.php' -print0 | xargs -0 -n1 php -l     # any touched PHP
 ```
 

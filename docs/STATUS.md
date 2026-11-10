@@ -31,12 +31,13 @@ this table when a count changes; the previous figures are in the history above.
 
 | Measure | Command | Result |
 |---|---|---|
-| Unit tests | `npm test` | **PASS.** 660 tests in 59 files (Phase 7: client, task and quote-prefill models and the link helpers) |
-| Server integration tests | `npm run test:server`, local throwaway `*_test` database | **PASS.** 608 tests in 47 files on local MariaDB 11.4.13 (Phase 7: `cron-reminders` 13 and `tasks` 12 tests added), run as `GK_TEST_DB=gakinz_p4full_test GK_TEST_PHP_PORT=5389 GK_TEST_PROVIDER_PORT=5390 npm run test:server`; CI (MySQL 8) passed on the previous release `b301ec7` |
-| Server suite on MySQL 8 | `npm run test:server` against MySQL 8.0 (`docs/OPERATIONS.md` section 8) | Last PASS 2026-10-20 (519 tests). MySQL 5.7 NOT TESTED; the live engine is UNVERIFIED (K-099) |
-| Type check and build | `npm run build` | **PASS.** 32 public pages and `app-shell.html` prerendered, `sitemap.xml` with 32 URLs |
-| Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 5 errors, 0 warnings. **`npm run lint` still fails** (K-002) |
-| Documentation | `npm run docs:check` | **PASS.** 24 documents |
+| Styling and packages | `vite.config.ts`, `package.json` | Tailwind CSS v4 through `@tailwindcss/vite`, pnpm (`pnpm-lock.yaml`) on branch `chore/tailwind-v4`, **local, not released** (D-060, `docs/AUDIT.md` 2026-11-10) |
+| Unit tests | `pnpm test` | **PASS.** 660 tests in 59 files (Phase 7: client, task and quote-prefill models and the link helpers) |
+| Server integration tests | `pnpm run test:server`, local throwaway `*_test` database | **PASS.** 608 tests in 47 files on local MariaDB 11.4.13 (Phase 7: `cron-reminders` 13 and `tasks` 12 tests added), run as `GK_TEST_DB=gakinz_p4full_test GK_TEST_PHP_PORT=5389 GK_TEST_PROVIDER_PORT=5390 pnpm run test:server`; CI (MySQL 8) passed on the previous release `b301ec7` |
+| Server suite on MySQL 8 | `pnpm run test:server` against MySQL 8.0 (`docs/OPERATIONS.md` section 8) | Last PASS 2026-10-20 (519 tests). MySQL 5.7 NOT TESTED; the live engine is UNVERIFIED (K-099) |
+| Type check and build | `pnpm run build` | **PASS.** 32 public pages and `app-shell.html` prerendered, `sitemap.xml` with 32 URLs |
+| Lint | `pnpm run lint:ratchet` | **PASS** at the ceiling: 5 errors, 0 warnings. **`pnpm run lint` still fails** (K-002) |
+| Documentation | `pnpm run docs:check` | **PASS.** 24 documents |
 | PHP files | `ls server/*.php`, `php -l` | 67: 50 endpoints and 17 `_`-prefixed includes (`_ai.php` added), all passing `php -l` (PHP 8.5.12 locally; the host runs 8.4.27, checked 2026-11-08) |
 | Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 42 |
 | CMS screens | `src/routes/index.tsx` under `/app` | 26: Today, 24 module routes and My account, in seven navigation groups |

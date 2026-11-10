@@ -23,7 +23,7 @@ disagree, **the code wins** and this file is wrong: fix it in the same change.
 | Public site styles | `src/marketing/site.css` (scoped to `.gk-site`, D-046) |
 | Public parts | `src/marketing/components/site-ui.tsx`, pages in `src/marketing/pages/` |
 | Public data | `src/marketing/data/showcase.ts` (projects), `site.ts`, `content.ts` (CMS-editable copy) |
-| CMS tokens | `src/index.css` (`:root` light, `.dark`), `tailwind.config.js` (the `.ts` one is inert) |
+| CMS tokens | `src/index.css` (`:root` light, `.dark`, and the Tailwind v4 `@theme` blocks; no `tailwind.config.js` since D-060) |
 | CMS parts | `src/components/ui/*`, `src/app/components/page-kit.tsx` (PageHeader, StatGrid, StatTile, StatusBadge) |
 | CMS shell | `src/layouts/AppLayout.tsx`, `src/components/app-sidebar.tsx`, `nav-main.tsx`, `nav-groups.ts` |
 | Sign-in | `src/app/components/AuthFrame.tsx`, `src/app/ClerkLogin.tsx`, `src/app/ClerkSession.tsx` |
@@ -117,7 +117,7 @@ GAkinzOS only 150 to 300ms state changes. When animating with GSAP, clear only w
 Run in this order and report with DONE / PARTIAL / NOT TESTED / BLOCKED. Full commands in
 [references/verification.md](references/verification.md).
 
-1. `npm run build`, `npm test`, `npm run lint:ratchet`, `npm run docs:check`.
+1. `pnpm run build`, `pnpm test`, `pnpm run lint:ratchet`, `pnpm run docs:check`.
 2. Serve the build on loopback with **no proxy to the live API** (`vite preview` inherits the dev proxy to
    gakinz.com; use a static server or set `preview.proxy` to `{}`). Development calls the live API.
 3. `shots.mjs --axe` on every route at 390, 834, 1440, 1920 and 2560; zero overflow, errors and violations.

@@ -3,7 +3,7 @@
 **Status:** design and controls verified by source inspection, last brought up to date on
 2026-10-10 for the branches stacked into PR #8. Sign-in, payments, quote acceptance, My account
 and client isolation in `support.php` are also covered by local server tests against a
-synthetic database (`npm run test:server`). **Nothing was verified against production**, and
+synthetic database (`pnpm run test:server`). **Nothing was verified against production**, and
 none of the 2026-09-22 or 2026-10-10 server changes is known to be uploaded
 (`docs/DEPLOYMENT.md` section 5). Nothing here should be read as
 "this system is secure"; it describes what the code intends and where the gaps are.
@@ -70,7 +70,7 @@ Seven roles, in `VALID_ROLES`. Per-endpoint constants define who may call what; 
 matrix is in `docs/API-SPEC.md` section 3. `src/lib/access.test.ts` covers the client mirror,
 including the client-isolation rules. Server behaviour for the retired sign-in, payments, quote
 acceptance, blog editing, My account and the `support.php` client branch is covered by
-`npm run test:server` (`tests/server/`). Test counts are in `docs/STATUS.md` section 0.
+`pnpm run test:server` (`tests/server/`). Test counts are in `docs/STATUS.md` section 0.
 
 ### Client isolation
 
@@ -353,7 +353,7 @@ origin is reflected only on a match, and `Vary: Origin` is set. There is no wild
 pattern match.
 
 The tracked example lists `https://gakinz.com` and `https://www.gakinz.com` only (since 2026-11-01).
-Local development needs no entry: `npm run dev` proxies every `.php` call through Vite, so the browser
+Local development needs no entry: `pnpm run dev` proxies every `.php` call through Vite, so the browser
 sees same-origin requests. Whether the live private config still lists `http://localhost:5102` is
 UNVERIFIED; removing it if present is in `docs/DEPLOYMENT.md` section 5. With bearer tokens and no cookies, that entry only let
 a page on the owner's own machine read replies to requests it authorised itself.

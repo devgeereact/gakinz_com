@@ -3,7 +3,7 @@
 **Status:** current for the tracked source as at 2026-10-14, on `feat/redesign-2026`
 (stacked on PR #8). It is verified by source inspection of every PHP file in `server/`. **No endpoint has
 been exercised against production.** Some areas are also covered by local integration tests in
-`tests/server/`, run with `npm run test:server` against a throwaway `*_test` database: the
+`tests/server/`, run with `pnpm run test:server` against a throwaway `*_test` database: the
 Stripe link and webhook, PayPal being switched off, the retired legacy sign-in (404 stubs, D-057), My account
 `me`, certificates and their public check (`tests/server/certificates.test.ts`, Phase 6, D-058), quote acceptance, blog editing, create endpoints returning the new id, enquiry
 follow-ups, the client branch of `support.php`, the work hero actions and `site.php`
@@ -823,7 +823,7 @@ naming the schema step.
 6. If it needs a schema change, append the `ALTER TABLE` as a dated comment at the foot of
    `server/schema.sql` and record it in `docs/DATA-MODEL.md` and `docs/DEPLOYMENT.md`
    section 5. There is no migration runner.
-7. Run `php -l` on the new file, then `npm run build`, `npm test` and `npm run test:server`.
+7. Run `php -l` on the new file, then `pnpm run build`, `pnpm test` and `pnpm run test:server`.
 8. Record the file in the upload list in `docs/DEPLOYMENT.md` section 5 and describe it in this
-   file. The deploy pipeline will not ship it, and `npm run docs:check` fails a pull request
+   file. The deploy pipeline will not ship it, and `pnpm run docs:check` fails a pull request
    that changes server code without touching `docs/DEPLOYMENT.md`.

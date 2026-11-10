@@ -2,6 +2,27 @@
 
 ## Outcome
 
+**2026-11-10, branch `chore/tailwind-v4` (worktree `~/Developer/worktrees/gakinz-tailwind-v4`, local only, not pushed):**
+adopt Tailwind CSS v4 through the Vite plugin as the house styling standard (D-060), with no change to
+behaviour, copy or look. Four commits on `main` at `d30e95b`: npm to pnpm; the upgrade tool, reviewed; PostCSS
+swapped for `@tailwindcss/vite`; `tailwindcss-animate` swapped for `tw-animate-css` with the token map in
+`@theme inline`; then the documents.
+
+Success criteria and where each stands (evidence: `docs/AUDIT.md`, 2026-11-10):
+1. `pnpm` is the only package manager, one lockfile, CI installs with it. DONE (CI itself NOT TESTED until pushed).
+2. Tailwind v4 builds through `@tailwindcss/vite`; no `tailwind.config.js`, PostCSS config, `autoprefixer` or `tailwindcss-animate`. DONE.
+3. Shadcn variables stay the one token source, mapped by `@theme inline`. DONE.
+4. No page changes: 0 element boxes moved and no screenshot over 0.1 percent of pixels different in 128 captures (Chromium); 0 boxes moved in WebKit. DONE for the states the harness reaches; non-empty CMS states, Firefox and real Safari NOT TESTED.
+5. Gate green: `tsc -b`, lint ratchet 5 of 5, 660 unit tests, build (32 pages), `docs:check`, `pnpm verify`. DONE.
+
+Waiting on the owner: approval to push (then watch the first CI run, which is the first time the workflows use pnpm).
+Follow-ups, not done here: move ESLint to Biome; add a Playwright browser suite; migrate screens to new utilities one at a time.
+`release.json` still says `npm run ...` (it was not to be touched); it works because it only runs package scripts.
+
+---
+
+## Earlier task (before 2026-11-10)
+
 **2026-11-01 to 02, branch `golive/2026-11` (released 2026-11-08, see below).** Owner asked: get ready for
 live, then "make the best call for me ... fix all".
 

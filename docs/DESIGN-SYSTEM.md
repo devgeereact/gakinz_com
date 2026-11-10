@@ -2,7 +2,7 @@
 
 **Status:** current as of release `fdc5d94` (2026-10-31): the D-046 design with the D-053 finalisation,
 live on gakinz.com. The code is the authority: `src/marketing/site.css` for the public site,
-`src/index.css` and `tailwind.config.js` for GAkinzOS, `src/components/ui/*` and
+`src/index.css` for GAkinzOS (and for the Tailwind token map), `src/components/ui/*` and
 `src/app/components/page-kit.tsx` for components. If this document and the code disagree, the code wins
 and this document is corrected in the same change.
 
@@ -92,6 +92,19 @@ opacity; the current page in the header is marked with an underline, never a tin
 | Sidebar | `#0F151D` | `#0B1017` | `--sidebar-background` | chalk 15.12:1 / 15.74:1 |
 | Sidebar muted | `#8C96A4` | same | `--os-side-mute` | 6.12:1 / 6.37:1 |
 | Sidebar active bar | `#8EC5FF` | same | `--sidebar-primary` | n/a |
+
+### Tailwind v4 token map (D-060)
+
+Tailwind v4 reads its tokens from CSS, so `src/index.css` is the only place a token is declared; `tailwind.config.js` is gone.
+
+| Block | What it holds | Why |
+|---|---|---|
+| `:root`, `.dark` (and `.gk-public`) | The shadcn HSL variables, `--radius`, `--os-*`, `--sidebar-*` | The single source of every CMS colour, radius and shadow |
+| `@theme inline` | `--color-*` for each shadcn name (`background`, `card`, `primary`, `muted`, `accent`, `destructive`, `border`, `input`, `ring`, `chart-1..5`, `sidebar*`, `acc`, `ok`, `warn`, `bad`, `line`), `--radius-lg/md/sm` and `--shadow-os`, each one `hsl(var(--name))` or `var(--name)` | `inline` keeps the `var()` in the generated CSS, so a utility reads the variable where the element sits (the `.dark` class and the nested `.gk-public` palette keep working). A plain `@theme` would freeze the value at `:root` |
+| `@theme` | The type scale (`label`, `body`, `lede`, `t4` to `t1`, `display`, `hero`), v3 fixed line heights for `xs` to `4xl`, the font stacks, `--radius-action/media`, `--shadow-float/lifted`, the public palette `gk-*` (hex) | Values with no variable behind them |
+| `@custom-variant dark` | `&:is(.dark *)` | next-themes sets the `.dark` class |
+
+Rules: add a CMS token to its variable and to `@theme inline` together; a new literal goes in `@theme`. Preflight is on, with three v3 defaults restored in `@layer base` (border colour `gray-200` on pseudo-elements, pointer cursor on buttons, textfield appearance on search inputs). Animation utilities (`animate-in`, `fade-in-0`, `zoom-in-95`, `slide-in-from-*`) come from `tw-animate-css`. Browser floor: Chrome 111, Safari 16.4, Firefox 128 (Tailwind v4).
 
 ## 3. Type, spacing, shape, motion
 

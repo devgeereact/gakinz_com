@@ -91,5 +91,5 @@ find server -name '*.php' -print0 | xargs -0 -n1 php -l
 ```
 
 Then record the file in `docs/DEPLOYMENT.md` section 5 and describe it in `docs/API-SPEC.md`.
-The deploy pipeline will not ship it, and `npm run docs:check` fails a pull request that
+The deploy pipeline will not ship it, and `pnpm run docs:check` fails a pull request that
 changes server code without touching `docs/DEPLOYMENT.md`.

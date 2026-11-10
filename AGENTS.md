@@ -34,7 +34,7 @@ One fact, one home. Where two documents disagree, the code is the authority.
 | Server boundary, auth and audit | `server/_bootstrap.php` |
 | Role access | the per-endpoint constants in `server/*.php`. `src/lib/access.ts` mirrors them for the interface only |
 | Data model | `server/schema.sql`: `CREATE TABLE` blocks, then migrations as comments in the `MIGRATIONS` block and dated blocks at the foot |
-| Design tokens and utilities | `src/index.css` and `tailwind.config.js` |
+| Design tokens and utilities | `src/index.css` (the shadcn variables, plus the `@theme` blocks that map them to Tailwind v4 utilities). There is no `tailwind.config.js` |
 | Server configuration keys | `server/config.php.example` |
 | Release | `.github/workflows/ci.yml` (job `deploy`, after the checks) calling `.github/workflows/deploy.yml` |
 | Server deploy and outstanding work | `docs/DEPLOYMENT.md` |
@@ -48,17 +48,21 @@ public site in the note at the top of section 10, GAkinzOS in section 11. Sectio
 are the superseded D-037 record. Do not restyle either surface away from D-046 without a new
 decision.
 
+## Styling
+
+Tailwind CSS v4 is the styling system (D-060): utility classes in the markup, `tailwindcss()` in `vite.config.ts`, `@import "tailwindcss";` and the `@theme inline` token map in `src/index.css`. The shadcn variables in `:root` and `.dark` stay the single source of every CMS colour, radius and shadow; add a token to the variable and to `@theme inline` together, and record it in `docs/DESIGN-SYSTEM.md`. No `tailwind.config.js`, PostCSS, Sass or CSS-in-JS. Element defaults go in `@layer base` so utilities can override them. Plain unlayered CSS (the rest of `src/index.css`, `src/marketing/site.css`) beats every utility, so do not put a utility on an element and expect it to win over a rule there. Installed per project (`pnpm add -D tailwindcss @tailwindcss/vite`), never relied on from a global install. Packages are managed with pnpm; `pnpm-lock.yaml` is the only lockfile.
+
 ## Commands
 
 | Purpose | Command |
 |---|---|
-| Install | `npm install` |
-| Develop | `npm run dev` (port 5102, `strictPort`, fails loudly on a clash) |
-| Test | `npm test` (unit), `npm run test:server` (needs local MySQL or MariaDB) |
-| Lint ratchet | `npm run lint:ratchet` |
-| Documentation check | `npm run docs:check` (add `-- --base origin/<branch>` to apply the sync rule locally) |
-| Type check, build and prerender | `npm run build` (`tsc -b`, `vite build`, the SSR build, then `scripts/prerender.mjs`; no network) |
-| Lint | `npm run lint` |
+| Install | `pnpm install` |
+| Develop | `pnpm run dev` (port 5102, `strictPort`, fails loudly on a clash) |
+| Test | `pnpm test` (unit), `pnpm run test:server` (needs local MySQL or MariaDB) |
+| Lint ratchet | `pnpm run lint:ratchet` |
+| Documentation check | `pnpm run docs:check` (add `--base origin/<branch>` to apply the sync rule locally) |
+| Type check, build and prerender | `pnpm run build` (`tsc -b`, `vite build`, the SSR build, then `scripts/prerender.mjs`; no network) |
+| Lint | `pnpm run lint` |
 | PHP syntax gate | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` |
 
 ## Non-negotiable constraints
@@ -99,14 +103,14 @@ decision.
 A change is complete when all of the following hold and are stated with evidence. The full
 list is `docs/AUDIT.md`.
 
-1. `npm run build` succeeds, which includes `tsc -b`.
-2. `npm test` passes, and any new behaviour that can be unit tested has a test. A server
-   change passes `npm run test:server`, and a money, auth or ownership change adds a case there.
-3. `npm run lint:ratchet` passes. The backlog is recorded in `docs/KNOWN-ISSUES.md` K-002 and
+1. `pnpm run build` succeeds, which includes `tsc -b`.
+2. `pnpm test` passes, and any new behaviour that can be unit tested has a test. A server
+   change passes `pnpm run test:server`, and a money, auth or ownership change adds a case there.
+3. `pnpm run lint:ratchet` passes. The backlog is recorded in `docs/KNOWN-ISSUES.md` K-002 and
    measured in `docs/STATUS.md`; it may shrink, never grow.
 4. Any touched PHP passes `php -l`.
 5. The documents the change affects are updated in the same pull request, as set out in
-   "Keeping documents current" below, and `npm run docs:check` passes.
+   "Keeping documents current" below, and `pnpm run docs:check` passes.
 6. The report states what was not verified, in particular anything depending on live server,
    database, mail, payment or DNS state.
 
@@ -127,7 +131,7 @@ redone and a fixed defect is not reopened by mistake.
 | Any measured count (tests, lint, files, tables, modules) | `docs/STATUS.md` only. Other documents point to it rather than repeat the number |
 | Task scope or state | `.agent/CURRENT-TASK.md` |
 
-`npm run docs:check` must pass. It checks that every relative link in the project documents
+`pnpm run docs:check` must pass. It checks that every relative link in the project documents
 resolves and, given a base ref, that a change to server code updates `docs/DEPLOYMENT.md` and a
 change to `schema.sql` updates `docs/DATA-MODEL.md` and `docs/DEPLOYMENT.md`. CI runs it on
 every pull request against the base branch. It cannot judge whether the words are right; that

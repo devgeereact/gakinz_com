@@ -17,7 +17,7 @@ axe-core version in every report: newer versions add rules (4.14.0 flagged the l
 ## 1. Gate
 
 ```bash
-npm run build && npm test && npm run lint:ratchet && npm run docs:check
+pnpm run build && pnpm test && pnpm run lint:ratchet && pnpm run docs:check
 find server -name '*.php' -print0 | xargs -0 -n1 php -l
 ```
 
@@ -44,7 +44,7 @@ Add every case study route (`/work/<slug>` for all twelve) and every service pag
 Harni case study failed while the others passed, because its colour is light.
 
 The CMS needs a signed-in session. Build without the Clerk key
-(`VITE_CLERK_PUBLISHABLE_KEY= npx vite build --outDir .local-test/dist-noclerk`), serve that, seed
+(`VITE_CLERK_PUBLISHABLE_KEY= pnpm exec vite build --outDir .local-test/dist-noclerk`), serve that, seed
 `localStorage['gk-auth']` with a synthetic `super_admin`, and stub `fetch` for `.php` with labelled sample
 data (the pattern used on 31 Oct 2026). Never sign in to the live system to test.
 

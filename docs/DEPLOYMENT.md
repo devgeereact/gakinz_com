@@ -10,7 +10,7 @@ Section 5 is the one list of server work a release cannot carry.
 
 | What moves | Mechanism | Trigger |
 |---|---|---|
-| `dist/` and `server/*.php` (not `config.php`, `.htaccess`, `schema.sql`, Markdown or `*.example`) | `scripts/release.mjs --go` over SSH (`release.json`): checks (typecheck, lint ratchet, Vitest, `php -l`), build with the live Clerk key, checksum upload, entry files last, never deletes, snapshot of every changed server file in `~/backups/gakinz_com/releases/`, automatic restore if the smoke test fails | Every push to `main` that changes more than documents, after CI passes (the `deploy` job of `.github/workflows/ci.yml`, which calls `.github/workflows/deploy.yml`; restricted SSH deploy key, secrets `CPANEL_SSH_KEY` and `CPANEL_KNOWN_HOSTS`); documentation-only pushes do not deploy (`scripts/deploy-needed.mjs`). By hand: `npm run release`, then `npm run release -- --go` |
+| `dist/` and `server/*.php` (not `config.php`, `.htaccess`, `schema.sql`, Markdown or `*.example`) | `scripts/release.mjs --go` over SSH (`release.json`): checks (typecheck, lint ratchet, Vitest, `php -l`), build with the live Clerk key, checksum upload, entry files last, never deletes, snapshot of every changed server file in `~/backups/gakinz_com/releases/`, automatic restore if the smoke test fails | Every push to `main` that changes more than documents, after CI passes (the `deploy` job of `.github/workflows/ci.yml`, which calls `.github/workflows/deploy.yml`; restricted SSH deploy key, secrets `CPANEL_SSH_KEY` and `CPANEL_KNOWN_HOSTS`); documentation-only pushes do not deploy (`scripts/deploy-needed.mjs`). By hand: `pnpm run release`, then `pnpm run release --go` |
 | `server/.htaccess`, `config.php`, SQL | By a person, backup first | A decision, never automatic |
 
 On 2026-10-30 a dry run showed the live server equal to `main` (545 tests passed). The FTP workflow and `scripts/deploy-ftps.sh` were replaced; the owner deletes the FTP secrets and account.
@@ -22,7 +22,7 @@ by a person, and `server/.htaccess` is uploaded by hand. This is the single most
 
 ## 2. The deploy workflow
 
-**If the CI gate ever blocks a release** (K-138): the release is the `deploy` job of `ci.yml`, so a failing or cancelled check skips it. Fix the check and push again; to release anyway, start `Deploy` by hand from the Actions tab (workflow_dispatch skips the wait), or run `npm run release -- --go` from the Mac. To undo the gate itself, revert `7457e5e`. Documentation-only pushes run CI but do not release (`scripts/deploy-needed.mjs`).
+**If the CI gate ever blocks a release** (K-138): the release is the `deploy` job of `ci.yml`, so a failing or cancelled check skips it. Fix the check and push again; to release anyway, start `Deploy` by hand from the Actions tab (workflow_dispatch skips the wait), or run `pnpm run release --go` from the Mac. To undo the gate itself, revert `7457e5e`. Documentation-only pushes run CI but do not release (`scripts/deploy-needed.mjs`).
 
 `.github/workflows/deploy.yml`:
 
@@ -30,7 +30,7 @@ by a person, and `server/.htaccess` is uploaded by hand. This is the single most
 on: called by ci.yml after verify, server and security have passed and the push changes more than documents,
     or by hand (workflow_dispatch, which skips the wait)
   actions/checkout, setup-node 24, setup-php 8.4
-  npm ci
+  pnpm install --frozen-lockfile
   SSH config for host "cpanel" from secrets.CPANEL_SSH_KEY and secrets.CPANEL_KNOWN_HOSTS
   node scripts/release.mjs --go     (checks, build, plan, snapshot, upload, smoke, restore on failure)
 ```
@@ -40,7 +40,7 @@ The deploy key is restricted (`restrict`, label `github-deploy-gakinz_com` in th
 
 ### What `dist/` holds (prerendered since 2026-10-16)
 
-`npm run build` prerenders the public site (`docs/ARCHITECTURE.md` section 2, "Build-time
+`pnpm run build` prerenders the public site (`docs/ARCHITECTURE.md` section 2, "Build-time
 prerender"), so `dist/` now holds, besides `assets/` and the files from `public/`:
 
 | File | Served for |
@@ -80,12 +80,12 @@ on that push; a red CI run means nothing is deployed.
 ### Before you push
 
 ```bash
-npm run build          # runs tsc -b first, so a type error blocks the deploy
-npm test               # unit tests (src/)
-npm run test:server    # PHP endpoints against a throwaway local *_test database
-npm run lint:ratchet   # fails if the lint backlog (K-002) grows
-npm run docs:check     # links, and the document-sync rule in AGENTS.md
-npm run check:live     # after a release: read-only GETs against the live site (section 5 list)
+pnpm run build          # runs tsc -b first, so a type error blocks the deploy
+pnpm test               # unit tests (src/)
+pnpm run test:server    # PHP endpoints against a throwaway local *_test database
+pnpm run lint:ratchet   # fails if the lint backlog (K-002) grows
+pnpm run docs:check     # links, and the document-sync rule in AGENTS.md
+pnpm run check:live     # after a release: read-only GETs against the live site (section 5 list)
 ```
 
 CI runs all five, plus `php -l` over `server/`, and the deploy waits for it.
@@ -97,7 +97,7 @@ Approved 2026-10-10. Until then CI ran no tests and the deploy did not wait for 
 - **Keep the Vite build and the existing client and server model.** CI runs unit tests, the
   server tests and PHP syntax, and gains targeted synthetic endpoint and browser checks as
   they become available.
-- **Lint is a ratchet first, then a gate.** `npm run lint:ratchet` enforces the ceiling
+- **Lint is a ratchet first, then a gate.** `pnpm run lint:ratchet` enforces the ceiling
   in `scripts/lint-ratchet.mjs`; the current figure is in `docs/STATUS.md` (K-002). Clear the errors in small batches, then make
   lint blocking. `continue-on-error` alone is advisory, not a ratchet.
 - **Production deploys only after the required checks pass**, or through a deliberate,
@@ -110,7 +110,7 @@ Approved 2026-10-10. Until then CI ran no tests and the deploy did not wait for 
 - **Dependencies.** Identify reachable advisories, update compatible versions in small
   batches, and remove unnecessary exports only with approval (K-041). A CSV-only export may
   remove the `xlsx` problem if nobody needs workbooks (K-017). A Tailwind major migration is
-  never an automatic audit fix. Any lockfile update needs a fresh build and test run.
+  never an automatic audit fix (v4 was done on purpose, D-060). Any lockfile update needs a fresh build and test run.
 
 ## 3. Server deploy
 
@@ -143,20 +143,20 @@ during the demo-surface cleanup, so step 5 of the old instructions could not pas
 
 This is the one list of server work a release cannot carry: SQL, `server/.htaccess` and keys in the
 private `config.php`. A change that needs one of them records it here in the same pull request
-(`AGENTS.md`, "Keeping documents current"; `npm run docs:check` enforces it in CI).
+(`AGENTS.md`, "Keeping documents current"; `pnpm run docs:check` enforces it in CI).
 
 **Phase 7 (2026-11-09, D-059, released as `825600e`): no SQL, no `.htaccess` and no `config.php` change is needed.** The release replaces
 `cron.php`, `tasks.php`, `invoices.php`, `_bootstrap.php` and the front end. `$CHASE_INTERVAL_DAYS` is optional (default 7) and is
 documented in `server/config.php.example`; leave it out. **Read-only check done 2026-11-09 (owner-approved): the host's crontab has no GAkinz entry, so `cron.php` is not scheduled at all (K-145);
 the reminder change therefore has no live effect until a cron entry is added, which is a separate owner decision.** After a cron entry exists the next cron
 run sends no reminder for an invoice reminded in the last 7 days, and no digest if one went in the last 6 (an invoice reminded by hand
-before the release has an old-format audit line, so it may be reminded once more at the first run). Rollback: `npm run release --
+before the release has an old-format audit line, so it may be reminded once more at the first run). Rollback: `pnpm run release --
 --rollback --go`; nothing in the database changes.
 
 **Phase 6 (2026-11-09, D-058, released as `01d2269`): no SQL, no `.htaccess` and no `config.php` change is needed.** The release adds
 `certificates.php` and replaces `verify.php` and the front end; the `certificates` table already exists (`schema.sql`).
 Check it after release, read-only: `GET /verify.php?id=GK-AAAA-BBBB-CCCC` answers 404 `{"error":"No matching certificate."}`
-with `Cache-Control: no-store`; `GET /certificates.php` without a token answers 401. Rollback: `npm run release -- --rollback --go`;
+with `Cache-Control: no-store`; `GET /certificates.php` without a token answers 401. Rollback: `pnpm run release --rollback --go`;
 issued certificates stay in the table and nothing is lost.
 
 **Phase 5 (2026-11-09, D-057, released as `ed58064`): no SQL, no `.htaccess` and no `config.php` change is needed.**
@@ -164,7 +164,7 @@ The release replaces `auth.php`, `oauth.php`, `client_access.php`, `users.php`, 
 Before it went, a read-only query on 2026-11-09 showed 1 active user (super admin, linked to Clerk, app two-factor off). Tables and columns the retired code used (`auth_tokens`, `magic_links`,
 `password_resets`, `users.totp_*`) stay in place; a stored session token keeps working until it expires, and Phase 9
 drops them after about 30 days. `$REFERENCE_SIGNIN_ENABLED` and `$GOOGLE_*` in the live `config.php` become unused.
-Rollback: `npm run release -- --rollback --go` restores the previous release; no data changes.
+Rollback: `pnpm run release --rollback --go` restores the previous release; no data changes.
 
 **Status 2026-11-08:** `golive/2026-11` was released as `ae01cec` and every hand-applied item below is done, with
 the OpenRouter backup model, which was released after it as `983606c` (PR #25) and then configured
@@ -180,18 +180,18 @@ By hand, after that branch merges, backup first:
 - **`server/.htaccess`** (K-033, K-058, K-125): **applied to the live host on 2026-11-08 (owner-approved).** Backup of
   the previous file: `~/backups/gakinz_com/htaccess.before-phase1.20261108T071024Z`; restore with `cp -p` over
   `~/gakinz.com/.htaccess`. Before the upload the live page's one executable inline script was checked against the
-  CSP hash (match), and after it `npm run check:live` passed 16 of 16. What it does: a CSP enforced on the public pages and Report-Only on the app
+  CSP hash (match), and after it `pnpm run check:live` passed 16 of 16. What it does: a CSP enforced on the public pages and Report-Only on the app
   shell; HSTS; COOP; `X-Powered-By` and `X-Turbo-Charged-By` removed; `ServerSignature Off`; directory requests
   answer 404 instead of a listing; a deny for dotfiles, backups, `*.example` and `config.php.*`; a one-year
   `immutable` cache for the hashed `/assets/*` files. Either order with the release is safe: the live pages'
-  inline script had the same hash on 2026-11-01, and `npm run build` fails if a future build drifts from it. Checks after upload: `/`, `/work`,
+  inline script had the same hash on 2026-11-01, and `pnpm run build` fails if a future build drifts from it. Checks after upload: `/`, `/work`,
   `/services/web-design`, `/login`, `/app` 200; `/assets/` and `/uploads/` 404; `/config.php` 403 (a real file); `/README.md` and
   `/config.php.bak` are never uploaded, so they get 403, 404 or the app page, and the deny rule only matters if such a
   file ever appears (a different real file served with 200 fails the check); `/robots.txt`, `/llms.txt`, `/sitemap.xml` 200; `curl -sI https://gakinz.com/` shows
   `content-security-policy` and `strict-transport-security`; `/api.php` has no `x-powered-by`; an
   `/assets/index-*.js` shows `cache-control: public, max-age=31536000, immutable` (Cloudflare's "Browser Cache
   TTL" must respect existing headers); sign in once and look at the browser console for CSP reports.
-  `npm run check:live` runs every status and header check in this list (anonymous GETs only, nothing is
+  `pnpm run check:live` runs every status and header check in this list (anonymous GETs only, nothing is
   changed; `scripts/live-check.mjs`). Only the signed-in console check stays manual. Rollback:
   restore the backup.
 - **Private config: done 2026-11-08** (owner-approved; backup `~/backups/gakinz_com/config.php.before-phase1-config.20261108T205013Z`,
@@ -431,7 +431,7 @@ The full key list is in section 5.7.
      once. Do not post a real client's id to test it.
    - A client record in the CMS shows no Anonymise button.
 18. Do **not** test a real payment or a real send. Stripe behaviour is covered by
-   `npm run test:server` against a fake provider; a live check needs Stripe test-mode keys on a
+   `pnpm run test:server` against a fake provider; a live check needs Stripe test-mode keys on a
    non-production copy.
 
 **Establishing the real state.** For each PHP file, compare the server copy with the
@@ -488,8 +488,8 @@ notes, not here.
 
 | Symptom | Likely cause |
 |---|---|
-| Actions run fails at `npm ci` | `package-lock.json` out of step with `package.json` |
-| Actions run fails at `npm run build` | A TypeScript error. `tsc -b` runs first |
+| Actions run fails at `pnpm install --frozen-lockfile` | `pnpm-lock.yaml` out of step with `package.json` |
+| Actions run fails at `pnpm run build` | A TypeScript error. `tsc -b` runs first |
 | Actions run fails at the FTP step | One of the three secrets is wrong or the host changed |
 | API returns "Database connection failed" | Wrong credentials in the server `config.php`, or the user lacks privileges |
 | API returns a 500 on a feature that works locally | A migration has not been run |

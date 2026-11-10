@@ -4,6 +4,8 @@ project:
   lifecycle: "maintenance"
   risk: "production"
 
+styling: "tailwind-v4"   # @tailwindcss/vite, tokens in src/index.css (D-060); package manager: pnpm
+
 defaults:
   mode: "existing-application"
   workflows:
@@ -30,7 +32,7 @@ sources_of_truth:
   server_boundary: "server/_bootstrap.php"
   data_model: "server/schema.sql"
   role_access: "per-endpoint constants in server/*.php; src/lib/access.ts is an interface mirror only"
-  design_tokens: "src/index.css and tailwind.config.js (documented in docs/DESIGN-SYSTEM.md)"
+  design_tokens: "src/index.css: shadcn variables and the Tailwind v4 @theme map (documented in docs/DESIGN-SYSTEM.md)"
   server_config_keys: "server/config.php.example"
   client_deploy: ".github/workflows/deploy.yml"
   server_deploy: "docs/DEPLOYMENT.md"

@@ -31,13 +31,13 @@ through `src/lib/api.ts`.
 
 | Purpose | Command |
 |---|---|
-| Install | `npm install` |
-| Develop | `npm run dev` (port 5102, `strictPort`) |
-| Test | `npm test` (unit), `npm run test:server` (needs local MySQL or MariaDB) |
-| Lint ratchet | `npm run lint:ratchet` |
-| Documentation check | `npm run docs:check` |
-| Type check, build and prerender | `npm run build` (`tsc -b`, `vite build`, the SSR build, then `scripts/prerender.mjs`; no network) |
-| Lint | `npm run lint` |
+| Install | `pnpm install` |
+| Develop | `pnpm run dev` (port 5102, `strictPort`) |
+| Test | `pnpm test` (unit), `pnpm run test:server` (needs local MySQL or MariaDB) |
+| Lint ratchet | `pnpm run lint:ratchet` |
+| Documentation check | `pnpm run docs:check` |
+| Type check, build and prerender | `pnpm run build` (`tsc -b`, `vite build`, the SSR build, then `scripts/prerender.mjs`; no network) |
+| Lint | `pnpm run lint` |
 | PHP syntax gate | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` |
 
 ## Sources of truth
@@ -52,7 +52,7 @@ When this file and the code disagree, the code wins and this file is wrong.
 | Server boundary and auth | `server/_bootstrap.php` |
 | Role access | the per-endpoint constants in `server/*.php`, mirrored in `src/lib/access.ts` |
 | Data model | `server/schema.sql` |
-| Design tokens | CMS: `src/index.css` and `tailwind.config.js`. Public site: `src/marketing/site.css` (D-046) |
+| Design tokens | CMS: `src/index.css` (shadcn variables, `@theme inline` map; no `tailwind.config.js`). Public site: `src/marketing/site.css` (D-046) |
 | Server configuration keys | `server/config.php.example` |
 | Release | `scripts/release.mjs` and `release.json`, run by the `deploy` job of `.github/workflows/ci.yml` (which calls `deploy.yml`) on a push to `main`, after CI passes |
 | Hand-applied server work (SQL, `.htaccess`, `config.php`) | `docs/DEPLOYMENT.md` |
@@ -89,9 +89,9 @@ When this file and the code disagree, the code wins and this file is wrong.
 
 - Keep documents current as `AGENTS.md`, "Keeping documents current", requires: read
   `docs/STATUS.md` and `docs/KNOWN-ISSUES.md` before starting, update the affected documents in
-  the same pull request, and run `npm run docs:check`.
+  the same pull request, and run `pnpm run docs:check`.
 
-- TypeScript throughout. `npm run build` runs `tsc -b`, so a type error blocks the build and
+- TypeScript throughout. `pnpm run build` runs `tsc -b`, so a type error blocks the build and
   the deploy.
 - Public pages render inside the `.gk-site` wrapper (`src/marketing/site.css`, D-046) on a
   fixed graphite design regardless of the operating system setting. The CMS is light or dark
@@ -104,7 +104,7 @@ When this file and the code disagree, the code wins and this file is wrong.
   hides the feature.
 - Public entrances (`.rise` in `src/marketing/site.css`) are visible at rest and animate only
   when motion is allowed. Never gate a marketing entrance on JavaScript.
-- The Tailwind config is `tailwind.config.js` (there is no `.ts` variant).
+- Tailwind v4 through `@tailwindcss/vite`; the tokens live in `src/index.css` (D-060). There is no `tailwind.config.js` and no PostCSS config. Plain CSS outside a layer beats utilities, and `space-y-*` margins now sit on the earlier child, so a child's own `mb-*` overrides the gap. Packages: pnpm.
 - Visual work follows the project skill `.claude/skills/gakinz-design/`; token values and their
   measured contrast are in `docs/DESIGN-SYSTEM.md`.
 
@@ -116,7 +116,7 @@ counts are in `docs/STATUS.md` section 0. This file does not repeat them, so it 
 
 - `main` is live. The last code release was `983606c` (2026-11-08) through `release.mjs`; each
   release is recorded in `docs/WORKBOOK.md` section 1 and its checks in `docs/AUDIT.md`.
-- `npm run lint` still fails (K-002). `npm run lint:ratchet` holds the ceiling in
+- `pnpm run lint` still fails (K-002). `pnpm run lint:ratchet` holds the ceiling in
   `scripts/lint-ratchet.mjs`, and the count must not grow.
 - Anything checked only against mocked API responses is NOT TESTED on real data (K-044).
 - Gated features ship switched off (D-050). Do not switch one on without the named gates.

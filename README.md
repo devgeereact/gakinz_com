@@ -20,8 +20,8 @@ Behind them sits a PHP and MySQL API on cPanel shared hosting.
 ## Quick start
 
 ```bash
-npm install
-npm run dev          # http://localhost:5102
+pnpm install
+pnpm run dev          # http://localhost:5102
 ```
 
 Port 5102 is pinned with `strictPort`, so a clash fails loudly. This matters: in development
@@ -30,31 +30,31 @@ localhost port. A drifted port shows up as an opaque CORS failure, not as a port
 
 The dev server has no local PHP or MySQL behind it. **Development runs against production
 data.** Treat every write as a write to the real business. Server behaviour is tested only
-through `npm run test:server`, against a throwaway local database (`docs/OPERATIONS.md`
+through `pnpm run test:server`, against a throwaway local database (`docs/OPERATIONS.md`
 section 8).
 
 ## Commands
 
 | Command | Purpose |
 |---|---|
-| `npm run dev` | Dev server on port 5102 |
-| `npm run build` | `tsc -b`, `vite build`, an SSR build, then `scripts/prerender.mjs` (32 public pages, `app-shell.html`, `sitemap.xml`); output in `dist/`, no network |
-| `npm run preview` | Serve the built output on port 5102 |
-| `npm test` | Vitest unit tests, single run |
-| `npm run test:server` | PHP endpoints against a throwaway local `*_test` database |
-| `npm run test:watch` | Vitest in watch mode |
-| `npm run verify` | The release checks and build plus the upload guard, on uncommitted work. Never contacts the host |
-| `npm run release` | Dry run of a release over SSH; add `-- --go` to upload. A push to `main` does this from GitHub Actions |
-| `npm run check:live` | After a release: 16 read-only GET checks against the live site (`docs/DEPLOYMENT.md` section 5) |
-| `npm run typecheck` | `tsc -b --noEmit` |
-| `npm run lint` | ESLint. **Currently fails**; the count is in `docs/STATUS.md` section 0 and the backlog in `docs/KNOWN-ISSUES.md` K-002 |
-| `npm run lint:ratchet` | Fails if that count grows. CI runs it |
-| `npm run docs:check` | Fails on a broken document link, or (with `-- --base <ref>`) a server or schema change without its documents. CI runs it |
+| `pnpm run dev` | Dev server on port 5102 |
+| `pnpm run build` | `tsc -b`, `vite build`, an SSR build, then `scripts/prerender.mjs` (32 public pages, `app-shell.html`, `sitemap.xml`); output in `dist/`, no network |
+| `pnpm run preview` | Serve the built output on port 5102 |
+| `pnpm test` | Vitest unit tests, single run |
+| `pnpm run test:server` | PHP endpoints against a throwaway local `*_test` database |
+| `pnpm run test:watch` | Vitest in watch mode |
+| `pnpm run verify` | The release checks and build plus the upload guard, on uncommitted work. Never contacts the host |
+| `pnpm run release` | Dry run of a release over SSH; add `--go` to upload. A push to `main` does this from GitHub Actions |
+| `pnpm run check:live` | After a release: 16 read-only GET checks against the live site (`docs/DEPLOYMENT.md` section 5) |
+| `pnpm run typecheck` | `tsc -b --noEmit` |
+| `pnpm run lint` | ESLint. **Currently fails**; the count is in `docs/STATUS.md` section 0 and the backlog in `docs/KNOWN-ISSUES.md` K-002 |
+| `pnpm run lint:ratchet` | Fails if that count grows. CI runs it |
+| `pnpm run docs:check` | Fails on a broken document link, or (with `--base <ref>`) a server or schema change without its documents. CI runs it |
 | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` | PHP syntax gate |
 
 ## Stack
 
-React 19 and TypeScript on Vite 7, Tailwind v3 with shadcn and Radix primitives, React Router
+React 19 and TypeScript on Vite 7, Tailwind v4 (Vite plugin) with shadcn and Radix primitives, React Router
 7, Zustand. The API is plain PHP 8 over `mysqli`, one file per resource, with no framework and
 no Composer dependency. Tests are Vitest. Deploys run on GitHub Actions.
 
@@ -143,7 +143,7 @@ Mastercard design reference and the D-037 design record (retired 2026-11-01, rea
    figure, and no claim the project cannot stand behind. Absent material is left unpublished
    rather than shown as a gap. See `docs/DECISIONS.md` D-027 and D-039.
 8. **Public styles live in `src/marketing/site.css`**, scoped to `.gk-site`, since D-046. The
-   nine-value Tailwind type scale of D-024 governed the D-037 surface and still applies to
+   nine-value Tailwind type scale (now in the `@theme` block of `src/index.css`) of D-024 governed the D-037 surface and still applies to
    anything styled with Tailwind outside the CMS, such as the shared proposal page.
 
 ## State
@@ -151,6 +151,6 @@ Mastercard design reference and the D-037 design record (retired 2026-11-01, rea
 Current state lives in one place, `docs/STATUS.md`: the measured counts, the 2026-10-10 audit
 and readiness verdict, the delivery phases, the open work in priority order and the owner
 inputs still outstanding. In short: everything on `main` is live (release `983606c`, 2026-11-08), the
-public pages pass the release checks (`npm run check:live`, 16 of 16), and signed-in journeys on real data are still
+public pages pass the release checks (`pnpm run check:live`, 16 of 16), and signed-in journeys on real data are still
 largely NOT TESTED (2026-11-08: sign-in works and 24 CMS screens load with no CSP violations; no data flows were exercised). The
 production gates in `docs/OPERATIONS.md` decide what may be switched on.
