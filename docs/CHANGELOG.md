@@ -19,6 +19,7 @@ What changed in the product, newest first. The checks behind each change are in 
 - `docs/ROADMAP.md` (the frozen V1 finish line), this changelog, `docs/VERIFICATION.md`.
 
 **Changed**
+- The public phone number +44 20 8059 8757 (supplied by the owner) now shows on Contact and the legal pages and in the business structured data (`telephone`).
 - `docs/KNOWN-ISSUES.md` compacted from 2,397 to about 1,460 lines by merging closed issues into one table; the earlier
   text stays in git (`git show d30e95b:docs/KNOWN-ISSUES.md`).
 - `gk_send_email` accepts an optional `timeout` (alerts use 8 seconds; everything else keeps 20).

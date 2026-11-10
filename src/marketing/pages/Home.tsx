@@ -214,7 +214,7 @@ export default function Home() {
         jsonLd={[
           personSchema({ jobTitle: `${site.role}, ${site.location}`, description: site.line, sameAs: sameAsFrom(copy.business.social) }),
           websiteSchema(),
-          businessSchema({ description: site.line, email: site.contact.email, services: copy.services }),
+          businessSchema({ description: site.line, email: site.contact.email, phone: copy.business.phone, services: copy.services }),
         ]}
       />
 

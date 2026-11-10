@@ -63,8 +63,8 @@ export const site = {
   contact: {
     /** Real and in use. */
     email: "hello@gakinz.com",
-    /** NOT SUPPLIED. The previous site shipped +44 20 0000 0000. */
-    phone: null as Pending<string>,
+    /** Supplied by the owner 2026-11-10. (The 2026-09 site shipped a made-up +44 20 0000 0000; that was removed.) */
+    phone: "+44 20 8059 8757" as Pending<string>,
     /** True at the level stated. No street address is claimed. */
     place: "London, United Kingdom",
     /**

@@ -98,7 +98,7 @@ On 2026-10-14 the owner approved the redesign that replaces D-037's visual direc
       it (D-035). Also whether partial payments are always separate instalment invoices.
 - [ ] Cancellation, change and revision terms.
 - [ ] **`$OWNER_ALERTS` in `config.php`** (2026-11-10, D-061): the address that is emailed the moment an enquiry or a data deletion request arrives, with `$SMTP_*` working. Without it the owner is not told. Date:
-- [ ] Public contact details: email (`hello@gakinz.com` today), phone (`null` today), working
+- [ ] Public contact details: email (`hello@gakinz.com` today), phone (**supplied 2026-11-10: +44 20 8059 8757**, on Contact, the legal pages and the business schema), working
       hours, reply promise. This also sets the enquiry acknowledgement target in
       `docs/PRODUCT-SPEC.md` section 1.4.
 - [ ] The operating targets in `docs/PRODUCT-SPEC.md` section 1.4, confirmed or changed.

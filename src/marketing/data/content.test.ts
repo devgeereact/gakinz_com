@@ -129,11 +129,11 @@ describe("showcase", () => {
 describe("business details", () => {
   const li = { platform: "linkedin", url: "https://www.linkedin.com/in/example", label: "Gideon on LinkedIn" }
 
-  it("falls back to the built-in details, with no phone, address, hours or profiles invented", () => {
+  it("falls back to the built-in details (the owner's phone), with no address, hours or profiles invented", () => {
     const b = mergeCopy(null).business
-    expect(b).toEqual({ email: DEFAULT_COPY.contact.email, phone: null, address: [], hours: null, social: [] })
+    expect(b).toEqual({ email: DEFAULT_COPY.contact.email, phone: "+44 20 8059 8757", address: [], hours: null, social: [] })
     expect(mergeCopy({}).business).toEqual(b)
-    expect(mergeBusiness({}, "x@y.co")).toMatchObject({ email: "x@y.co", phone: null, social: [] })
+    expect(mergeBusiness({}, "x@y.co")).toMatchObject({ email: "x@y.co", phone: "+44 20 8059 8757", social: [] })
   })
 
   it("applies published values over the built-in ones, field by field", () => {
@@ -171,7 +171,7 @@ describe("business details", () => {
 
   it("ignores a bad published email or phone rather than showing it", () => {
     const b = mergeBusiness({ email: "not an email", phone: "ring me", social: "https://x.com/a" }, "keep@example.test")
-    expect(b).toMatchObject({ email: "keep@example.test", phone: null, social: [] })
+    expect(b).toMatchObject({ email: "keep@example.test", phone: "+44 20 8059 8757", social: [] })
   })
 })
 

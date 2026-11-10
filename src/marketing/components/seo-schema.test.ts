@@ -22,6 +22,12 @@ describe("businessSchema", () => {
     expect(b).not.toHaveProperty("vatID")
   })
 
+  it("states the telephone number only when one is supplied, as digits", () => {
+    const withPhone = businessSchema({ description: "d", email: "a@b.co", phone: "+44 20 8059 8757", services: [] })
+    expect(withPhone.telephone).toBe("+442080598757")
+    expect(businessSchema({ description: "d", email: "a@b.co", phone: null, services: [] })).not.toHaveProperty("telephone")
+  })
+
   it("lists each service as an offer pointing at its own page", () => {
     const offers = (b.hasOfferCatalog as { itemListElement: { itemOffered: { name: string; url: string } }[] }).itemListElement
     expect(offers).toHaveLength(1)
