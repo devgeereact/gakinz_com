@@ -174,7 +174,7 @@ export default function Portal() {
             <Select value={clientId} onValueChange={setClientId}>
               <SelectTrigger
                 aria-labelledby="portal-preview-label"
-                className="h-auto min-h-[38px] min-w-0 flex-1 whitespace-normal border-0 bg-transparent text-left shadow-none focus:shadow-none [&>span]:line-clamp-none [&>span]:[overflow-wrap:anywhere]"
+                className="h-auto min-h-[38px] min-w-0 flex-1 whitespace-normal border-0 bg-transparent text-left shadow-none focus:shadow-none [&>span]:line-clamp-none [&>span]:wrap-anywhere"
               >
                 <SelectValue placeholder="Choose a client" />
               </SelectTrigger>
@@ -225,7 +225,7 @@ export default function Portal() {
           <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border bg-card p-[18px]">
             <div className="min-w-0">
               <p className="font-mono text-[11.5px] uppercase tracking-[.06em] text-muted-foreground">Welcome</p>
-              <h2 className="mt-1 font-display text-[1.6rem] font-semibold leading-tight tracking-[-0.025em] [overflow-wrap:anywhere]">
+              <h2 className="mt-1 font-display text-[1.6rem] font-semibold leading-tight tracking-tight wrap-anywhere">
                 {data.client.company}
               </h2>
             </div>
@@ -270,7 +270,7 @@ export default function Portal() {
                       return (
                         <li key={p.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3">
                           <span className="min-w-0">
-                            <b className="block font-semibold [overflow-wrap:anywhere]">{p.name}</b>
+                            <b className="block font-semibold wrap-anywhere">{p.name}</b>
                             <span className="block text-[13px] text-muted-foreground">
                               {p.reference && <span className="font-mono tabular-nums">{p.reference} · </span>}
                               {pct}% complete{p.due_date ? ` · due ${fmt(p.due_date)}` : ""}
@@ -312,7 +312,7 @@ export default function Portal() {
                     {data.invoices.map((inv) => (
                       <li key={inv.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3">
                         <span className="min-w-0">
-                          <b className="block font-mono font-semibold tabular-nums [overflow-wrap:anywhere]">{inv.number || `#${inv.id}`}</b>
+                          <b className="block font-mono font-semibold tabular-nums wrap-anywhere">{inv.number || `#${inv.id}`}</b>
                           <span className="block text-[13px] text-muted-foreground">
                             Due {fmt(inv.due_at)} · <span className="tabular-nums">{gbp(inv.total)}</span>
                             {inv.project_reference && (
@@ -367,7 +367,7 @@ export default function Portal() {
                     {data.tickets.map((t) => (
                       <li key={t.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3">
                         <span className="min-w-0">
-                          <b className="block font-semibold [overflow-wrap:anywhere]">{t.subject}</b>
+                          <b className="block font-semibold wrap-anywhere">{t.subject}</b>
                           <span className="block text-[13px] text-muted-foreground">Raised {fmt(t.created_at)}</span>
                         </span>
                         <StatusBadge status={t.status} />
@@ -460,7 +460,7 @@ function ClientMessages({
                   className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3 text-left hover:text-acc"
                 >
                   <span className="min-w-0">
-                    <b className="block font-semibold [overflow-wrap:anywhere]">{t.subject}</b>
+                    <b className="block font-semibold wrap-anywhere">{t.subject}</b>
                     <span className="block text-[13px] text-muted-foreground">
                       {t.replies.length === 0
                         ? "No replies yet"
@@ -589,7 +589,7 @@ function Thread({
         <ArrowLeft /> All messages
       </Button>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <h3 className="min-w-0 font-display text-[1.15rem] font-semibold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">{thread.subject}</h3>
+        <h3 className="min-w-0 font-display text-[1.15rem] font-semibold leading-tight tracking-[-0.02em] wrap-anywhere">{thread.subject}</h3>
         <StatusBadge status={THREAD_STATUS[thread.status] ?? thread.status} />
       </div>
 
@@ -719,7 +719,7 @@ function TimelineItem({ who, when, on, children }: { who: string; when: string; 
       <span aria-hidden className={cn("ml-[5px] mt-1.5 size-[9px] rounded-full shadow-[0_0_0_3px_hsl(var(--card))]", on ? "bg-acc" : "bg-line-strong")} />
       <span className="min-w-0">
         <b className="font-semibold">{who}</b> <small className="text-[12.5px] text-muted-foreground">· {when}</small>
-        <span className="mt-0.5 block whitespace-pre-wrap [overflow-wrap:anywhere]">{children}</span>
+        <span className="mt-0.5 block whitespace-pre-wrap wrap-anywhere">{children}</span>
       </span>
     </li>
   )

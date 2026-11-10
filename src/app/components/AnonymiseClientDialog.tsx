@@ -52,7 +52,7 @@ export function AnonymiseClientDialog({ preview, onClose, onDone }: { preview: C
           role="region"
           aria-label="What changes and what is kept"
           tabIndex={0}
-          className="max-h-[45vh] space-y-3 overflow-y-auto rounded-md text-[13px] text-muted-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30"
+          className="max-h-[45vh] space-y-3 overflow-y-auto rounded-md text-[13px] text-muted-foreground focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30"
         >
           {blocked && (
             <div role="alert" className="text-destructive">
@@ -98,7 +98,7 @@ export function AnonymiseClientDialog({ preview, onClose, onDone }: { preview: C
             <span>Keep the company name (only if it does not name a person, a sole trader for example)</span>
           </label>
           <Label htmlFor="anonymise-confirm">
-            Type <span className="font-mono [overflow-wrap:anywhere]">{preview.company}</span> to confirm
+            Type <span className="font-mono wrap-anywhere">{preview.company}</span> to confirm
           </Label>
           <Input
             id="anonymise-confirm"

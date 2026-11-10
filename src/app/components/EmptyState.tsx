@@ -30,7 +30,7 @@ export function EmptyState({ icon: Icon, title, description, action, className }
           <Icon className="size-[18px]" />
         </span>
       )}
-      <p className="font-display text-[1.2rem] font-semibold leading-tight tracking-[-0.025em] text-foreground">{title}</p>
+      <p className="font-display text-[1.2rem] font-semibold leading-tight tracking-tight text-foreground">{title}</p>
       {description && <p className="max-w-[46ch] text-muted-foreground">{description}</p>}
       {action && <div className="mt-1 flex flex-wrap justify-center gap-2">{action}</div>}
     </div>
@@ -58,7 +58,7 @@ export function LoadError({
       className={cn("flex flex-wrap items-start gap-3.5 rounded-2xl border border-bad/30 bg-bad-soft p-[18px] text-foreground", className)}
     >
       <AlertTriangle aria-hidden className="mt-0.5 size-[18px] shrink-0 text-bad" />
-      <div className="min-w-[min(100%,200px)] flex-1 [overflow-wrap:anywhere]">
+      <div className="min-w-[min(100%,200px)] flex-1 wrap-anywhere">
         <p className="font-semibold">Could not load {what}.</p>
         <p className="mt-1 text-muted-foreground">{detail ?? "The server did not answer. Nothing was changed. Check your connection, then try again."}</p>
       </div>

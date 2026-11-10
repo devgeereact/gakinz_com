@@ -261,10 +261,10 @@ export default function Content() {
                           actual serif) for the public relaunch. This is a CMS preview
                           and is not inside `.gk-public`, so it keeps the workspace's
                           own face. */}
-                      {data.title && <h3 className="font-sans text-lg font-bold [overflow-wrap:anywhere]">{data.title}</h3>}
-                      <p className="mt-2 whitespace-pre-wrap leading-relaxed text-foreground [overflow-wrap:anywhere]">{data.body}</p>
+                      {data.title && <h3 className="font-sans text-lg font-bold wrap-anywhere">{data.title}</h3>}
+                      <p className="mt-2 whitespace-pre-wrap leading-relaxed text-foreground wrap-anywhere">{data.body}</p>
                       {data.hashtags?.length > 0 && (
-                        <p className="mt-3 font-mono text-[13px] text-acc [overflow-wrap:anywhere]">{data.hashtags.join(" ")}</p>
+                        <p className="mt-3 font-mono text-[13px] text-acc wrap-anywhere">{data.hashtags.join(" ")}</p>
                       )}
                       <div className="mt-[14px] flex flex-wrap gap-2">
                         <Button variant="outline" onClick={() => copy(full)}>
@@ -327,8 +327,8 @@ export default function Content() {
                       <Trash2 />
                     </Button>
                   </div>
-                  {d.title && <div className="mt-2 font-semibold [overflow-wrap:anywhere]">{d.title}</div>}
-                  <p className="mt-1 line-clamp-3 flex-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">{d.body}</p>
+                  {d.title && <div className="mt-2 font-semibold wrap-anywhere">{d.title}</div>}
+                  <p className="mt-1 line-clamp-3 flex-1 text-sm text-muted-foreground wrap-anywhere">{d.body}</p>
                   <div className="mt-3">
                     <Button variant="outline" size="sm" onClick={() => copy([d.title, d.body, d.hashtags].filter(Boolean).join("\n\n"))}>
                       <Copy /> Copy
@@ -355,7 +355,7 @@ function ChipBox({ title, items, onCopy, mono = false }: { title: string; items:
       </div>
       <div className="mt-2 flex flex-wrap gap-1.5">
         {items.map((k) => (
-          <span key={k} className={cn("rounded-full border bg-secondary px-2.5 py-1 text-xs [overflow-wrap:anywhere]", mono && "font-mono text-acc")}>
+          <span key={k} className={cn("rounded-full border bg-secondary px-2.5 py-1 text-xs wrap-anywhere", mono && "font-mono text-acc")}>
             {k}
           </span>
         ))}

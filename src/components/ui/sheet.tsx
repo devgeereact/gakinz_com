@@ -94,7 +94,7 @@ const SheetFooter = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-wrap justify-end gap-2 border-t pt-3.5 [&>button]:max-sm:flex-auto",
+      "flex flex-wrap justify-end gap-2 border-t pt-3.5 max-sm:[&>button]:flex-auto",
       className
     )}
     {...props}
@@ -108,7 +108,7 @@ const SheetTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Title
     ref={ref}
-    className={cn("pr-12 font-display text-[1.4rem] font-semibold leading-tight tracking-[-0.025em] text-foreground", className)}
+    className={cn("pr-12 font-display text-[1.4rem] font-semibold leading-tight tracking-tight text-foreground", className)}
     {...props}
   />
 ))

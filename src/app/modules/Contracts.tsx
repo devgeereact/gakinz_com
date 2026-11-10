@@ -351,8 +351,8 @@ export default function Contracts() {
               <TableBody>
                 {items.map((c) => (
                   <TableRow key={c.id}>
-                    <TableCell className="min-w-[12rem]">
-                      <span className="font-semibold [overflow-wrap:anywhere]">{c.title}</span>
+                    <TableCell className="min-w-48">
+                      <span className="font-semibold wrap-anywhere">{c.title}</span>
                       {c.nda_triage && (
                         <Badge variant={TRIAGE[c.nda_triage].variant} className="ml-2 align-middle">
                           {TRIAGE[c.nda_triage].label}
@@ -362,15 +362,15 @@ export default function Contracts() {
                         <span className="mt-0.5 block font-mono text-xs tabular-nums text-muted-foreground">Project {c.project_reference}</span>
                       )}
                     </TableCell>
-                    <TableCell className="min-w-[9rem] [overflow-wrap:anywhere]">{c.client_company || <span className="text-muted-foreground">No client</span>}</TableCell>
+                    <TableCell className="min-w-36 wrap-anywhere">{c.client_company || <span className="text-muted-foreground">No client</span>}</TableCell>
                     <TableCell className="whitespace-nowrap">{KIND_LABEL[c.kind] ?? c.kind}</TableCell>
                     <TableCell>
                       <StatusBadge status={c.status} />
                     </TableCell>
-                    <TableCell className="min-w-[9rem]">
+                    <TableCell className="min-w-36">
                       {c.signed_at ? (
                         <>
-                          <span className="[overflow-wrap:anywhere]">{c.signer_name ?? ""}</span>
+                          <span className="wrap-anywhere">{c.signer_name ?? ""}</span>
                           <span className="block whitespace-nowrap text-[12.5px] text-muted-foreground">{fmt(c.signed_at)}</span>
                         </>
                       ) : (

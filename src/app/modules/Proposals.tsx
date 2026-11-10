@@ -436,7 +436,7 @@ export default function Proposals() {
         )}
 
         {!loading && !error && items.length > 0 && (
-          <StatGrid className="mb-0">
+          <StatGrid className="last:mb-0">
             <StatTile label="Sent, awaiting reply" value={gbp(sum(sent))} note={plural(sent.length, "quote")} />
             <StatTile label="Accepted" value={gbp(sum(accepted))} note={plural(accepted.length, "quote")} tone={accepted.length ? "up" : undefined} />
             <StatTile label="Win rate" value={`${winRate}%`} note="Of decided quotes" />
@@ -470,7 +470,7 @@ export default function Proposals() {
               <TableBody>
                 {items.map((p) => (
                   <TableRow key={p.id}>
-                    <TableCell className="min-w-[12rem] [overflow-wrap:anywhere]">
+                    <TableCell className="min-w-48 wrap-anywhere">
                       <span className="font-semibold">{p.title}</span>
                       {p.project_reference && (
                         <span className="mt-0.5 block font-mono text-xs tabular-nums text-muted-foreground">Project {p.project_reference}</span>
@@ -488,7 +488,7 @@ export default function Proposals() {
                         </span>
                       )}
                     </TableCell>
-                    <TableCell className="min-w-[9rem] [overflow-wrap:anywhere]">{p.client_company || <span className="text-muted-foreground">No client</span>}</TableCell>
+                    <TableCell className="min-w-36 wrap-anywhere">{p.client_company || <span className="text-muted-foreground">No client</span>}</TableCell>
                     <TableCell>
                       <StatusBadge status={p.status} />
                     </TableCell>
@@ -629,7 +629,7 @@ export default function Proposals() {
           {acceptError && (
             <div role="alert" className="flex items-start gap-3 rounded-2xl border border-bad/30 bg-bad-soft p-[14px] text-sm text-foreground">
               <AlertCircle className="mt-0.5 size-4 shrink-0 text-bad" aria-hidden="true" />
-              <p className="min-w-0 flex-1 [overflow-wrap:anywhere]">{acceptError}</p>
+              <p className="min-w-0 flex-1 wrap-anywhere">{acceptError}</p>
             </div>
           )}
           <DialogFooter className="gap-2 sm:gap-0">

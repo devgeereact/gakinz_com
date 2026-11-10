@@ -231,7 +231,7 @@ export default function Mailbox() {
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search mail…"
             disabled={!status?.imap}
-            className="w-full min-w-0 border-0 bg-transparent outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed"
+            className="w-full min-w-0 border-0 bg-transparent outline-hidden placeholder:text-muted-foreground disabled:cursor-not-allowed"
           />
         </label>
       </form>
@@ -264,7 +264,7 @@ export default function Mailbox() {
               </p>
             </div>
           ) : (
-            <ul className="max-h-[34rem] overflow-y-auto">
+            <ul className="max-h-136 overflow-y-auto">
               {list.map((m) => (
                 <li key={m.uid}>
                   <button
@@ -278,14 +278,14 @@ export default function Mailbox() {
                     )}
                   >
                     <span className="flex w-full min-w-0 items-start gap-2">
-                      <b className={cn("min-w-0 flex-1 [overflow-wrap:anywhere]", m.seen ? "font-medium" : "font-bold")}>
+                      <b className={cn("min-w-0 flex-1 wrap-anywhere", m.seen ? "font-medium" : "font-bold")}>
                         {!m.seen && <span className="sr-only">Unread: </span>}
                         {m.from_name || m.from_email}
                       </b>
                       <span className="shrink-0 pt-0.5 font-mono text-xs tabular-nums text-muted-foreground">{when(m.date)}</span>
                       {!m.seen && <span aria-hidden className="mt-2 size-2 shrink-0 rounded-full bg-acc" />}
                     </span>
-                    <span className={cn("w-full min-w-0 text-[13.5px] [overflow-wrap:anywhere]", m.seen && "text-muted-foreground")}>{m.subject}</span>
+                    <span className={cn("w-full min-w-0 text-[13.5px] wrap-anywhere", m.seen && "text-muted-foreground")}>{m.subject}</span>
                   </button>
                 </li>
               ))}
@@ -294,7 +294,7 @@ export default function Mailbox() {
         </div>
 
         {/* Reading or compose pane */}
-        <div className="min-h-[24rem] min-w-0 rounded-2xl border bg-card p-[18px]">
+        <div className="min-h-96 min-w-0 rounded-2xl border bg-card p-[18px]">
           {draft ? (
             <Compose
               draft={draft}
@@ -307,17 +307,17 @@ export default function Mailbox() {
               isReply={!!draft.in_reply_to}
             />
           ) : loadingMsg ? (
-            <p className="flex min-h-[20rem] items-center justify-center gap-2 text-muted-foreground">
+            <p className="flex min-h-80 items-center justify-center gap-2 text-muted-foreground">
               <Loader2 className="size-4 animate-spin" /> Opening…
             </p>
           ) : message ? (
             <article>
-              <h2 className="font-display text-[1.3rem] font-semibold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">{message.subject}</h2>
-              <p className="mb-4 mt-1.5 text-muted-foreground [overflow-wrap:anywhere]">
+              <h2 className="font-display text-[1.3rem] font-semibold leading-tight tracking-[-0.02em] wrap-anywhere">{message.subject}</h2>
+              <p className="mb-4 mt-1.5 text-muted-foreground wrap-anywhere">
                 From {message.from_name ? <>{message.from_name} &lt;{message.from_email}&gt;</> : message.from_email}
                 {message.date ? ` · ${new Date(message.date).toLocaleString("en-GB")}` : ""}
               </p>
-              <pre className="whitespace-pre-wrap font-sans text-[15px] leading-relaxed text-foreground [overflow-wrap:anywhere]">
+              <pre className="whitespace-pre-wrap font-sans text-[15px] leading-relaxed text-foreground wrap-anywhere">
                 {message.text || "(no text content)"}
               </pre>
               <div className="mt-5 flex flex-wrap gap-2">
@@ -327,7 +327,7 @@ export default function Mailbox() {
               </div>
             </article>
           ) : (
-            <div className="flex min-h-[20rem] flex-col items-center justify-center gap-3 text-center text-muted-foreground">
+            <div className="flex min-h-80 flex-col items-center justify-center gap-3 text-center text-muted-foreground">
               <Mail aria-hidden className="size-8 opacity-50" />
               <p>Select a message to read, or compose a new one.</p>
             </div>
@@ -340,7 +340,7 @@ export default function Mailbox() {
 
 function Banner({ children }: { children: React.ReactNode }) {
   return (
-    <div role="status" className="mb-3 flex items-start gap-3 rounded-2xl bg-warn-soft p-4 text-sm text-foreground [overflow-wrap:anywhere]">
+    <div role="status" className="mb-3 flex items-start gap-3 rounded-2xl bg-warn-soft p-4 text-sm text-foreground wrap-anywhere">
       <AlertTriangle aria-hidden className="mt-0.5 size-4 shrink-0 text-warn" />
       <span className="min-w-0">{children}</span>
     </div>

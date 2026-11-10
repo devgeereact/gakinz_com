@@ -32,7 +32,7 @@ export default function AuthFrame({ children }: { children: ReactNode }) {
             ))}
           </div>
         </div>
-        <ClockPill className="!px-0 uppercase tracking-[.06em] !text-sidebar-muted" />
+        <ClockPill className="px-0! uppercase tracking-[.06em] text-sidebar-muted!" />
       </section>
       <main className="grid place-items-center p-[clamp(24px,5vw,56px)]">
         <div className="w-full max-w-[400px]">{children}</div>

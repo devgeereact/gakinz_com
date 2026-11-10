@@ -51,7 +51,7 @@ function Panel({ title, extra, children, className }: { title: ReactNode; extra?
   return (
     <section className={cn("min-w-0 rounded-2xl border bg-card", className)}>
       <div className="flex flex-wrap items-center gap-2.5 px-[18px] pb-3 pt-4">
-        <h2 className="min-w-0 font-display text-[1.05rem] font-semibold tracking-[-0.01em] [overflow-wrap:anywhere]">{title}</h2>
+        <h2 className="min-w-0 font-display text-[1.05rem] font-semibold tracking-[-0.01em] wrap-anywhere">{title}</h2>
         {extra && <div className="ml-auto">{extra}</div>}
       </div>
       <div className="px-[18px] pb-[18px]">{children}</div>
@@ -87,7 +87,7 @@ export default function DevPipeline() {
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-bad" />
           <div className="min-w-[min(100%,200px)] flex-1">
             <p className="font-semibold">Could not load the dev pipeline.</p>
-            <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
+            <p className="mt-1 text-sm text-muted-foreground wrap-anywhere">
               {error}. The dev endpoint and database must be live on the server.
             </p>
           </div>
@@ -355,7 +355,7 @@ function ProjectPipeline({
           <div>
             {CHECKS.map((c) => (
               <label key={c.key} className="flex cursor-pointer items-center justify-between gap-4 border-t py-3 first:border-t-0">
-                <span className="min-w-0 [overflow-wrap:anywhere]">{c.label}</span>
+                <span className="min-w-0 wrap-anywhere">{c.label}</span>
                 <input
                   type="checkbox"
                   checked={!!checks[c.key]}
@@ -390,7 +390,7 @@ function ProjectPipeline({
                       <small className="text-[12.5px] text-muted-foreground">{fmt(d.created_at)}</small>
                     </span>
                     {(d.notes || d.url) && (
-                      <span className="mt-0.5 block text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
+                      <span className="mt-0.5 block text-[13px] text-muted-foreground wrap-anywhere">
                         {d.notes}
                         {d.notes && d.url && " · "}
                         {d.url && (
@@ -418,14 +418,14 @@ function ProjectPipeline({
           {ghLoading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Loading from GitHub…</div>
           ) : ghError ? (
-            <p className="text-sm text-muted-foreground [overflow-wrap:anywhere]">{ghError}</p>
+            <p className="text-sm text-muted-foreground wrap-anywhere">{ghError}</p>
           ) : gh ? (
             <>
               <p className="mb-2 font-mono text-[11px] uppercase tracking-[.08em] text-muted-foreground">Recent commits</p>
               <div>
                 {gh.commits.map((c) => (
                   <div key={c.sha} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t py-3 first:border-t-0">
-                    <span className="min-w-0 [overflow-wrap:anywhere]">
+                    <span className="min-w-0 wrap-anywhere">
                       {c.message}
                       <span className="text-xs text-muted-foreground"> · {c.author}</span>
                     </span>
@@ -438,7 +438,7 @@ function ProjectPipeline({
               <div>
                 {gh.pulls.map((p) => (
                   <div key={p.number} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t py-3 first:border-t-0">
-                    <span className="min-w-0 [overflow-wrap:anywhere]">
+                    <span className="min-w-0 wrap-anywhere">
                       <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-acc hover:underline">#{p.number}</a> {p.title}
                     </span>
                     <span className="text-xs text-muted-foreground">{p.author}</span>

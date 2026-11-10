@@ -115,8 +115,8 @@ export function CallList({
             >
               <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5">
                 <div className="min-w-0">
-                  {showWith && <b className="block font-semibold [overflow-wrap:anywhere]">{callWith(c)}</b>}
-                  <span className={cn("block [overflow-wrap:anywhere]", !showWith && "font-semibold")}>{t.agreed}</span>
+                  {showWith && <b className="block font-semibold wrap-anywhere">{callWith(c)}</b>}
+                  <span className={cn("block wrap-anywhere", !showWith && "font-semibold")}>{t.agreed}</span>
                   {t.yours && <small className="block text-[12.5px] text-muted-foreground">{t.yours}</small>}
                 </div>
                 <Badge variant={meta.tone}>{meta.label}</Badge>
@@ -126,7 +126,7 @@ export function CallList({
                   <CalendarClock aria-hidden className="size-3.5 shrink-0" /> {c.duration_min} min
                 </span>
                 {c.location && (
-                  <span className="inline-flex min-w-0 items-center gap-1 [overflow-wrap:anywhere]">
+                  <span className="inline-flex min-w-0 items-center gap-1 wrap-anywhere">
                     <MapPin aria-hidden className="size-3.5 shrink-0" />
                     {isWebLink(c.location) ? (
                       <a href={c.location.trim()} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-acc hover:underline">
@@ -139,10 +139,10 @@ export function CallList({
                 )}
               </p>
               {overdue && <p className="text-[13px] text-warn">This time has passed. Record whether the call happened.</p>}
-              {c.outcome && <p className="text-[13px] [overflow-wrap:anywhere]"><b className="font-semibold">Outcome:</b> {c.outcome}</p>}
-              {c.notes && <p className="whitespace-pre-wrap text-[13px] text-muted-foreground [overflow-wrap:anywhere]">{c.notes}</p>}
+              {c.outcome && <p className="text-[13px] wrap-anywhere"><b className="font-semibold">Outcome:</b> {c.outcome}</p>}
+              {c.notes && <p className="whitespace-pre-wrap text-[13px] text-muted-foreground wrap-anywhere">{c.notes}</p>}
               {failed && (
-                <p role="status" className="text-[13px] text-bad [overflow-wrap:anywhere]">
+                <p role="status" className="text-[13px] text-bad wrap-anywhere">
                   {noticeText(failed)}
                 </p>
               )}
@@ -151,7 +151,7 @@ export function CallList({
                   <summary className="cursor-pointer select-none">History ({c.history.length})</summary>
                   <ul className="mt-1.5 grid list-none gap-1 p-0">
                     {c.history.map((e) => (
-                      <li key={e.id} className="[overflow-wrap:anywhere]">
+                      <li key={e.id} className="wrap-anywhere">
                         {describeEvent(e)}
                         {e.by ? ` by ${e.by}` : ""}, {e.created_at.slice(0, 16).replace("T", " ")}
                         {noticeText(e) ? `. ${noticeText(e)}` : ""}

@@ -471,7 +471,7 @@ export default function Dashboard() {
               className={cn("flex items-start gap-3 rounded-2xl p-[18px]", a.level === "warning" ? "bg-warn-soft" : "bg-acc-soft")}
             >
               <Megaphone aria-hidden className={cn("mt-0.5 size-[18px] shrink-0", a.level === "warning" ? "text-warn" : "text-acc")} />
-              <p className="min-w-0 flex-1 [overflow-wrap:anywhere]">
+              <p className="min-w-0 flex-1 wrap-anywhere">
                 <b className="font-semibold">{a.title}</b>
                 {a.body ? <span className="text-muted-foreground"> {a.body}</span> : null}
               </p>
@@ -616,8 +616,8 @@ export default function Dashboard() {
                       <span className="flex min-w-0 items-center gap-2.5">
                         <Avatar name={l.name} />
                         <span className="min-w-0">
-                          <b className="block font-semibold [overflow-wrap:anywhere]">{l.name}</b>
-                          <small className="block text-[12.5px] leading-snug text-muted-foreground [overflow-wrap:anywhere]">
+                          <b className="block font-semibold wrap-anywhere">{l.name}</b>
+                          <small className="block text-[12.5px] leading-snug text-muted-foreground wrap-anywhere">
                             {l.company || l.email}
                             {l.project_type ? ` · ${l.project_type}` : ""}
                           </small>
@@ -715,8 +715,8 @@ function FollowUpsCard({ leads, down }: { leads: Lead[]; down: boolean }) {
                     className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3 text-left hover:text-acc"
                   >
                     <span className="min-w-0">
-                      <b className="block font-semibold [overflow-wrap:anywhere]">{l.company || l.name}</b>
-                      <span className="block text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
+                      <b className="block font-semibold wrap-anywhere">{l.company || l.name}</b>
+                      <span className="block text-[13px] text-muted-foreground wrap-anywhere">
                         {l.next_action_note || (l.company ? l.name : l.email)}
                       </span>
                     </span>
@@ -753,7 +753,7 @@ function AttentionList({
         <AlertTriangle aria-hidden className="mt-0.5 size-[18px] shrink-0 text-bad" />
         <div className="min-w-[min(100%,200px)] flex-1">
           <p className="font-semibold">The attention list could not be loaded.</p>
-          <p className="mt-1 text-muted-foreground [overflow-wrap:anywhere]">{panel.error}</p>
+          <p className="mt-1 text-muted-foreground wrap-anywhere">{panel.error}</p>
         </div>
         <Button variant="outline" onClick={onRetry} disabled={retrying}>
           <RefreshCw className={cn(retrying && "animate-spin")} /> Retry
@@ -813,8 +813,8 @@ function AttentionSection({ row, retrying, onRetry }: { row: TodayRow; retrying:
                   className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 py-2.5 hover:text-acc focus-visible:text-acc"
                 >
                   <span className="min-w-0">
-                    <b className="block font-semibold [overflow-wrap:anywhere]">{item.title}</b>
-                    <span className="block text-[12.5px] leading-snug text-muted-foreground [overflow-wrap:anywhere]">{item.reason}</span>
+                    <b className="block font-semibold wrap-anywhere">{item.title}</b>
+                    <span className="block text-[12.5px] leading-snug text-muted-foreground wrap-anywhere">{item.reason}</span>
                   </span>
                   {when && <span className="whitespace-nowrap font-mono text-[11.5px] tabular-nums text-muted-foreground">{when}</span>}
                 </Link>

@@ -77,7 +77,7 @@ export function NavMain({ items, label }: { items: NavItem[]; label: string }) {
             setOpen(!open)
             saveGroup(label, !open)
           }}
-          className="gk-os-mono flex min-h-10 w-full items-center gap-2.5 rounded-[10px] px-2.5 text-left !text-[10.5px] !tracking-[.09em] text-sidebar-muted hover:text-sidebar-foreground focus-visible:outline-sidebar-ring"
+          className="gk-os-mono flex min-h-10 w-full items-center gap-2.5 rounded-[10px] px-2.5 text-left text-[10.5px]! tracking-[.09em]! text-sidebar-muted hover:text-sidebar-foreground focus-visible:outline-sidebar-ring"
         >
           <span>{label}</span>
           <ChevronDown

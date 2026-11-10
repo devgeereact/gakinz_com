@@ -168,7 +168,7 @@ export function PortalRequests({
                 {updates.map((t) => (
                   <li key={`u${t.id}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3">
                     <span className="min-w-0">
-                      <b className="block font-semibold [overflow-wrap:anywhere]">{t.subject.slice(UPDATE_PREFIX.length) || "Update request"}</b>
+                      <b className="block font-semibold wrap-anywhere">{t.subject.slice(UPDATE_PREFIX.length) || "Update request"}</b>
                       <span className="block text-[13px] text-muted-foreground">
                         Update request · {t.replies.some((r) => !r.from_client) ? "answered in Messages" : "waiting for the studio"}
                       </span>
@@ -181,7 +181,7 @@ export function PortalRequests({
                   return (
                     <li key={`c${c.id}`} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3">
                       <span className="min-w-0">
-                        <b className="block font-semibold [overflow-wrap:anywhere]">Call · {when.agreed}</b>
+                        <b className="block font-semibold wrap-anywhere">Call · {when.agreed}</b>
                         <span className="block text-[13px] text-muted-foreground">
                           {c.status === "requested" ? "Your first choice. The studio will confirm a time." : "Confirmed by the studio."}
                           {when.yours ? ` ${when.yours}.` : ""}

@@ -204,7 +204,7 @@ export function GlobalSearch() {
 
         {/* Record search state, outside the listbox (which may hold only
             options and groups) and always mounted, so a change is announced. */}
-        <div role="status" className="px-4 text-sm text-muted-foreground empty:hidden [&:not(:empty)]:py-3">
+        <div role="status" className="px-4 text-sm text-muted-foreground empty:hidden not-empty:py-3">
           {showRecords && records.status === "loading" && (
             <span className="flex items-center">
               <Loader2 className="mr-3 h-4 w-4 animate-spin" aria-hidden="true" />
@@ -216,7 +216,7 @@ export function GlobalSearch() {
             <span className="block text-xs">Some record types could not be searched just now, so this list may be incomplete.</span>
           )}
         </div>
-        <div role="alert" className="px-4 text-sm text-destructive empty:hidden [&:not(:empty)]:py-3">
+        <div role="alert" className="px-4 text-sm text-destructive empty:hidden not-empty:py-3">
           {showRecords && records.status === "failed" && `Record search failed. ${records.error}`}
         </div>
 

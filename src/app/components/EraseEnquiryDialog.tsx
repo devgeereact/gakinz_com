@@ -59,7 +59,7 @@ export function EraseEnquiryDialog({ lead, onClose, onErased }: { lead: Lead; on
           <DialogTitle>Erase this enquiry for good?</DialogTitle>
           <DialogDescription>
             For an erasure request from someone who never became a client. This permanently deletes the enquiry from{" "}
-            <span className="[overflow-wrap:anywhere]">{lead.name}</span>, its follow-up and any calls recorded on it, and replaces their
+            <span className="wrap-anywhere">{lead.name}</span>, its follow-up and any calls recorded on it, and replaces their
             email address and name with “[erased]” in the activity log. It cannot be undone. An enquiry linked to a client is refused.
           </DialogDescription>
         </DialogHeader>
@@ -70,7 +70,7 @@ export function EraseEnquiryDialog({ lead, onClose, onErased }: { lead: Lead; on
             </p>
           )}
           {others && <p>{others}</p>}
-          <p className="mb-1 font-medium text-foreground">Not erased</p>
+          <p className="font-medium text-foreground">Not erased</p>
           <ul className="list-disc space-y-0.5 pl-5">
             {NOT_ERASED.map((x) => (
               <li key={x}>{x}</li>
@@ -84,7 +84,7 @@ export function EraseEnquiryDialog({ lead, onClose, onErased }: { lead: Lead; on
           }}
         >
           <Label htmlFor="erase-confirm">
-            Type <span className="font-mono [overflow-wrap:anywhere]">{lead.email}</span> to confirm
+            Type <span className="font-mono wrap-anywhere">{lead.email}</span> to confirm
           </Label>
           <Input
             id="erase-confirm"

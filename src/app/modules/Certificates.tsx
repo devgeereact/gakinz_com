@@ -129,8 +129,8 @@ export default function Certificates() {
                   return (
                     <TableRow key={c.id}>
                       <TableCell className="whitespace-nowrap font-mono text-[13px]">{c.public_id}</TableCell>
-                      <TableCell className="[overflow-wrap:anywhere]">{c.recipient}</TableCell>
-                      <TableCell className="[overflow-wrap:anywhere]">{c.programme}</TableCell>
+                      <TableCell className="wrap-anywhere">{c.recipient}</TableCell>
+                      <TableCell className="wrap-anywhere">{c.programme}</TableCell>
                       <TableCell className="whitespace-nowrap">{c.issued_at}</TableCell>
                       <TableCell>{revoked ? <StatusBadge status="void">Revoked</StatusBadge> : <StatusBadge status="active">Valid</StatusBadge>}</TableCell>
                       <TableCell className="text-right">

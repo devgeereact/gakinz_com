@@ -170,7 +170,7 @@ describe("business details", () => {
   })
 
   it("ignores a bad published email or phone rather than showing it", () => {
-    const b = mergeBusiness({ email: "not an email", phone: "ring me", social: "https://x.com/a" }, "keep@example.test")
+    const b = mergeBusiness({ email: "not an email", phone: "ring-3 me", social: "https://x.com/a" }, "keep@example.test")
     expect(b).toMatchObject({ email: "keep@example.test", phone: null, social: [] })
   })
 })

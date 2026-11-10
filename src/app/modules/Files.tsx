@@ -142,7 +142,7 @@ export default function Files() {
         onClick={pick}
         onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick() } }}
         className={cn(
-          "mb-4 grid cursor-pointer place-items-center gap-2.5 rounded-2xl border border-dashed bg-card p-7 text-center transition-colors focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30",
+          "mb-4 grid cursor-pointer place-items-center gap-2.5 rounded-2xl border border-dashed bg-card p-7 text-center transition-colors focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30",
           dragOver ? "border-acc bg-acc-soft" : "border-line-strong hover:border-muted-foreground",
         )}
       >
@@ -179,7 +179,7 @@ export default function Files() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search files…"
-            className="min-h-[38px] w-full min-w-0 border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+            className="min-h-[38px] w-full min-w-0 border-0 bg-transparent text-sm outline-hidden placeholder:text-muted-foreground"
           />
         </label>
       </div>
@@ -189,7 +189,7 @@ export default function Files() {
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-bad" />
           <div className="min-w-[min(100%,200px)] flex-1">
             <p className="font-semibold">Could not load files.</p>
-            <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
+            <p className="mt-1 text-sm text-muted-foreground wrap-anywhere">
               {error}. The files endpoint and database must be live on the server.
             </p>
           </div>
@@ -228,7 +228,7 @@ export default function Files() {
                   <TableCell className="min-w-[220px]">
                     <span className="flex min-w-0 items-center gap-2.5">
                       <FileIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                      <b className="min-w-0 font-semibold [overflow-wrap:anywhere]">{f.name}</b>
+                      <b className="min-w-0 font-semibold wrap-anywhere">{f.name}</b>
                       {f.share_token && <Badge variant="acc">Shared</Badge>}
                     </span>
                   </TableCell>

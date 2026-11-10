@@ -229,7 +229,7 @@ export default function Time() {
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-bad" />
           <div className="min-w-[min(100%,200px)] flex-1">
             <p className="font-semibold">Could not load time entries.</p>
-            <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
+            <p className="mt-1 text-sm text-muted-foreground wrap-anywhere">
               {error}. The time endpoint and database must be live on the server.
             </p>
           </div>

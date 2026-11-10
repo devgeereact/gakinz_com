@@ -299,7 +299,7 @@ export default function Clients() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search clients…"
-              className="w-full min-w-0 border-0 bg-transparent outline-none placeholder:text-muted-foreground"
+              className="w-full min-w-0 border-0 bg-transparent outline-hidden placeholder:text-muted-foreground"
             />
           </label>
         </div>
@@ -338,7 +338,7 @@ export default function Clients() {
                   key={c.id}
                   tabIndex={0}
                   aria-label={`Open ${c.company}`}
-                  className="cursor-pointer focus-visible:bg-secondary focus-visible:outline-none"
+                  className="cursor-pointer focus-visible:bg-secondary focus-visible:outline-hidden"
                   onClick={() => openDetail(c.id)}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
@@ -348,15 +348,15 @@ export default function Clients() {
                   }}
                 >
                   <TableCell>
-                    <span className="flex min-w-[12rem] max-w-[22rem] items-center gap-2.5">
+                    <span className="flex min-w-48 max-w-88 items-center gap-2.5">
                       <Avatar name={c.company} />
                       <span className="min-w-0">
-                        <b className="block font-semibold [overflow-wrap:anywhere]">{c.company}</b>
-                        {c.contact_name && <small className="block text-[12.5px] leading-snug text-muted-foreground [overflow-wrap:anywhere]">{c.contact_name}</small>}
+                        <b className="block font-semibold wrap-anywhere">{c.company}</b>
+                        {c.contact_name && <small className="block text-[12.5px] leading-snug text-muted-foreground wrap-anywhere">{c.contact_name}</small>}
                       </span>
                     </span>
                   </TableCell>
-                  <TableCell className="min-w-[12rem] max-w-[18rem] text-muted-foreground [overflow-wrap:anywhere]">{c.email || "—"}</TableCell>
+                  <TableCell className="min-w-48 max-w-[18rem] text-muted-foreground wrap-anywhere">{c.email || "—"}</TableCell>
                   <TableCell className="whitespace-nowrap font-mono text-[13px] text-muted-foreground">{c.phone || "—"}</TableCell>
                   <TableCell>
                     <Badge variant={TAG_TONE[c.tag]}>{TAG_LABEL[c.tag]}</Badge>
@@ -443,7 +443,7 @@ export default function Clients() {
       <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
         <SheetContent className="flex flex-col gap-0 p-0 sm:p-0">
           <SheetHeader className="border-b p-5 pb-4 text-left">
-            <SheetTitle className="[overflow-wrap:anywhere]">{detail?.client.company ?? "Client"}</SheetTitle>
+            <SheetTitle className="wrap-anywhere">{detail?.client.company ?? "Client"}</SheetTitle>
             <SheetDescription>Client</SheetDescription>
           </SheetHeader>
           <div className="flex-1 overflow-y-auto p-5">
@@ -462,16 +462,16 @@ export default function Clients() {
                   ].map(([l, v]) => (
                     <div key={l} className="grid min-w-0 gap-1.5 rounded-2xl border bg-card px-4 py-3.5">
                       <span className="text-[13px] text-muted-foreground">{l}</span>
-                      <span className="font-display text-[1.4rem] font-bold leading-none tracking-[-0.03em] tabular-nums [overflow-wrap:anywhere]">{v}</span>
+                      <span className="font-display text-[1.4rem] font-bold leading-none tracking-[-0.03em] tabular-nums wrap-anywhere">{v}</span>
                     </div>
                   ))}
                 </div>
 
                 <dl className="grid grid-cols-[minmax(0,9rem)_minmax(0,1fr)] gap-x-4 gap-y-2.5 max-sm:grid-cols-1">
                   <dt className="text-[13.5px] text-muted-foreground">Contact</dt>
-                  <dd className="m-0 min-w-0 [overflow-wrap:anywhere]">{detail.client.contact_name || <span className="text-muted-foreground">None</span>}</dd>
+                  <dd className="m-0 min-w-0 wrap-anywhere">{detail.client.contact_name || <span className="text-muted-foreground">None</span>}</dd>
                   <dt className="text-[13.5px] text-muted-foreground">Email</dt>
-                  <dd className="m-0 min-w-0 [overflow-wrap:anywhere]">
+                  <dd className="m-0 min-w-0 wrap-anywhere">
                     {detail.client.email ? (
                       <a href={`mailto:${detail.client.email}`} className="text-acc hover:underline">{detail.client.email}</a>
                     ) : (
@@ -479,7 +479,7 @@ export default function Clients() {
                     )}
                   </dd>
                   <dt className="text-[13.5px] text-muted-foreground">Phone</dt>
-                  <dd className="m-0 min-w-0 font-mono text-[13px] [overflow-wrap:anywhere]">{detail.client.phone || <span className="font-sans text-muted-foreground">None</span>}</dd>
+                  <dd className="m-0 min-w-0 font-mono text-[13px] wrap-anywhere">{detail.client.phone || <span className="font-sans text-muted-foreground">None</span>}</dd>
                   <dt className="text-[13.5px] text-muted-foreground">Tag</dt>
                   <dd className="m-0">
                     <Badge variant={TAG_TONE[detail.client.tag]}>{TAG_LABEL[detail.client.tag]}</Badge>
@@ -510,7 +510,7 @@ export default function Clients() {
                           aria-hidden
                           className={cn("ml-[5px] mt-1.5 size-[9px] rounded-full shadow-[0_0_0_3px_hsl(var(--card))]", i === 0 ? "bg-acc" : "bg-line-strong")}
                         />
-                        <span className="min-w-0 [overflow-wrap:anywhere]">
+                        <span className="min-w-0 wrap-anywhere">
                           {t.label}
                           {t.amount != null && <span className="tabular-nums"> · {gbp(t.amount)}</span>}
                           <small className="block text-[12.5px] text-muted-foreground">

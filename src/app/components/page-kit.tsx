@@ -15,7 +15,7 @@ export function PageHeader({ title, subtitle, actions, className }: { title: Rea
   return (
     <div className={cn("flex flex-wrap items-end gap-x-6 gap-y-4 pb-5 pt-1", className)}>
       <div className="min-w-[min(100%,280px)] flex-1">
-        <h1 className="font-display text-[clamp(1.7rem,2.6vw,2.2rem)] font-semibold leading-tight tracking-[-0.025em] text-foreground">{title}</h1>
+        <h1 className="font-display text-[clamp(1.7rem,2.6vw,2.2rem)] font-semibold leading-tight tracking-tight text-foreground">{title}</h1>
         {subtitle && <p className="mt-1.5 max-w-[70ch] text-muted-foreground">{subtitle}</p>}
       </div>
       {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
@@ -54,7 +54,7 @@ export function StatTile({
       {note && <span className={cn("text-[12.5px] text-muted-foreground", tone === "up" && "text-ok", tone === "down" && "text-bad")}>{note}</span>}
     </>
   )
-  const cls = cn("grid min-w-0 gap-1.5 rounded-2xl border bg-card px-[18px] py-4 text-left", onClick && "transition-colors hover:border-line-strong focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30", className)
+  const cls = cn("grid min-w-0 gap-1.5 rounded-2xl border bg-card px-[18px] py-4 text-left", onClick && "transition-colors hover:border-line-strong focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30", className)
   return onClick ? (
     <button type="button" className={cls} onClick={onClick}>
       {body}

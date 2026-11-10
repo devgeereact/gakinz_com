@@ -118,7 +118,7 @@ const blank: FormState = {
 // Shared styling for the native <select>s. Native, not the Radix trigger, so a
 // real <label htmlFor> binds to a real form control.
 const selectClass =
-  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
 
 function FieldError({ id, message }: { id: string; message?: string }) {
   if (!message) return null
@@ -555,7 +555,7 @@ export default function Work() {
             {items.map((row, i) => (
               <li key={row.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3 p-4">
                 <span
-                  className={cn("h-7 w-7 flex-shrink-0 rounded-lg border border-border", !row.brand_colour && "border-dashed")}
+                  className={cn("h-7 w-7 shrink-0 rounded-lg border border-border", !row.brand_colour && "border-dashed")}
                   style={row.brand_colour ? { background: row.brand_colour } : undefined}
                   title={row.brand_colour ? `Brand colour ${row.brand_colour}` : "No brand colour set"}
                   aria-hidden="true"
@@ -567,7 +567,7 @@ export default function Work() {
                     <Badge variant="secondary">{KIND_LABEL[row.kind]}</Badge>
                     <StatusBadge status={row.status} />
                     {row.client_name && (
-                      <Badge variant={row.client_consent === 1 ? "ok" : "warn"} className="max-w-full whitespace-normal [overflow-wrap:anywhere]">
+                      <Badge variant={row.client_consent === 1 ? "ok" : "warn"} className="max-w-full whitespace-normal wrap-anywhere">
                         {row.client_name}
                         {row.client_consent === 1 ? " · consent recorded" : " · no consent"}
                       </Badge>
@@ -577,7 +577,7 @@ export default function Work() {
                     {row.summary || <span className="italic">No summary yet.</span>}
                   </p>
                 </div>
-                <div className="flex flex-shrink-0 flex-wrap items-center gap-1">
+                <div className="flex shrink-0 flex-wrap items-center gap-1">
                   <label className="mr-2 flex items-center gap-2 whitespace-nowrap text-sm">
                     <Switch
                       checked={row.hero_order != null}

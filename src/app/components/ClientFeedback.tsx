@@ -207,16 +207,16 @@ function FeedbackItem({ item, onChange }: { item: Feedback; onChange: (f: Feedba
         {item.may_publish ? <Badge variant="ok">May be quoted</Badge> : <Badge variant="secondary">Private only</Badge>}
       </div>
       {item.went_well && (
-        <p className="text-sm [overflow-wrap:anywhere]">
+        <p className="text-sm wrap-anywhere">
           <b className="font-semibold">Worked:</b> {item.went_well}
         </p>
       )}
       {item.could_improve && (
-        <p className="text-sm [overflow-wrap:anywhere]">
+        <p className="text-sm wrap-anywhere">
           <b className="font-semibold">Could improve:</b> {item.could_improve}
         </p>
       )}
-      {item.may_publish && item.attribution && <p className="text-[13px] text-muted-foreground [overflow-wrap:anywhere]">Named as {item.attribution}</p>}
+      {item.may_publish && item.attribution && <p className="text-[13px] text-muted-foreground wrap-anywhere">Named as {item.attribution}</p>}
       {item.follow_up_ok && <p className="text-[13px] text-acc">Welcomes a follow-up</p>}
       <div className="grid gap-2 sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
         <div>

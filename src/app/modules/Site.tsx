@@ -84,7 +84,7 @@ type FieldDef = { key: string; label: string; long?: boolean; lines?: boolean; o
 
 // Native, not the Radix trigger, so the visible <label htmlFor> names a real control (as in Work).
 const selectClass =
-  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-xs transition-colors focus-visible:outline-hidden focus-visible:ring-1 focus-visible:ring-ring"
 type Row = Record<string, unknown>
 
 function ListEditor<T extends Row>({
@@ -284,7 +284,7 @@ function MiniHero({ hero, slots }: { hero: SiteContent["hero"]; slots: HeroSlot[
       style={bg ? { background: bg, color: on } : undefined}
     >
       <span className="font-mono text-xs opacity-80">{hero.status}</span>
-      <b className="break-words text-[1.35rem] font-bold leading-[1.05] tracking-tight">
+      <b className="wrap-break-word text-[1.35rem] font-bold leading-[1.05] tracking-tight">
         {hero.lead} <u className="decoration-2 underline-offset-[3px]">{w?.word || "…"}.</u>
       </b>
       <span className="mt-1.5 flex flex-wrap gap-2 text-xs font-medium">
@@ -719,7 +719,7 @@ export default function Site() {
                           style={w.colour ? { background: w.colour } : undefined}
                           aria-hidden="true"
                         />
-                        <span className="min-w-0 break-words">
+                        <span className="min-w-0 wrap-break-word">
                           <b className="font-semibold">{w.title}</b>
                           <br />
                           <span className="text-sm text-muted-foreground">
@@ -907,7 +907,7 @@ export default function Site() {
           </Tabs>
 
           {/* ── Publish bar ─────────────────────────────────────────────── */}
-          <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-x-3 gap-y-2 rounded-2xl border border-border bg-card/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-card/90">
+          <div className="sticky bottom-0 z-10 flex flex-wrap items-center justify-end gap-x-3 gap-y-2 rounded-2xl border border-border bg-card/95 px-4 py-3 backdrop-blur-sm supports-backdrop-filter:bg-card/90">
             <p className="mr-auto min-w-0 text-[13px] text-muted-foreground" aria-live="polite">
               {last
                 ? `Last published ${formatPublishedDate(last.at)}${last.by ? ` by ${last.by}` : ""}.`

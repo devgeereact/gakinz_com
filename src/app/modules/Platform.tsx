@@ -73,7 +73,7 @@ function LoadError({ what, detail, onRetry }: { what: string; detail: string; on
       <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-bad" />
       <div className="min-w-[min(100%,200px)] flex-1">
         <p className="font-semibold">Could not load {what}.</p>
-        <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">{detail}</p>
+        <p className="mt-1 text-sm text-muted-foreground wrap-anywhere">{detail}</p>
       </div>
       <Button variant="outline" onClick={onRetry}>
         <RefreshCw /> Try again
@@ -311,11 +311,11 @@ function TeamTab({ open, setOpen }: { open: boolean; setOpen: (open: boolean) =>
                           {initials(u.name)}
                         </span>
                         <span className="min-w-0">
-                          <b className="block font-semibold [overflow-wrap:anywhere]">
+                          <b className="block font-semibold wrap-anywhere">
                             {u.name}
                             {isSelf && <span className="ml-1.5 text-xs font-normal text-muted-foreground">(you)</span>}
                           </b>
-                          <small className="block text-[12.5px] leading-snug text-muted-foreground [overflow-wrap:anywhere]">{u.email}</small>
+                          <small className="block text-[12.5px] leading-snug text-muted-foreground wrap-anywhere">{u.email}</small>
                         </span>
                       </span>
                     </TableCell>
@@ -389,7 +389,7 @@ function RateCell({ user, onSaved }: { user: ManagedUser; onSaved: (rate: number
         onBlur={save}
         onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
         aria-label={`Cost per hour for ${user.name}`}
-        className="h-9 w-[5.5rem] text-right font-mono text-[13px] tabular-nums"
+        className="h-9 w-22 text-right font-mono text-[13px] tabular-nums"
       />
     </div>
   )
@@ -464,11 +464,11 @@ function AnnouncementsTab() {
               {items.map((a) => (
                 <div key={a.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-start gap-3 border-t py-3 first:border-t-0">
                   <div className="min-w-0">
-                    <p className="flex flex-wrap items-center gap-2 font-semibold [overflow-wrap:anywhere]">
+                    <p className="flex flex-wrap items-center gap-2 font-semibold wrap-anywhere">
                       {a.level === "warning" && <Badge variant="warn">Warning</Badge>}
                       {a.title}
                     </p>
-                    {a.body && <p className="mt-0.5 text-sm text-muted-foreground [overflow-wrap:anywhere]">{a.body}</p>}
+                    {a.body && <p className="mt-0.5 text-sm text-muted-foreground wrap-anywhere">{a.body}</p>}
                     <p className="mt-0.5 text-xs text-muted-foreground">
                       {a.author || "Unknown"} · {fmt(a.created_at)}
                     </p>
@@ -530,7 +530,7 @@ function IntegrationsTab() {
             return (
               <div key={i.key} className="grid min-w-0 content-start gap-2.5 rounded-2xl border bg-card p-[18px]">
                 <span className="flex flex-wrap items-start justify-between gap-2">
-                  <b className="min-w-0 font-semibold [overflow-wrap:anywhere]">{i.label}</b>
+                  <b className="min-w-0 font-semibold wrap-anywhere">{i.label}</b>
                   <Badge variant={on ? "ok" : "secondary"}>{on ? "Connected" : "Not set"}</Badge>
                 </span>
                 <p className="text-[13px] text-muted-foreground">{i.note}</p>
@@ -596,7 +596,7 @@ function AuditTab() {
                   <TableCell className="whitespace-nowrap">{fmt(a.created_at)}</TableCell>
                   <TableCell className="whitespace-nowrap">{a.user_name || <span className="text-muted-foreground">Unknown</span>}</TableCell>
                   <TableCell className="whitespace-nowrap font-mono text-[13px]">{a.action}</TableCell>
-                  <TableCell className="min-w-[200px] text-muted-foreground [overflow-wrap:anywhere]">{a.detail || "None"}</TableCell>
+                  <TableCell className="min-w-[200px] text-muted-foreground wrap-anywhere">{a.detail || "None"}</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -719,7 +719,7 @@ function RetentionCard() {
           role="region"
           aria-label="Retention report, scrolls sideways"
           tabIndex={0}
-          className="overflow-x-auto rounded-xl focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30 [&>div]:overflow-visible"
+          className="overflow-x-auto rounded-xl focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30 [&>div]:overflow-visible"
         >
           {/* The Table's own wrapper is made not to scroll, so this focusable region is the one scroll container. */}
           <Table>

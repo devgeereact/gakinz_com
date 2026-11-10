@@ -478,7 +478,7 @@ export default function Invoicing() {
         )}
 
         {!loading && !error && items.length > 0 && (
-          <StatGrid className="mb-0">
+          <StatGrid className="last:mb-0">
             <StatTile label="Paid this month" value={gbp(paidThisMonth.sum)} note={plural(paidThisMonth.n, "invoice")} tone={paidThisMonth.n ? "up" : undefined} />
             <StatTile label="Outstanding" value={gbp(outstanding)} note={plural(outstandingCount, "invoice")} />
             <StatTile label="Overdue" value={gbp(overdue.sum)} note={plural(overdue.n, "invoice")} tone={overdue.n ? "down" : undefined} />
@@ -520,7 +520,7 @@ export default function Invoicing() {
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Search invoices…"
-                  className="w-full min-w-0 border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                  className="w-full min-w-0 border-0 bg-transparent text-sm text-foreground outline-hidden placeholder:text-muted-foreground"
                 />
               </label>
             </div>
@@ -553,11 +553,11 @@ export default function Invoicing() {
                       aria-current={inv.id === linkedInvoice ? "true" : undefined}
                     >
                       <TableCell className="whitespace-nowrap font-mono font-semibold">{inv.number || `#${inv.id}`}</TableCell>
-                      <TableCell className="min-w-[10rem] max-w-[16rem] [overflow-wrap:anywhere]">{inv.client_company || <span className="text-muted-foreground">No client</span>}</TableCell>
+                      <TableCell className="min-w-40 max-w-[16rem] wrap-anywhere">{inv.client_company || <span className="text-muted-foreground">No client</span>}</TableCell>
                       <TableCell>
                         <StatusBadge status={inv.overdue && inv.status !== "paid" ? "overdue" : inv.status} />
                         {inv.status === "paid" && recordedPaymentLine(inv) && (
-                          <p className="mt-1 max-w-[14rem] text-xs text-muted-foreground [overflow-wrap:anywhere]">
+                          <p className="mt-1 max-w-56 text-xs text-muted-foreground wrap-anywhere">
                             {recordedPaymentLine(inv)}, {fmt(inv.paid_at)}
                           </p>
                         )}

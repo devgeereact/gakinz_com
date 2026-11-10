@@ -316,7 +316,7 @@ export default function Projects() {
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-bad" />
           <div className="min-w-[min(100%,200px)] flex-1">
             <p className="font-semibold">Could not load projects.</p>
-            <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
+            <p className="mt-1 text-sm text-muted-foreground wrap-anywhere">
               {error}. The projects endpoint and database must be live on the server.
             </p>
           </div>
@@ -370,13 +370,13 @@ export default function Projects() {
                 onClick={() => select(p)}
                 aria-pressed={selected?.id === p.id}
                 className={cn(
-                  "grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-5 gap-y-2 border-b px-[18px] py-3.5 text-left transition-colors last:border-b-0 hover:bg-secondary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/30 md:grid-cols-[minmax(0,2fr)_auto_minmax(0,1.4fr)_7.5rem]",
+                  "grid w-full min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-5 gap-y-2 border-b px-[18px] py-3.5 text-left transition-colors last:border-b-0 hover:bg-secondary focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-ring/30 md:grid-cols-[minmax(0,2fr)_auto_minmax(0,1.4fr)_7.5rem]",
                   selected?.id === p.id && "bg-accent hover:bg-accent",
                 )}
               >
                 <span className="min-w-0">
-                  <span className="block font-display text-[1.05rem] font-semibold leading-snug [overflow-wrap:anywhere]">{p.name}</span>
-                  <span className="block text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
+                  <span className="block font-display text-[1.05rem] font-semibold leading-snug wrap-anywhere">{p.name}</span>
+                  <span className="block text-[13px] text-muted-foreground wrap-anywhere">
                     {p.client_company || "Internal"}
                     {p.reference && <span className="font-mono text-[12px] tabular-nums"> · {p.reference}</span>}
                   </span>
@@ -533,11 +533,11 @@ function ProjectBoard({
     <section className="min-w-0 rounded-2xl border bg-card p-[18px]" aria-label={`${project.name} task board`}>
       <div className="mb-4 flex flex-wrap items-end gap-3">
         <div className="min-w-[min(100%,200px)] flex-1">
-          <p className="font-mono text-xs uppercase tracking-[.08em] text-muted-foreground [overflow-wrap:anywhere]">
+          <p className="font-mono text-xs uppercase tracking-[.08em] text-muted-foreground wrap-anywhere">
             {project.client_company || "Internal"}
             {project.reference && <> · {project.reference}</>}
           </p>
-          <h2 className="mt-1 font-display text-[1.4rem] font-semibold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">
+          <h2 className="mt-1 font-display text-[1.4rem] font-semibold leading-tight tracking-[-0.02em] wrap-anywhere">
             {project.name}
           </h2>
         </div>
@@ -585,7 +585,7 @@ function ProjectBoard({
           role="region"
           aria-label="Task board, scrolls sideways"
           tabIndex={0}
-          className="grid auto-cols-[minmax(250px,1fr)] grid-flow-col gap-3.5 overflow-x-auto rounded-2xl pb-2 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/30"
+          className="grid auto-cols-[minmax(250px,1fr)] grid-flow-col gap-3.5 overflow-x-auto rounded-2xl pb-2 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30"
           data-kanban
         >
           {TASK_COLS.map((col) => (
@@ -599,18 +599,18 @@ function ProjectBoard({
                   key={task.id}
                   id={recordElementId("task", task.id)}
                   className={cn(
-                    "grid scroll-m-4 gap-1.5 rounded-xl border bg-card p-3 transition-[border-color,box-shadow] hover:border-line-strong hover:shadow-sm",
+                    "grid scroll-m-4 gap-1.5 rounded-xl border bg-card p-3 transition-[border-color,box-shadow] hover:border-line-strong hover:shadow-xs",
                     task.id === linkedTask && LINKED_RECORD,
                   )}
                 >
                   <span className="flex items-start justify-between gap-2">
-                    <b className="min-w-0 font-semibold [overflow-wrap:anywhere]">{task.title}</b>
+                    <b className="min-w-0 font-semibold wrap-anywhere">{task.title}</b>
                     <Button variant="ghost" size="sm" className="-mr-1.5 -mt-1 h-7 px-1.5" onClick={() => startEdit(task)} aria-label={`Edit ${task.title}`} title="Edit, assign or set a date">
                       <Pencil />
                     </Button>
                   </span>
                   <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[12.5px] text-muted-foreground">
-                    <span className="min-w-0 [overflow-wrap:anywhere]">{task.assignee || "Unassigned"}</span>
+                    <span className="min-w-0 wrap-anywhere">{task.assignee || "Unassigned"}</span>
                     {fmt(task.due_date) && <span className="font-mono tabular-nums">{fmt(task.due_date)}</span>}
                   </span>
                   <Select value={task.status} onValueChange={(v) => moveTask(task, v as TaskStatus)}>
@@ -643,7 +643,7 @@ function ProjectBoard({
           onChange={(e) => setNewTitle(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && !e.nativeEvent.isComposing && addTask()}
           placeholder="Add a task and press Enter"
-          className="min-h-[38px] w-full min-w-0 border-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+          className="min-h-[38px] w-full min-w-0 border-0 bg-transparent text-sm outline-hidden placeholder:text-muted-foreground"
         />
         <Button variant="ghost" size="sm" onClick={addTask} disabled={adding}>
           Add

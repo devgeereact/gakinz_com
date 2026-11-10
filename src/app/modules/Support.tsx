@@ -192,7 +192,7 @@ export default function Support() {
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-bad" />
           <div className="min-w-[min(100%,200px)] flex-1">
             <p className="font-semibold">Could not load support tickets.</p>
-            <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
+            <p className="mt-1 text-sm text-muted-foreground wrap-anywhere">
               {error}. The support endpoint and database must be live on the server.
             </p>
           </div>
@@ -246,15 +246,15 @@ export default function Support() {
                     onClick={() => setSelectedId(t.id)}
                     aria-current={selectedId === t.id ? "true" : undefined}
                     className={cn(
-                      "flex w-full flex-col items-start gap-1 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-secondary focus-visible:bg-secondary focus-visible:outline-none",
+                      "flex w-full flex-col items-start gap-1 rounded-[10px] px-2.5 py-2 text-left transition-colors hover:bg-secondary focus-visible:bg-secondary focus-visible:outline-hidden",
                       selectedId === t.id && "bg-secondary",
                     )}
                   >
                     <span className="flex w-full items-start gap-2">
-                      <b className="min-w-0 flex-1 font-semibold [overflow-wrap:anywhere]">{t.subject}</b>
+                      <b className="min-w-0 flex-1 font-semibold wrap-anywhere">{t.subject}</b>
                       <StatusBadge status={t.priority} />
                     </span>
-                    <span className="text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
+                    <span className="text-[13px] text-muted-foreground wrap-anywhere">
                       {t.client_company || "No client"} · {fmt(t.created_at)}
                     </span>
                     <StatusBadge status={t.status} />
@@ -362,10 +362,10 @@ function TicketPanel({ id, onChanged }: { id: number; onChanged: () => void }) {
     <div className="flex h-full flex-col">
       <div className="mb-3.5 flex flex-wrap items-end gap-2.5">
         <div className="min-w-[min(100%,200px)] flex-1">
-          <p className="font-mono text-xs uppercase tracking-[.08em] text-muted-foreground [overflow-wrap:anywhere]">
+          <p className="font-mono text-xs uppercase tracking-[.08em] text-muted-foreground wrap-anywhere">
             {ticket.client_company || "No client"} · {cap(ticket.priority)}
           </p>
-          <h2 className="mt-1 font-display text-[1.3rem] font-semibold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">{ticket.subject}</h2>
+          <h2 className="mt-1 font-display text-[1.3rem] font-semibold leading-tight tracking-[-0.02em] wrap-anywhere">{ticket.subject}</h2>
         </div>
         <div className="grid min-w-[140px] gap-1.5 max-sm:flex-1">
           <Label htmlFor="tst">Status</Label>
@@ -403,7 +403,7 @@ function TicketPanel({ id, onChanged }: { id: number; onChanged: () => void }) {
         {ticket.body && (
           <li className="grid grid-cols-[20px_minmax(0,1fr)] gap-2.5 py-2">
             <span aria-hidden className="ml-[5px] mt-1.5 h-[9px] w-[9px] rounded-full bg-line-strong shadow-[0_0_0_3px_hsl(var(--card))]" />
-            <span className="min-w-0 [overflow-wrap:anywhere]">
+            <span className="min-w-0 wrap-anywhere">
               <b className="font-semibold">{ticket.client_company || "Client"}</b>
               <small className="text-[12.5px] text-muted-foreground"> · {fmt(ticket.created_at)}</small>
               <br />
@@ -414,7 +414,7 @@ function TicketPanel({ id, onChanged }: { id: number; onChanged: () => void }) {
         {ticket.replies.map((r) => (
           <li key={r.id} className="grid grid-cols-[20px_minmax(0,1fr)] gap-2.5 py-2">
             <span aria-hidden className="ml-[5px] mt-1.5 h-[9px] w-[9px] rounded-full bg-acc shadow-[0_0_0_3px_hsl(var(--card))]" />
-            <span className="min-w-0 [overflow-wrap:anywhere]">
+            <span className="min-w-0 wrap-anywhere">
               <b className="font-semibold">{r.author || "Staff"}</b>
               <small className="text-[12.5px] text-muted-foreground"> · {fmt(r.created_at)}</small>
               <br />
@@ -524,7 +524,7 @@ function TicketTimeSection({ ticket, onLogged }: { ticket: TicketDetail; onLogge
         <ul className="m-0 list-none divide-y p-0">
           {time.entries.map((e) => (
             <li key={e.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 py-2">
-              <span className="min-w-0 [overflow-wrap:anywhere]">
+              <span className="min-w-0 wrap-anywhere">
                 <span className="block">{e.description || <span className="text-muted-foreground">No description</span>}</span>
                 <small className="text-[12.5px] text-muted-foreground">
                   {formatYmd(e.entry_date)} · {e.user_name || "Unknown"} · {e.billable ? "Billable" : "Internal"}

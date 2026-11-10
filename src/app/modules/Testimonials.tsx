@@ -146,17 +146,17 @@ export default function Testimonials() {
               const stars = Math.max(1, Math.min(5, t.rating))
               return (
                 <figure key={t.id} className="m-0 grid min-w-0 content-between gap-3.5 rounded-2xl border bg-card p-[18px]">
-                  <blockquote className="m-0 font-display text-[1.25rem] leading-[1.3] tracking-[-0.01em] [overflow-wrap:anywhere]">
+                  <blockquote className="m-0 font-display text-[1.25rem] leading-[1.3] tracking-[-0.01em] wrap-anywhere">
                     “{t.quote}”
                   </blockquote>
                   <figcaption className="flex flex-wrap items-center justify-between gap-2.5">
-                    <span className="flex min-w-0 flex-1 basis-[12rem] items-center gap-2.5">
+                    <span className="flex min-w-0 flex-1 basis-48 items-center gap-2.5">
                       <span aria-hidden="true" className="grid size-8 shrink-0 place-items-center rounded-full bg-acc-soft text-xs font-bold text-acc">
                         {initials(t.author)}
                       </span>
                       <span className="min-w-0">
-                        <b className="block font-semibold [overflow-wrap:anywhere]">{t.author}</b>
-                        <small className="block text-[12.5px] leading-[1.35] text-muted-foreground [overflow-wrap:anywhere]">
+                        <b className="block font-semibold wrap-anywhere">{t.author}</b>
+                        <small className="block text-[12.5px] leading-[1.35] text-muted-foreground wrap-anywhere">
                           {sub && `${sub} · `}
                           <span className="whitespace-nowrap" aria-label={`Rated ${stars} out of 5`}>
                             {"★".repeat(stars)}

@@ -31,9 +31,9 @@ export default function Account() {
           <CardContent>
             <dl className="grid grid-cols-[minmax(0,6rem)_minmax(0,1fr)] gap-x-4 gap-y-2.5 max-sm:grid-cols-1">
               <dt className="text-[13.5px] text-muted-foreground">Name</dt>
-              <dd className="m-0 min-w-0 [overflow-wrap:anywhere]">{me?.name || <span className="text-muted-foreground">Not set</span>}</dd>
+              <dd className="m-0 min-w-0 wrap-anywhere">{me?.name || <span className="text-muted-foreground">Not set</span>}</dd>
               <dt className="text-[13.5px] text-muted-foreground">Email</dt>
-              <dd className="m-0 min-w-0 font-mono text-[13.5px] [overflow-wrap:anywhere]">
+              <dd className="m-0 min-w-0 font-mono text-[13.5px] wrap-anywhere">
                 {me?.email || <span className="font-sans text-muted-foreground">Not set</span>}
               </dd>
               {me?.role && (

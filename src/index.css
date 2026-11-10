@@ -1,6 +1,176 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@custom-variant dark (&:is(.dark *));
+
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+  @media (width >= --theme(--breakpoint-sm)) {
+    max-width: none;
+  }
+  @media (width >= 1400px) {
+    max-width: 1400px;
+  }
+}
+
+@theme {
+  --text-label: 0.875rem;
+  --text-label--line-height: 1.3;
+  --text-label--letter-spacing: 0.04em;
+  --text-body: 1rem;
+  --text-body--line-height: 1.4;
+  --text-lede: 1.25rem;
+  --text-lede--line-height: 1.4;
+  --text-t4: 1.5rem;
+  --text-t4--line-height: 1.2;
+  --text-t4--letter-spacing: -0.02em;
+  --text-t3: 1.75rem;
+  --text-t3--line-height: 1.2;
+  --text-t3--letter-spacing: -0.02em;
+  --text-t2: 2.25rem;
+  --text-t2--line-height: 1.22;
+  --text-t2--letter-spacing: -0.02em;
+  --text-t1: 3rem;
+  --text-t1--line-height: 1.05;
+  --text-t1--letter-spacing: -0.02em;
+  --text-display: 4rem;
+  --text-display--line-height: 1;
+  --text-display--letter-spacing: -0.02em;
+  --text-hero: 5rem;
+  --text-hero--line-height: 1;
+  --text-hero--letter-spacing: -0.02em;
+
+  --radius-action: 1.25rem;
+  --radius-media: 2.5rem;
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --shadow-os: var(--os-shadow);
+  --shadow-float: 0 4px 24px 0 rgba(0, 0, 0, 0.04);
+  --shadow-lifted: 0 24px 48px 0 rgba(0, 0, 0, 0.08);
+
+  --font-sans: 'Hanken Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono:
+    'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --font-serif:
+    'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display:
+    'Bricolage Grotesque Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-ui: 'Hanken Grotesk Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-data:
+    'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, Menlo, monospace;
+
+  --color-gk-paper: #f3f0ee;
+  --color-gk-sunk: #fcfbfa;
+  --color-gk-white: #ffffff;
+  --color-gk-ink: #141413;
+  --color-gk-ink-soft: #555555;
+  --color-gk-ink-mute: #696969;
+  --color-gk-set: #141413;
+  --color-gk-come: #9a3a0a;
+  --color-gk-rule: #d1cdc7;
+  --color-gk-edge: #8c857c;
+  --color-gk-orange: #f37338;
+  --color-gk-signal: #cf4500;
+  --color-gk-on-dark: #f3f0ee;
+  --color-gk-on-dark-soft: #b8b2aa;
+  --color-gk-set-on-dark: #f3f0ee;
+  --color-gk-come-on-dark: #f37338;
+
+  --color-acc: hsl(var(--os-acc));
+  --color-acc-soft: hsl(var(--os-acc-soft));
+  --color-acc-foreground: hsl(var(--os-on-acc));
+
+  --color-ok: hsl(var(--os-ok));
+  --color-ok-soft: hsl(var(--os-ok-soft));
+
+  --color-warn: hsl(var(--os-warn));
+  --color-warn-soft: hsl(var(--os-warn-soft));
+
+  --color-bad: hsl(var(--os-bad));
+  --color-bad-soft: hsl(var(--os-bad-soft));
+
+  --color-line: hsl(var(--border));
+  --color-line-strong: hsl(var(--os-line-2));
+
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-chart-1: hsl(var(--chart-1));
+  --color-chart-2: hsl(var(--chart-2));
+  --color-chart-3: hsl(var(--chart-3));
+  --color-chart-4: hsl(var(--chart-4));
+  --color-chart-5: hsl(var(--chart-5));
+
+  --color-sidebar: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+  --color-sidebar-muted: hsl(var(--os-side-mute));
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+/*
+  Two more Tailwind v3 defaults that v4's Preflight dropped, restored so the look does not move:
+  buttons keep the pointer cursor (v4 uses the default arrow) and search inputs keep the plain
+  text-field appearance (matters in Safari).
+*/
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not(:disabled) {
+    cursor: pointer;
+  }
+  [type="search"] {
+    appearance: textfield;
+  }
+}
 
 /* Fonts. Every family is self-hosted from @fontsource-variable and imported
    once in src/main.tsx, so nothing is fetched from a third party: Bricolage
@@ -214,7 +384,7 @@
      zero so a utility on the element still wins, and `.gk-public` content
      keeps its own family. */
   :where(h1, h2, h3):not(:where(.gk-public *)) {
-    font-family: theme("fontFamily.display");
+    font-family: var(--font-display);
     letter-spacing: -0.025em;
     line-height: 1.1;
   }
@@ -296,7 +466,7 @@
 /* Page title: Bricolage at the prototype's `.ph h1` size, plain ink. */
 .gk-app-grad {
   color: hsl(var(--foreground));
-  font-family: theme("fontFamily.display");
+  font-family: var(--font-display);
   font-weight: 650;
   letter-spacing: -0.025em;
   line-height: 1.1;
@@ -306,7 +476,7 @@
    because the public site's <main> carries id="main" too. */
 h1.gk-app-grad,
 #main.gk-app-main h1 {
-  font-family: theme("fontFamily.display");
+  font-family: var(--font-display);
   font-size: clamp(1.7rem, 2.6vw, 2.2rem);
   font-weight: 650;
   letter-spacing: -0.025em;
@@ -354,7 +524,7 @@ h1.gk-app-grad,
 
 /* Mono uppercase label: crumbs, group headers, table heads, small captions. */
 .gk-os-mono {
-  font-family: theme("fontFamily.mono");
+  font-family: var(--font-mono);
   font-size: 11.5px;
   letter-spacing: .06em;
   text-transform: uppercase;
@@ -370,7 +540,7 @@ h1.gk-app-grad,
   border-radius: 10px;
   background: hsl(var(--sidebar-foreground));
   color: hsl(var(--sidebar-background));
-  font-family: theme("fontFamily.display");
+  font-family: var(--font-display);
   font-weight: 800;
   font-size: 18px;
   line-height: 1;

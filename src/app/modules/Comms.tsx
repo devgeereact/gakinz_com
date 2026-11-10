@@ -396,12 +396,12 @@ export default function Comms() {
                           )}
                         >
                           <span className="flex w-full min-w-0 items-start gap-2">
-                            <b className="min-w-0 flex-1 font-semibold [overflow-wrap:anywhere]">{t.subject}</b>
+                            <b className="min-w-0 flex-1 font-semibold wrap-anywhere">{t.subject}</b>
                             <span className="shrink-0 pt-0.5 font-mono text-xs tabular-nums text-muted-foreground">
                               {timeAgo(t.last_message_at ?? t.created_at)}
                             </span>
                           </span>
-                          <span className="w-full min-w-0 text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
+                          <span className="w-full min-w-0 text-[13px] text-muted-foreground wrap-anywhere">
                             {[t.client_company, t.project_name, channelMeta(t.channel).label].filter(Boolean).join(" · ")}
                           </span>
                           {t.preview && <span className="line-clamp-1 w-full min-w-0 text-[12.5px] text-muted-foreground">{t.preview}</span>}
@@ -433,7 +433,7 @@ export default function Comms() {
               ) : (
                 <>
                   <div className="mb-1.5 flex flex-wrap items-center gap-2.5">
-                    <h2 className="min-w-[min(100%,12rem)] flex-1 font-display text-[1.25rem] font-semibold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">
+                    <h2 className="min-w-[min(100%,12rem)] flex-1 font-display text-[1.25rem] font-semibold leading-tight tracking-[-0.02em] wrap-anywhere">
                       {detail.subject}
                     </h2>
                     <Badge variant="secondary">{channelMeta(detail.channel).label}</Badge>
@@ -449,7 +449,7 @@ export default function Comms() {
                       )}
                     </Button>
                   </div>
-                  <p className="mb-3.5 text-muted-foreground [overflow-wrap:anywhere]">
+                  <p className="mb-3.5 text-muted-foreground wrap-anywhere">
                     {[detail.client_company, detail.project_name].filter(Boolean).join(" · ") || "No client or project linked"}
                   </p>
 
@@ -473,7 +473,7 @@ export default function Comms() {
                               <small className="text-[12.5px] text-muted-foreground">
                                 · {m.author ?? "—"} · {timeAgo(m.created_at)}
                               </small>
-                              <span className="mt-0.5 block whitespace-pre-wrap [overflow-wrap:anywhere]">{m.body}</span>
+                              <span className="mt-0.5 block whitespace-pre-wrap wrap-anywhere">{m.body}</span>
                             </span>
                           </li>
                         ))}

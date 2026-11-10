@@ -145,10 +145,10 @@ export function ProjectAssetsPanel({
                     )}
                   >
                     <span className="min-w-0">
-                      <b className="block font-semibold [overflow-wrap:anywhere]">{item.label}</b>
-                      {item.note && <span className="block whitespace-pre-wrap text-[13px] text-muted-foreground [overflow-wrap:anywhere]">{item.note}</span>}
+                      <b className="block font-semibold wrap-anywhere">{item.label}</b>
+                      {item.note && <span className="block whitespace-pre-wrap text-[13px] text-muted-foreground wrap-anywhere">{item.note}</span>}
                       {item.client_note && (
-                        <span className="mt-1 block whitespace-pre-wrap text-[13px] [overflow-wrap:anywhere]">
+                        <span className="mt-1 block whitespace-pre-wrap text-[13px] wrap-anywhere">
                           <span className="text-muted-foreground">Client said: </span>
                           {item.client_note}
                         </span>
@@ -339,16 +339,16 @@ export function PortalAssets() {
           <div className="grid gap-4">
             {groupByProject(items ?? []).map((g) => (
               <div key={g.projectId}>
-                <h3 className="mb-1 font-mono text-xs uppercase tracking-[.08em] text-muted-foreground [overflow-wrap:anywhere]">{g.projectName}</h3>
+                <h3 className="mb-1 font-mono text-xs uppercase tracking-[.08em] text-muted-foreground wrap-anywhere">{g.projectName}</h3>
                 <ul className="divide-y" aria-label={`What we need for ${g.projectName}`}>
                   {g.items.map((item) => (
                     <li key={item.id} className="py-3">
                       <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3">
                         <span className="min-w-0">
-                          <b className="block font-semibold [overflow-wrap:anywhere]">{item.label}</b>
-                          {item.note && <span className="block whitespace-pre-wrap text-[13px] text-muted-foreground [overflow-wrap:anywhere]">{item.note}</span>}
+                          <b className="block font-semibold wrap-anywhere">{item.label}</b>
+                          {item.note && <span className="block whitespace-pre-wrap text-[13px] text-muted-foreground wrap-anywhere">{item.note}</span>}
                           {item.client_note && item.status !== "requested" && (
-                            <span className="mt-1 block whitespace-pre-wrap text-[13px] [overflow-wrap:anywhere]">
+                            <span className="mt-1 block whitespace-pre-wrap text-[13px] wrap-anywhere">
                               <span className="text-muted-foreground">You said: </span>
                               {item.client_note}
                             </span>

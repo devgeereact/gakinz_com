@@ -81,7 +81,7 @@ export default function CarePlan() {
         )}
 
         {!loading && !error && (
-          <StatGrid className="mb-0">
+          <StatGrid className="last:mb-0">
             <StatTile label="Sites managed" value={String(items.length)} />
             <StatTile label="Care-plan MRR" value={gbp(mrr)} note="Per month" tone={mrr > 0 ? "up" : undefined} />
             <StatTile
@@ -123,7 +123,7 @@ export default function CarePlan() {
                   const code = s.last_http_status
                   return (
                     <TableRow key={s.project_id}>
-                      <TableCell className="min-w-[13rem] max-w-[20rem]">
+                      <TableCell className="min-w-52 max-w-[20rem]">
                         <a
                           href={s.prod_url}
                           title={s.prod_url}
@@ -135,7 +135,7 @@ export default function CarePlan() {
                           <ExternalLink className="size-3.5 shrink-0" aria-hidden="true" />
                           <span className="sr-only">(opens in a new tab)</span>
                         </a>
-                        <span className="block text-[12.5px] text-muted-foreground [overflow-wrap:anywhere]">
+                        <span className="block text-[12.5px] text-muted-foreground wrap-anywhere">
                           {s.project_name} · {s.client_company || "Internal"}
                         </span>
                       </TableCell>

@@ -366,7 +366,7 @@ export default function Leads() {
             }}
             className={cn(
               "min-h-[34px] whitespace-nowrap rounded-[8px] px-3.5 text-[13px] font-medium",
-              v.on ? "bg-card text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground",
+              v.on ? "bg-card text-foreground shadow-xs" : "text-muted-foreground hover:text-foreground",
             )}
           >
             {v.label}
@@ -491,18 +491,18 @@ export default function Leads() {
                             dragId === lead.id && "opacity-50",
                           )}
                         >
-                          <b className="min-w-0 font-semibold [overflow-wrap:anywhere]">{lead.company || lead.name}</b>
-                          <span className="min-w-0 text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
+                          <b className="min-w-0 font-semibold wrap-anywhere">{lead.company || lead.name}</b>
+                          <span className="min-w-0 text-[13px] text-muted-foreground wrap-anywhere">
                             {lead.company ? lead.name : lead.email}
                             {lead.project_type ? ` · ${lead.project_type}` : ""}
                           </span>
                           {lead.reference && (
-                            <span className="min-w-0 font-mono text-[12px] tabular-nums text-muted-foreground [overflow-wrap:anywhere]">{lead.reference}</span>
+                            <span className="min-w-0 font-mono text-[12px] tabular-nums text-muted-foreground wrap-anywhere">{lead.reference}</span>
                           )}
                           {(foot || lead.budget) && (
                             <span className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 text-[12.5px] text-muted-foreground">
                               <span className={cn("min-w-0", st === "overdue" && "text-bad", st === "today" && "text-warn")}>{foot}</span>
-                              {lead.budget && <span className="min-w-0 font-mono tabular-nums [overflow-wrap:anywhere]">{lead.budget}</span>}
+                              {lead.budget && <span className="min-w-0 font-mono tabular-nums wrap-anywhere">{lead.budget}</span>}
                             </span>
                           )}
                         </button>
@@ -528,7 +528,7 @@ export default function Leads() {
           {openLead && (
             <>
               <SheetHeader className="border-b p-5 pb-4 text-left">
-                <SheetTitle className="[overflow-wrap:anywhere]">{openLead.company || openLead.name}</SheetTitle>
+                <SheetTitle className="wrap-anywhere">{openLead.company || openLead.name}</SheetTitle>
                 <SheetDescription>Enquiry · {STAGES.find((s) => s.key === openLead.status)?.label}</SheetDescription>
               </SheetHeader>
               <div className="flex-1 overflow-y-auto p-5">
@@ -540,17 +540,17 @@ export default function Leads() {
                     </>
                   )}
                   <dt className="text-[13.5px] text-muted-foreground">Contact</dt>
-                  <dd className="m-0 min-w-0 [overflow-wrap:anywhere]">{openLead.name}</dd>
+                  <dd className="m-0 min-w-0 wrap-anywhere">{openLead.name}</dd>
                   <dt className="text-[13.5px] text-muted-foreground">Email</dt>
-                  <dd className="m-0 min-w-0 [overflow-wrap:anywhere]">
+                  <dd className="m-0 min-w-0 wrap-anywhere">
                     <a href={`mailto:${openLead.email}`} className="inline-flex items-center gap-1 text-acc hover:underline">
                       <Mail aria-hidden className="size-3.5 shrink-0" /> {openLead.email}
                     </a>
                   </dd>
                   <dt className="text-[13.5px] text-muted-foreground">Wants</dt>
-                  <dd className="m-0 min-w-0 [overflow-wrap:anywhere]">{openLead.project_type || <span className="text-muted-foreground">Not given</span>}</dd>
+                  <dd className="m-0 min-w-0 wrap-anywhere">{openLead.project_type || <span className="text-muted-foreground">Not given</span>}</dd>
                   <dt className="text-[13.5px] text-muted-foreground">Budget</dt>
-                  <dd className="m-0 min-w-0 [overflow-wrap:anywhere]">{openLead.budget || <span className="text-muted-foreground">Not given</span>}</dd>
+                  <dd className="m-0 min-w-0 wrap-anywhere">{openLead.budget || <span className="text-muted-foreground">Not given</span>}</dd>
                   <dt className="text-[13.5px] text-muted-foreground">Score</dt>
                   <dd className="m-0">
                     <Badge variant={SCORE_META[openLead.score]?.tone ?? "secondary"}>{SCORE_META[openLead.score]?.label ?? "Unscored"}</Badge>
@@ -588,13 +588,13 @@ export default function Leads() {
                   {openLead.status === "lost" && openLead.lost_reason && (
                     <>
                       <dt className="text-[13.5px] text-muted-foreground">Lost because</dt>
-                      <dd className="m-0 min-w-0 [overflow-wrap:anywhere]">{openLead.lost_reason}</dd>
+                      <dd className="m-0 min-w-0 wrap-anywhere">{openLead.lost_reason}</dd>
                     </>
                   )}
                 </dl>
 
                 <p className="mb-1.5 mt-5 font-semibold">Their message</p>
-                <p className="whitespace-pre-wrap text-muted-foreground [overflow-wrap:anywhere]">{openLead.message}</p>
+                <p className="whitespace-pre-wrap text-muted-foreground wrap-anywhere">{openLead.message}</p>
 
                 <div className="mb-2 mt-5 flex flex-wrap items-center justify-between gap-2">
                   <p className="font-semibold">Calls</p>
@@ -785,7 +785,7 @@ function FollowUp({ lead, today }: { lead: Lead; today: string }) {
           {FOLLOW_META[st].label} {formatYmd(lead.next_action_at)}
         </Badge>
       </span>
-      {lead.next_action_note && <p className="text-[13px] text-muted-foreground [overflow-wrap:anywhere]">{lead.next_action_note}</p>}
+      {lead.next_action_note && <p className="text-[13px] text-muted-foreground wrap-anywhere">{lead.next_action_note}</p>}
     </div>
   )
 }

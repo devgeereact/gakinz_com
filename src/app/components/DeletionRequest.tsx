@@ -65,7 +65,7 @@ export function DeletionRequestCard({ email }: { email: string | null | undefine
               This sends GAkinz a request through Messages. Nothing is deleted yet. GAkinz will reply
               {email ? (
                 <>
-                  {" "}to <span className="font-mono [overflow-wrap:anywhere]">{email}</span>
+                  {" "}to <span className="font-mono wrap-anywhere">{email}</span>
                 </>
               ) : null}{" "}
               to confirm who is asking, what will be deleted, and what may need to be kept, and why.

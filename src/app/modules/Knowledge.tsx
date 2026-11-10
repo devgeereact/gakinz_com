@@ -129,7 +129,7 @@ export default function Knowledge() {
               onChange={(e) => setQ(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && load()}
               placeholder="Search titles…"
-              className="w-full min-w-0 border-0 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              className="w-full min-w-0 border-0 bg-transparent text-sm text-foreground outline-hidden placeholder:text-muted-foreground"
             />
           </label>
           {["all", ...categories].map((c) => (
@@ -179,11 +179,11 @@ export default function Knowledge() {
                         onClick={() => openArticle(a.id)}
                         aria-current={selected?.id === a.id ? "true" : undefined}
                         className={cn(
-                          "flex min-h-10 w-full flex-col items-start gap-0.5 rounded-[10px] px-2.5 py-2 text-left hover:bg-secondary focus-visible:bg-secondary focus-visible:outline-none",
+                          "flex min-h-10 w-full flex-col items-start gap-0.5 rounded-[10px] px-2.5 py-2 text-left hover:bg-secondary focus-visible:bg-secondary focus-visible:outline-hidden",
                           selected?.id === a.id && "bg-secondary",
                         )}
                       >
-                        <b className="font-semibold [overflow-wrap:anywhere]">{a.title}</b>
+                        <b className="font-semibold wrap-anywhere">{a.title}</b>
                         <span className="text-[12.5px] text-muted-foreground">
                           {a.category} · {AUDIENCE[a.audience] ?? a.audience}
                         </span>
@@ -195,7 +195,7 @@ export default function Knowledge() {
             </div>
 
             {/* Reader */}
-            <article className="min-h-[20rem] min-w-0 rounded-2xl border bg-card p-[18px]">
+            <article className="min-h-80 min-w-0 rounded-2xl border bg-card p-[18px]">
               {viewLoading ? (
                 <div className="space-y-3" aria-busy="true" aria-label="Loading article">
                   <Skeleton className="h-3 w-40" />
@@ -208,11 +208,11 @@ export default function Knowledge() {
                 <EmptyState icon={BookOpen} title="Nothing open" description="Pick an article to read, or write a new one." className="py-14" />
               ) : (
                 <>
-                  <p className="font-mono text-[11.5px] uppercase tracking-[.06em] text-muted-foreground [overflow-wrap:anywhere]">
+                  <p className="font-mono text-[11.5px] uppercase tracking-[.06em] text-muted-foreground wrap-anywhere">
                     {selected.category} · {AUDIENCE[selected.audience] ?? selected.audience} · {selected.author || "Unknown author"}
                   </p>
-                  <h2 className="mb-3.5 mt-1.5 font-display text-[1.5rem] font-semibold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere]">{selected.title}</h2>
-                  <div className="max-w-[62ch] whitespace-pre-wrap leading-relaxed [overflow-wrap:anywhere]">{selected.body || "This article has no body yet."}</div>
+                  <h2 className="mb-3.5 mt-1.5 font-display text-[1.5rem] font-semibold leading-tight tracking-[-0.02em] wrap-anywhere">{selected.title}</h2>
+                  <div className="max-w-[62ch] whitespace-pre-wrap leading-relaxed wrap-anywhere">{selected.body || "This article has no body yet."}</div>
                   <div className="mt-5 flex flex-wrap gap-2">
                     <Button variant="outline" onClick={() => startEdit(selected)}>
                       <Pencil /> Edit

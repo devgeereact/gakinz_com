@@ -172,7 +172,7 @@ export default function Resourcing() {
           <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-bad" />
           <div className="min-w-[min(100%,200px)] flex-1">
             <p className="font-semibold">Could not load resourcing.</p>
-            <p className="mt-1 text-sm text-muted-foreground [overflow-wrap:anywhere]">
+            <p className="mt-1 text-sm text-muted-foreground wrap-anywhere">
               {error}. The resourcing endpoint and database must be live on the server.
             </p>
           </div>
@@ -218,8 +218,8 @@ export default function Resourcing() {
                               {initials(m.name)}
                             </span>
                             <span className="min-w-0">
-                              <b className="block font-semibold [overflow-wrap:anywhere]">{m.name}</b>
-                              <small className="block text-[12.5px] leading-snug text-muted-foreground [overflow-wrap:anywhere]">
+                              <b className="block font-semibold wrap-anywhere">{m.name}</b>
+                              <small className="block text-[12.5px] leading-snug text-muted-foreground wrap-anywhere">
                                 <span className="font-mono tabular-nums">{hrs(m.logged_minutes)}h</span> of{" "}
                                 <span className="font-mono tabular-nums">{hrs(m.capacity_minutes)}h</span> logged
                                 {m.on_leave && (
@@ -260,8 +260,8 @@ export default function Resourcing() {
                     {leave.map((l) => (
                       <div key={l.id} className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t py-3 first:border-t-0">
                         <span className="min-w-0">
-                          <b className="block font-semibold [overflow-wrap:anywhere]">{l.user_name}</b>
-                          <span className="block text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
+                          <b className="block font-semibold wrap-anywhere">{l.user_name}</b>
+                          <span className="block text-[13px] text-muted-foreground wrap-anywhere">
                             {LEAVE_LABEL[l.type]} · {fmtDate(l.start_date)} to {fmtDate(l.end_date)}
                             {l.note ? ` · ${l.note}` : ""}
                           </span>

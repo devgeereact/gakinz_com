@@ -187,9 +187,9 @@ export default function Blog() {
               <TableBody>
                 {items.map((a) => (
                   <TableRow key={a.id}>
-                    <TableCell className="min-w-[14rem]">
-                      <span className="font-semibold [overflow-wrap:anywhere]">{a.title}</span>
-                      <span className="block font-mono text-xs text-muted-foreground [overflow-wrap:anywhere]">/{a.slug}</span>
+                    <TableCell className="min-w-56">
+                      <span className="font-semibold wrap-anywhere">{a.title}</span>
+                      <span className="block font-mono text-xs text-muted-foreground wrap-anywhere">/{a.slug}</span>
                     </TableCell>
                     <TableCell className="whitespace-nowrap">{a.category}</TableCell>
                     <TableCell>

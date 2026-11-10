@@ -254,7 +254,7 @@ function BriefSection({
           {section.fields.map((f) => (
             <div key={f.key} className="min-w-0">
               <dt className="text-[12.5px] text-muted-foreground">{f.label}</dt>
-              <dd className="whitespace-pre-wrap [overflow-wrap:anywhere]">{brief?.[f.key] || <span className="text-muted-foreground">Not recorded</span>}</dd>
+              <dd className="whitespace-pre-wrap wrap-anywhere">{brief?.[f.key] || <span className="text-muted-foreground">Not recorded</span>}</dd>
             </div>
           ))}
         </dl>
@@ -376,7 +376,7 @@ function Measurements({
             ) : (
               <li key={m.id} className="grid gap-2 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-start">
                 <span className="min-w-0 text-sm">
-                  <b className="block font-semibold [overflow-wrap:anywhere]">{m.label}</b>
+                  <b className="block font-semibold wrap-anywhere">{m.label}</b>
                   <MeasureLine label="Target" value={m.target} />
                   <MeasureLine label="Baseline" value={m.baseline} />
                   <MeasureLine label="Actual" value={m.actual} />
@@ -436,7 +436,7 @@ function Measurements({
 function MeasureLine({ label, value }: { label: string; value: string | null }) {
   if (!value) return null
   return (
-    <span className="block text-[13px] [overflow-wrap:anywhere]">
+    <span className="block text-[13px] wrap-anywhere">
       <span className="text-muted-foreground">{label}: </span>
       {value}
     </span>

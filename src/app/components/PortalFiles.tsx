@@ -81,8 +81,8 @@ export function PortalFiles() {
                 <span className="flex min-w-0 items-start gap-2.5">
                   <FileIcon aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                   <span className="min-w-0">
-                    <b className="block font-semibold [overflow-wrap:anywhere]">{f.name}</b>
-                    <span className="block text-[13px] text-muted-foreground [overflow-wrap:anywhere]">
+                    <b className="block font-semibold wrap-anywhere">{f.name}</b>
+                    <span className="block text-[13px] text-muted-foreground wrap-anywhere">
                       {[f.project_name, humanSize(f.size), f.shared_at ? `shared ${fmt(f.shared_at)}` : null].filter(Boolean).join(" · ")}
                     </span>
                   </span>

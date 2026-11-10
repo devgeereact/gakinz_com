@@ -284,7 +284,7 @@ export default function Analytics() {
 
       {loading ? (
         <div className="space-y-4" aria-busy="true" aria-label="Loading figures">
-          <StatGrid className="mb-0">
+          <StatGrid className="last:mb-0">
             {[0, 1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-[104px] rounded-2xl" />
             ))}
@@ -318,7 +318,7 @@ export default function Analytics() {
 
           {!allFailed && (
             <>
-              <StatGrid className="mb-0">
+              <StatGrid className="last:mb-0">
                 <StatTile label="Revenue paid" value={money(kpis.paid)} note="All settled invoices" tone={kpis.paid > 0 ? "up" : undefined} />
                 <StatTile label="Win rate" value={`${kpis.winRate.toFixed(0)}%`} note={`${kpis.wonCount} of ${kpis.decidedCount} decided enquiries`} />
                 <StatTile label="Avg invoice" value={money(kpis.avgInvoice)} note="Per settled invoice" />
@@ -480,8 +480,8 @@ function ReportTable({
                         isNum(k)
                           ? "whitespace-nowrap text-right font-mono tabular-nums"
                           : i === 0
-                            ? "min-w-[10rem] font-semibold [overflow-wrap:anywhere]"
-                            : "min-w-[8rem] [overflow-wrap:anywhere]"
+                            ? "min-w-40 font-semibold wrap-anywhere"
+                            : "min-w-32 wrap-anywhere"
                       }
                     >
                       {isMoney(k) ? money(Number(r[k] ?? 0)) : String(r[k] ?? "None")}
