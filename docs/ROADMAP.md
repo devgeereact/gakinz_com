@@ -21,40 +21,44 @@ one enquiry to a paid invoice and a client sees only their own work.
 - [x] **2. The owner signs in with Clerk only; the retired password, magic-link, Google and reference
   routes answer 404.** Check: `tests/server/legacy-retired.test.ts`, D-057, `npm run check:live`. The owner
   still confirms one fresh email-code sign-in (BLOCKED, owner).
-- [ ] **3. A visitor submits the contact form and the owner is told at once.** Today the enquiry is saved
-  and appears in Leads, but nothing emails the owner (found 2026-11-10: `contact.php` sends no mail, and the
-  weekly digest never runs, K-145). Check: `tests/server/enquiry-notify.test.ts` (saved once, owner emailed,
-  mail failure never loses the enquiry) and `npm run test:browser` (`tests/browser/contact.mjs`, the real form
-  in a real browser against local PHP).
+- [x] **3. A visitor submits the contact form and the owner is told at once.** Found 2026-11-10: `contact.php` saved
+  the enquiry and sent no mail, and the digest cannot run without a cron entry (K-145, K-146). Now it emails
+  `$OWNER_ALERTS`. Evidence: `tests/server/enquiry-notify.test.ts` (8 tests: saved once, owner emailed, no fallback to
+  the digest list, 20 an hour cap, mail failure and a dead mail host never lose the enquiry, header injection) and
+  `npm run test:browser` (`tests/browser/contact.test.ts`: the real form in Chromium at 375 and 1280 px against local PHP,
+  thank-you with reference, row stored once, mail received, bad field refused, server failure keeps what was typed, no
+  console errors or failed requests). **Live: the owner must set `$OWNER_ALERTS`** (table row g) or nothing is sent.
 - [~] **4. Every public page states true business facts and shows no "to supply" placeholder.** Needs the
   owner's facts (trading identity, VAT, prices, phone, IT support area, legal pages). Check:
   `npm run check:facts -- --strict` exits 0 (today it lists every open gap with the page and the exact
   wording). BLOCKED, owner.
-- [ ] **5. The owner turns an enquiry into a client, a quote, an accepted project and an invoice.** Check:
+- [x] **5. The owner turns an enquiry into a client, a quote, an accepted project and an invoice.** Check:
   `tests/server/journey.test.ts` steps 2 to 7 plus the Phase 7 quote-from-enquiry and quote-to-project
   tests; one live walk with TEST records is BLOCKED (owner).
-- [ ] **6. The owner issues an invoice and records a payment (Stripe or manual) with the right VAT.**
+- [x] **6. The owner issues an invoice and records a payment (Stripe or manual) with the right VAT.**
   Check: `journey.test.ts` steps 7 to 9, `manual-payment.test.ts`, `paid-state.test.ts` and a VAT case at
   an awkward amount (`tests/server/vat-totals.test.ts`). Whether the business is VAT registered and the
   review of past Stripe charges (K-025) are the owner's.
-- [ ] **7. A client signs in to the portal and sees only their own project, invoice and files.** Check:
+- [x] **7. A client signs in to the portal and sees only their own project, invoice and files.** Check:
   `journey.test.ts` step 10, `portal-files.test.ts`, `support-client.test.ts` and the signed-out, wrong-role
   and other-client matrix in `tests/server/portal-isolation.test.ts`.
 - [~] **8. A backup is restored once and the recovery target is agreed (K-010).** Check: `npm run
   drill:restore` restores the newest Mac copy of the database dump into a throwaway database and compares
   tables and row counts; the dated result is in `docs/OPERATIONS.md` section 10. Restoring the **host's**
   copy, the uploads, and agreeing the targets are BLOCKED (owner).
-- [ ] **9. Scheduled work is either running or visibly switched off.** The host has no GAkinz cron entry
+- [x] **9. Scheduled work is either running or visibly switched off.** The host has no GAkinz cron entry
   (K-145), so invoice reminders, retainer billing, the weekly digest, uptime checks and pruning do not run.
-  Check: `tests/server/cron-heartbeat.test.ts` (a run leaves a heartbeat; no heartbeat in 36 hours shows the
-  owner a notice in Today and Settings naming what is off). The crontab line and the decision to add it are
-  the owner's (BLOCKED).
+  Evidence: `tests/server/cron-heartbeat.test.ts` (8 tests: a run leaves a per-job heartbeat; a job not seen in 36 hours
+  is listed on Today for the owner roles; a prune-only line does not hide the others; not shown to an editor) and
+  `scheduledJobsNotice` unit tests. Not seen in a browser. Adding the crontab line is the owner's decision (BLOCKED,
+  table row c, two steps in `docs/OPERATIONS.md` 2.1).
 - [~] **10. Privacy basics work: a deletion request reaches the owner with a due date, and retention periods
-  are set.** Check: `tests/server/deletion-request.test.ts` (extended for K-095: high priority, due in 30
-  days, owner emailed, shown in Today). The `$RETENTION_*` periods need the owner and an adviser (K-062);
-  `$RETENTION_APPLY` stays false. BLOCKED, owner.
+  are set.** Done (K-095): a deletion request opens at high priority and emails the owner with the reply-by date
+  one month on (`tests/server/deletion-alert.test.ts`, 4 tests; `deletion-request.test.ts`). Not built: a due-date
+  column and a Today item (parked). Open, owner and adviser: the `$RETENTION_*` periods (K-062, proposals in
+  `docs/PRIVACY-READINESS.md` section 6) and the legal deadline wording; `$RETENTION_APPLY` stays false. BLOCKED.
 
-`node scripts/finish-status.mjs` or `npm run finish` is not set up here; progress is the boxes above.
+**Progress (2026-11-10): 7 of 10 ticked, 3 waiting for the owner (4, 8, 10).** There is no `npm run finish` here; the boxes are the progress.
 
 ## Needs the owner (BLOCKED, with the exact action)
 
@@ -92,6 +96,9 @@ opens a new scope. Nothing here was deleted from the code or the issue list.
 - Server suite on MySQL 5.7 and 8 (K-099, K-111); CI runs MySQL 8.
 - Large files: `server/work.php`, `Dashboard.tsx`, `bookings.php`, `proposals.php`, `Invoicing.tsx` (over 600 lines each).
 - Acknowledgement email to the visitor (K-097).
+- A due-date column and a Today item for data deletion requests (K-095 remainder).
+- An index on `audit_log (action, created_at)`: the heartbeat, the contact throttle and the reminder memory all filter on `action`; fine at today's size, schema change when it grows.
+- Owner alerts: a retry or queue if a send fails (today: audited, the item is in Leads or Support either way).
 - Real assistive-technology pass on the public site and the CMS.
 
 ## Cut (decided not to build for V1; the code stays)
@@ -124,10 +131,10 @@ The commit message says which.
 
 | # | Slice | Items | Status |
 |---|---|---|---|
-| 1 | Enquiry notification and the contact browser test | 3 | PLANNED |
-| 2 | Placeholder check and owner input list | 4 | PLANNED |
-| 3 | Money, VAT and portal isolation evidence | 5, 6, 7 | PLANNED |
-| 4 | Restore drill | 8 | PLANNED |
-| 5 | Cron heartbeat and visible notice | 9 | PLANNED |
-| 6 | Deletion request handling | 10 | PLANNED |
-| 7 | Docs merge, audit, ladder, handoff | all | PLANNED |
+| 1 | Enquiry notification and the contact browser test | 3 | DONE |
+| 2 | Placeholder check and owner input list | 4 | DONE (the facts: owner) |
+| 3 | Money, VAT and portal isolation evidence | 5, 6, 7 | DONE |
+| 4 | Restore drill | 8 | DONE (host copy, uploads and targets: owner) |
+| 5 | Cron heartbeat and visible notice | 9 | DONE |
+| 6 | Deletion request handling | 10 | DONE (retention periods: owner and adviser) |
+| 7 | Docs merge, audit, ladder, handoff | all | DONE |

@@ -223,9 +223,10 @@ needed: how identity is checked (reply from the address on file, never an ID doc
 email), what is deleted, what is kept and why, and how the requester is told. Response
 deadline: REQUIRES LEGAL REVIEW, not stated here.
 
-The request ticket has priority `normal` and notifies nobody: it waits in Support like any
-other ticket, with no due date or reminder (K-095). Whether it should be marked urgent, carry
-a deadline or send the owner an alert is an owner decision (`docs/STATUS.md` section 5).
+Since 2026-11-10 (K-095, D-061, not yet released) the request ticket opens at priority `high` and, when `$OWNER_ALERTS` is set,
+emails the owner at once with the client, the ticket number and a reply-by date one month on (the usual UK GDPR response
+time, which the adviser confirms). It still has no due-date column and no Today item (parked), and the legal deadline and
+procedure remain the adviser's (`docs/STATUS.md` section 5).
 
 Work references (2026-10-19, SQL 19, not uploaded) add no new personal data: an enquiry's
 `GK-E` reference is kept on the enquiry row and goes when that row is erased, and a project's

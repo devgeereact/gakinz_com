@@ -105,6 +105,9 @@ once.
 | `.agent/CURRENT-TASK.md` | The task in hand, its scope, authority and evidence |
 | `.agent/MCP-PROFILE.yml` | Which integrations an agent may read or change |
 | `server/README.md` | The server folder: install steps and what each file is for |
+| `docs/ROADMAP.md` | The frozen V1 finish line (what "finished" means), the parking lot, what was cut and what waits for the owner |
+| `docs/CHANGELOG.md` | What changed in the product, newest first |
+| `docs/VERIFICATION.md` | What was actually run for the finish line, and the owner's own walk through it |
 | `docs/WORKBOOK.md` | The one page to work from: state, what is left, standing rules and order of work. Start here |
 | `docs/STATUS.md` | Current state and every measured count, delivery phases, open work, owner inputs. The file that changes most |
 | `docs/KNOWN-ISSUES.md` | Open and fixed problems, with evidence and status |

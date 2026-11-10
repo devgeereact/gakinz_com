@@ -135,3 +135,9 @@ PR #28 CI green (MySQL 8); `main` fast-forwarded to `cbfd527`; the release job s
 - Throwaway MariaDB on port 3399 is running; stop it with `mariadb-admin --no-defaults -h127.0.0.1 -P3399 -uroot shutdown`.
 - Finding 2026-11-09: read-only `crontab -l` shows no GAkinz cron entry (K-145). Reminders/billing/digest/uptime/prune are not scheduled live. Needs an owner decision before adding one.
 - Released 2026-11-09 as `825600e` (PR #31, CI green incl. MySQL 8); `check:live` 16 of 16; update routes 401 anonymously; web cron 403. Dialogs not seen in a browser. Stop the throwaway MariaDB (port 3399) when finished.
+
+## Handoff: V1 finish-line run (10 November 2026, branch `goal/finish`, local only, D-060, D-061)
+Done: froze the V1 finish line in `docs/ROADMAP.md` (7 of 10 ticked); `server/_notify.php` emails `$OWNER_ALERTS` when an enquiry or a deletion request arrives (K-146, K-095); per-job cron heartbeat and a Today notice (K-145); `npm run test:browser` (contact form, Chromium), `check:facts`, `drill:restore` (first restore of a real host dump: 42 of 42 tables, 0 orphans, MariaDB 11.4.13); 34 new money and isolation tests; KNOWN-ISSUES compacted (2,397 to about 1,460 lines).
+Evidence: `docs/VERIFICATION.md` (server 661, unit 674, browser 6, `verify` PASS) and `docs/AUDIT.md` 2026-11-10.
+Open (owner): `$OWNER_ALERTS` in `config.php` before release; business facts (`check:facts`); adviser sign-off and retention periods; the cron entry decision; host restore, uploads and recovery targets; the owner walk. Not released.
+

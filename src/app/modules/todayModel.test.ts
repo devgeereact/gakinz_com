@@ -260,7 +260,7 @@ describe("scheduledJobsNotice", () => {
   it("says only some are off when others run", () => {
     const n = scheduledJobsNotice(view({ last_run: "2026-11-10T02:00:00Z", stale: true, all_off: false, off: ["Retainer billing"] }))
     expect(n?.title).toBe("Some scheduled jobs are not running")
-    expect(n?.detail).not.toContain("nothing is sent")
+    expect(n?.detail).toContain("have not run in the last 36 hours")
   })
 
   it("gives the date of the last run when there was one", () => {

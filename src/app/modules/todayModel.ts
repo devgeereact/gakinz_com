@@ -99,7 +99,9 @@ export function scheduledJobsNotice(view: TodayView): ScheduledJobsNotice | null
   const all = j.all_off === true
   return {
     title: all ? "Scheduled jobs are not running" : "Some scheduled jobs are not running",
-    detail: `${when} Until the host runs ${all ? "cron.php" : "them"} ${all ? "these are off and" : "these are off:"}${all ? " nothing is sent or billed automatically." : ""}`.trim(),
+    detail: all
+      ? `${when} Until the host runs cron.php, nothing is sent or billed automatically.`
+      : `${when} These have not run in the last 36 hours:`,
     off,
   }
 }

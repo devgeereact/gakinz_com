@@ -26,6 +26,7 @@ One fact, one home. Where two documents disagree, the code is the authority.
 
 | Fact | Authority |
 |---|---|
+| What "finished V1" means, what is parked or cut | `docs/ROADMAP.md` (frozen 2026-11-10, D-060) |
 | Product scope, journeys, planned features and exclusions | `docs/PRODUCT-SPEC.md` |
 | Content, social and monetisation policy | `docs/CONTENT-AND-GROWTH.md` |
 | Public copy | `src/marketing/data/site.ts` for defaults; published Site content (`server/site.php`) overrides the sections it covers (D-046) |
