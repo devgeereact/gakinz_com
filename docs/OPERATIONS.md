@@ -148,14 +148,15 @@ The inbox needs the PHP `imap` extension. `mail.php?action=status` reports `smtp
 
 ## 5. Backups
 
-**There is no backup procedure in this repository, and none is claimed.** The database and the
-uploads directory both live on the host. `server/uploads/` is gitignored, so file uploads exist
-in exactly one place. Backup arrangements, if any, belong to the hosting account and are
-recorded in the operator's global notes.
+The repository carries no backup job: backup arrangements belong to the hosting account and the operator's
+global notes (a daily database dump on the host, the newest five kept, and a copy pulled to the Mac under
+`~/Backups/projects/gakinz_com/`). `server/uploads/` is gitignored, so uploaded client files exist on the host
+only unless the host job also covers them, which this repository cannot see (K-010).
 
-This is worth stating plainly because it is the largest operational risk in the project:
-uploaded client files have no second copy that this repository knows about (K-010). The
-proposed recovery targets and the restoration test that closes this are in section 10.
+What the repository does provide is the **restore drill**, `npm run drill:restore`
+(`scripts/restore-drill.mjs`): it loads a dump into a throwaway local database, compares the tables with
+`schema.sql`, counts rows and checks for orphaned rows, then drops the database. Run it after any change to the
+backup arrangement and at least quarterly. Its result goes in section 10.
 
 ## 6. Routine checks
 
@@ -329,3 +330,17 @@ previous PHP files, a schema and data backup, the compatibility impact and the e
 run afterwards. Additive SQL may not need reversing, but a data transformation needs a specific
 restoration path. Owner approval covers a named release and its checks, not unrestricted
 hosting changes. The release mechanics are in `docs/DEPLOYMENT.md`.
+
+### 10.1 Restore drill record
+
+| Date | Dump | Result |
+|---|---|---|
+| 2026-11-10 | `gakinz_db_20261030_005611.sql.gz`, the Mac copy of the host's dump (10.6 KB, 10 days old) | **Database restored: PASS.** `npm run drill:restore` loaded it into a throwaway local MariaDB 11.4.13 in 2.1 s: 42 of 42 tables from `schema.sql`, none missing or extra, 88 rows (audit_log 45, auth_tokens 32, enquiries 1, posts 3, reference_counters 3, testimonials 3, users 1), 0 orphaned rows in seven relationship checks. **Not covered:** the uploaded files, file permissions, the host's own current copies (the Mac copy is 10 days old, so the host job may be newer), and whether the daily job is still running. Recovery targets above are still **proposed, not agreed**. |
+
+The dump header names the server that produced it, `11.4.13-MariaDB-cll-lve` with source database
+`devgeereact_gakinz_com`: that is the live engine as at 2026-10-30 (K-099), MariaDB and not MySQL.
+
+To close K-010 fully the owner (or a session with the owner's approval to read the server) repeats the drill on the
+host's newest dump, restores a copy of `uploads/` beside it, and agrees the targets in the table at the top of this
+section.
+

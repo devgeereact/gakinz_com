@@ -18,7 +18,8 @@
     "lint:ratchet": "node scripts/lint-ratchet.mjs",
     "docs:check": "node scripts/docs-check.mjs",
     "check:live": "node scripts/live-check.mjs",
-    "check:facts": "node scripts/facts-check.mjs"
+    "check:facts": "node scripts/facts-check.mjs",
+    "drill:restore": "node scripts/restore-drill.mjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.11",
