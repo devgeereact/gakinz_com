@@ -17,7 +17,8 @@
     "test:browser": "vitest run -c vitest.browser.config.ts",
     "lint:ratchet": "node scripts/lint-ratchet.mjs",
     "docs:check": "node scripts/docs-check.mjs",
-    "check:live": "node scripts/live-check.mjs"
+    "check:live": "node scripts/live-check.mjs",
+    "check:facts": "node scripts/facts-check.mjs"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.11",
