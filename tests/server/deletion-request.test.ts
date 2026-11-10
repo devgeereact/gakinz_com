@@ -51,7 +51,7 @@ describe("deletion_request", () => {
     expect(t[2]).toMatch(/^Please delete the personal data GAkinz holds about me and my account\./)
     expect(t[2]).toContain("Nothing has been deleted yet")
     expect(t[2]).not.toContain("script")
-    expect(t.slice(3)).toEqual(["open", "normal"])
+    expect(t.slice(3)).toEqual(["open", "high"])
     expect(one(`SELECT COUNT(*) FROM tickets WHERE client_id = ${clientB}`)).toBe("0")
     expect(sql("SELECT user_id, detail FROM audit_log WHERE action = 'ticket_deletion_request'")).toEqual([[String(userA), `#${r.json.id} (client)`]])
     expect(clientData()).toBe(before)

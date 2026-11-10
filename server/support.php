@@ -49,6 +49,7 @@
  * detail returns `time: null`, as before SQL 17.
  */
 require __DIR__ . '/_bootstrap.php';
+require_once __DIR__ . '/_notify.php';
 
 const STAFF = ['super_admin', 'admin', 'manager', 'editor', 'employee'];
 const STAFF_OR_CLIENT = ['super_admin', 'admin', 'manager', 'editor', 'employee', 'client'];
@@ -264,17 +265,37 @@ if ($user['role'] === 'client') {
         fail('You already have a data deletion request open. GAkinz will reply to it.', 409);
       }
       $bodyText = DELETION_BODY;
-      $stmt = $conn->prepare("INSERT INTO tickets (client_id, subject, body, priority) VALUES (?, ?, ?, 'normal')");
+      // High, not normal (K-095): a data request has a legal response deadline, so it sorts above ordinary tickets.
+      $stmt = $conn->prepare("INSERT INTO tickets (client_id, subject, body, priority) VALUES (?, ?, ?, 'high')");
       $stmt->bind_param('iss', $clientId, $subject, $bodyText);
       $stmt->execute();
       $newId = $conn->insert_id; // read before audit(), which inserts its own row
       audit($conn, $user['id'], 'ticket_deletion_request', "#$newId (client)");
+      $co = $conn->prepare('SELECT company, DATE_FORMAT(CURRENT_DATE + INTERVAL 1 MONTH, \'%e %b %Y\') AS due FROM clients WHERE id = ?');
+      $co->bind_param('i', $clientId);
+      $co->execute();
+      $coRow = $co->get_result()->fetch_assoc() ?: [];
       $conn->commit();
     } catch (mysqli_sql_exception $e) {
       $conn->rollback();
       error_log('support.php deletion_request: SQL error ' . $e->getCode());
       fail('Could not send your request.', 500);
     }
+    // Tell the owner after the client has their answer (see _notify.php); it cannot fail the request. The date is the
+    // usual one-month response time, which the adviser confirms (docs/PRIVACY-READINESS.md section 7).
+    $company = gk_oneline((string)($coRow['company'] ?? 'a client'), 100);
+    $appUrl = rtrim((string)($GLOBALS['APP_URL'] ?? 'https://gakinz.com'), '/');
+    gk_owner_alert(
+      $conn,
+      gk_oneline('Data deletion request from ' . $company, 100),
+      "$company has asked for their personal data to be deleted.\n\n"
+        . "Ticket: #$newId (Data deletion request, high priority)\n"
+        . 'Reply by: ' . ($coRow['due'] ?? 'one month from today') . " (the usual one-month response time; confirm with your adviser)\n\n"
+        . "Nothing has been deleted. Open it in Support: $appUrl/app/support\n",
+      'deletion_notified',
+      'deletion_notify_failed',
+      "ticket #$newId"
+    );
     ok(['id' => $newId, 'subject' => DELETION_SUBJECT], 201);
   }
 
