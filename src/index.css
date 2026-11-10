@@ -640,7 +640,7 @@ h1.gk-app-grad,
 
 /* Public wrapper typography, kept for ProposalView and the portal card. */
 /* Headings at medium 500. The -2% headline tracking lives in the type scale
-   in tailwind.config.js, so it is not repeated here. The family comes from
+   in the @theme block above, so it is not repeated here. The family comes from
    the D-046 tokens (Bricolage Grotesque, Hanken Grotesk). */
 .gk-public :is(h1, h2, h3, h4, blockquote) {
   font-weight: 500;
