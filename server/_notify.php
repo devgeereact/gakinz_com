@@ -45,7 +45,11 @@ function gk_owner_alert(mysqli $conn, string $subject, string $body, string $okA
       if (!empty($r['ok'])) audit($conn, null, $okAction, $detail);
       else audit($conn, null, $failAction, gk_oneline($detail . ' · ' . ($r['error'] ?? 'send failed'), 250));
     } catch (Throwable $e) {
-      try { audit($conn, null, $failAction, gk_oneline($detail . ' · ' . $e->getMessage(), 250)); } catch (Throwable $ignored) {}
+      try {
+        audit($conn, null, $failAction, gk_oneline($detail . ' · ' . $e->getMessage(), 250));
+      } catch (Throwable $e2) {
+        error_log('_notify.php: could not record a failed owner alert: ' . $e2->getMessage()); // the host log is the last place to say so
+      }
     }
   });
 }

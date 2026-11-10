@@ -139,6 +139,9 @@ describe("retention_apply", () => {
     // `all` never includes it, even with every gate but the flag open.
     const all = spawnSync("php", [path.join(WORK_DIR, "cron.php"), "job=all", "--apply"], { encoding: "utf8" })
     expect(JSON.parse(all.stdout).ran).not.toHaveProperty("retention_apply")
+    // The only trace of that run is its heartbeat row (cron-heartbeat.test.ts); no business row changed.
+    expect(sql("SELECT detail FROM audit_log WHERE action = 'cron_run'")).toEqual([["all"]])
+    sql("DELETE FROM audit_log WHERE action = 'cron_run'")
     expect(snapshot()).toBe(before)
   })
 
