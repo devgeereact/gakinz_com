@@ -271,10 +271,6 @@ if ($user['role'] === 'client') {
       $stmt->execute();
       $newId = $conn->insert_id; // read before audit(), which inserts its own row
       audit($conn, $user['id'], 'ticket_deletion_request', "#$newId (client)");
-      $co = $conn->prepare('SELECT company, DATE_FORMAT(CURRENT_DATE + INTERVAL 1 MONTH, \'%e %b %Y\') AS due FROM clients WHERE id = ?');
-      $co->bind_param('i', $clientId);
-      $co->execute();
-      $coRow = $co->get_result()->fetch_assoc() ?: [];
       $conn->commit();
     } catch (mysqli_sql_exception $e) {
       $conn->rollback();
@@ -283,6 +279,16 @@ if ($user['role'] === 'client') {
     }
     // Tell the owner after the client has their answer (see _notify.php); it cannot fail the request. The date is the
     // usual one-month response time, which the adviser confirms (docs/PRIVACY-READINESS.md section 7).
+    // Looked up after the commit and best effort: a failure here must not touch the request that is already saved.
+    $coRow = [];
+    try {
+      $co = $conn->prepare('SELECT company, DATE_FORMAT(CURRENT_DATE + INTERVAL 1 MONTH, \'%e %b %Y\') AS due FROM clients WHERE id = ?');
+      $co->bind_param('i', $clientId);
+      $co->execute();
+      $coRow = $co->get_result()->fetch_assoc() ?: [];
+    } catch (Throwable $e) {
+      error_log('support.php deletion_request: alert lookup failed: ' . $e->getMessage());
+    }
     $company = gk_oneline((string)($coRow['company'] ?? 'a client'), 100);
     $appUrl = rtrim((string)($GLOBALS['APP_URL'] ?? 'https://gakinz.com'), '/');
     gk_owner_alert(

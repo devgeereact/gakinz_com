@@ -59,6 +59,25 @@ command line; a key in a URL ends up in Cloudflare and host logs:
 wget -qO- "https://gakinz.com/cron.php?key=<CRON_KEY>&job=all"
 ```
 
+### 2.1 Adding the cron entry (owner decision, K-145)
+
+**Today the host has no GAkinz entry** (read-only `crontab -l`, 2026-11-09), so none of the jobs below runs. Since
+2026-11-10 Today shows a notice naming what is off, and every run of `cron.php` leaves a `cron_run` audit row that
+counts for the job it names, or for all five when it is `all` (a job returns to the notice if none is seen for 36 hours). Adding the entry is a server change and, with
+`job=all`, switches on emails to clients and retainer billing, so do it in two steps. cPanel, Cron Jobs; the path is
+the account's document root (not stated here):
+
+1. **Prove the plumbing, touching nothing.** Daily at 02:00: `php /home/<account>/public_html/cron.php job=prune`.
+   After one run the clean-up job leaves Today's notice and Settings, Audit shows a `cron_run` row with detail `prune`; the other four jobs stay listed as off, which is true.
+2. **Before switching to `job=all`, check what its first run will do:**
+   - Every overdue invoice whose client has an email address gets a payment reminder at the first run (then one per
+     `$CHASE_INTERVAL_DAYS`). Open Invoicing, filter Overdue, and decide that each should be chased.
+   - Every client with a monthly retainer amount above zero gets this month's invoice raised (once per month).
+   - The weekly digest goes to `$REPORT_RECIPIENTS`; `$SMTP_*` must work (send a test from Mail).
+3. **Then change the line to `job=all`** (same time); the notice clears once every job is seen. Keep `retention_apply` out of it. A line that runs more often than daily is fine: heartbeats are written at most once per job per 10 minutes.
+
+To leave the jobs off on purpose, add nothing: the notice on Today stays, which is the honest state.
+
 | Job | What it does | Skips when |
 |---|---|---|
 | `chase` | Emails one reminder per overdue invoice, at most once per `$CHASE_INTERVAL_DAYS` (optional config key, 1 to 90, default 7). A reminder sent by hand from Invoicing counts. The memory is the audit log (`cron_chase` and `invoice_chase` rows), so there is no schema change; a retention rule that deletes audit rows sooner than the interval would let a reminder repeat. Runs under the named lock `gk_cron_chase`; a failed send writes no row, so the next run retries. Result `{sent, skipped, already_reminded}` (2026-11-09, Phase 7, D-059) | No SMTP configured |

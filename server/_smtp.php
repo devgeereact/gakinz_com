@@ -36,9 +36,10 @@ function gk_smtp_send(array $cfg, string $rawMessage, array $rcpts): array {
   // The mail host's certificate is checked only when $MAIL_VERIFY_TLS is true in config.php (see mail.php).
   $verify = ($GLOBALS['MAIL_VERIFY_TLS'] ?? false) === true;
   $ctx = stream_context_create(['ssl' => ['verify_peer' => $verify, 'verify_peer_name' => $verify]]);
-  $fp = @stream_socket_client("$transport:$port", $errno, $errstr, 20, STREAM_CLIENT_CONNECT, $ctx);
+  $timeout = max(1, (int)($cfg['timeout'] ?? 20)); // owner alerts use a short one (_notify.php)
+  $fp = @stream_socket_client("$transport:$port", $errno, $errstr, $timeout, STREAM_CLIENT_CONNECT, $ctx);
   if (!$fp) return [false, "Connect failed: $errstr ($errno)"];
-  stream_set_timeout($fp, 20);
+  stream_set_timeout($fp, $timeout);
 
   $read = function () use ($fp): string {
     $data = '';
@@ -165,6 +166,7 @@ function gk_send_email(array $opts): array {
       'user'   => $GLOBALS['SMTP_USER'] ?? '',
       'pass'   => $GLOBALS['SMTP_PASS'] ?? '',
       'from'   => $fromEmail,
+      'timeout' => $opts['timeout'] ?? 20,
     ], $raw, $rcpts);
   } else {
     // Fallback to PHP mail()

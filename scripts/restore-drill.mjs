@@ -42,14 +42,31 @@ export const ORPHAN_CHECKS = [
 
 function mysqlArgs(db) {
   const a = ["-h", process.env.GK_TEST_DB_HOST ?? "localhost", "-P", process.env.GK_TEST_DB_PORT ?? "3306", "-u", process.env.GK_TEST_DB_USER ?? os.userInfo().username]
-  if (process.env.GK_TEST_DB_PASS) a.push(`-p${process.env.GK_TEST_DB_PASS}`)
   if (db) a.push(db)
   return a
 }
 
+/** The password goes in MYSQL_PWD, not on the command line, where `ps` would show it to other local users. */
 function mysql(db, query, input) {
   const args = [...mysqlArgs(db), ...(query ? ["-N", "-B", "-e", query] : [])]
-  return spawnSync("mysql", args, { encoding: "utf8", input, maxBuffer: 256 * 1024 * 1024 })
+  const env = process.env.GK_TEST_DB_PASS ? { ...process.env, MYSQL_PWD: process.env.GK_TEST_DB_PASS } : process.env
+  const r = spawnSync("mysql", args, { encoding: "utf8", input, env, maxBuffer: 256 * 1024 * 1024 })
+  if (r.error) return { status: 127, stdout: "", stderr: `could not run the mysql client: ${r.error.message}` }
+  return { ...r, stdout: r.stdout ?? "", stderr: r.stderr ?? "" }
+}
+
+/**
+ * Statements in a dump that would escape the throwaway database: a USE, or a CREATE/DROP of a database. An ordinary
+ * `mysqldump` of one database has none; one taken with --databases or --add-drop-database does, and loading it would
+ * act on the database it names (possibly a real local one) instead of the _test target. Returns the offending lines.
+ */
+/** mysqldump / mariadb-dump end a complete dump with "-- Dump completed on ..."; a truncated one lacks it. */
+export function dumpCompleted(sql) {
+  return /^-- Dump completed on /m.test(sql.slice(-400))
+}
+
+export function unsafeStatements(sql) {
+  return sql.split("\n").filter((l) => /^\s*(USE\s|CREATE\s+(DATABASE|SCHEMA)\b|DROP\s+(DATABASE|SCHEMA)\b)/i.test(l)).map((l) => l.trim().slice(0, 80))
 }
 
 function newestDump() {
@@ -79,7 +96,21 @@ function main() {
   const facts = dumpFacts(sqlText.slice(0, 2000))
   const ageDays = Math.floor((Date.now() - fs.statSync(dumpPath).mtimeMs) / 86400000)
 
-  mysql(null, `DROP DATABASE IF EXISTS \`${db}\`; CREATE DATABASE \`${db}\` CHARACTER SET utf8mb4;`)
+  if (!sqlText.trim() || !dumpCompleted(sqlText)) {
+    console.error("FAIL: the dump is empty or truncated (it does not end with '-- Dump completed on ...'). Nothing was restored, so this is not a valid backup.")
+    process.exit(1)
+  }
+  const bad = unsafeStatements(sqlText)
+  if (bad.length) {
+    console.error(`Refusing: the dump contains statements that act on a named database (${bad.slice(0, 3).join(" | ")}). Take the dump of one database without --databases or --add-drop-database.`)
+    process.exit(2)
+  }
+
+  const made = mysql(null, `DROP DATABASE IF EXISTS \`${db}\`; CREATE DATABASE \`${db}\` CHARACTER SET utf8mb4;`)
+  if (made.status !== 0) {
+    console.error(`Could not create the throwaway database: ${made.stderr.trim().split("\n")[0]}`)
+    process.exit(2)
+  }
   // The dump names its own database only in a comment, and has no USE line, so it loads into the target.
   const started = Date.now()
   const load = mysql(db, null, sqlText)
@@ -102,6 +133,11 @@ function main() {
     return [label, r.status === 0 ? Number(r.stdout.trim()) : "n/a (table or column not in this dump)"]
   })
 
+  if (tables.length === 0) {
+    console.error("FAIL: the dump loaded but created no tables.")
+    mysql(null, `DROP DATABASE IF EXISTS \`${db}\`;`)
+    process.exit(1)
+  }
   const rows = Object.values(counts).reduce((a, b) => a + b, 0)
   console.log("RESTORE DRILL RESULT")
   console.log(`  dump:            ${path.basename(dumpPath)} (${(raw.length / 1024).toFixed(1)} KB, ${ageDays} day(s) old)`)
@@ -110,6 +146,7 @@ function main() {
   console.log(`  tables restored: ${tables.length} of ${expected.length} in schema.sql; ${rows} rows in total`)
   console.log(`  missing tables:  ${missing.length ? missing.join(", ") : "none"}${missing.length ? "  (created by schema changes newer than the dump)" : ""}`)
   console.log(`  extra tables:    ${extra.length ? extra.join(", ") : "none"}`)
+  console.log(`  dump completed:  yes (ends with the dump-completed marker)`)
   console.log("  rows per table (non-empty only):")
   for (const [t, n] of Object.entries(counts).filter(([, n]) => n > 0)) console.log(`    ${t}: ${n}`)
   console.log("  orphan checks (0 is good):")
@@ -117,8 +154,8 @@ function main() {
   console.log("  NOT CHECKED: uploaded files (the dump holds only database rows), file permissions, the live host's own copy.")
 
   if (!keep) mysql(null, `DROP DATABASE IF EXISTS \`${db}\`;`)
-  const bad = orphans.some(([, n]) => typeof n === "number" && n > 0)
-  process.exit(bad ? 1 : 0)
+  const broken = orphans.some(([, n]) => typeof n === "number" && n > 0)
+  process.exit(broken ? 1 : 0)
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main()

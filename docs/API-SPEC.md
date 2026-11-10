@@ -112,7 +112,7 @@ Treat these as the internet-facing attack surface.
 
 | Endpoint | Method | Purpose |
 |---|---|---|
-| `contact.php` | POST | Public enquiry form. Validates name, email and a message of at least 10 characters, then inserts into `enquiries` with the caller IP. JSON only: any other `Content-Type` answers 415 (2026-11-01). Throttled per IP from `audit_log`, modelled on the login throttle; over the limit it returns 429. Answers `{ id, reference }` with 201; `reference` is the enquiry's `GK-E-YYYY-NNNN` once SQL 19 has run and `_reference.php` is up, else `null` (2026-10-19, see Work references in section 5) |
+| `contact.php` | POST | Public enquiry form. Validates name, email and a message of at least 10 characters, then inserts into `enquiries` with the caller IP. JSON only: any other `Content-Type` answers 415 (2026-11-01). Throttled per IP from `audit_log`, modelled on the login throttle; over the limit it returns 429. Answers `{ id, reference }` with 201; `reference` is the enquiry's `GK-E-YYYY-NNNN` once SQL 19 has run and `_reference.php` is up, else `null` (2026-10-19, see Work references in section 5). **Since 2026-11-10 (D-061) a saved enquiry also emails `$OWNER_ALERTS` (only that key; never the digest list)** after the response is finished; best effort, the answer never depends on it, at most 20 an hour (then `alert_suppressed`), outcome in the audit log as `enquiry_notified` or `enquiry_notify_failed`. Covered by `tests/server/enquiry-notify.test.ts` and `tests/browser/contact.test.ts` |
 | `verify.php` | GET `?id=` | Certificate check (Phase 6, D-058). Upper-cases the reference and strips spaces, and answers `{ id, recipient, programme, issued_at }` (the date as `1 November 2026`) and nothing else. A revoked, unknown or malformed reference all get the same 404 `{"error":"No matching certificate."}`; an empty one gets 400. `Cache-Control: no-store`, so a revoke shows at once. GET only (405 otherwise). **Throttled:** each miss writes an `audit_log` row `certificate_lookup_miss` (IP, no detail, so the guess is not kept); 20 misses in 10 minutes from one connection answer 429 to every lookup, a real reference included, until the window passes. A hit writes nothing. Covered by `tests/server/certificates.test.ts` |
 | `book.php` | GET | Returns the configured Calendly URL, or an empty string |
 | `blog.php` | GET, and GET `?slug=` | Published posts without their body, and one published post with its body |
@@ -476,8 +476,8 @@ or sent clears them. Covered by `tests/server/manual-payment.test.ts`.
   `tests/server/portal-requests.test.ts`.
 - `deletion_request` (2026-10-19, `docs/PRIVACY-READINESS.md` section 7) takes no input and
   ignores any body. It creates a ticket with the fixed subject "Data deletion request" and a
-  fixed body saying nothing has been deleted yet, priority `normal`, and returns `{ id,
-  subject }` with 201. While that client has such a ticket that is not `resolved`, another
+  fixed body saying nothing has been deleted yet, priority `high` (2026-11-10, K-095; it was `normal`), and returns `{ id,
+  subject }` with 201. The owner is also emailed (`$OWNER_ALERTS`, D-061) with the client, the ticket and the date one month on; audit `deletion_notified` or `deletion_notify_failed`, covered by `tests/server/deletion-alert.test.ts`. While that client has such a ticket that is not `resolved`, another
   request from any of its logins answers 409; the client row is locked for the check, so
   simultaneous requests make one ticket. Nothing is deleted. Audit action
   `ticket_deletion_request`, `#id (client)`. A staff caller gets 405. Covered by
@@ -569,6 +569,7 @@ where `at` is a UTC time ending `Z` or a plain due date, and `route` a CMS deep 
 (`/app/leads?enquiry=`, `/app/leads?due=1&enquiry=`, `/app/leads?view=calls&call=`,
 `/app/projects?project=&task=`, `/app/projects?project=&asset=`, `/app/invoicing?invoice=`).
 A missing table or failed query marks only its section `unavailable`, never an empty `ok`.
+For `super_admin`, `admin` and `manager` the reply also carries `scheduled_jobs: { last_run, stale, off }`: `last_run` is the newest `cron_run` audit row (UTC, or `null`), `stale` is true when there is none in 36 hours, and `off` names what is not running then (2026-11-10, K-145; covered by `tests/server/cron-heartbeat.test.ts`). Other roles get no such key.
 Dates use the database clock (K-075). 405 for anything but GET. Covered by
 `tests/server/today.test.ts`.
 

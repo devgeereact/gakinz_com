@@ -37,8 +37,10 @@ export function startStack(): Promise<Stack> {
       req.pipe(up)
       return
     }
-    let f = path.join(DIST, decodeURIComponent(url.pathname))
-    if (!f.startsWith(DIST)) f = path.join(DIST, "index.html")
+    let wanted = url.pathname
+    try { wanted = decodeURIComponent(url.pathname) } catch { /* a malformed escape falls through to the app shell */ }
+    let f = path.resolve(DIST, "." + wanted)
+    if (f !== DIST && !f.startsWith(DIST + path.sep)) f = path.join(DIST, "index.html")
     if (fs.existsSync(f) && fs.statSync(f).isDirectory() && fs.existsSync(path.join(f, "index.html"))) f = path.join(f, "index.html")
     if (!fs.existsSync(f) || fs.statSync(f).isDirectory()) f = path.join(DIST, "index.html")
     res.writeHead(200, { "content-type": TYPES[path.extname(f)] ?? "application/octet-stream" })

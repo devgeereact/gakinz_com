@@ -96,9 +96,10 @@ export function scheduledJobsNotice(view: TodayView): ScheduledJobsNotice | null
   const off = Array.isArray(j.off) ? j.off.filter((x): x is string => typeof x === "string") : []
   const last = typeof j.last_run === "string" ? new Date(j.last_run) : null
   const when = last && !Number.isNaN(last.getTime()) ? `The last run was on ${last.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}.` : "No run has ever been seen."
+  const all = j.all_off === true
   return {
-    title: "Scheduled jobs are not running",
-    detail: `${when} Until the host runs cron.php these are off and nothing is sent or billed automatically.`,
+    title: all ? "Scheduled jobs are not running" : "Some scheduled jobs are not running",
+    detail: `${when} Until the host runs ${all ? "cron.php" : "them"} ${all ? "these are off and" : "these are off:"}${all ? " nothing is sent or billed automatically." : ""}`.trim(),
     off,
   }
 }

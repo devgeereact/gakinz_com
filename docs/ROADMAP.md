@@ -68,7 +68,7 @@ Prepared in this run: the scripts, tests and instructions below. None of these w
 | d | Restore the host's latest backup and the uploads somewhere isolated; agree the recovery targets; record the live database engine (K-010, K-099) | item 8 | steps in `docs/OPERATIONS.md` section 10 |
 | e | OpenRouter monthly spending limit; delete the Clerk user for `dev@gakinz.com`; rename the `TEST owner` row | safety | Clerk and OpenRouter dashboards; one `UPDATE` in `docs/DEPLOYMENT.md` section 5 |
 | f | One live walk with TEST records: contact form to paid invoice, certificates, downloads, a client sign-in | gate 6 (real browser and phone) | `docs/VERIFICATION.md` "Owner walk" |
-| g | Add `$OWNER_ALERTS` (or rely on `$REPORT_RECIPIENTS`) to `config.php` before the release that carries item 3 | item 3 live | `docs/DEPLOYMENT.md` section 5 |
+| g | Add `$OWNER_ALERTS = 'your address'` to `config.php` (and check `$SMTP_*`) before the release that carries item 3; there is no fallback to the digest list | item 3 live | `docs/DEPLOYMENT.md` section 5 |
 
 ## Parking lot (V1.1 and later)
 
