@@ -31,26 +31,28 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      # pnpm first, so setup-node can cache its store. The version comes from "packageManager" in package.json.
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v5
         with:
           node-version-file: .node-version
-          cache: npm
+          cache: pnpm
 
-      # `npm ci` deliberately, not `npm install`: it installs the lockfile
-      # exactly and fails on a lockfile that cannot be satisfied. `npm install`
-      # succeeding proves nothing about `npm ci` — it rewrites the lockfile to
-      # make itself work.
-      - run: npm ci
+      # `--frozen-lockfile` deliberately, not a plain `pnpm install`: it installs
+      # pnpm-lock.yaml exactly and fails on a lockfile that cannot be satisfied,
+      # where a plain install would rewrite the lockfile to make itself work.
+      - run: pnpm install --frozen-lockfile
 
       - name: Typecheck
-        run: npm run typecheck
+        run: pnpm run typecheck
 
       # Lint is a RATCHET: the existing backlog (the limits in
       # scripts/lint-ratchet.mjs) is tolerated, but any new problem fails the
       # build. Lower the limits as the backlog falls, then switch this step to
-      # `npm run lint` once it reaches zero.
+      # `pnpm run lint` once it reaches zero.
       - name: Lint (ratchet)
-        run: npm run lint:ratchet
+        run: pnpm run lint:ratchet
 
       # Documents stay current (AGENTS.md, "Keeping documents current"): links
       # resolve, and on a pull request a server or schema change must update
@@ -58,21 +60,21 @@ jobs:
       # straight into the script.
       - name: Docs check (pull request)
         if: github.event_name == 'pull_request'
-        run: npm run docs:check -- --base "origin/$BASE_REF"
+        run: pnpm run docs:check --base "origin/$BASE_REF"
         env:
           BASE_REF: ${{ github.base_ref }}
 
       - name: Docs check
         if: github.event_name != 'pull_request'
-        run: npm run docs:check
+        run: pnpm run docs:check
 
       - name: Unit tests
-        run: npm test
+        run: pnpm test
 
       # The build is a real gate: deploy.yml ships whatever `vite build`
       # produces, so a build that fails here is a deploy that would have shipped
       # a broken site.
-      - run: npm run build
+      - run: pnpm run build
 
   server:
     name: PHP syntax + server integration tests
@@ -88,12 +90,15 @@ jobs:
           extensions: mysqli, curl, mbstring
           coverage: none
 
+      # pnpm first, so setup-node can cache its store. The version comes from "packageManager" in package.json.
+      - uses: pnpm/action-setup@v4
+
       - uses: actions/setup-node@v5
         with:
           node-version-file: .node-version
-          cache: npm
+          cache: pnpm
 
-      - run: npm ci
+      - run: pnpm install --frozen-lockfile
 
       - name: PHP syntax
         run: find server -name '*.php' -print0 | xargs -0 -n1 php -l
@@ -104,7 +109,7 @@ jobs:
         run: sudo systemctl start mysql.service
 
       - name: Server integration tests
-        run: npm run test:server
+        run: pnpm run test:server
         env:
           GK_TEST_DB_HOST: 127.0.0.1
           GK_TEST_DB_USER: root

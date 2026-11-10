@@ -27,17 +27,17 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version-file: .node-version
-          cache: npm
-          cache-dependency-path: package-lock.json
+          cache: pnpm
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.4"
           coverage: none
       - name: Install
-        run: npm ci --no-audit --no-fund
+        run: pnpm install --frozen-lockfile
       - name: SSH to cPanel
         env:
           CPANEL_SSH_KEY: ${{ secrets.CPANEL_SSH_KEY }}

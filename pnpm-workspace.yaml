@@ -1,0 +1,8 @@
+# pnpm blocks dependency install scripts by default.
+# Add a package here only after reviewing why it needs to run a build script.
+# Reviewed 2026-11-10: none of these is needed. esbuild ships its binary as a platform package (the
+# script only verifies it), and @clerk/shared and core-js scripts only print banners / opt-in telemetry.
+allowBuilds:
+  esbuild: false
+  core-js: false
+  "@clerk/shared": false
