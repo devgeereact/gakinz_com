@@ -1,5 +1,6 @@
 import { defineConfig } from "vite"
 import react from "@vitejs/plugin-react"
+import tailwindcss from "@tailwindcss/vite"
 import path from "path"
 
 export default defineConfig({
@@ -24,7 +25,7 @@ export default defineConfig({
     // Without this, preview inherits server.proxy and sends .php calls to the live API (K-116).
     proxy: {},
   },
-  plugins: [react()],
+  plugins: [tailwindcss(), react()],
   build: {
     rollupOptions: {
       output: {
