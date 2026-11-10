@@ -132,6 +132,13 @@ $APP_URL = 'https://gakinz.com';
 $CRON_KEY          = '';
 $REPORT_RECIPIENTS = '';  // e.g. 'founder@gakinz.com, ops@gakinz.com'
 
+// ── Owner alerts (_notify.php) — optional. ──────────────────────────────────────
+// A short email to these addresses the moment a visitor sends an enquiry or a client files a data deletion
+// request, so neither waits in the CMS until someone opens it. Comma list. Left empty, it falls back to
+// $REPORT_RECIPIENTS; with both empty (or no $SMTP_HOST) nothing is sent. Needs no cron entry. A failed send never
+// affects the visitor; it is recorded in the audit log as enquiry_notify_failed / deletion_notify_failed.
+$OWNER_ALERTS = '';       // e.g. 'hello@gakinz.com'
+
 // ── PayPal (payments.php) — optional. Orders API v2. ────────────────────────────
 $PAYPAL_CLIENT_ID  = '';
 $PAYPAL_SECRET     = '';
