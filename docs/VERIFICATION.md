@@ -26,15 +26,31 @@ Run in the worktree `.local-state/wt-finish`, Node 24.22.1, PHP 8.5.12, local Ma
 
 No `pnpm` in this project: the equivalents are `npm`. There is no `npm run check`; the rungs above are the gate.
 
+## Release and live checks, 2026-11-10 (owner said "Go ahead and Push" and "do these")
+
+| Step | Result |
+|---|---|
+| PR #32 CI | DONE, all green: typecheck, lint, docs, unit, build; PHP syntax and server tests on MySQL 8; gitleaks and Semgrep |
+| `main` fast-forwarded to `4bdaed7`; release job | DONE, succeeded (the release script's own smoke checks passed) |
+| `npm run check:live` on production | DONE, 16 of 16, read-only |
+| Phone on the live site | DONE, `tel:+442080598757` on `/contact`; `telephone` in the home page structured data |
+| SMTP on the host | DONE, connect + login accepted (235); no mail sent by the check |
+| `$OWNER_ALERTS` | DONE, set on the host (config backed up, linted, mode 600) |
+| Live owner alert | DONE as far as the server can show: one TEST enquiry (GK-E-2026-0002) gave a 201, an `enquiry_notified` audit row and no failure row; the TEST row was then deleted. **NOT SEEN:** the email in the mailbox; please look for "New enquiry from TEST Finish Run (ignore)" in hello@gakinz.com |
+| Daily backup on the host | DONE: `~/gakinz-backup.sh` ran twice by hand (dump 9.1 KB, uploads tarball 125 bytes, folder empty); cron line `30 3 * * *` added; first scheduled run is 03:30 tomorrow, NOT YET SEEN |
+| Restore of the host's own dump | DONE locally: 42 of 42 tables, 60 rows, 0 orphans |
+| Cron entry | DONE: `15 6 * * *` `job=all` added after counting 0 clients, 0 invoices, 0 retainers; one hand run gave all-zero results and wrote the `cron_run` heartbeat. First scheduled run is 06:15 tomorrow, NOT YET SEEN |
+| Walk steps 2 to 7 | NOT TESTED: they need a signed-in session (Clerk email code) that an agent cannot hold |
+
 ## Live-ready gate (`~/Developer/build-kit/App-Kit/LAUNCH-PROMPTS.md`)
 
 | # | Gate line | Status |
 |---|---|---|
-| 1 | Every V1 finish-line item ticked with evidence | **PARTIAL.** 7 of 10 ticked; items 4, 8 and 10 wait for the owner (`docs/ROADMAP.md`) |
+| 1 | Every V1 finish-line item ticked with evidence | **PARTIAL.** 7 of 10 ticked; items 4 (business facts), 8 (the targets) and 10 (retention periods) wait for the owner (`docs/ROADMAP.md`) |
 | 2 | Local ladder green on the release commit | **DONE** on the branch tip (table above); CI (MySQL 8) has not run it |
 | 3 | `slop-check` 0 errors; `slop-audit` recorded | **PARTIAL.** `slop-audit` recorded in `docs/AUDIT.md` 2026-11-10; the scan prints 1 (the baseline quirk) |
 | 4 | Sign-in or personal data: `security-audit` run, high and critical fixed; refusals tested | **PARTIAL.** Refusals tested (`portal-isolation.test.ts`, 24 tests). A full `security-audit` was not re-run this session; the last is 2026-11-01 to 02 |
-| 5 | Real data: verified backup and tested restore, and a rollback exercised | **PARTIAL.** Restore of a dump DONE locally; the host's copy, uploads and a rollback drill are NOT TESTED / BLOCKED (owner) |
+| 5 | Real data: verified backup and tested restore, and a rollback exercised | **PARTIAL.** Daily host backup installed and the host's own dump restored (DONE); a release rollback was not exercised (NOT TESTED); recovery targets await the owner's yes |
 | 6 | Main journey checked on a real phone and a real browser by the owner | **NOT TESTED.** The "Owner walk" below |
 | 7 | Facts, photos and legal items in; no placeholder | **BLOCKED**, owner (`npm run check:facts`) |
 | 8 | Docs current; `.agent/CURRENT-TASK.md` says FINISHED | **PARTIAL.** Docs are current; it does not say FINISHED because items 4, 8 and 10 are open |

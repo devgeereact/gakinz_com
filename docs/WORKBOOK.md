@@ -27,6 +27,7 @@ document disagree, the linked document wins and this page is wrong.
 | 2026-11-09 | `ed58064` | Phase 5: Clerk is the only sign-in; password, magic-link, Google and reference routes answer 404; My account opens Clerk's panel (D-057, K-132, K-133) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #29 |
 | 2026-11-09 | `825600e` | Phase 7: reminders and the digest remember what they sent; edit a client; edit, assign and date a task; a quote opens its project; Draft a quote from an enquiry (D-059, K-141 to K-144) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #31 |
 | 2026-11-09 | `01d2269` | Phase 6: certificates issued, listed and revoked in the CMS; `/verify` throttled, uniform and uncached (D-058, K-134, K-061) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #30 |
+| 2026-11-10 | `4bdaed7` | Finish-line run: owner email on a new enquiry and on a data deletion request, per-job cron heartbeat and Today notice, the public phone number, `scripts/gakinz-backup.sh` (D-060, D-061, K-146, K-095, K-145) | GitHub Actions through `ci.yml`, owner-approved ("Go ahead and Push"); CI green on PR #32 including MySQL 8 |
 | 2026-11-09 | `cbfd527` | Phase 4: updates keep unsent fields and missing ids answer 404 (K-129, K-130); one function records the same payment evidence on every path (K-131); a role-drift guard and a fixed editor dashboard (K-135) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #28 |
 
 The checks of each release are in [AUDIT.md](AUDIT.md) (newest first). Measured counts are in
@@ -38,7 +39,7 @@ Gated features ship switched off (D-050): `$RETENTION_APPLY`,
 
 ## 2. In progress
 
-**Finish-line run, 2026-11-10 (branch `goal/finish`, local only, not released, D-060 and D-061).** `docs/ROADMAP.md` freezes V1 at ten items; seven are ticked with evidence and three wait for the owner (business facts, the restore of the host's copy and recovery targets, retention periods). New in the branch: an email to `$OWNER_ALERTS` when an enquiry or a data deletion request arrives, a per-job scheduled-jobs notice on Today, `npm run test:browser`, `check:facts`, `drill:restore`, and a compacted KNOWN-ISSUES. Release needs the owner's say-so; `$OWNER_ALERTS` goes into `config.php` first (`docs/DEPLOYMENT.md` section 5).
+**Finish-line run, 2026-11-10 (released as `4bdaed7`, PR #32, D-060 and D-061).** `docs/ROADMAP.md` freezes V1 at ten items; seven are ticked with evidence and three wait for the owner (business facts, the restore of the host's copy and recovery targets, retention periods). New in the branch: an email to `$OWNER_ALERTS` when an enquiry or a data deletion request arrives, a per-job scheduled-jobs notice on Today, `npm run test:browser`, `check:facts`, `drill:restore`, and a compacted KNOWN-ISSUES. Also done on the host the same day: `$OWNER_ALERTS` set, a daily backup job, and the first GAkinz cron entries (`docs/OPERATIONS.md` 2.1 and 5); the public phone number is live.
 
 The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md). Phase 7 (daily-flow speed-ups, D-059) was released as `825600e`; nothing else is in progress. Open: the host has no GAkinz cron entry (K-145), an owner decision. Phase 5 (retire the legacy sign-in, D-057) was released as `ed58064`; nothing else is in progress.
 

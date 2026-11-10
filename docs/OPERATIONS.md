@@ -61,7 +61,9 @@ wget -qO- "https://gakinz.com/cron.php?key=<CRON_KEY>&job=all"
 
 ### 2.1 Adding the cron entry (owner decision, K-145)
 
-**Today the host has no GAkinz entry** (read-only `crontab -l`, 2026-11-09), so none of the jobs below runs. Since
+**Done 2026-11-10 (owner's "do these"):** the host's crontab now has `15 6 * * * php ~/gakinz.com/cron.php job=all` and the daily backup at 03:30 (crontab saved first as `~/backups/gakinz_com/crontab.before-gakinz-entries.*`). Before that (read-only `crontab -l`, 2026-11-09) there was no GAkinz entry, so none of the jobs below ran. The two-step plan below was collapsed into one because the database held 0 clients, 0 invoices and 0 retainers, so the first `job=all` could email and bill nobody (counts read first; it was run once by hand: `chase` 0 sent, `billing` 0 created, `uptime` 0 checked, `digest` skipped for want of `$REPORT_RECIPIENTS`). **Re-read the "before switching" checks the day a first client or invoice exists.** The digest stays off until `$REPORT_RECIPIENTS` is set.
+
+For reference, the original reasoning: Since
 2026-11-10 Today shows a notice naming what is off, and every run of `cron.php` leaves a `cron_run` audit row that
 counts for the job it names, or for all five when it is `all` (a job returns to the notice if none is seen for 36 hours). Adding the entry is a server change and, with
 `job=all`, switches on emails to clients and retainer billing, so do it in two steps. cPanel, Cron Jobs; the path is
@@ -167,15 +169,23 @@ The inbox needs the PHP `imap` extension. `mail.php?action=status` reports `smtp
 
 ## 5. Backups
 
-The repository carries no backup job: backup arrangements belong to the hosting account and the operator's
-global notes (a daily database dump on the host, the newest five kept, and a copy pulled to the Mac under
-`~/Backups/projects/gakinz_com/`). `server/uploads/` is gitignored, so uploaded client files exist on the host
-only unless the host job also covers them, which this repository cannot see (K-010).
+**Until 2026-11-10 no daily GAkinz backup existed on the host** (found by listing `~/backups/gakinz_com/`: only the two
+manual dumps of 2026-10-30; the daily jobs in the crontab belong to other projects). Since then `scripts/gakinz-backup.sh`
+is installed as `~/gakinz-backup.sh` and run daily by cron: a `mariadb-dump` of the one database (single transaction, so
+the site is not locked), checked for the "Dump completed" marker and a sane size, plus a tarball of `~/gakinz.com/uploads`,
+mode 600, into `~/backups/gakinz_com/` as `gakinz_auto_db_<UTC>.sql.gz` and `gakinz_auto_files_<UTC>.tar.gz`; the newest
+14 days of its own files are kept, nothing else is deleted, and a failed run says why in `backup.log` and deletes nothing.
+Its output on the first run: dump 9.1 KB, uploads tarball 125 bytes (the uploads folder is empty: no client file has been
+uploaded yet).
 
-What the repository does provide is the **restore drill**, `npm run drill:restore`
-(`scripts/restore-drill.mjs`): it loads a dump into a throwaway local database, compares the tables with
-`schema.sql`, counts rows and checks for orphaned rows, then drops the database. Run it after any change to the
-backup arrangement and at least quarterly. Its result goes in section 10.
+**Not done by it:** a copy off the host. Pull the newest dump to the Mac and run the drill (below) when you want one:
+`scp cpanel:backups/gakinz_com/gakinz_auto_db_*.sql.gz ~/Backups/projects/gakinz_com/local-state/` then
+`npm run drill:restore`. A same-account backup does not survive loss of the account; the Mac copy is what does.
+
+The **restore drill**, `npm run drill:restore` (`scripts/restore-drill.mjs`), loads a dump into a throwaway local
+database, compares the tables with `schema.sql`, counts rows and checks for orphaned rows, then drops the database. It
+refuses an empty or truncated dump. Run it after any change to the backup arrangement and at least quarterly. Its result
+goes in section 10.1.
 
 ## 6. Routine checks
 
@@ -356,10 +366,12 @@ hosting changes. The release mechanics are in `docs/DEPLOYMENT.md`.
 |---|---|---|
 | 2026-11-10 | `gakinz_db_20261030_005611.sql.gz`, the Mac copy of the host's dump (10.6 KB, 10 days old) | **Database restored: PASS.** `npm run drill:restore` loaded it into a throwaway local MariaDB 11.4.13 in 2.1 s: 42 of 42 tables from `schema.sql`, none missing or extra, 88 rows (audit_log 45, auth_tokens 32, enquiries 1, posts 3, reference_counters 3, testimonials 3, users 1), 0 orphaned rows in seven relationship checks. **Not covered:** the uploaded files, file permissions, the host's own current copies (the Mac copy is 10 days old, so the host job may be newer), and whether the daily job is still running. Recovery targets above are still **proposed, not agreed**. |
 
+| 2026-11-10 (later) | `gakinz_auto_db_20261110_074511.sql.gz`, taken on the host by the new `gakinz-backup.sh`, pulled to the Mac | **Database restored: PASS** on the host's own newest dump (0 days old): 42 of 42 tables, 60 rows (audit_log 48, enquiries 1, posts 3, reference_counters 3, testimonials 3, users 2), 0 orphans, 2.0 s. **Uploads:** the folder on the host is empty (the files tarball is 125 bytes), so there is nothing to restore yet. Recovery targets: the daily job makes RPO 24 hours true; they still need the owner's yes. |
+
 The dump header names the server that produced it, `11.4.13-MariaDB-cll-lve` with source database
 `devgeereact_gakinz_com`: that is the live engine as at 2026-10-30 (K-099), MariaDB and not MySQL.
 
-To close K-010 fully the owner (or a session with the owner's approval to read the server) repeats the drill on the
-host's newest dump, restores a copy of `uploads/` beside it, and agrees the targets in the table at the top of this
-section.
+K-010 is closed when the owner agrees the targets in the table at the top of this section (proposed: back within one working
+day, lose at most 24 hours; the daily job at 03:30 supports that) and, once client files exist, a restore of the files
+tarball has been tried too.
 

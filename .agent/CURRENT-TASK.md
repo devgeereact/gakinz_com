@@ -2,11 +2,11 @@
 
 ## Outcome
 
-**2026-11-10, branch `goal/finish` (worktree `.local-state/wt-finish`, from `main` at `d30e95b`, local only): take GAkinz to
+**2026-11-10, branch `goal/finish` (worktree `.local-state/wt-finish`), RELEASED as `4bdaed7` (PR #32) on the owner's "Go ahead and Push": take GAkinz to
 its frozen V1 finish line (`docs/ROADMAP.md`, D-060).** Owner's brief: adopt the draft finish line, correct it, build only the eight
 open items in the owner's order, park the rest, cut the documents' sprawl by merging, leave everything local.
 
-**Status: 7 of 10 items ticked with evidence; 3 wait for the owner. Not FINISHED.** Nothing pushed, released or run against the live site.
+**Status: 7 of 10 items ticked with evidence; 3 wait for the owner. Not FINISHED.** Released and live-checked (`docs/VERIFICATION.md`). Also done on the host with the owner's go-ahead: `$OWNER_ALERTS`, daily backup, cron entry.
 
 | # | Item | Status |
 |---|---|---|
@@ -14,17 +14,18 @@ open items in the owner's order, park the rest, cut the documents' sprawl by mer
 | 3 | A visitor's enquiry reaches the owner | DONE locally: `$OWNER_ALERTS` email (D-061, K-146). **Owner sets `$OWNER_ALERTS`** |
 | 4 | True business facts, no placeholder | BLOCKED, owner. `npm run check:facts` lists 9 open facts |
 | 5, 6, 7 | Enquiry to invoice; payment and VAT; portal isolation | DONE locally (existing journey tests plus 34 new cases); live walk is the owner's |
-| 8 | Restore once; recovery targets | PARTIAL: Mac copy of the host dump restored (42 of 42 tables, 0 orphans); host copy, uploads, targets are the owner's |
-| 9 | Scheduled work running or visibly off | DONE locally: per-job heartbeat and a Today notice; the cron entry is the owner's decision (K-145) |
+| 8 | Restore once; recovery targets | PARTIAL: daily host backup installed; the host's own fresh dump restored (42 of 42 tables, 0 orphans); the owner's yes on the targets is left |
+| 9 | Scheduled work running or visibly off | DONE and live: per-job heartbeat, Today notice, and the cron entry now exists (first scheduled run 06:15 on 2026-11-11) |
 | 10 | Privacy basics | PARTIAL: deletion requests high priority plus owner email (K-095); retention periods need the owner and an adviser |
 
-## Next actions (owner; each exact step is in `docs/ROADMAP.md` "Needs the owner")
+## Next actions (owner)
 
-1. Say **push** to have the release proposed. Before it goes live: add `$OWNER_ALERTS = '...'` to `config.php` and check `$SMTP_*` (`docs/DEPLOYMENT.md` section 5, first paragraph).
-2. Business facts and adviser sign-off (items 4 and 10): `npm run build && npm run check:facts`.
-3. Decide the cron entry: two steps in `docs/OPERATIONS.md` 2.1 (K-145).
-4. Restore the host's newest dump and the uploads, agree the recovery targets (`docs/OPERATIONS.md` 10.1, K-010); confirm the live engine (K-099).
-5. The owner walk in `docs/VERIFICATION.md`; set the OpenRouter limit; delete the Clerk dev user; rename the `TEST owner` row.
+1. Look in hello@gakinz.com for "New enquiry from TEST Finish Run (ignore)": that confirms item 3 end to end.
+2. Say yes (or change) the recovery targets: back within one working day, lose at most 24 hours (K-010).
+3. Business facts still missing (`npm run build && npm run check:facts`) and the adviser's retention periods (K-062).
+4. Set the OpenRouter monthly limit and **rotate that key** (it was shown in a session log by mistake); delete the Clerk dev user; say what to rename the `TEST owner` row to.
+5. The signed-in walk, steps 2 to 7 in `docs/VERIFICATION.md`. Tomorrow also check that `backup.log` has a 03:30 line and Today shows no scheduled-jobs notice after 06:15.
+6. Set `$REPORT_RECIPIENTS` if you want the weekly digest.
 
 ## Resume
 

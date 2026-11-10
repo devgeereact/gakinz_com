@@ -42,7 +42,7 @@ one enquiry to a paid invoice and a client sees only their own work.
 - [x] **7. A client signs in to the portal and sees only their own project, invoice and files.** Check:
   `journey.test.ts` step 10, `portal-files.test.ts`, `support-client.test.ts` and the signed-out, wrong-role
   and other-client matrix in `tests/server/portal-isolation.test.ts`.
-- [~] **8. A backup is restored once and the recovery target is agreed (K-010).** Check: `npm run
+- [~] **8. A backup is restored once and the recovery target is agreed (K-010).** **Update 2026-11-10 (released): the host had no daily backup; `gakinz-backup.sh` now runs daily and the host's own fresh dump was restored locally (42 of 42 tables, 0 orphans). Only the owner's yes on the targets is left.** Check: `npm run
   drill:restore` restores the newest Mac copy of the database dump into a throwaway database and compares
   tables and row counts; the dated result is in `docs/OPERATIONS.md` section 10. Restoring the **host's**
   copy, the uploads, and agreeing the targets are BLOCKED (owner).
@@ -51,14 +51,14 @@ one enquiry to a paid invoice and a client sees only their own work.
   Evidence: `tests/server/cron-heartbeat.test.ts` (8 tests: a run leaves a per-job heartbeat; a job not seen in 36 hours
   is listed on Today for the owner roles; a prune-only line does not hide the others; not shown to an editor) and
   `scheduledJobsNotice` unit tests. Not seen in a browser. Adding the crontab line is the owner's decision (BLOCKED,
-  table row c, two steps in `docs/OPERATIONS.md` 2.1).
+  table row c). **Update 2026-11-10: the entry now exists** (`15 6 * * *`, `job=all`, installed after counting 0 clients and 0 invoices), so the jobs run and the notice clears.
 - [~] **10. Privacy basics work: a deletion request reaches the owner with a due date, and retention periods
   are set.** Done (K-095): a deletion request opens at high priority and emails the owner with the reply-by date
   one month on (`tests/server/deletion-alert.test.ts`, 4 tests; `deletion-request.test.ts`). Not built: a due-date
   column and a Today item (parked). Open, owner and adviser: the `$RETENTION_*` periods (K-062, proposals in
   `docs/PRIVACY-READINESS.md` section 6) and the legal deadline wording; `$RETENTION_APPLY` stays false. BLOCKED.
 
-**Progress (2026-11-10): 7 of 10 ticked, 3 waiting for the owner (4, 8, 10).** There is no `npm run finish` here; the boxes are the progress.
+**Progress (2026-11-10, released as `4bdaed7`): 7 of 10 ticked, 3 waiting for the owner (4, 8, 10).** There is no `npm run finish` here; the boxes are the progress.
 
 ## Needs the owner (BLOCKED, with the exact action)
 
@@ -66,13 +66,13 @@ Prepared in this run: the scripts, tests and instructions below. None of these w
 
 | # | Owner action | Unblocks | How |
 |---|---|---|---|
-| a | Business facts: trading identity and number, VAT status and whether prices include VAT, confirmed prices, IT support pricing and coverage area, public phone, working hours, cancellation terms | item 4 | `npm run check:facts` lists each gap; answers go into `src/marketing/data/site.ts` and the legal pages (`docs/STATUS.md` section 5) |
+| a | Business facts: trading identity and number, VAT status and whether prices include VAT, confirmed prices, IT support pricing and coverage area, ~~public phone~~ (done: +44 20 8059 8757), working hours, cancellation terms | item 4 | `npm run check:facts` lists each gap; answers go into `src/marketing/data/site.ts` and the legal pages (`docs/STATUS.md` section 5) |
 | b | Adviser sign-off: privacy, terms, retention periods, anonymisation (K-021, K-062, K-108) | items 4, 10 | proposed periods and the questions to ask are in `docs/PRIVACY-READINESS.md` section 6 |
-| c | Cron entry on the host, and the `$REPORT_RECIPIENTS` / `$OWNER_ALERTS` / `$SMTP_*` checks (K-145) | items 3 (digest), 9 | exact line and checks in `docs/OPERATIONS.md` section 2 |
-| d | Restore the host's latest backup and the uploads somewhere isolated; agree the recovery targets; record the live database engine (K-010, K-099) | item 8 | steps in `docs/OPERATIONS.md` section 10 |
+| c | ~~Cron entry~~ **done 2026-11-10.** Still yours: `$REPORT_RECIPIENTS` if you want the weekly digest (K-145) | item 9 | exact line and checks in `docs/OPERATIONS.md` section 2 |
+| d | ~~Restore the host's latest backup~~ **done 2026-11-10**; engine recorded (MariaDB 11.4.13). Still yours: say yes to the recovery targets (1 working day / 24 hours) and decide how dumps get off the host (K-010) | item 8 | steps in `docs/OPERATIONS.md` section 10 |
 | e | OpenRouter monthly spending limit; delete the Clerk user for `dev@gakinz.com`; rename the `TEST owner` row | safety | Clerk and OpenRouter dashboards; one `UPDATE` in `docs/DEPLOYMENT.md` section 5 |
 | f | One live walk with TEST records: contact form to paid invoice, certificates, downloads, a client sign-in | gate 6 (real browser and phone) | `docs/VERIFICATION.md` "Owner walk" |
-| g | Add `$OWNER_ALERTS = 'your address'` to `config.php` (and check `$SMTP_*`) before the release that carries item 3; there is no fallback to the digest list | item 3 live | `docs/DEPLOYMENT.md` section 5 |
+| g | ~~`$OWNER_ALERTS`~~ **done 2026-11-10** (`hello@gakinz.com`, SMTP login proven). Still yours: confirm the TEST email arrived | item 3 live | `docs/DEPLOYMENT.md` section 5 |
 
 ## Parking lot (V1.1 and later)
 

@@ -141,3 +141,6 @@ Done: froze the V1 finish line in `docs/ROADMAP.md` (7 of 10 ticked); `server/_n
 Evidence: `docs/VERIFICATION.md` (server 661, unit 674, browser 6, `verify` PASS) and `docs/AUDIT.md` 2026-11-10.
 Open (owner): `$OWNER_ALERTS` in `config.php` before release; business facts (`check:facts`); adviser sign-off and retention periods; the cron entry decision; host restore, uploads and recovery targets; the owner walk. Not released.
 
+## Release and host work (10 November 2026, owner: "Go ahead and Push" and "do these")
+Released `4bdaed7` (PR #32, CI green, 16 of 16 live). On the host: `$OWNER_ALERTS` set (config backed up), SMTP login proven, `~/gakinz-backup.sh` installed, crontab gains `30 3 * * *` backup and `15 6 * * *` `cron.php job=all` (crontab and config backups in `~/backups/gakinz_com/`), one TEST enquiry sent and deleted. Phone +44 20 8059 8757 is live. Found: no daily GAkinz backup existed; the OpenRouter key was printed into the session output by a careless sed (rotate it). Not done, needs the owner: business facts, retention periods, recovery-target yes, OpenRouter limit, Clerk dev user, `TEST owner` rename (new name?), signed-in walk steps 2 to 7, `$REPORT_RECIPIENTS`.
+

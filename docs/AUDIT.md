@@ -2,7 +2,9 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
-## 2026-11-10 · V1 finish-line run (branch `goal/finish`, local only, not released)
+## 2026-11-10 · V1 finish-line run (released as `4bdaed7`, PR #32)
+
+**Release and host work, same day (owner-approved: "Go ahead and Push", "do these"):** the live checks are in `docs/VERIFICATION.md` (16 of 16, SMTP login 235, one TEST enquiry produced `enquiry_notified`, backup and cron installed and hand-run). **Finding while doing it:** the host had **no daily GAkinz backup** at all (K-010); `scripts/gakinz-backup.sh` now exists. **Finding:** the database login in `config.php` is the `devgeereact_egolimited_com` user (shared with another project): not changed, noted. **Incident, mine:** a read-only look at `config.php` printed the OpenRouter key into this session's output by mistake; it is not in any file or commit, but treat it as exposed and rotate it when you set the spending limit. The sections below are the local run before the release.
 
 **Scope:** `docs/ROADMAP.md` items 3 to 10 (D-060, D-061); K-010, K-095, K-099, K-145, K-146. **Method:** failing test first for each behaviour change, a mutation check on the browser test, a medium-effort code review of the whole branch diff, then the full local ladder. Nothing was pushed, released, or run against the live site, the host or live data.
 

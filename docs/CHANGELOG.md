@@ -4,7 +4,7 @@ What changed in the product, newest first. The checks behind each change are in 
 [VERIFICATION.md](VERIFICATION.md); why is in [DECISIONS.md](DECISIONS.md). Releases before 2026-11-10 are listed in
 [WORKBOOK.md](WORKBOOK.md) section 1.
 
-## Unreleased: V1 finish-line run (2026-11-10, branch `goal/finish`, local only)
+## 2026-11-10 · V1 finish-line run (released as `4bdaed7`, PR #32)
 
 **Added**
 - The owner is emailed the moment a visitor sends an enquiry (`server/_notify.php`, `$OWNER_ALERTS`). Best effort, after
@@ -24,7 +24,6 @@ What changed in the product, newest first. The checks behind each change are in 
   text stays in git (`git show d30e95b:docs/KNOWN-ISSUES.md`).
 - `gk_send_email` accepts an optional `timeout` (alerts use 8 seconds; everything else keeps 20).
 
-**Needs the owner before it does anything live:** `$OWNER_ALERTS` and working `$SMTP_*` in `config.php`
-([DEPLOYMENT.md](DEPLOYMENT.md) section 5). No SQL, no `.htaccess`.
+**On the host, the same day:** `$OWNER_ALERTS` set, a daily database and uploads backup (`scripts/gakinz-backup.sh`), and the first GAkinz cron entries ([OPERATIONS.md](OPERATIONS.md) sections 2.1 and 5). No SQL, no `.htaccess`.
 
 **Not changed:** public copy, prices, legal pages, sign-in, payments, schema.
