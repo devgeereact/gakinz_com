@@ -21,12 +21,15 @@ LOG="$OUT/backup.log"
 log() { printf '%s %s\n' "$(date -u +%FT%TZ)" "$*" >>"$LOG"; }
 fail() { log "FAILED: $*"; echo "gakinz-backup FAILED: $*" >&2; exit 1; }
 
+# Cron runs with a minimal PATH, where `php` is the CGI build and cannot run `php -r` (the first scheduled run, 2026-11-10 03:30, failed
+# that way), so the CLI binary is named in full.
+PHP=/usr/local/bin/php; [ -x "$PHP" ] || PHP="$(command -v php)"
 # The login comes from config.php through PHP. The password goes in MYSQL_PWD (an environment variable, not a
 # command-line argument), so it is not in the process list; the user name and host are not secret.
-DB_USER_V="$(php -r 'require $argv[1]; echo DB_USER;' "$CONF" 2>/dev/null)" || fail "could not read the database user"
-DB_HOST_V="$(php -r 'require $argv[1]; echo DB_HOST;' "$CONF" 2>/dev/null)" || fail "could not read the database host"
-DB="$(php -r 'require $argv[1]; echo DB_NAME;' "$CONF" 2>/dev/null)" || fail "could not read the database name"
-MYSQL_PWD="$(php -r 'require $argv[1]; echo DB_PASS;' "$CONF" 2>/dev/null)" || fail "could not read the database password"
+DB_USER_V="$("$PHP" -r 'require $argv[1]; echo DB_USER;' "$CONF" 2>/dev/null)" || fail "could not read the database user"
+DB_HOST_V="$("$PHP" -r 'require $argv[1]; echo DB_HOST;' "$CONF" 2>/dev/null)" || fail "could not read the database host"
+DB="$("$PHP" -r 'require $argv[1]; echo DB_NAME;' "$CONF" 2>/dev/null)" || fail "could not read the database name"
+MYSQL_PWD="$("$PHP" -r 'require $argv[1]; echo DB_PASS;' "$CONF" 2>/dev/null)" || fail "could not read the database password"
 export MYSQL_PWD
 [ -n "$DB" ] && [ -n "$DB_USER_V" ] || fail "empty database name or user"
 

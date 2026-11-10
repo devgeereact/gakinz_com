@@ -37,9 +37,9 @@ No `pnpm` in this project: the equivalents are `npm`. There is no `npm run check
 | SMTP on the host | DONE, connect + login accepted (235); no mail sent by the check |
 | `$OWNER_ALERTS` | DONE, set on the host (config backed up, linted, mode 600) |
 | Live owner alert | DONE as far as the server can show: one TEST enquiry (GK-E-2026-0002) gave a 201, an `enquiry_notified` audit row and no failure row; the TEST row was then deleted. The owner confirmed the email arrived in hello@gakinz.com (2026-11-10) |
-| Daily backup on the host | DONE: `~/gakinz-backup.sh` ran twice by hand (dump 9.1 KB, uploads tarball 125 bytes, folder empty); cron line `30 3 * * *` added; first scheduled run is 03:30 tomorrow, NOT YET SEEN |
+| Daily backup on the host | DONE: `~/gakinz-backup.sh` ran twice by hand (dump 9.1 KB, uploads tarball 125 bytes, folder empty); cron line `30 3 * * *` added. **The first scheduled run (03:30 server time, which is EST, so 08:30 UTC on 2026-11-10) FAILED**: `could not read the database user`, because cron's minimal PATH finds `/usr/bin/php`, the CGI build, which cannot run `php -r`. Fixed the same day (the script names `/usr/local/bin/php`), reinstalled on the host, and re-run under `env -i PATH=/usr/bin:/bin`: ok (dump 9.5 KB). The next scheduled run is the proof: NOT YET SEEN |
 | Restore of the host's own dump | DONE locally: 42 of 42 tables, 60 rows, 0 orphans |
-| Cron entry | DONE: `15 6 * * *` `job=all` added after counting 0 clients, 0 invoices, 0 retainers; one hand run gave all-zero results and wrote the `cron_run` heartbeat. First scheduled run is 06:15 tomorrow, NOT YET SEEN |
+| Cron entry | DONE: `15 6 * * *` `job=all` added after counting 0 clients, 0 invoices, 0 retainers; one hand run gave all-zero results and wrote the `cron_run` heartbeat. **The first scheduled run happened: 06:15 server time (EST) on 2026-11-10 wrote the `cron_run` heartbeat (audit row 52)**. The host's clock is EST, five hours behind UTC and behind London |
 | Owner walk, steps 1, 2, 3, 5, 7 | DONE on the live site, signed in as the owner in Chrome, with TEST records (table below). Steps 4 and 6 need a test client signed in: NOT TESTED |
 
 ### Live owner walk, 2026-11-10 (owner signed in; run through Chrome on gakinz.com)
@@ -49,13 +49,13 @@ No `pnpm` in this project: the equivalents are `npm`. There is no `npm run check
 | 1 Contact form | The real form on `/contact` gave the thank-you with reference `GK-E-2026-0003`; the enquiry was in Leads, New, with its budget and message |
 | 2 Convert, quote, accept | Convert to client moved the enquiry to Won and created the client. "Draft a quote" opened a quote already titled and linked to that client. Send and Accept worked (Send changes the status only and mails nobody). Accept asked how and when the client agreed, then created project `GK-P-2026-0001` and three invoices, and landed on the project |
 | 3 Invoice and payment | Quote £1,234.57 + VAT 20% £246.91 = £1,481.48; the three invoices were £592.60, £444.44, £444.44 (sum £1,481.48). "Record payment" defaulted to bank transfer and the exact total (£444.44), took a reference, and the row then read "Bank transfer, ref TEST WALK BACS, 10 Nov 2026". "Paid this month" read £1,037.04 = £592.60 + £444.44 after a reload. **NOT TESTED:** the invoice PDF (the document icon showed nothing in the automated browser) |
-| 5 Today | No "scheduled jobs are not running" notice after the 06:15 `job=all` run; Today loaded normally |
+| 5 Today | After the scheduled 06:15 run, no "scheduled jobs are not running" notice after the 06:15 `job=all` run; Today loaded normally |
 | 7 Certificates | Issued `GK-FZMM-3CYJ-6C7K`; `/verify/<ref>` said "Valid certificate" with recipient, programme and date only; revoked; `/verify` then said "No matching certificate" |
 | 4, 6 Test client sign-in, deletion request | **NOT TESTED.** Needs a Clerk sign-in as the test client; the client `TEST Walk Ltd` exists with email `gakinz101+walk@gmail.com` for that |
 
 Small things seen (parked, ROADMAP): the Quotes list column "Total" shows the amount before VAT (the quote's own total, £1,481.48, is only in the form); the Invoicing tiles do not update after "Mark paid" until the page is reloaded; "Mark paid" on a draft stores the method as "other" by design (K-131; "Record payment" asks for the method).
 
-**TEST records left on the live system for the client sign-in:** client `TEST Walk Ltd`, enquiry `GK-E-2026-0003`, quote and project `GK-P-2026-0001`, invoices `GK-INV-0001` (paid, method other), `GK-INV-0002` (paid, bank transfer), `GK-INV-0003` (draft), certificate `GK-FZMM-3CYJ-6C7K` (revoked). The invoice numbers 0001 to 0003 are therefore used: the first real invoice will be 0004 unless the owner decides to clear and renumber before real billing (a server data change, "approved:" first).
+**TEST records: removed later the same day** at the owner's request (`docs/DEPLOYMENT.md` section 5, 2026-11-10): the database now holds 0 enquiries, clients, projects, quotes, invoices and certificates, and one user (`TEST owner`). The `dev@gakinz.com` row was removed too. Numbering restarts: the next enquiry is `GK-E-2026-0001`, the next invoice `GK-INV-0001`.
 
 ## Live-ready gate (`~/Developer/build-kit/App-Kit/LAUNCH-PROMPTS.md`)
 

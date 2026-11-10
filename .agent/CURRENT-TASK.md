@@ -15,16 +15,16 @@ open items in the owner's order, park the rest, cut the documents' sprawl by mer
 | 4 | True business facts, no placeholder | BLOCKED, owner. `npm run check:facts` lists 9 open facts |
 | 5, 6, 7 | Enquiry to invoice; payment and VAT; portal isolation | DONE locally (journey tests plus 34 new cases) and walked live 2026-11-10 as owner (enquiry to two paid invoices, VAT correct); the client-side sign-in is NOT TESTED |
 | 8 | Restore once; recovery targets | DONE: daily host backup; host dump restored (42 of 42 tables, 0 orphans); targets agreed (D-062). Open: off-host copy |
-| 9 | Scheduled work running or visibly off | DONE and live: per-job heartbeat, Today notice, and the cron entry now exists (first scheduled run 06:15 on 2026-11-11) |
+| 9 | Scheduled work running or visibly off | DONE and live: per-job heartbeat, Today notice, and the cron entry now exists (the 06:15 server-time run on 2026-11-10 was seen in the audit log) |
 | 10 | Privacy basics | PARTIAL: deletion requests high priority plus owner email (K-095); retention periods need the owner and an adviser |
 
 ## Next actions (owner)
 
 1. Business facts still missing (`npm run build && npm run check:facts`) and the adviser's retention periods (K-062). The owner is working on these.
 2. **Rotate the OpenRouter key** (it was shown in a session log by mistake). The owner chose no spending limit (D-062).
-3. Sign in to the portal as the test client (`gakinz101+walk@gmail.com`, client `TEST Walk Ltd`, Clerk email code) for walk steps 4 and 6; the live TEST records are listed in `docs/VERIFICATION.md`. Then decide whether to clear them and renumber invoices before real billing (invoice numbers 0001 to 0003 are used).
-4. Delete the Clerk user for `dev@gakinz.com`; say what to rename the `TEST owner` row to.
-5. Tomorrow: `backup.log` has a 03:30 line; Today shows no scheduled-jobs notice after 06:15.
+3. Walk steps 4 and 6 (a client signs in to the portal; "Ask to delete my data") are NOT TESTED: the TEST client was deleted at your request. Do them with the first real client, or ask for a fresh TEST client.
+4. Say what to rename the `TEST owner` row to (the `dev@gakinz.com` row is gone; Clerk has no such user).
+5. Tomorrow after 03:30 server time (EST, five hours behind UTC): `~/backups/gakinz_com/backup.log` has an `ok` line. The first scheduled run failed on cron's PATH and was fixed; this is the proof.
 6. Set `$REPORT_RECIPIENTS` if you want the weekly digest. Decide how dumps get off the host (K-010).
 
 ## Resume

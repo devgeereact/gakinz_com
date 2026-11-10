@@ -506,3 +506,7 @@ notes, not here.
 DNS, TLS certificates, mail hosting and Cloudflare proxy state are **out of scope for this
 repository**. Earlier revisions of the project documentation gave instructions in those areas
 that were wrong and caused outages. Read the operator's global notes instead.
+
+### Hand-applied on 2026-11-10 (owner: "delete it all")
+- **Live TEST data removed** by one SQL transaction after a fresh dump (`gakinz_auto_db_20261110_114507.sql.gz`): the `TEST Walk Ltd` client, its enquiry, quote, project, three invoices and the revoked certificate; the June "Smoke Test / GAkinz QA" enquiry; and the `dev@gakinz.com` super_admin row (it had no sessions and no authored posts; Clerk has no such user). The `TEST owner` account (id 2) stays. Reference counters (`E`, `P` for 2026) were set to 0 and the auto-increment of invoices, quotes, clients, projects, enquiries and certificates reset, so the next enquiry is `GK-E-2026-0001` and the next invoice `GK-INV-0001`. `audit_log` was left alone (it is the trail).
+- `~/gakinz-backup.sh` was replaced with the repository copy (`scripts/gakinz-backup.sh`) after the first scheduled run failed on cron's PATH.
