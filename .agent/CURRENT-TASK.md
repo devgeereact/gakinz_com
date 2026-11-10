@@ -6,26 +6,26 @@
 its frozen V1 finish line (`docs/ROADMAP.md`, D-060).** Owner's brief: adopt the draft finish line, correct it, build only the eight
 open items in the owner's order, park the rest, cut the documents' sprawl by merging, leave everything local.
 
-**Status: 7 of 10 items ticked with evidence; 3 wait for the owner. Not FINISHED.** Released and live-checked (`docs/VERIFICATION.md`). Also done on the host with the owner's go-ahead: `$OWNER_ALERTS`, daily backup, cron entry.
+**Status: 8 of 10 items ticked with evidence; 2 wait for the owner (4 business facts, 10 retention periods). Not FINISHED.** Released and live-checked (`docs/VERIFICATION.md`). Also done on the host with the owner's go-ahead: `$OWNER_ALERTS`, daily backup, cron entry.
 
 | # | Item | Status |
 |---|---|---|
 | 1, 2 | Public pages prerendered; Clerk-only sign-in | DONE (already true; re-built, 32 pages) |
 | 3 | A visitor's enquiry reaches the owner | DONE locally: `$OWNER_ALERTS` email (D-061, K-146). **Owner sets `$OWNER_ALERTS`** |
 | 4 | True business facts, no placeholder | BLOCKED, owner. `npm run check:facts` lists 9 open facts |
-| 5, 6, 7 | Enquiry to invoice; payment and VAT; portal isolation | DONE locally (existing journey tests plus 34 new cases); live walk is the owner's |
-| 8 | Restore once; recovery targets | PARTIAL: daily host backup installed; the host's own fresh dump restored (42 of 42 tables, 0 orphans); the owner's yes on the targets is left |
+| 5, 6, 7 | Enquiry to invoice; payment and VAT; portal isolation | DONE locally (journey tests plus 34 new cases) and walked live 2026-11-10 as owner (enquiry to two paid invoices, VAT correct); the client-side sign-in is NOT TESTED |
+| 8 | Restore once; recovery targets | DONE: daily host backup; host dump restored (42 of 42 tables, 0 orphans); targets agreed (D-062). Open: off-host copy |
 | 9 | Scheduled work running or visibly off | DONE and live: per-job heartbeat, Today notice, and the cron entry now exists (first scheduled run 06:15 on 2026-11-11) |
 | 10 | Privacy basics | PARTIAL: deletion requests high priority plus owner email (K-095); retention periods need the owner and an adviser |
 
 ## Next actions (owner)
 
-1. Look in hello@gakinz.com for "New enquiry from TEST Finish Run (ignore)": that confirms item 3 end to end.
-2. Say yes (or change) the recovery targets: back within one working day, lose at most 24 hours (K-010).
-3. Business facts still missing (`npm run build && npm run check:facts`) and the adviser's retention periods (K-062).
-4. Set the OpenRouter monthly limit and **rotate that key** (it was shown in a session log by mistake); delete the Clerk dev user; say what to rename the `TEST owner` row to.
-5. The signed-in walk, steps 2 to 7 in `docs/VERIFICATION.md`. Tomorrow also check that `backup.log` has a 03:30 line and Today shows no scheduled-jobs notice after 06:15.
-6. Set `$REPORT_RECIPIENTS` if you want the weekly digest.
+1. Business facts still missing (`npm run build && npm run check:facts`) and the adviser's retention periods (K-062). The owner is working on these.
+2. **Rotate the OpenRouter key** (it was shown in a session log by mistake). The owner chose no spending limit (D-062).
+3. Sign in to the portal as the test client (`gakinz101+walk@gmail.com`, client `TEST Walk Ltd`, Clerk email code) for walk steps 4 and 6; the live TEST records are listed in `docs/VERIFICATION.md`. Then decide whether to clear them and renumber invoices before real billing (invoice numbers 0001 to 0003 are used).
+4. Delete the Clerk user for `dev@gakinz.com`; say what to rename the `TEST owner` row to.
+5. Tomorrow: `backup.log` has a 03:30 line; Today shows no scheduled-jobs notice after 06:15.
+6. Set `$REPORT_RECIPIENTS` if you want the weekly digest. Decide how dumps get off the host (K-010).
 
 ## Resume
 

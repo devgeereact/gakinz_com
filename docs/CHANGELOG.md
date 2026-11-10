@@ -4,6 +4,11 @@ What changed in the product, newest first. The checks behind each change are in 
 [VERIFICATION.md](VERIFICATION.md); why is in [DECISIONS.md](DECISIONS.md). Releases before 2026-11-10 are listed in
 [WORKBOOK.md](WORKBOOK.md) section 1.
 
+## 2026-11-10 (later) · Recovery targets agreed, live walk recorded (documents only)
+
+- Recovery targets agreed: back within one working day, lose at most 24 hours (D-062). The owner chose no OpenRouter spending limit (D-062).
+- The live owner walk (steps 1, 2, 3, 5, 7) is recorded in `docs/VERIFICATION.md` with the TEST records it left. No code or host change.
+
 ## 2026-11-10 · V1 finish-line run (released as `4bdaed7`, PR #32)
 
 **Added**

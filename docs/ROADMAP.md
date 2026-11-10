@@ -42,7 +42,7 @@ one enquiry to a paid invoice and a client sees only their own work.
 - [x] **7. A client signs in to the portal and sees only their own project, invoice and files.** Check:
   `journey.test.ts` step 10, `portal-files.test.ts`, `support-client.test.ts` and the signed-out, wrong-role
   and other-client matrix in `tests/server/portal-isolation.test.ts`.
-- [~] **8. A backup is restored once and the recovery target is agreed (K-010).** **Update 2026-11-10 (released): the host had no daily backup; `gakinz-backup.sh` now runs daily and the host's own fresh dump was restored locally (42 of 42 tables, 0 orphans). Only the owner's yes on the targets is left.** Check: `npm run
+- [x] **8. A backup is restored once and the recovery target is agreed (K-010).** **Update 2026-11-10 (released): the host had no daily backup; `gakinz-backup.sh` now runs daily and the host's own fresh dump was restored locally (42 of 42 tables, 0 orphans). Targets agreed the same day (D-062: back within one working day, lose at most 24 hours).** Still open under K-010: dumps are not copied off the host, and the first 03:30 run is not yet seen. Check: `npm run
   drill:restore` restores the newest Mac copy of the database dump into a throwaway database and compares
   tables and row counts; the dated result is in `docs/OPERATIONS.md` section 10. Restoring the **host's**
   copy, the uploads, and agreeing the targets are BLOCKED (owner).
@@ -58,7 +58,7 @@ one enquiry to a paid invoice and a client sees only their own work.
   column and a Today item (parked). Open, owner and adviser: the `$RETENTION_*` periods (K-062, proposals in
   `docs/PRIVACY-READINESS.md` section 6) and the legal deadline wording; `$RETENTION_APPLY` stays false. BLOCKED.
 
-**Progress (2026-11-10, released as `4bdaed7`): 7 of 10 ticked, 3 waiting for the owner (4, 8, 10).** There is no `npm run finish` here; the boxes are the progress.
+**Progress (2026-11-10, released as `4bdaed7`): 8 of 10 ticked, 2 waiting for the owner (4, 10).** There is no `npm run finish` here; the boxes are the progress.
 
 ## Needs the owner (BLOCKED, with the exact action)
 
@@ -69,10 +69,10 @@ Prepared in this run: the scripts, tests and instructions below. None of these w
 | a | Business facts: trading identity and number, VAT status and whether prices include VAT, confirmed prices, IT support pricing and coverage area, ~~public phone~~ (done: +44 20 8059 8757), working hours, cancellation terms | item 4 | `npm run check:facts` lists each gap; answers go into `src/marketing/data/site.ts` and the legal pages (`docs/STATUS.md` section 5) |
 | b | Adviser sign-off: privacy, terms, retention periods, anonymisation (K-021, K-062, K-108) | items 4, 10 | proposed periods and the questions to ask are in `docs/PRIVACY-READINESS.md` section 6 |
 | c | ~~Cron entry~~ **done 2026-11-10.** Still yours: `$REPORT_RECIPIENTS` if you want the weekly digest (K-145) | item 9 | exact line and checks in `docs/OPERATIONS.md` section 2 |
-| d | ~~Restore the host's latest backup~~ **done 2026-11-10**; engine recorded (MariaDB 11.4.13). Still yours: say yes to the recovery targets (1 working day / 24 hours) and decide how dumps get off the host (K-010) | item 8 | steps in `docs/OPERATIONS.md` section 10 |
-| e | OpenRouter monthly spending limit; delete the Clerk user for `dev@gakinz.com`; rename the `TEST owner` row | safety | Clerk and OpenRouter dashboards; one `UPDATE` in `docs/DEPLOYMENT.md` section 5 |
-| f | One live walk with TEST records: contact form to paid invoice, certificates, downloads, a client sign-in | gate 6 (real browser and phone) | `docs/VERIFICATION.md` "Owner walk" |
-| g | ~~`$OWNER_ALERTS`~~ **done 2026-11-10** (`hello@gakinz.com`, SMTP login proven). Still yours: confirm the TEST email arrived | item 3 live | `docs/DEPLOYMENT.md` section 5 |
+| d | ~~Restore the host's latest backup~~ **done 2026-11-10**; engine recorded (MariaDB 11.4.13). **Targets agreed (D-062).** Still open: decide how dumps get off the host (K-010) | item 8 | steps in `docs/OPERATIONS.md` section 10 |
+| e | ~~OpenRouter limit~~ owner chose none (D-062), but **rotate the exposed key**; delete the Clerk user for `dev@gakinz.com`; rename the `TEST owner` row (name needed) | safety | Clerk and OpenRouter dashboards; one `UPDATE` in `docs/DEPLOYMENT.md` section 5 |
+| f | ~~One live walk~~ **done 2026-11-10 for steps 1, 2, 3, 5, 7** (`docs/VERIFICATION.md`). Left: a test client sign-in (steps 4, 6), the invoice PDF, a real phone | gate 6 (real browser and phone) | `docs/VERIFICATION.md` "Owner walk" |
+| g | ~~`$OWNER_ALERTS`~~ **done 2026-11-10** (`hello@gakinz.com`, SMTP login proven). Confirmed by the owner: the TEST email arrived | item 3 live | `docs/DEPLOYMENT.md` section 5 |
 
 ## Parking lot (V1.1 and later)
 
@@ -100,6 +100,7 @@ opens a new scope. Nothing here was deleted from the code or the issue list.
 - An index on `audit_log (action, created_at)`: the heartbeat, the contact throttle and the reminder memory all filter on `action`; fine at today's size, schema change when it grows.
 - Owner alerts: a retry or queue if a send fails (today: audited, the item is in Leads or Support either way).
 - Real assistive-technology pass on the public site and the CMS.
+- Quotes list "Total" is the amount before VAT (label it, or show the VAT-inclusive total); Invoicing tiles refresh after "Mark paid" without a reload.
 
 ## Cut (decided not to build for V1; the code stays)
 
@@ -134,7 +135,7 @@ The commit message says which.
 | 1 | Enquiry notification and the contact browser test | 3 | DONE |
 | 2 | Placeholder check and owner input list | 4 | DONE (the facts: owner) |
 | 3 | Money, VAT and portal isolation evidence | 5, 6, 7 | DONE |
-| 4 | Restore drill | 8 | DONE (host copy, uploads and targets: owner) |
+| 4 | Restore drill | 8 | DONE (targets agreed, D-062; off-host copy still open) |
 | 5 | Cron heartbeat and visible notice | 9 | DONE |
 | 6 | Deletion request handling | 10 | DONE (retention periods: owner and adviser) |
 | 7 | Docs merge, audit, ladder, handoff | all | DONE |

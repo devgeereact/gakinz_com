@@ -1127,3 +1127,10 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 
 **Why:** the cheapest change that makes "a visitor sends an enquiry and the owner receives it" true without a cron entry, a queue, or a schema change.
 
+## D-062 · Recovery targets agreed; OpenRouter left uncapped by the owner
+**Date:** 2026-11-10 · **Status:** decided by the owner ("decide for me" on the targets; "unlimited" on the OpenRouter limit).
+
+1. **Recovery targets:** back within one working day (RTO), lose at most 24 hours of ordinary changes (RPO). The daily 03:30 host backup (`gakinz-backup.sh`, 14 days kept) and the restore drill (`npm run drill:restore`) are what make them true; the first restore passed on the host's own dump on 2026-11-10.
+2. **Why these:** one owner, a small database (about 60 rows) and no client files yet; a tighter point would need a more frequent dump for no stated need. Tighten the cadence if invoices or bookings start to matter hourly.
+3. **Still open under K-010:** copy dumps off the host, and try a files restore once client uploads exist.
+4. **OpenRouter:** the owner chose no monthly limit. The risk is spend with no ceiling if the AI module is used or its key is abused; the AI module stays switched as it is (Cut in the roadmap) and the exposed key is to be rotated by the owner. Revisit if the AI features are switched on.

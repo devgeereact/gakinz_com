@@ -337,10 +337,10 @@ until the authentication and ownership gates pass.
 
 ## 10. Recovery targets
 
-**Proposed, awaiting the owner's agreement** (`docs/STATUS.md` section 5). These are targets,
+**Agreed 2026-11-10** (the owner delegated the choice: "decide for me"; D-062). These are targets,
 not achieved service levels.
 
-| Measure | Proposal |
+| Measure | Target |
 |---|---|
 | Recovery time (RTO) | Back within one working day |
 | Recovery point (RPO) | Lose no more than 24 hours of ordinary changes. If that is too much for invoices or bookings, tighten the backup cadence |
@@ -371,7 +371,7 @@ hosting changes. The release mechanics are in `docs/DEPLOYMENT.md`.
 The dump header names the server that produced it, `11.4.13-MariaDB-cll-lve` with source database
 `devgeereact_gakinz_com`: that is the live engine as at 2026-10-30 (K-099), MariaDB and not MySQL.
 
-K-010 is closed when the owner agrees the targets in the table at the top of this section (proposed: back within one working
-day, lose at most 24 hours; the daily job at 03:30 supports that) and, once client files exist, a restore of the files
-tarball has been tried too.
+K-010: the targets are agreed (back within one working day, lose at most 24 hours; the daily 03:30 job supports that). What is
+left: once client files exist, try a restore of the files tarball too, and copy dumps off the host (they still sit only on it
+and in the Mac copies pulled by hand).
 

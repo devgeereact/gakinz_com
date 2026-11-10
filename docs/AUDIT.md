@@ -2,6 +2,10 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-10 (later) · Live owner walk on gakinz.com
+
+**Scope:** `docs/VERIFICATION.md` "Owner walk" steps 1 to 7, run through Chrome on the live site by the agent while the owner was signed in (the owner asked for it; TEST records only; no payment taken, nothing emailed except the owner's own enquiry alert). **Result:** steps 1, 2, 3, 5, 7 PASS; steps 4 and 6 NOT TESTED (need a test client sign-in); the invoice PDF NOT TESTED. Evidence and the TEST records left are in `docs/VERIFICATION.md`. **Findings:** the quotes list shows the amount before VAT under "Total"; Invoicing tiles refresh only after a reload (both parked); the first real invoice will be 0004 because the walk used 0001 to 0003 (owner decision). No bug that makes a ticked item untrue.
+
 ## 2026-11-10 · V1 finish-line run (released as `4bdaed7`, PR #32)
 
 **Release and host work, same day (owner-approved: "Go ahead and Push", "do these"):** the live checks are in `docs/VERIFICATION.md` (16 of 16, SMTP login 235, one TEST enquiry produced `enquiry_notified`, backup and cron installed and hand-run). **Finding while doing it:** the host had **no daily GAkinz backup** at all (K-010); `scripts/gakinz-backup.sh` now exists. **Finding:** the database login in `config.php` is the `devgeereact_egolimited_com` user (shared with another project): not changed, noted. **Incident, mine:** a read-only look at `config.php` printed the OpenRouter key into this session's output by mistake; it is not in any file or commit, but treat it as exposed and rotate it when you set the spending limit. The sections below are the local run before the release.
