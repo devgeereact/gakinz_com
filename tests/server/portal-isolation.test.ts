@@ -5,7 +5,7 @@
  * support-client.test.ts, and the happy path in journey.test.ts step 10.)
  */
 import { beforeAll, describe, expect, it } from "vitest"
-import { api, createClient, createInvoice, createUser, login, one, q, resetDb, sql } from "./helpers"
+import { api, createClient, createInvoice, createUser, login, one, resetDb, sql } from "./helpers"
 
 let clientA: number
 let clientB: number

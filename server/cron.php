@@ -101,6 +101,10 @@ if ($job === 'all' || $job === 'uptime')  $out['uptime']  = cron_uptime($conn);
 if ($job === 'all' || $job === 'digest')  $out['digest']  = cron_digest($conn);
 if ($job === 'all' || $job === 'prune')   $out['prune']   = cron_prune($conn);
 
+// The heartbeat. today.php reads the newest of these to tell the owner whether scheduled work is running at all
+// (K-145: a host with no cron entry otherwise fails silently). Written only when a job actually ran.
+if ($out) audit($conn, null, 'cron_run', $job);
+
 ok(['ran' => $out]);
 
 // ── Jobs ─────────────────────────────────────────────────────────────────────

@@ -57,6 +57,7 @@ require __DIR__ . '/_bootstrap.php';
 const TODAY_ITEMS_MAX = 20;
 const TODAY_ASSET_WAIT_DAYS = 3;
 const TODAY_CALL_AHEAD_DAYS = 7;
+const TODAY_CRON_STALE_HOURS = 36;
 const TODAY_LEADS_ROLES = ['super_admin', 'admin', 'manager', 'editor'];              // leads.php STAFF
 const TODAY_BOOKINGS_ROLES = ['super_admin', 'admin', 'manager', 'editor'];           // bookings.php STAFF
 const TODAY_TASKS_ROLES = ['super_admin', 'admin', 'manager', 'editor', 'employee'];  // tasks.php STAFF
@@ -207,4 +208,25 @@ try {
 } catch (Throwable $e) {
   $now = null;
 }
-ok(['generated_at' => td_utc($now ?? time()), 'sections' => (object)$sections]);
+$reply = ['generated_at' => td_utc($now ?? time()), 'sections' => (object)$sections];
+
+// Are the scheduled jobs (cron.php) running at all? Owner roles only: it is about money and client email. The host
+// needs a cron entry (docs/OPERATIONS.md section 2); with none, reminders, retainer billing, the weekly digest, uptime
+// checks and pruning silently never happen (K-145), so say so here. "Stale" is no cron_run heartbeat in 36 hours,
+// which a daily entry never trips. A failed lookup omits the key rather than guessing.
+if (in_array($user['role'], TODAY_INVOICES_ROLES, true)) {
+  try {
+    $row = td_rows($conn, "SELECT UNIX_TIMESTAMP(MAX(created_at)) AS t FROM audit_log WHERE action = 'cron_run'")[0] ?? [];
+    $last = isset($row['t']) && $row['t'] !== null ? (int)$row['t'] : null;
+    $stale = $last === null || (($now ?? time()) - $last) > TODAY_CRON_STALE_HOURS * 3600;
+    $reply['scheduled_jobs'] = [
+      'last_run' => td_utc($last),
+      'stale'    => $stale,
+      'off'      => $stale ? ['Overdue-invoice reminders', 'Retainer billing', 'The weekly digest', 'Uptime checks', 'Clean-up of expired sign-in records'] : [],
+    ];
+  } catch (Throwable $e) {
+    error_log('today.php scheduled_jobs unavailable: ' . $e->getMessage());
+  }
+}
+
+ok($reply);

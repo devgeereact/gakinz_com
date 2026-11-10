@@ -924,7 +924,9 @@ export type TodayItem = {
 export type TodaySection =
   | { status: "ok"; count: number; items: TodayItem[] }
   | { status: "unavailable"; count: null; items: TodayItem[] }
-export type TodayData = { generated_at: string; sections: Partial<Record<TodaySectionKey, TodaySection>> }
+// Present for the owner roles only: has cron.php run in the last 36 hours, and what is off if not (K-145).
+export type ScheduledJobs = { last_run: string | null; stale: boolean; off: string[] }
+export type TodayData = { generated_at: string; sections: Partial<Record<TodaySectionKey, TodaySection>>; scheduled_jobs?: ScheduledJobs }
 export const today = {
   get: () => api.get<TodayData>("/today.php"),
 }
