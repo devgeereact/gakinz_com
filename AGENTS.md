@@ -59,7 +59,6 @@ decision.
 | Lint | `npm run lint` (0 errors, 0 warnings) |
 | Documentation check | `npm run docs:check` (add `-- --base origin/<branch>` to apply the sync rule locally) |
 | Type check, build and prerender | `npm run build` (`tsc -b`, `vite build`, the SSR build, then `scripts/prerender.mjs`; no network) |
-| Lint | `npm run lint` |
 | PHP syntax gate | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` |
 
 ## Non-negotiable constraints
