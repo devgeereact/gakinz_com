@@ -155,9 +155,12 @@ jobs:
           persist-credentials: false
           fetch-depth: 0
 
+      # No dependencies are installed here, so no package cache: setup-node v5 would otherwise see
+      # "packageManager": "pnpm" in package.json, try to cache with pnpm, and fail because pnpm is not set up.
       - uses: actions/setup-node@v5
         with:
           node-version-file: .node-version
+          package-manager-cache: false
 
       - id: range
         run: node scripts/deploy-needed.mjs "$BEFORE" "$GITHUB_SHA" >> "$GITHUB_OUTPUT"
