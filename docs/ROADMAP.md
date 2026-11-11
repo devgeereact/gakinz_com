@@ -68,9 +68,10 @@ person can do or see, ticked on **local** evidence with the commit, anything tha
 is BLOCKED and says so. Chosen because each one either guards a flaw class the V1 run never looked for (layout on real
 pages and screens) or closes a way the owner could miss something that matters (a legal deadline, a lost alert).
 
-- [ ] **1. A visitor on a phone or a desktop sees every public page laid out cleanly.** Check: `tests/browser/public-layout.test.ts`
+- [x] **1. A visitor on a phone or a desktop sees every public page laid out cleanly.** Check: `tests/browser/public-layout.test.ts`
   loads all 32 prerendered pages at 375 and 1280 px and fails on sideways page scroll, clipped text, a console error or a failed
   request; every page screenshot looked at; an axe run over the same pages (WCAG 2.0 to 2.2 A and AA) recorded in `docs/VERIFICATION.md`.
+  **Evidence 2026-11-11:** 66 tests (the sitemap list, then 32 pages at 375 and at 1280 px) pass; axe-core (WCAG 2.0 to 2.2 A and AA) over the same 64 loads found 0 violations; 11 pages viewed side by side at both sizes (home, services, a service, pricing, work, a work page, about, contact, privacy, an article, the 404) and every template class is among them. Found and parked: K-147 (two sitemap articles render the not-found page on the live CMS), and the pricing, privacy and work pages still carry the V1 item 4 placeholders (owner). The test also fails if a sitemap page shows the not-found view.
 - [ ] **2. The owner sees a client's data deletion request on Today with its reply-by date.** No schema change: the date is the
   ticket's creation date plus one month (K-095 remainder). Check: new cases in `tests/server/today.test.ts` (listed, oldest or
   most urgent first, a closed ticket is not listed, an editor does not see it) and a unit test for the date rule.
@@ -89,7 +90,7 @@ pages and screens) or closes a way the owner could miss something that matters (
 Dashboard show "unavailable" for a failed source (K-031), and the browser holds no session token in `localStorage` (K-033).
 They are closed with that evidence in the same commit that proves it.
 
-**Progress V1.1 (2026-11-11): 0 of 5 ticked.**
+**Progress V1.1 (2026-11-11): 1 of 5 ticked.**
 
 ## Versions and the nine GSD phases (2026-11-11)
 

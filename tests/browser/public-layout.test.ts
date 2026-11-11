@@ -8,6 +8,7 @@ import fs from "node:fs"
 import path from "node:path"
 import type { Browser } from "playwright-core"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
+import { q, resetDb, sql } from "../server/helpers"
 import { launch, startStack, type Stack } from "./stack"
 
 const DIST = path.resolve(__dirname, "../../dist")
@@ -21,6 +22,16 @@ export function sitemapPaths(): string[] {
 let stack: Stack
 let browser: Browser
 beforeAll(async () => {
+  // The three built-in articles are in the sitemap, but the page shows what the CMS says: a slug the CMS does not
+  // hold renders the 404 view after load (src/marketing/data/blog.ts). The live CMS lacks two of them (K-147), so
+  // the throwaway database publishes all three, as the live one is meant to, and the test then holds the pages to it.
+  resetDb()
+  for (const [slug, title] of [
+    ["what-makes-a-site-fast", "What makes a site fast"],
+    ["accessibility-is-not-optional", "Accessibility is not optional"],
+    ["why-one-team-design-and-build", "Why one team should design and build"],
+  ])
+    sql(`INSERT INTO posts (slug, title, excerpt, body, category, status, published_at) VALUES (${q(slug)}, ${q(title)}, 'Test post.', 'First paragraph.\n\nSecond paragraph.', 'Practice', 'published', NOW())`)
   stack = await startStack()
   browser = await launch()
 })
@@ -41,7 +52,9 @@ function pageProblems(): string[] {
     return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.display !== "none"
   }
   for (const el of document.querySelectorAll("body *")) {
-    if (el.matches("input, textarea, select, .sr-only, svg, svg *")) continue
+    // Not flaws: form controls scroll their own text; .sr and .sr-only are visually hidden on purpose; the hero's
+    // laptop and phone frames crop their screenshots by design (object-fit: cover inside overflow: hidden).
+    if (el.matches("input, textarea, select, .sr, .sr-only, svg, svg *, .laptop, .laptop *, .phone, .phone *")) continue
     const cs = getComputedStyle(el)
     if ((cs.overflowX === "hidden" || cs.overflowX === "clip") && el.scrollWidth > el.clientWidth + 1 && visible(el)) {
       problems.push(`content clipped in <${el.tagName.toLowerCase()} class="${String(el.className).slice(0, 60)}">`)
@@ -80,11 +93,32 @@ for (const [label, w, h] of [["phone 375", 375, 812], ["desktop 1280", 1280, 800
       page.on("requestfailed", (r) => bad.push(`request failed: ${r.method()} ${r.url()} ${r.failure()?.errorText}`))
       page.on("response", (r) => r.status() >= 400 && bad.push(`HTTP ${r.status()}: ${r.url()}`))
       await page.goto(`${stack.origin}${route}`, { waitUntil: "networkidle" })
-      expect(await page.locator("main h1, #main h1").count(), `${route} has one h1`).toBeGreaterThanOrEqual(1)
+      expect(await page.locator("main h1, #main h1").count(), `${route} has an h1`).toBeGreaterThanOrEqual(1)
+      expect(await page.getByText("That page is not here").count(), `${route} shows the not-found page`).toBe(0)
       bad.push(...(await page.evaluate(pageProblems)))
+      // Optional: GK_AXE=<path to axe.min.js> also runs axe-core (WCAG 2.0 to 2.2 A and AA). It is not a project
+      // dependency (adding one would collide with the pending package changes), so it is a manual gate step.
+      if (process.env.GK_AXE) {
+        await page.addScriptTag({ path: process.env.GK_AXE })
+        const found = await page.evaluate(async () => {
+          // @ts-expect-error axe is injected by the script tag above
+          const r = await axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] } })
+          return r.violations.map((v: { id: string; nodes: { target: string[] }[] }) => `axe ${v.id} x${v.nodes.length}: ${v.nodes[0].target.join(" ")}`)
+        })
+        bad.push(...found)
+      }
       const shots = process.env.GK_SHOTS
       if (shots) {
         fs.mkdirSync(shots, { recursive: true })
+        // Images below the fold load lazily; scroll the whole page once so a full-page capture shows them.
+        await page.evaluate(async () => {
+          for (let y = 0; y < document.documentElement.scrollHeight; y += 600) {
+            window.scrollTo(0, y)
+            await new Promise((r) => setTimeout(r, 40))
+          }
+          window.scrollTo(0, 0)
+        })
+        await page.waitForLoadState("networkidle")
         const name = (route === "/" ? "home" : route.replace(/^\/|\/$/g, "").replace(/\//g, "-")) + `-${w}.png`
         await page.screenshot({ path: path.join(shots, name), fullPage: true })
       }
