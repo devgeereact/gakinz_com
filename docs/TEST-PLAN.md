@@ -15,7 +15,7 @@ pass (section 7).
 | Unit | Vitest, `npm test` | `src/lib/access.ts`, `csv.ts`, `format.ts`, `session-revoke.ts`, `src/marketing/lib/articleFormat.ts`, `src/marketing/data/cmsResult.ts` | **PASS**, 2026-10-10 |
 | Server integration | Vitest, `npm run test:server` | Sign-in, My account, payments, quote acceptance, blog editing, create ids, enquiry follow-ups, the work ledger (`work.php`), the enquiry-to-paid-deposit journey and the `support.php` client branch, against a local `*_test` database (D-036) | **PASS**, 2026-10-10 |
 | PHP syntax | `php -l` | Every server file | **PASS**, 2026-10-10 |
-| Lint | ESLint, `npm run lint`, held by `npm run lint:ratchet` | Whole client | **FAIL**; the ratchet passes (K-002) |
+| Lint | ESLint, `npm run lint` | Whole client | **PASS**, 0 errors and 0 warnings (K-002 closed 2026-11-11) |
 | Documentation | `npm run docs:check` | Links and the document-sync rule (`AGENTS.md`) | **PASS**, 2026-10-10 |
 | Accessibility | axe-core 4.10.2 in Chrome, plus computed contrast, focus, reflow and target-size sweeps | All 16 public routes | **PASS**, 0 violations, 2026-09-22. `docs/AUDIT.md` |
 | Performance | Chrome DevTools trace and Lighthouse, production build served locally | Public surface | **PARTIAL.** Lab only, no field data, 2026-09-22. `docs/AUDIT.md` |
@@ -37,7 +37,7 @@ waits for it (`docs/DEPLOYMENT.md` section 2).
 npm run build                                              # tsc -b then vite build
 npm test                                                   # unit tests
 npm run test:server                                        # PHP endpoints, local *_test database
-npm run lint:ratchet                                       # the lint backlog must not grow
+npm run lint                                               # 0 errors, 0 warnings
 npm run docs:check                                         # documents current, links resolve
 find server -name '*.php' -print0 | xargs -0 -n1 php -l     # any touched PHP
 ```

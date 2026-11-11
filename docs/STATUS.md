@@ -36,7 +36,7 @@ this table when a count changes; the previous figures are in the history above.
 | Browser tests | `npm run build && npm run test:browser` | **PASS.** 6 tests in 1 file: the contact form in headless Chromium at 375 and 1280 px against local PHP and a throwaway database (`tests/browser/contact.test.ts`). Signed-in screens and axe are NOT covered |
 | Server suite on MySQL 8 | `npm run test:server` against MySQL 8.0 (`docs/OPERATIONS.md` section 8) | Last PASS 2026-10-20 (519 tests). MySQL 5.7 NOT TESTED; the live engine is UNVERIFIED (K-099) |
 | Type check and build | `npm run build` | **PASS.** 32 public pages and `app-shell.html` prerendered, `sitemap.xml` with 32 URLs |
-| Lint | `npm run lint:ratchet` | **PASS** at the ceiling: 5 errors, 0 warnings. **`npm run lint` still fails** (K-002) |
+| Lint | `npm run lint` | **PASS.** 0 errors, 0 warnings (K-002 closed 2026-11-11); the ratchet script is gone |
 | Documentation | `npm run docs:check` | **PASS.** 27 documents |
 | PHP files | `ls server/*.php`, `php -l` | 68: 50 endpoints and 18 `_`-prefixed includes (`_notify.php` added 2026-11-10), all passing `php -l` (PHP 8.5.12 locally; the host runs 8.4.27, checked 2026-11-08) |
 | Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 42 |

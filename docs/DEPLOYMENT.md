@@ -10,7 +10,7 @@ Section 5 is the one list of server work a release cannot carry.
 
 | What moves | Mechanism | Trigger |
 |---|---|---|
-| `dist/` and `server/*.php` (not `config.php`, `.htaccess`, `schema.sql`, Markdown or `*.example`) | `scripts/release.mjs --go` over SSH (`release.json`): checks (typecheck, lint ratchet, Vitest, `php -l`), build with the live Clerk key, checksum upload, entry files last, never deletes, snapshot of every changed server file in `~/backups/gakinz_com/releases/`, automatic restore if the smoke test fails | Every push to `main` that changes more than documents, after CI passes (the `deploy` job of `.github/workflows/ci.yml`, which calls `.github/workflows/deploy.yml`; restricted SSH deploy key, secrets `CPANEL_SSH_KEY` and `CPANEL_KNOWN_HOSTS`); documentation-only pushes do not deploy (`scripts/deploy-needed.mjs`). By hand: `npm run release`, then `npm run release -- --go` |
+| `dist/` and `server/*.php` (not `config.php`, `.htaccess`, `schema.sql`, Markdown or `*.example`) | `scripts/release.mjs --go` over SSH (`release.json`): checks (typecheck, lint, Vitest, `php -l`), build with the live Clerk key, checksum upload, entry files last, never deletes, snapshot of every changed server file in `~/backups/gakinz_com/releases/`, automatic restore if the smoke test fails | Every push to `main` that changes more than documents, after CI passes (the `deploy` job of `.github/workflows/ci.yml`, which calls `.github/workflows/deploy.yml`; restricted SSH deploy key, secrets `CPANEL_SSH_KEY` and `CPANEL_KNOWN_HOSTS`); documentation-only pushes do not deploy (`scripts/deploy-needed.mjs`). By hand: `npm run release`, then `npm run release -- --go` |
 | `server/.htaccess`, `config.php`, SQL | By a person, backup first | A decision, never automatic |
 
 On 2026-10-30 a dry run showed the live server equal to `main` (545 tests passed). The FTP workflow and `scripts/deploy-ftps.sh` were replaced; the owner deletes the FTP secrets and account.
@@ -83,7 +83,7 @@ on that push; a red CI run means nothing is deployed.
 npm run build          # runs tsc -b first, so a type error blocks the deploy
 npm test               # unit tests (src/)
 npm run test:server    # PHP endpoints against a throwaway local *_test database
-npm run lint:ratchet   # fails if the lint backlog (K-002) grows
+npm run lint            # 0 errors, 0 warnings
 npm run docs:check     # links, and the document-sync rule in AGENTS.md
 npm run check:live     # after a release: read-only GETs against the live site (section 5 list)
 ```
@@ -97,9 +97,8 @@ Approved 2026-10-10. Until then CI ran no tests and the deploy did not wait for 
 - **Keep the Vite build and the existing client and server model.** CI runs unit tests, the
   server tests and PHP syntax, and gains targeted synthetic endpoint and browser checks as
   they become available.
-- **Lint is a ratchet first, then a gate.** `npm run lint:ratchet` enforces the ceiling
-  in `scripts/lint-ratchet.mjs`; the current figure is in `docs/STATUS.md` (K-002). Clear the errors in small batches, then make
-  lint blocking. `continue-on-error` alone is advisory, not a ratchet.
+- **Lint is a gate.** `npm run lint` must report nothing; CI and the release checks run it (K-002 was cleared in small
+  batches under a ratchet, then the ratchet was removed). `continue-on-error` alone is advisory, not a gate.
 - **Production deploys only after the required checks pass**, or through a deliberate,
   approved release trigger. Every push to `main` with code changes releases `dist/` and
   `server/*.php`; documentation-only pushes do not (`scripts/deploy-needed.mjs`, called from `ci.yml`), and a failing CI job stops the release (K-138).

@@ -47,9 +47,7 @@ The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md). Phase 7 (daily
 
 ### 3a. Engineering (no owner needed)
 
-1. **Lint, K-002.** 5 errors left: Contracts, Portal (security review first: its effect decides
-   which client's data a `client` caller sees) and the theme toggle. Then replace `lint:ratchet`
-   with `lint` in CI and close K-002.
+1. ~~**Lint, K-002.**~~ Done 2026-11-11 (V1.1 item 5): 0 errors; CI and `release.json` run `npm run lint`; the ratchet script is gone.
 2. **Analytics shows zero for a single failed source** (K-031 follow-up): decide whether each KPI
    should say "unavailable" instead.
 3. **Demo status in the CMS.** A Work record can only be Live or In build; add a demo flag to
@@ -120,7 +118,7 @@ The full list: [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
 ## 5. How to work
 
 1. **One branch per concern, short-lived**, merged once checked and approved.
-2. **Small batches with a gate:** build, unit and server tests, lint ratchet, docs check, and a
+2. **Small batches with a gate:** build, unit and server tests, lint, docs check, and a
    browser run for anything visible; then the owner decides on the release.
 3. **Evidence over summaries.** Report command output, not an agent's word.
 4. **Keep the code graph current.** `graphify-out/` (untracked) is rebuilt by git hooks after

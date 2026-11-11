@@ -56,7 +56,7 @@ decision.
 | Install | `npm install` |
 | Develop | `npm run dev` (port 5102, `strictPort`, fails loudly on a clash) |
 | Test | `npm test` (unit), `npm run test:server` (needs local MySQL or MariaDB) |
-| Lint ratchet | `npm run lint:ratchet` |
+| Lint | `npm run lint` (0 errors, 0 warnings) |
 | Documentation check | `npm run docs:check` (add `-- --base origin/<branch>` to apply the sync rule locally) |
 | Type check, build and prerender | `npm run build` (`tsc -b`, `vite build`, the SSR build, then `scripts/prerender.mjs`; no network) |
 | Lint | `npm run lint` |
@@ -103,8 +103,8 @@ list is `docs/AUDIT.md`.
 1. `npm run build` succeeds, which includes `tsc -b`.
 2. `npm test` passes, and any new behaviour that can be unit tested has a test. A server
    change passes `npm run test:server`, and a money, auth or ownership change adds a case there.
-3. `npm run lint:ratchet` passes. The backlog is recorded in `docs/KNOWN-ISSUES.md` K-002 and
-   measured in `docs/STATUS.md`; it may shrink, never grow.
+3. `npm run lint` passes with no error and no warning (K-002 is closed; the history is in
+   `docs/KNOWN-ISSUES.md`).
 4. Any touched PHP passes `php -l`.
 5. The documents the change affects are updated in the same pull request, as set out in
    "Keeping documents current" below, and `npm run docs:check` passes.

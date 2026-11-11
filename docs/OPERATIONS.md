@@ -37,7 +37,7 @@ to exercise the server is the synthetic test path in section 8.
 | `npm run test:watch` | Vitest, watch mode |
 | `npm run test:server` | PHP endpoints against a throwaway local `*_test` database (section 8) |
 | `npm run lint` | ESLint. Currently fails, see `docs/KNOWN-ISSUES.md` K-002 |
-| `npm run lint:ratchet` | Fails if the lint backlog grows |
+| `npm run lint` | Fails on any lint error or warning |
 | `npm run typecheck` | Type check only |
 | `npm run docs:check` | Fails on a broken document link, or with `-- --base <ref>` on a server or schema change without its documents |
 | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` | PHP syntax gate |
@@ -326,7 +326,7 @@ recorded evidence. Status on 2026-10-10: every gate is open, and production read
 | Business integrity | Duplicate enquiry, conversion and acceptance handling; the legal quote version; accurate invoice tax and rounding; provider reconciliation |
 | Publication | Edit round trip, draft privacy, consent, publish and unpublish, approved media, safe links, metadata and sitemap |
 | UX and accessibility | No document overflow at the tested widths; form, keyboard and assistive-technology checks; owner and client task completion |
-| Delivery | Build, tests, PHP syntax and the documentation check pass in CI; deploy waits for CI; the lint ratchet is enforced and then the backlog reduced; dependency advisory exposure decisions recorded (K-041) |
+| Delivery | Build, tests, PHP syntax and the documentation check pass in CI; deploy waits for CI; lint is a plain gate (the backlog is cleared, K-002); dependency advisory exposure decisions recorded (K-041) |
 | Operations | Response expectations, error observation, renewal review, retention decisions, incident and owner-lockout procedure |
 
 Each gate's scenarios are in `docs/TEST-PLAN.md` section 7. Launch does not need every optional

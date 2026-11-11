@@ -117,7 +117,7 @@ GAkinzOS only 150 to 300ms state changes. When animating with GSAP, clear only w
 Run in this order and report with DONE / PARTIAL / NOT TESTED / BLOCKED. Full commands in
 [references/verification.md](references/verification.md).
 
-1. `npm run build`, `npm test`, `npm run lint:ratchet`, `npm run docs:check`.
+1. `npm run build`, `npm test`, `npm run lint`, `npm run docs:check`.
 2. Serve the build on loopback with **no proxy to the live API** (`vite preview` inherits the dev proxy to
    gakinz.com; use a static server or set `preview.proxy` to `{}`). Development calls the live API.
 3. `shots.mjs --axe` on every route at 390, 834, 1440, 1920 and 2560; zero overflow, errors and violations.

@@ -1,16 +1,18 @@
 import { Moon, Sun } from "lucide-react"
 import { useTheme } from "next-themes"
-import { useEffect, useState } from "react"
+import { useSyncExternalStore } from "react"
 
 // Light or dark, nothing else (D-046). Shows the sun while dark and the moon
 // while light, as the prototype does, and switches to the other one.
 export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  // False while rendering on the server and for the hydration pass, true afterwards, so the icon is chosen only
+  // once the real theme is known and never differs from the prerendered markup.
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  )
 
   const isDark = mounted && resolvedTheme === "dark"
   const label = isDark ? "Switch to light theme" : "Switch to dark theme"

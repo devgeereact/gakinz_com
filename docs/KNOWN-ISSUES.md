@@ -20,7 +20,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | ID | Issue | Severity | Status |
 |---|---|---|---|
 | K-001 | A live super-admin credential is in git history | Critical | **Password rotated 2026-10-12 (owner-reported). Sessions revoked and the account retired 2026-10-30:** the 32 session tokens of that account were deleted and the account soft-deleted (`users` id 1). The repository is now public, so the credential in history stays exposed to the web; it is rotated and its account is gone |
-| K-002 | Lint fails | Medium | Open. 5 errors, 0 warnings on 2026-10-21 after groups A to C moved onto `useLoad` (22 screens and the sign-in page); left: Contracts, Portal and the theme toggle; before that 33 errors, 0 warnings on 2026-10-19, all `set-state-in-effect`, down from 41 and 1 (2026-10-11) and 60 and 7; ratchet in CI. Not merged |
+| K-002 | Lint fails | Medium | **Fixed 2026-11-11** (V1.1 item 5): the last 5 `set-state-in-effect` errors (Contracts, Portal, the theme toggle) are gone; `npm run lint` reports 0 errors and 0 warnings, CI and `release.json` run it, and `scripts/lint-ratchet.mjs` is deleted. History: 60 errors and 7 warnings on 2026-09-04, 33 on 2026-10-19, 5 on 2026-10-21 |
 | K-003 | `config.php.example` named a retired mail host | Medium | Fixed in the template. Server value UNVERIFIED |
 | K-006 | Deployed server state is unknown | Medium | Mitigated 2026-10-21: everything to `3fc6a31` uploaded and checked (WORKBOOK section 1) |
 | K-010 | No backup procedure is known to exist | High | **Mostly closed 2026-11-10.** There was no daily GAkinz backup (only two manual dumps of 2026-10-30). `scripts/gakinz-backup.sh` now runs daily on the host (03:30; database and uploads, 14 days kept) and the host's own newest dump was restored once locally (`npm run drill:restore`: 42 of 42 tables, 0 orphans; `docs/OPERATIONS.md` 10.1). Targets agreed 2026-11-10 (D-062: 1 working day / 24 hours). Open: copy dumps off the host on a schedule; try a files restore once client files exist; the first scheduled 03:30 (EST) run failed on cron's PATH (php was the CGI build) and was fixed; the next scheduled run is not yet seen |
@@ -118,12 +118,11 @@ needs rewriting, which is a force push and was explicitly excluded from this mig
 ---
 
 ## K-002 · Lint fails
-**Severity:** medium · **Status:** open, recorded not fixed
+**Severity:** medium · **Status:** fixed 2026-11-11 (V1.1 item 5)
 
 `npm run lint` on 2026-09-04 reported **60 errors and 7 warnings across 42 files**. The
-current figure is in `docs/STATUS.md` section 0, and `npm run lint:ratchet` enforces the
-ceiling in `scripts/lint-ratchet.mjs` in CI. The table below is the 2026-09-04 breakdown, kept
-for history.
+figure on 2026-11-11 is 0 errors and 0 warnings and `npm run lint` is the gate in CI (the ratchet
+script was removed). The table below is the 2026-09-04 breakdown, kept for history.
 
 **2026-10-19, on `feat/journeys-2026-10-18` (not merged):** 41 errors and 1 warning down to
 **33 errors and 0 warnings**, and the ceiling lowered to match. The five

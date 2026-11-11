@@ -47,8 +47,7 @@ section 8).
 | `npm run release` | Dry run of a release over SSH; add `-- --go` to upload. A push to `main` does this from GitHub Actions |
 | `npm run check:live` | After a release: 16 read-only GET checks against the live site (`docs/DEPLOYMENT.md` section 5) |
 | `npm run typecheck` | `tsc -b --noEmit` |
-| `npm run lint` | ESLint. **Currently fails**; the count is in `docs/STATUS.md` section 0 and the backlog in `docs/KNOWN-ISSUES.md` K-002 |
-| `npm run lint:ratchet` | Fails if that count grows. CI runs it |
+| `npm run lint` | ESLint. Must report 0 errors and 0 warnings; CI and `release.json` run it (K-002 closed) |
 | `npm run docs:check` | Fails on a broken document link, or (with `-- --base <ref>`) a server or schema change without its documents. CI runs it |
 | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` | PHP syntax gate |
 
@@ -75,7 +74,7 @@ src/
   index.css      design tokens for both surfaces, and the utility layer
 server/          PHP endpoints and shared includes, schema.sql, .htaccess, config template
 tests/server/    server integration tests, run against a local *_test database
-scripts/         release, prerender, lint ratchet and documentation check
+scripts/         release, prerender and documentation check
 docs/            project documentation, flat, see below
 .claude/skills/  the gakinz-design project skill (design rules and checks)
 ```

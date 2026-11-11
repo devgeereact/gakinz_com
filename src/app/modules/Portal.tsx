@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react"
+import { useLoad } from "@/hooks/use-load"
 import { Loader2, CreditCard, ArrowLeft, Send, Plus, Eye, Link2Off, MessageSquarePlus } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -54,14 +55,26 @@ export default function Portal() {
   const user = useAuth((s) => s.user)
   const isClient = user?.role === "client"
 
-  const [clientList, setClientList] = useState<Client[]>([])
-  const [clientId, setClientId] = useState("")
-  const [data, setData] = useState<PortalData | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // The client picked in the preview selector. A `client` login never uses it: its own client comes from the
+  // session, and the server ignores whatever id is sent and derives it from the token.
+  const [pickedId, setPickedId] = useState("")
+  const clientId = isClient ? (user?.client_id != null ? String(user.client_id) : "") : pickedId
   const [payId, setPayId] = useState<number | null>(null)
-  // Bumped by "Try again" to re-run the loads below with the same inputs.
-  const [attempt, setAttempt] = useState(0)
+  // Staff only: the clients to preview. A client login never asks for the list.
+  const { data: clientList, error: listError, reload: reloadList } = useLoad<Client[]>(
+    () => (isClient ? Promise.resolve({ ok: true as const, data: [] }) : clientsApi.list()),
+    [],
+    isClient,
+  )
+  // The portal itself, loaded again whenever the client changes. A failed load shows no data, only the error.
+  const { data: loadedData, error: portalError, loading: portalLoading, reload: reloadPortal } = useLoad<PortalData | null>(
+    () => (clientId ? portal.get(Number(clientId)) : Promise.resolve({ ok: true as const, data: null })),
+    null,
+    clientId,
+  )
+  const error = portalError ?? listError
+  const data = portalError ? null : loadedData
+  const loading = clientId !== "" && portalLoading
   // The client's New message form, opened from the page header.
   const [composing, setComposing] = useState(false)
   // The client's message threads, loaded once here and shared by Requests (its
@@ -102,36 +115,6 @@ export default function Portal() {
     : null
 
   useEffect(() => {
-    if (isClient) {
-      // Load own portal; the server ignores the param and derives from the token.
-      if (user?.client_id != null) setClientId(String(user.client_id))
-      return
-    }
-    clientsApi.list().then((r) => {
-      if (r.ok) setClientList(r.data)
-      else setError(r.error)
-    })
-  }, [isClient, user?.client_id, attempt])
-
-  useEffect(() => {
-    if (!clientId) {
-      setData(null)
-      return
-    }
-    setLoading(true)
-    portal.get(Number(clientId)).then((r) => {
-      if (r.ok) {
-        setData(r.data)
-        setError(null)
-      } else {
-        setError(r.error)
-        setData(null)
-      }
-      setLoading(false)
-    })
-  }, [clientId, attempt])
-
-  useEffect(() => {
     if (!isClient) return
     let live = true
     clientMessages.list().then((res) => {
@@ -143,8 +126,8 @@ export default function Portal() {
   }, [isClient, applyThreads])
 
   const retry = () => {
-    setError(null)
-    setAttempt((n) => n + 1)
+    reloadList()
+    reloadPortal()
   }
 
   return (
@@ -171,7 +154,7 @@ export default function Portal() {
             <span id="portal-preview-label" className="whitespace-nowrap text-muted-foreground">
               Previewing
             </span>
-            <Select value={clientId} onValueChange={setClientId}>
+            <Select value={clientId} onValueChange={setPickedId}>
               <SelectTrigger
                 aria-labelledby="portal-preview-label"
                 className="h-auto min-h-[38px] min-w-0 flex-1 whitespace-normal border-0 bg-transparent text-left shadow-none focus:shadow-none [&>span]:line-clamp-none [&>span]:[overflow-wrap:anywhere]"

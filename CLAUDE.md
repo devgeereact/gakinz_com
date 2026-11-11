@@ -34,10 +34,9 @@ through `src/lib/api.ts`.
 | Install | `npm install` |
 | Develop | `npm run dev` (port 5102, `strictPort`) |
 | Test | `npm test` (unit), `npm run test:server` (needs local MySQL or MariaDB) |
-| Lint ratchet | `npm run lint:ratchet` |
+| Lint | `npm run lint` (0 errors, 0 warnings) |
 | Documentation check | `npm run docs:check` |
 | Type check, build and prerender | `npm run build` (`tsc -b`, `vite build`, the SSR build, then `scripts/prerender.mjs`; no network) |
-| Lint | `npm run lint` |
 | PHP syntax gate | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` |
 
 ## Sources of truth
@@ -116,8 +115,8 @@ counts are in `docs/STATUS.md` section 0. This file does not repeat them, so it 
 
 - `main` is live. The last code release was `983606c` (2026-11-08) through `release.mjs`; each
   release is recorded in `docs/WORKBOOK.md` section 1 and its checks in `docs/AUDIT.md`.
-- `npm run lint` still fails (K-002). `npm run lint:ratchet` holds the ceiling in
-  `scripts/lint-ratchet.mjs`, and the count must not grow.
+- `npm run lint` passes with 0 errors and 0 warnings (K-002 closed 2026-11-11); CI and the release checks run it,
+  so a new problem blocks the build.
 - Anything checked only against mocked API responses is NOT TESTED on real data (K-044).
 - Gated features ship switched off (D-050). Do not switch one on without the named gates.
 - A live super-admin credential was published in an earlier revision of this file and is in

@@ -84,15 +84,16 @@ pages and screens) or closes a way the owner could miss something that matters (
   CMS routes at 375 and 1280 px from a test-only build with Clerk replaced by a stub and every API answer labelled sample data
   (long names, many rows, empty and error states); no sideways page scroll, no page error; every screenshot looked at;
   axe over the same screens. Not the live site, not real data (K-044).
-- [ ] **5. `npm run lint` passes and CI runs it instead of the ratchet** (K-002). The five errors are in Contracts, Portal and the
+- [x] **5. `npm run lint` passes and CI runs it instead of the ratchet** (K-002). The five errors are in Contracts, Portal and the
   theme toggle; Portal is security-critical, so `portal-isolation.test.ts`, `journey.test.ts` and `support-client.test.ts` must stay
   green. Check: `npm run lint` exits 0; `.github/workflows/ci.yml` calls it.
+  **Evidence 2026-11-11:** `npm run lint` exits 0 (0 errors, 0 warnings). Portal (staff preview and client login) and Contracts moved onto `useLoad`, the theme toggle onto `useSyncExternalStore`; the template of a new contract is now applied by the handlers that change it instead of an effect. `ci.yml` and `release.json` run `npm run lint`; `scripts/lint-ratchet.mjs` and its npm script are deleted; the living docs are updated. `portal-isolation`, `journey` and `support-client` are server-side and unchanged; the Portal screen itself is NOT TESTED in a browser yet (item 4 covers it).
 
 **Discovery fixes (not items):** two parking-lot lines were checked against the code and were already untrue: Analytics and the
 Dashboard show "unavailable" for a failed source (K-031), and the browser holds no session token in `localStorage` (K-033).
 They are closed with that evidence in the same commit that proves it.
 
-**Progress V1.1 (2026-11-11): 3 of 5 ticked.**
+**Progress V1.1 (2026-11-11): 4 of 5 ticked.**
 
 ## Versions and the nine GSD phases (2026-11-11)
 
