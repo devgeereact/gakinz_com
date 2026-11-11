@@ -3,6 +3,7 @@ import { site } from "@/marketing/data/site"
 import { PageHead } from "@/marketing/components/site-ui"
 import { telHref } from "@/marketing/components/site-helpers"
 import { useSiteCopy } from "@/marketing/data/content"
+import { STORED_ITEMS } from "@/marketing/data/storage-items"
 
 /**
  * /privacy, /terms and /cookies: three routes from one component.
@@ -36,7 +37,8 @@ import { useSiteCopy } from "@/marketing/data/content"
  * its wording is the owner's to settle, not a developer's.
  */
 
-type Block = { h: string; p: string[] }
+/** `stored` lists STORED_ITEMS after the paragraphs (the cookie policy only). */
+type Block = { h: string; p: string[]; stored?: boolean }
 
 const pad = (n: number) => String(n).padStart(2, "0")
 
@@ -59,6 +61,22 @@ function Para({ text }: { text: string }) {
         ),
       )}
     </p>
+  )
+}
+
+/** The cookie policy's list, drawn from STORED_ITEMS so the page and the code cannot disagree. */
+function StoredList() {
+  return (
+    <ul className="stored">
+      {STORED_ITEMS.map((i) => (
+        <li key={i.name}>
+          <strong>
+            <code>{i.name}</code>
+          </strong>{" "}
+          ({i.kind}, set by {i.setBy}). {i.purpose} Lasts: {i.lasts}.
+        </li>
+      ))}
+    </ul>
   )
 }
 
@@ -89,6 +107,7 @@ function LegalPage({
                   {b.p.map((para, j) => (
                     <Para key={j} text={para} />
                   ))}
+                  {b.stored && <StoredList />}
                 </div>
               </section>
             ))}
@@ -200,7 +219,9 @@ export function Privacy() {
           },
           {
             h: "Cookies",
-            p: ["The public pages set no cookies. The cookie policy lists what the client login stores in your browser."],
+            p: [
+              "The public pages set no cookies and store nothing in your browser. Signing in to the client area stores a few items, including cookies set by Clerk, the sign-in service; the cookie policy lists each one.",
+            ],
           },
         ]}
       />
@@ -269,9 +290,15 @@ export function Cookies() {
           {
             h: "Signing in",
             p: [
-              "If you sign in to the client area, your browser stores what the sign-in needs to work: gk-auth (local storage: your sign-in token and basic account details, kept until you sign out; the token stops working after 30 days) and gk-locked (session storage: whether the screen is locked, cleared when you close the tab).",
-              "Inside the signed-in area, three settings remember your choices: sidebar_state (a cookie that keeps the side menu open or closed, 7 days), gkos-groups (local storage: which menu groups are open) and theme (local storage: light or dark, only if you change it).",
-              "Signing in with Google sets gk_oauth_state, a cookie that lasts 10 minutes and protects the sign-in from forgery. It is deleted when the sign-in finishes.",
+              "The client area at /app and the sign-in page use Clerk, a sign-in service, which runs at clerk.gakinz.com, a subdomain of this site. Clerk's code loads only on the sign-in page and under /app, never on the public pages. You sign in with an email code or with Google.",
+              "Once you sign in, your browser holds the items below. Each says whether this site or Clerk sets it; Clerk's three are the cookies its documentation lists for a production site.",
+            ],
+            stored: true,
+          },
+          {
+            h: "Google",
+            p: [
+              "Signing in with Google is handled by Clerk and Google: choosing it hands the sign-in over to them, and they set their own cookies under their own policies.",
             ],
           },
           {

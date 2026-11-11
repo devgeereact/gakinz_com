@@ -87,7 +87,10 @@ request left for another domain. The CMS rows come from source, not from a signe
 | `gk-auth` | localStorage | first party | basic account details (name, email, role). Since 2026-11-09 it holds no token: the Clerk session is the credential, and a stored legacy token is dropped on first load | sign-in | until sign-out | strictly necessary | no |
 | `gk-locked` | sessionStorage | first party | inactivity lock | Retired 2026-11-09 (lock screen deleted); no longer set | n/a | n/a | n/a |
 | `gk_oauth_state` | cookie, HttpOnly, Secure, Lax | first party | forgery protection for Google sign-in | Retired 2026-11-09 (`oauth.php` is a 404 stub); no longer set | n/a | n/a | n/a |
-| Clerk session storage | cookies and localStorage, set by Clerk's script | Clerk | keeps the sign-in session | sign-in page and `/app` only | set by Clerk | strictly necessary | **owner to confirm the exact names and lifetimes against Clerk's documentation** |
+| `__client` | cookie, HttpOnly, set by Clerk's sign-in service at `clerk.gakinz.com` | Clerk | keeps the sign-in session | sign-in page and `/app` only | up to 7 days (the maximum session lifetime in the production Clerk settings, read 2026-11-11) | strictly necessary | **owner to confirm against Clerk's documentation** |
+| `__client_uat` | cookie, set by Clerk | Clerk | notes when the session last changed | sign-in page and `/app` only | set by Clerk (lifetime not confirmed) | strictly necessary | **owner to confirm** |
+| `__session` | cookie, set by Clerk | Clerk | short-lived session token sent to the API | sign-in page and `/app` only | about a minute (production session token lifetime, 60 s) | strictly necessary | **owner to confirm** |
+| Google sign-in | cookies under Google's and Clerk's own policies | Google, Clerk | optional sign-in method (enabled in the production Clerk settings, read 2026-11-11) | only if the person chooses Google | set by them | n/a | the cookie policy says it is handled by Clerk and Google |
 | `sidebar_state` | cookie, set by script | first party | side menu open or closed | CMS menu toggled | 7 days | preference (appearance) | REQUIRES LEGAL REVIEW |
 | `gkos-groups` | localStorage | first party | which menu groups are open | CMS menu used | until cleared | preference (appearance) | REQUIRES LEGAL REVIEW |
 | `theme` | localStorage | first party (`next-themes`) | light or dark | theme changed | until cleared | preference (appearance) | REQUIRES LEGAL REVIEW |
@@ -238,7 +241,7 @@ Work references (2026-10-19, SQL 19, not uploaded) add no new personal data: an 
 | Document | State | Evidence used | Missing owner information | Publication |
 |---|---|---|---|---|
 | Privacy policy (`/privacy`) | exists; **facts corrected and section 9 structure applied 2026-10-17**, owner facts as labelled placeholders | `contact.php`, this file | entity, ICO number, bases, processors, transfers, periods | not publishable until placeholders are filled and reviewed |
-| Cookie policy (`/cookies`) | exists; **rewritten to name every item, 2026-10-17**; now linked from the footer | section 4 | none for the facts; classification needs review | ready for review |
+| Cookie policy (`/cookies`) | exists; **rewritten to name every item, 2026-10-17; corrected 2026-11-11 (V1.2 item 1) to drop the retired items and name Clerk's cookies, drawn from `STORED_ITEMS`**; linked from the footer | section 4 | none for the facts; classification needs review | ready for review |
 | Terms of use (`/terms`) | exists; covers browsing only; governing law is a placeholder | `Legal.tsx` | governing law; the warranty sentence (K-021 item 5) | needs review |
 | Client terms (projects, payment, cancellation) | **missing on the site**; project terms are said to live in each proposal | `docs/STATUS.md` section 5 | payment schedule, cancellation, revision terms | blocked on owner |
 | Review dates | shown as a labelled gap on all three pages | K-021 | a real review date | blocked on owner |
@@ -283,7 +286,7 @@ DRAFT, 2026-10-17. Text in [square brackets] is a required owner input. Clauses 
 > that address to confirm it is you. You can also complain to the Information Commissioner's
 > Office (ico.org.uk). (REVIEW for wording and timescale)
 >
-> **Cookies.** See the cookie policy.
+> **Cookies.** The public pages set no cookies. Signing in to the client area stores a few items, including cookies set by Clerk, the sign-in service. See the cookie policy.
 >
 > **Changes.** [Effective date.] I will update this page when what I collect changes.
 

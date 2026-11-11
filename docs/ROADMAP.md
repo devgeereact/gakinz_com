@@ -121,11 +121,15 @@ They are closed with that evidence in the same commit that proves it.
 Goal: the public site says only true things, and does not invite abuse. Same rules as V1 and V1.1: at most ten items, each a
 user outcome with a check, ticked on **local** evidence; what needs the host or the owner is BLOCKED and says so.
 
-- [ ] **1. The cookie policy tells the truth.** Today it describes a Google sign-in cookie that was retired in Phase 5 and names
+- [x] **1. The cookie policy tells the truth.** Today it describes a Google sign-in cookie that was retired in Phase 5 and names
   neither Clerk nor the `gk-auth` browser storage. Check: a test compares the policy with the storage keys the code really uses
   (`sidebar_state`, `gkos-groups`, `theme`, `gk-auth`) and with Clerk's documented cookies; it fails if the page lists the retired
   `gk_oauth_state` or `gk-locked`, or if a key used in `src/` is missing. Google sign-in is enabled in Clerk (read 2026-11-11), so
   the page says it is handled by Clerk and Google rather than denying it. Facts only; the adviser still reviews the wording (V1 item 4).
+  **Evidence 2026-11-11 (local, on `goal/v1.2`, not released):** `src/marketing/data/storage-items.ts` is the one list (`STORED_ITEMS`: the four
+  items this site stores plus Clerk's `__client`, `__client_uat`, `__session`) and `/cookies` renders it; `storage-items.test.ts` (4 tests) fails
+  on the retired items and on any file in `src/` that uses cookies or storage but is not in its list of four; `cookies.test.tsx` (4 tests) checks the
+  rendered page; `public-layout.test.ts` 66 of 66 with axe 0 violations (`/cookies`, `/privacy` included).
 - [x] **2. The sitemap lists exactly the articles that exist (K-147).** The built-in articles are made to match the three posts in
   the live CMS (`fixed-price-how-we-scope`, `what-makes-a-website-fast`, `why-one-team-design-and-build`); the two built-in
   articles the CMS does not hold are dropped (they stay in git). Check: a unit test ties the sitemap's article URLs to that list;

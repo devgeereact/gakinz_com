@@ -4,6 +4,16 @@ What changed in the product, newest first. The checks behind each change are in 
 [VERIFICATION.md](VERIFICATION.md); why is in [DECISIONS.md](DECISIONS.md). Releases before 2026-11-10 are listed in
 [WORKBOOK.md](WORKBOOK.md) section 1.
 
+## 2026-11-11 (V1.2) · The cookie policy lists what is really stored (item 1; on `goal/v1.2`, not released)
+
+**Fixed**
+- `/cookies` no longer describes the retired Google sign-in cookie (`gk_oauth_state`) or the retired lock-screen item (`gk-locked`), and no longer says `gk-auth` holds a sign-in token (it holds only name, email and role).
+- It now names Clerk, the sign-in service at `clerk.gakinz.com`, and lists its cookies (`__client`, `__client_uat`, `__session`) beside this site's own `sidebar_state`, `gkos-groups`, `theme` and `gk-auth`, each with who sets it, what it is for and how long it lasts. Google sign-in is described as handled by Clerk and Google under their own cookies, not denied.
+- The privacy policy's Cookies paragraph points to the cookie policy and says what is stored in one sentence.
+
+**Added**
+- `STORED_ITEMS` (`src/marketing/data/storage-items.ts`) is the single list the cookie page renders; a test scans `src/` and fails when code starts using cookies or browser storage that the list does not know about.
+
 ## 2026-11-11 (V1.2) · The built-in articles match the CMS (K-147; on `goal/v1.2`, not released)
 
 **Fixed**
