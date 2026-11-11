@@ -7,7 +7,7 @@ import unusedImports from 'eslint-plugin-unused-imports' // ✅ ADD THIS
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist', '.claude', '.playwright-mcp']),
+  globalIgnores(['dist', 'dist-cms-test', '.claude', '.playwright-mcp']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [

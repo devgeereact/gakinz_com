@@ -9,6 +9,7 @@ import path from "node:path"
 import type { Browser } from "playwright-core"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 import { q, resetDb, sql } from "../server/helpers"
+import { pageProblems } from "./layout"
 import { launch, startStack, type Stack } from "./stack"
 
 const DIST = path.resolve(__dirname, "../../dist")
@@ -39,41 +40,6 @@ afterAll(async () => {
   await browser?.close()
   await stack?.close()
 })
-
-/** Runs inside the page. Returns one line per problem. */
-function pageProblems(): string[] {
-  const problems: string[] = []
-  const vw = window.innerWidth
-  const root = document.documentElement
-  if (root.scrollWidth > vw) problems.push(`the page scrolls sideways (${root.scrollWidth}px in a ${vw}px window)`)
-  const visible = (el: Element) => {
-    const r = el.getBoundingClientRect()
-    const cs = getComputedStyle(el)
-    return r.width > 0 && r.height > 0 && cs.visibility !== "hidden" && cs.display !== "none"
-  }
-  for (const el of document.querySelectorAll("body *")) {
-    // Not flaws: form controls scroll their own text; .sr and .sr-only are visually hidden on purpose; the hero's
-    // laptop and phone frames crop their screenshots by design (object-fit: cover inside overflow: hidden).
-    if (el.matches("input, textarea, select, .sr, .sr-only, svg, svg *, .laptop, .laptop *, .phone, .phone *")) continue
-    const cs = getComputedStyle(el)
-    if ((cs.overflowX === "hidden" || cs.overflowX === "clip") && el.scrollWidth > el.clientWidth + 1 && visible(el)) {
-      problems.push(`content clipped in <${el.tagName.toLowerCase()} class="${String(el.className).slice(0, 60)}">`)
-    }
-  }
-  // Something sticking out past the right edge is what makes a phone page scroll sideways; name the first few.
-  if (root.scrollWidth > vw) {
-    let named = 0
-    for (const el of document.querySelectorAll("body *")) {
-      if (named >= 3) break
-      const r = el.getBoundingClientRect()
-      if (r.right > vw + 1 && r.width > 0 && visible(el)) {
-        problems.push(`  sticks out: <${el.tagName.toLowerCase()} class="${String(el.className).slice(0, 60)}"> right edge ${Math.round(r.right)}px`)
-        named++
-      }
-    }
-  }
-  return problems
-}
 
 const pages = sitemapPaths()
 

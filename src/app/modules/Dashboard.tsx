@@ -648,7 +648,6 @@ export default function Dashboard() {
                     <button
                       type="button"
                       onClick={() => navigate("/app/leads")}
-                      aria-label={`Lead ${l.name}${l.company ? `, ${l.company}` : ""}, status ${l.status}. Open leads.`}
                       className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3 text-left hover:text-acc"
                     >
                       <span className="flex min-w-0 items-center gap-2.5">
@@ -662,6 +661,7 @@ export default function Dashboard() {
                         </span>
                       </span>
                       <StatusBadge status={l.status} />
+                      <span className="sr-only">. Open leads.</span>
                     </button>
                   </li>
                 ))}
@@ -749,7 +749,6 @@ function FollowUpsCard({ leads, down }: { leads: Lead[]; down: boolean }) {
                   <button
                     type="button"
                     onClick={() => navigate("/app/leads?due=1")}
-                    aria-label={`Follow up ${l.name}${l.company ? `, ${l.company}` : ""}, ${overdue ? `overdue since ${when}` : "due today"}. Open enquiries.`}
                     className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3 text-left hover:text-acc"
                   >
                     <span className="min-w-0">
@@ -759,6 +758,7 @@ function FollowUpsCard({ leads, down }: { leads: Lead[]; down: boolean }) {
                       </span>
                     </span>
                     <StatusBadge status={overdue ? "overdue" : "due today"}>{overdue ? `Overdue, ${when}` : "Due today"}</StatusBadge>
+                    <span className="sr-only">. Open enquiries.</span>
                   </button>
                 </li>
               )

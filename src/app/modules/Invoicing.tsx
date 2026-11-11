@@ -569,8 +569,8 @@ export default function Invoicing() {
                         {gbp(inv.total)}
                         {inv.vat_rate > 0 && <span className="ml-1 font-sans text-xs text-muted-foreground">inc. VAT</span>}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
+                      <TableCell className="min-w-[12rem] max-w-[22rem] text-right">
+                        <div className="flex flex-wrap justify-end gap-1">
                           <Button variant="ghost" size="sm" disabled={busyId === inv.id} onClick={() => downloadPdf(inv)} title="Download PDF" aria-label={`Download PDF of ${inv.number || `invoice ${inv.id}`}`}>
                             <FileDown />
                           </Button>

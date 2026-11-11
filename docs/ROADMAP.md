@@ -80,10 +80,11 @@ pages and screens) or closes a way the owner could miss something that matters (
   from the last 7 days show as a Today notice that names the enquiry or ticket (D-061 left them invisible). Check: new cases
   in `tests/server/today.test.ts` and `tests/server/enquiry-notify.test.ts`.
   **Evidence 2026-11-11:** `tests/server/alert-failures.test.ts` (5 tests): empty when nothing failed; failed enquiry, failed deletion and held-back alerts newest first; older than 7 days left out and at most 5 listed while all are counted; owner roles only (an editor gets no key); end to end, a mail host that refuses leaves the enquiry saved and Today names its reference. `todayModel.test.ts` (3 new cases) covers the wording. Rendered in `Dashboard.tsx` next to the scheduled-jobs notice; not seen in a browser.
-- [ ] **4. Every CMS screen holds realistic data on a phone and a desktop.** Check: `tests/browser/cms-layout.test.ts` opens all
+- [x] **4. Every CMS screen holds realistic data on a phone and a desktop.** Check: `tests/browser/cms-layout.test.ts` opens all
   CMS routes at 375 and 1280 px from a test-only build with Clerk replaced by a stub and every API answer labelled sample data
   (long names, many rows, empty and error states); no sideways page scroll, no page error; every screenshot looked at;
   axe over the same screens. Not the live site, not real data (K-044).
+  **Evidence 2026-11-11:** `tests/browser/cms-layout.test.ts`, 68 tests: 27 owner screens, the 3 client screens and 4 editor screens, each at 375 and 1280 px, against the real PHP and a throwaway MariaDB seeded with 40 clients (one with a 100-character name), 40 enquiries in every stage, 14 projects, 70 tasks, 30 invoices in every status, proposals, tickets, posts, certificates, calls and time entries (`tests/browser/seed.ts`); the Clerk package is replaced by a stub in a separate test-only build (`vite.cms-test.config.ts`, never shipped). No sideways page scroll, no console error, no failed request; axe (WCAG 2.0 to 2.2 A and AA) 0 violations on all 68. Found and fixed: (1) every client and editor login asked `invoices.php` and got a 403 on every screen (the notification bell); (2) axe label-in-name on the Today lead lists and the Leads cards (an `aria-label` that dropped visible text); (3) Invoicing and Contracts row actions ran 209 px and 42 px past the box at 1280 px, now they wrap. Looked at: 8 screens side by side at both sizes (Enquiries, Clients, Invoicing, Contracts and others). **Not fixed, parked as K-148:** on a phone, 8 tables (Blog, Certificates, Clients, Contracts, Invoicing, Platform, Proposals, Time) scroll sideways inside their box, so the last columns need a swipe. Not real data, not Safari or a real phone, not the Today, Support and Portal screens beyond the automated checks.
 - [x] **5. `npm run lint` passes and CI runs it instead of the ratchet** (K-002). The five errors are in Contracts, Portal and the
   theme toggle; Portal is security-critical, so `portal-isolation.test.ts`, `journey.test.ts` and `support-client.test.ts` must stay
   green. Check: `npm run lint` exits 0; `.github/workflows/ci.yml` calls it.
@@ -93,7 +94,7 @@ pages and screens) or closes a way the owner could miss something that matters (
 Dashboard show "unavailable" for a failed source (K-031), and the browser holds no session token in `localStorage` (K-033).
 They are closed with that evidence in the same commit that proves it.
 
-**Progress V1.1 (2026-11-11): 4 of 5 ticked.**
+**Progress V1.1 (2026-11-11): 5 of 5 ticked** (final ladder and report pending).
 
 ## Versions and the nine GSD phases (2026-11-11)
 
@@ -146,6 +147,7 @@ opens a new scope. Nothing here was deleted from the code or the issue list.
 - Acknowledgement email to the visitor (K-097).
 - An index on `audit_log (action, created_at)`: the heartbeat, the contact throttle and the reminder memory all filter on `action`; fine at today's size, schema change when it grows.
 - Stripe: switch on pay links (owner steps in `docs/DEPLOYMENT.md`, then test mode, then live).
+- Phone tables: eight CMS tables scroll sideways inside their box on a phone (K-148); stacked rows or a column picker would fix it.
 - Real assistive-technology pass (screen reader, keyboard-only) on the public site and the CMS. V1.1 item 1 and 4 run axe, which is not the same thing.
 - A due-date column for data deletion requests (V1.1 item 2 computes the date from the ticket instead).
 - Owner alerts: a retry or queue if a send fails (V1.1 item 3 only makes the failure visible).

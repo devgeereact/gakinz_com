@@ -10,7 +10,7 @@ import http from "node:http"
 import path from "node:path"
 import { BASE, PHP_PORT } from "../server/env"
 
-const DIST = path.resolve(__dirname, "../../dist")
+const DEFAULT_DIST = path.resolve(__dirname, "../../dist")
 const TYPES: Record<string, string> = {
   ".js": "text/javascript", ".css": "text/css", ".html": "text/html", ".svg": "image/svg+xml", ".webp": "image/webp",
   ".png": "image/png", ".woff2": "font/woff2", ".json": "application/json", ".ico": "image/x-icon", ".xml": "application/xml", ".txt": "text/plain",
@@ -18,12 +18,14 @@ const TYPES: Record<string, string> = {
 
 export type Stack = { origin: string; close: () => Promise<void> }
 
-export function assertBuilt(): void {
-  if (!fs.existsSync(path.join(DIST, "index.html"))) throw new Error("dist/ is missing. Run `npm run build` before `npm run test:browser`.")
+export function assertBuilt(dist: string = DEFAULT_DIST): void {
+  if (!fs.existsSync(path.join(dist, "index.html"))) throw new Error(`${path.basename(dist)}/ is missing. Run \`npm run build\` before \`npm run test:browser\`.`)
 }
 
-export function startStack(): Promise<Stack> {
-  assertBuilt()
+/** Serve `dist` (the shipped build by default) and the PHP under test on one origin. */
+export function startStack(dist: string = DEFAULT_DIST): Promise<Stack> {
+  assertBuilt(dist)
+  const DIST = dist
   const server = http.createServer((req, res) => {
     const url = new URL(req.url ?? "/", "http://x")
     if (url.pathname.endsWith(".php")) {

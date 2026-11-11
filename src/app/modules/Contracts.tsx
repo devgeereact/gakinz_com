@@ -379,8 +379,8 @@ export default function Contracts() {
                         <span className="text-muted-foreground">Not yet</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
+                    <TableCell className="min-w-[10rem] max-w-[18rem] text-right">
+                      <div className="flex flex-wrap justify-end gap-1">
                         <Button variant="ghost" size="sm" disabled={busyId === c.id} onClick={() => downloadPdf(c)} title="Download PDF" aria-label={`Download PDF of ${c.title}`}>
                           <FileDown />
                         </Button>
