@@ -45,7 +45,7 @@ section 8).
 | `pnpm run test:watch` | Vitest in watch mode |
 | `pnpm run verify` | The release checks and build plus the upload guard, on uncommitted work. Never contacts the host |
 | `pnpm run release` | Dry run of a release over SSH; add `-- --go` to upload. A push to `main` does this from GitHub Actions |
-| `pnpm run check:live` | After a release: 16 read-only GET checks against the live site (`docs/DEPLOYMENT.md` section 5) |
+| `pnpm run check:live` | After a release: 16 read-only GET checks, plus one per sitemap article, against the live site (`docs/DEPLOYMENT.md` section 5) |
 | `pnpm run typecheck` | `tsc -b --noEmit` |
 | `pnpm run lint` | ESLint. Must report 0 errors and 0 warnings; CI and `release.json` run it (K-002 closed) |
 | `pnpm run docs:check` | Fails on a broken document link, or (with `-- --base <ref>`) a server or schema change without its documents. CI runs it |

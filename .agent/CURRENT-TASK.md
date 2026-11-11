@@ -4,7 +4,9 @@
 
 **V1.2 (public-site trust, D-065) is SPEC AND PLAN WRITTEN, not started.** Spec: `docs/superpowers/specs/2026-11-11-v1-2-public-trust-design.md`. Plan: `docs/superpowers/plans/2026-11-11-v1-2-public-trust.md` (seven tasks, test first). Frozen list: `docs/ROADMAP.md` "V1.2 finish line". Working in this folder on branch `goal/v1.2` (D-066: nothing is built outside the project folder). V0, V1 (8 of 10) and V1.1 are live as `ed5a724`; the record is in `docs/ROADMAP.md` and `.agent/HANDOFF.md`.
 
-Where it stands: a fresh agent checked the spec cold; its findings changed the design (item 4 dropped as already true, the 404 served by `server/notfound.php`, `services` exempt, Google kept in the cookie page; see the spec's "Builder check"). The owner's go to build is the next gate. No V1.2 product code exists yet.
+Build progress (V1.2): task 1 (built-in articles match the CMS, item 2, K-147) is implemented on `goal/v1.2` and awaits review; tasks 2 to 6 are not started.
+
+Where it stands (before the build began): a fresh agent checked the spec cold; its findings changed the design (item 4 dropped as already true, the 404 served by `server/notfound.php`, `services` exempt, Google kept in the cookie page; see the spec's "Builder check"). The owner's go to build is the next gate. No V1.2 product code exists yet.
 
 ## Next actions
 

@@ -193,7 +193,8 @@ By hand, after that branch merges, backup first:
   `/assets/index-*.js` shows `cache-control: public, max-age=31536000, immutable` (Cloudflare's "Browser Cache
   TTL" must respect existing headers); sign in once and look at the browser console for CSP reports.
   `pnpm run check:live` runs every status and header check in this list (anonymous GETs only, nothing is
-  changed; `scripts/live-check.mjs`). Only the signed-in console check stays manual. Rollback:
+  changed; `scripts/live-check.mjs`), then asks `blog.php?slug=<slug>` for every article the live sitemap lists and fails one
+  the CMS does not hold (K-147). Only the signed-in console check stays manual. Rollback:
   restore the backup.
 - **Private config: done 2026-11-08** (owner-approved; backup `~/backups/gakinz_com/config.php.before-phase1-config.20261108T205013Z`,
   mode 600; edited as a copy, `php -l` checked, swapped in, health-checked).

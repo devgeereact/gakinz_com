@@ -24,13 +24,13 @@ let stack: Stack
 let browser: Browser
 beforeAll(async () => {
   // The three built-in articles are in the sitemap, but the page shows what the CMS says: a slug the CMS does not
-  // hold renders the 404 view after load (src/marketing/data/blog.ts). The live CMS lacks two of them (K-147), so
-  // the throwaway database publishes all three, as the live one is meant to, and the test then holds the pages to it.
+  // hold renders the 404 view after load (src/marketing/data/blog.ts). The built-in articles mirror the three live posts
+  // (K-147), so the throwaway database publishes the same three slugs and the test holds the pages to them.
   resetDb()
   for (const [slug, title] of [
-    ["what-makes-a-site-fast", "What makes a site fast"],
-    ["accessibility-is-not-optional", "Accessibility is not optional"],
-    ["why-one-team-design-and-build", "Why one team should design and build"],
+    ["fixed-price-how-we-scope", "A fixed price before we start"],
+    ["what-makes-a-website-fast", "What actually makes a website fast"],
+    ["why-one-team-design-and-build", "Why one team for design and build beats a handoff"],
   ])
     sql(`INSERT INTO posts (slug, title, excerpt, body, category, status, published_at) VALUES (${q(slug)}, ${q(title)}, 'Test post.', 'First paragraph.\n\nSecond paragraph.', 'Practice', 'published', NOW())`)
   stack = await startStack()

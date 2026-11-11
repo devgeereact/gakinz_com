@@ -2,6 +2,12 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-11 (V1.2 task 1) · Built-in articles match the CMS (K-147)
+
+**Scope:** `src/marketing/data/site.ts` `insights`, `scripts/live-check.mjs`, the seed in `tests/browser/public-layout.test.ts`. Method: test first (5 failing tests seen before any change), then the change.
+**Checks:** read-only `curl` of `https://gakinz.com/blog.php` and `?slug=` for the three live posts (the text was copied unchanged); `pnpm exec vitest run` 684 of 684; `pnpm run build` writes 32 pages and 32 sitemap URLs; `tests/browser/public-layout.test.ts` 66 of 66 with axe on (0 violations).
+**Not checked:** the live sitemap (it changes at the next release; `check:live` then proves it), a visual look at the new article pages.
+
 ## 2026-11-11 (release) · V1.1 with Tailwind v4 and pnpm released (`ed5a724`)
 
 **Scope:** the release of the merged branch (V1.1, D-063, and Tailwind v4 with pnpm, D-064) and the check that it is what is live. Evidence: `docs/VERIFICATION.md` "Release and live checks, 2026-11-11".

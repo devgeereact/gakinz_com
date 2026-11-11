@@ -126,10 +126,14 @@ user outcome with a check, ticked on **local** evidence; what needs the host or 
   (`sidebar_state`, `gkos-groups`, `theme`, `gk-auth`) and with Clerk's documented cookies; it fails if the page lists the retired
   `gk_oauth_state` or `gk-locked`, or if a key used in `src/` is missing. Google sign-in is enabled in Clerk (read 2026-11-11), so
   the page says it is handled by Clerk and Google rather than denying it. Facts only; the adviser still reviews the wording (V1 item 4).
-- [ ] **2. The sitemap lists exactly the articles that exist (K-147).** The built-in articles are made to match the three posts in
+- [x] **2. The sitemap lists exactly the articles that exist (K-147).** The built-in articles are made to match the three posts in
   the live CMS (`fixed-price-how-we-scope`, `what-makes-a-website-fast`, `why-one-team-design-and-build`); the two built-in
   articles the CMS does not hold are dropped (they stay in git). Check: a unit test ties the sitemap's article URLs to that list;
   `check:live` gains a read-only check that every article in the live sitemap answers 200 from `blog.php?slug=`.
+  **Evidence 2026-11-11 (local, on `goal/v1.2`, not released):** `src/marketing/data/insights.test.ts` (3 tests) ties `insights` and the
+  prerendered `/resources/` pages to the three CMS slugs; `scripts/live-check.test.mjs` (3 new tests) covers `articleSlugsFromSitemap` and the
+  per-article check; the build still writes 32 pages and 32 sitemap URLs; `public-layout.test.ts` 66 of 66 with axe 0 violations. The live
+  sitemap only changes at the next release, so the first `check:live` after it is the live proof.
 - [ ] **3. The contact form turns bots away without bothering people.** A hidden honeypot field and a minimum fill time. A
   honeypot hit saves nothing and sends no alert; a too-fast post gets a friendly retry; a real enquiry is unaffected. Check:
   server tests (honeypot, too fast, normal, the throttle still works) and `tests/browser/contact.test.ts` at 375 and 1280 px.

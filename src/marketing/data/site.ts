@@ -452,13 +452,11 @@ export const faqs: { q: string; a: string }[] = [
  *
  * The live source is the `posts` table through server/blog.php; see
  * src/marketing/data/blog.ts. This array is what renders when the endpoint is
- * unreachable, so it must stay true on its own.
- *
- * `readMins` was previously asserted per post with no basis. It is gone. The
- * claim "I build to WCAG 2.1 AA as a matter of course" was also removed from
- * the accessibility piece: the project's own accessibility position is
- * measured and recorded in docs/AUDIT.md, and the article now says
- * what is actually true.
+ * unreachable, so it must stay true on its own. It mirrors the posts the live
+ * CMS held on 2026-11-11 (GET /blog.php), word for word, so the sitemap lists
+ * exactly the article pages that exist (K-147). When the CMS posts change,
+ * change this array with them; `pnpm run check:live` fails when the sitemap
+ * lists an article the CMS does not hold.
  */
 export type Insight = {
   slug: string
@@ -470,37 +468,42 @@ export type Insight = {
 
 export const insights: Insight[] = [
   {
-    slug: "why-one-team-design-and-build",
-    title: "Why one person designing and building beats a handover",
+    slug: "fixed-price-how-we-scope",
+    title: "A fixed price before we start: how we scope a project",
     excerpt:
-      "Most web projects lose time and quality in the gap between the designer and the developer. Here is what closing it actually changes.",
-    date: "2026-05-12",
+      "No open-ended invoices. After a short discovery call we send one fixed number — here is how we get there.",
+    date: "2026-06-20",
     body: [
-      "The usual web project splits in two. A designer draws the screens, signs them off, and hands a file to a developer who was not in any of the client meetings. What gets built is a translation, and translations lose things.",
-      "When the same person designs and builds, there is no handover document to misread. The decisions made while drawing carry straight into the code, and the parts that are expensive to build get caught while they are still cheap to change.",
-      "It also means one place for the blame to land. You are not refereeing between two suppliers when something looks wrong. Whoever drew it built it, and owns the result.",
+      "A lot of web work is quoted by the hour, which means the final bill is a surprise and the incentive is to take longer. We think that is the wrong way round.",
+      "We do it differently. After a short discovery call we send one fixed price for the project, so you know the number before any work begins. No open-ended invoices, no meter running in the background.",
+      "Discovery is where the thinking happens. We learn the business, the audience, and what the site actually has to achieve, then scope the work to match. A clear brief is what makes a fixed price possible — and it is yours to keep either way.",
+      "A fixed price changes the relationship. We are paid to solve the problem well, not to stretch it out, and you can plan with a number you can trust. That is the whole point of working with one studio you can hold to a result.",
     ],
   },
   {
-    slug: "what-makes-a-site-fast",
+    slug: "what-makes-a-website-fast",
     title: "What actually makes a website fast",
-    excerpt: "Speed is not a setting. It is several dozen small decisions, most of them made before anything is built.",
-    date: "2026-04-03",
+    excerpt:
+      "Speed is not one setting. It is a series of small, deliberate choices made throughout a build.",
+    date: "2026-06-20",
     body: [
-      "Clients often ask for a fast site as though speed were a switch somewhere. It is not. A fast site is the sum of decisions: how images are sized, how much code ships, how fonts load, how the server answers.",
-      "I treat performance as a budget set at the start and checked as I go. Every feature costs something, and the cost gets weighed against what the visitor gets for it.",
-      "The payoff is not theoretical. A site that appears quickly keeps more of the people who asked for it, and it feels trustworthy before a single word has been read.",
+      "Clients often ask for a fast site as if speed were a switch. It is not. A fast site is the sum of dozens of small decisions: how images are sized, how much code ships, how fonts load, how the server responds.",
+      "We treat performance as a budget, set at the start and checked throughout. Every feature has a weight, and we weigh that weight against what it gives the visitor. A carousel that nobody uses is not worth the second it costs to load.",
+      "Images are usually the first place to look. Right-sized, modern formats, and loaded only when needed will often do more for real-world speed than any single setting in a dashboard.",
+      "The payoff is real. A site that loads quickly keeps more people, ranks better, and feels more trustworthy before a single word is read. Speed is not a finishing touch; it is part of the design.",
     ],
   },
   {
-    slug: "accessibility-is-not-optional",
-    title: "Accessibility is not a final check",
-    excerpt: "What it costs to retrofit, and why I now price it as part of the build rather than as an extra.",
-    date: "2026-02-18",
+    slug: "why-one-team-design-and-build",
+    title: "Why one team for design and build beats a handoff",
+    excerpt:
+      "Most web projects lose time and quality in the gap between the designer and the developer. Here is how we close it.",
+    date: "2026-06-20",
     body: [
-      "Accessibility is usually the line item that goes when a budget tightens. That gets it backwards. A site that locks people out is a site that does not work for part of the audience it was paid to reach.",
-      "The practical parts are unglamorous: keyboard support that actually works, contrast you can measure, headings in a sensible order, focus you can see. None of it shows off, which is exactly why it gets cut.",
-      "It is also far cheaper before the build than after it. Retrofitting means reopening layout decisions that have already been signed off, so I price the pass into the build and write down what was checked and what was found.",
+      "The classic web project splits in two. A designer draws the screens, signs them off, and hands a file to a developer who has never sat in the client meetings. What the developer builds is a translation, and translations lose things.",
+      "When the same team designs and builds, there is no handover document to misread. Decisions made in the design carry straight into the code, and the parts that are hard to build get caught while they are still cheap to change.",
+      "It also means one point of accountability. You are not refereeing between two suppliers when something looks off. The team that drew it is the team that built it, and they own the result end to end.",
+      "The result is a site that feels considered the whole way through — not a pretty front end stretched over a build that fights it. That consistency is the quiet thing visitors feel, even when they cannot name it.",
     ],
   },
 ]

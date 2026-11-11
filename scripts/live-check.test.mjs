@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { CHECKS, evaluate, findAssetPath, runChecks } from "./live-check.mjs"
+import { articleSlugsFromSitemap, CHECKS, evaluate, findAssetPath, runChecks } from "./live-check.mjs"
 
 const res = (status, headers = {}) => ({ status, headers: new Headers(headers) })
 
@@ -65,6 +65,25 @@ describe("findAssetPath", () => {
 
   it("returns null when the page references no bundle", () => {
     expect(findAssetPath("<html></html>")).toBeNull()
+  })
+})
+
+describe("articleSlugsFromSitemap", () => {
+  const xml = `<?xml version="1.0"?><urlset>
+    <url><loc>https://gakinz.com/</loc></url>
+    <url><loc>https://gakinz.com/resources</loc></url>
+    <url><loc>https://gakinz.com/resources/fixed-price-how-we-scope</loc></url>
+    <url><loc>https://gakinz.com/resources/what-makes-a-website-fast</loc></url>
+    <url><loc>https://gakinz.com/work/some-project</loc></url>
+  </urlset>`
+
+  it("reads the article slugs out of a sitemap", () => {
+    expect(articleSlugsFromSitemap(xml)).toEqual(["fixed-price-how-we-scope", "what-makes-a-website-fast"])
+  })
+
+  it("ignores URLs that are not articles", () => {
+    expect(articleSlugsFromSitemap('<loc>https://gakinz.com/</loc><loc>https://gakinz.com/resources</loc><loc>https://gakinz.com/resources/</loc><loc>https://other.test/resources/x</loc>')).toEqual([])
+    expect(articleSlugsFromSitemap("")).toEqual([])
   })
 })
 
@@ -152,5 +171,18 @@ describe("runChecks", () => {
     const bundle = results.find((r) => r.name === "hashed bundle is cached for a year")
     expect(bundle.ok).toBe(false)
     expect(bundle.detail).toContain("no /assets/index-")
+  })
+
+  it("asks the CMS for every article the sitemap lists and fails one it does not hold", async () => {
+    const sitemap = "<loc>https://gakinz.com/resources/in-the-cms</loc><loc>https://gakinz.com/resources/not-in-the-cms</loc>"
+    const results = await runChecks(
+      "https://example.test",
+      fakeFetch({ "/": { status: 200, body: home }, "/sitemap.xml": { status: 200, body: sitemap }, "/blog.php?slug=in-the-cms": { status: 200 } }),
+    )
+    const good = results.find((r) => r.name === "sitemap article exists in the CMS: in-the-cms")
+    const bad = results.find((r) => r.name === "sitemap article exists in the CMS: not-in-the-cms")
+    expect(good.ok).toBe(true)
+    expect(bad.ok).toBe(false)
+    expect(bad.detail).toBe("/blog.php?slug=not-in-the-cms answered 404, expected 200")
   })
 })

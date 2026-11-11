@@ -4,6 +4,12 @@ What changed in the product, newest first. The checks behind each change are in 
 [VERIFICATION.md](VERIFICATION.md); why is in [DECISIONS.md](DECISIONS.md). Releases before 2026-11-10 are listed in
 [WORKBOOK.md](WORKBOOK.md) section 1.
 
+## 2026-11-11 (V1.2) · The built-in articles match the CMS (K-147; on `goal/v1.2`, not released)
+
+**Fixed**
+- The built-in articles (the fallback for `/resources`, and the prerendered pages and sitemap entries) are now the three posts the live CMS holds: `fixed-price-how-we-scope`, `what-makes-a-website-fast`, `why-one-team-design-and-build`, with the CMS's own text and date. The two articles the CMS never held (`what-makes-a-site-fast`, `accessibility-is-not-optional`) are gone from the sitemap; they stay in git history.
+- `pnpm run check:live` now also asks `blog.php?slug=<slug>` for every article in the live sitemap and fails one that does not answer 200.
+
 ## 2026-11-11 (later) · One planning home (documents only)
 
 - `.planning/` (nine GSD phases, a 2026-11-08 baseline) is folded into `docs/ROADMAP.md`: an "At a glance" table of what is done, what is left and what is parked; scope notes for the planned V1.2 and V2; the parking lot grouped by theme with the version each item would join. The folder is removed; a copy of the old files is kept in `.local-state/` (gitignored).

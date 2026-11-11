@@ -39,6 +39,11 @@ export function findAssetPath(html) {
   return m ? m[0] : null
 }
 
+/** The slugs of every article page (`https://gakinz.com/resources/<slug>`) a sitemap lists, in order. */
+export function articleSlugsFromSitemap(xml) {
+  return [...String(xml ?? "").matchAll(/<loc>\s*https:\/\/gakinz\.com\/resources\/([^/<\s]+)\s*<\/loc>/g)].map((m) => m[1])
+}
+
 /** Judge one response against one check. Pure: no network, no clock. */
 export function evaluate(check, response) {
   const { path } = check
@@ -84,6 +89,7 @@ export async function runChecks(base, fetchFn = fetch) {
   let homeBody = null
   let fallbackBody = null
   let fallbackLoaded = false
+  let sitemapBody = null
 
   for (const check of CHECKS) {
     const isBundle = check.name === BUNDLE_CHECK
@@ -95,6 +101,7 @@ export async function runChecks(base, fetchFn = fetch) {
     try {
       const response = await fetchFn(new URL(path, base).href, { method: "GET", redirect: "manual", signal: AbortSignal.timeout(10_000) })
       if (path === "/") homeBody = await response.text()
+      if (path === "/sitemap.xml" && response.status === 200) sitemapBody = await response.text()
       if (check.denied && response.status === 200) {
         // What the server answers for a path that cannot exist: the app page. Fetched once.
         if (!fallbackLoaded) {
@@ -107,6 +114,20 @@ export async function runChecks(base, fetchFn = fetch) {
       results.push({ name: check.name, path, ...verdict })
     } catch (e) {
       results.push({ name: check.name, path, ok: false, detail: `${path} could not be fetched (${e.cause?.code ?? e.message})` })
+    }
+  }
+
+  // Every article the sitemap lists must exist in the CMS, or its page renders "not here" after load (K-147).
+  if (sitemapBody !== null) {
+    for (const slug of articleSlugsFromSitemap(sitemapBody)) {
+      const name = `sitemap article exists in the CMS: ${slug}`
+      const path = `/blog.php?slug=${slug}`
+      try {
+        const response = await fetchFn(new URL(path, base).href, { method: "GET", redirect: "manual", signal: AbortSignal.timeout(10_000) })
+        results.push({ name, path, ok: response.status === 200, detail: response.status === 200 ? `${path} 200` : `${path} answered ${response.status}, expected 200` })
+      } catch (e) {
+        results.push({ name, path, ok: false, detail: `${path} could not be fetched (${e.cause?.code ?? e.message})` })
+      }
     }
   }
   return results
