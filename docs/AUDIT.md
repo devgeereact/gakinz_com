@@ -2,6 +2,13 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-11 (V1.2 task 3) · The contact form turns bots away (item 3)
+
+**Scope:** `server/contact.php`, `src/lib/api.ts` (`EnquiryPayload`), `src/marketing/pages/Contact.tsx`, `src/marketing/site.css` (`.hp`). Method: test first (`tests/server/contact-bots.test.ts` seen failing 5 of 8 before any server change; the browser tests seen failing on the missing field), then the change.
+**Checks:** `php -l server/contact.php` clean; server files `contact-bots`, `contact-hardening`, `enquiry-notify`, `enquiry-services`, `journey`, `references`, `alert-failures` 55 of 55 against the throwaway MariaDB; `pnpm test` 693 of 693; `tsc -b` clean; `eslint` clean on the four touched TypeScript files; `pnpm run build` writes 32 pages; `pnpm run test:browser` 146 of 146 with axe on (`/contact` 0 violations, no layout flaws at 375 and 1280 px, which first caught an `overflow: hidden` on `.hp` and led to dropping it).
+**Anti-goals checked by test:** a refused fast post is not counted by the throttle and the retry goes through; what the visitor typed survives the friendly retry; the hidden field is never reached by Tab and carries `tabindex=-1`, `aria-hidden`, `autocomplete=off`; the sixth post in 15 minutes is still throttled.
+**Not checked:** a real password manager or browser autofill (the field is named `hp_site`, not `website`, and carries the ignore hints for 1Password, LastPass and Bitwarden; no manager was run); a screen reader; the effect on real bot traffic; a visitor whose clock is ahead of the server's by a few seconds is asked to wait that much longer (reasoned, not run). The server half is live only after the next release uploads `server/contact.php`.
+
 ## 2026-11-11 (V1.2 task 2) · The cookie policy tells the truth (item 1)
 
 **Scope:** `src/marketing/data/storage-items.ts`, `src/marketing/pages/Legal.tsx` (`Cookies`, and the `Privacy` Cookies paragraph), `src/marketing/site.css` (`.stored`). Method: test first (3 behaviour failures seen against an empty list before any content), then the change.

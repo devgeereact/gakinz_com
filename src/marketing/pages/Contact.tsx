@@ -11,6 +11,12 @@ import { whatHappensNext } from "@/marketing/data/site"
  * enquiry lands in the CMS Enquiries board as before. Errors show under each
  * field and focus moves to the first one (WCAG 3.3.1, 2.4.3).
  *
+ * Two quiet bot signals ride along with the enquiry: a field named hp_site that
+ * people never see (off screen, out of the tab order, hidden from assistive
+ * technology, not autofilled) and the time the form opened. Neither asks the
+ * visitor to do anything. A post under 2.5 s after opening gets a friendly retry
+ * from the server and keeps everything typed.
+ *
  * The optional service choice offers the website's own service names plus
  * "Something else" (spec 7), and fills the enquiry's existing projectType
  * field, as a package carried from Pricing does. The budget bands are the
@@ -47,6 +53,12 @@ export default function Contact() {
   const emailRef = useRef<HTMLInputElement>(null)
   const messageRef = useRef<HTMLTextAreaElement>(null)
   const code = useRef<HTMLElement>(null)
+  const hpRef = useRef<HTMLInputElement>(null)
+  // When the form opened, sent as openedAt. Set after mount so prerendering stays free of the clock.
+  const openedAt = useRef(0)
+  useEffect(() => {
+    openedAt.current = Date.now()
+  }, [])
 
   // A pricing button links here with ?package=Name. Only a real package name is
   // accepted; it fills the enquiry's existing projectType field. Set after the
@@ -90,7 +102,7 @@ export default function Contact() {
     const first = ORDER.find((k) => found[k])
     if (first) return ({ name: nameRef, email: emailRef, message: messageRef })[first].current?.focus()
     setSending(true)
-    const res = await contact.send(form)
+    const res = await contact.send({ ...form, hp_site: hpRef.current?.value ?? "", openedAt: openedAt.current || undefined })
     setSending(false)
     if (res.ok) {
       setSentTo(form.name.trim().split(/\s+/)[0])
@@ -166,6 +178,11 @@ export default function Contact() {
               </div>
             ) : (
               <form className="form" onSubmit={submit} noValidate>
+                {/* Honeypot. Read from the DOM at send time, so a bot that sets the value without events is still caught. */}
+                <div className="hp" aria-hidden="true">
+                  <label htmlFor="hp_site">Leave this field empty</label>
+                  <input id="hp_site" name="hp_site" ref={hpRef} type="text" tabIndex={-1} autoComplete="off" defaultValue="" data-1p-ignore data-lpignore="true" data-bwignore="true" />
+                </div>
                 <div className="row2">
                   {field("name", "Your name", <input id="name" ref={nameRef} autoComplete="name" required aria-invalid={errors.name || undefined} aria-describedby={errors.name ? "e-name" : undefined} value={form.name} onChange={(e) => set("name", e.target.value)} onBlur={() => blur("name")} />)}
                   {field("email", "Email", <input id="email" ref={emailRef} type="email" autoComplete="email" required aria-invalid={errors.email || undefined} aria-describedby={errors.email ? "e-email" : undefined} value={form.email} onChange={(e) => set("email", e.target.value)} onBlur={() => blur("email")} />)}

@@ -2,7 +2,7 @@
 /**
  * Public enquiry endpoint. The corporate contact form posts here; each enquiry
  * lands in the `enquiries` table, which feeds the GAkinzOS leads pipeline (§6).
- *   POST /contact.php {name, email, company?, budget?, projectType?, message}
+ *   POST /contact.php {name, email, company?, budget?, projectType?, message, hp_site?, openedAt?}
  *     → 201 {id, reference}
  *
  * `reference` is the enquiry's GK-E-YYYY-NNNN (SQL 19, _reference.php), shown
@@ -43,6 +43,36 @@ if ((int)($stmt->get_result()->fetch_assoc()['c'] ?? 0) >= CONTACT_MAX_PER_WINDO
 }
 
 $in = body();
+
+// Two cheap bot signals, checked before anything is validated or saved. They stop form-filling bots only: a script
+// that POSTs JSON directly can leave both fields out, so the per-IP throttle above is still the real limit.
+//
+// 1. Honeypot. `hp_site` is a field the page hides from people (off screen, out of the tab order, aria-hidden), so
+//    only a bot completes it. The answer looks exactly like success (201, no reference) so the bot learns nothing;
+//    nothing is saved and nobody is mailed. It is not counted by the throttle (that counts `enquiry_submit` rows).
+$hp = $in['hp_site'] ?? '';
+if (is_array($hp) ? count($hp) > 0 : trim((string)$hp) !== '') {
+  audit($conn, null, 'enquiry_bot_dropped', 'honeypot');
+  ok(['id' => 0, 'reference' => null], 201);
+}
+
+// 2. Minimum fill time. `openedAt` is the browser's Date.now() when the form opened. A post under CONTACT_MIN_FILL_MS
+//    later is a script, or a very fast autofill; the sender is told to check and send again, and the retry works
+//    because the opening time does not move. A missing, non-numeric, future or over-a-day-old value is NO signal:
+//    an older cached page, a wrong clock or another test posts without it, and a genuine enquiry must never be
+//    refused for something the sender cannot fix. Browser and server clocks are compared, so a visitor whose clock
+//    is slightly ahead is asked to wait a moment longer, never locked out.
+const CONTACT_MIN_FILL_MS = 2500;
+const CONTACT_MAX_OPEN_AGE_MS = 86400000;
+$opened = $in['openedAt'] ?? null;
+if ((is_int($opened) || is_float($opened) || (is_string($opened) && is_numeric($opened)))) {
+  $age = (int)round(microtime(true) * 1000) - (float)$opened;
+  if ($age >= 0 && $age <= CONTACT_MAX_OPEN_AGE_MS && $age < CONTACT_MIN_FILL_MS) {
+    audit($conn, null, 'enquiry_too_fast', '');
+    fail('That was quick. Please check your details and send again.', 429);
+  }
+}
+
 $name    = str_field($in, 'name', 200);
 $email   = str_field($in, 'email', 200);
 $company = str_field($in, 'company', 200);

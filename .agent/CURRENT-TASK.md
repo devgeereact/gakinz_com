@@ -2,9 +2,9 @@
 
 ## Outcome
 
-**V1.2 (public-site trust, D-065) is IN PROGRESS: spec and plan written, build started, Tasks 1 and 2 done (awaiting review).** Spec: `docs/superpowers/specs/2026-11-11-v1-2-public-trust-design.md`. Plan: `docs/superpowers/plans/2026-11-11-v1-2-public-trust.md` (seven tasks, test first). Frozen list: `docs/ROADMAP.md` "V1.2 finish line". Working in this folder on branch `goal/v1.2` (D-066: nothing is built outside the project folder). V0, V1 (8 of 10) and V1.1 are live as `ed5a724`; the record is in `docs/ROADMAP.md` and `.agent/HANDOFF.md`.
+**V1.2 (public-site trust, D-065) is IN PROGRESS: spec and plan written, build started, Tasks 1, 2 and 3 done (awaiting review).** Spec: `docs/superpowers/specs/2026-11-11-v1-2-public-trust-design.md`. Plan: `docs/superpowers/plans/2026-11-11-v1-2-public-trust.md` (seven tasks, test first). Frozen list: `docs/ROADMAP.md` "V1.2 finish line". Working in this folder on branch `goal/v1.2` (D-066: nothing is built outside the project folder). V0, V1 (8 of 10) and V1.1 are live as `ed5a724`; the record is in `docs/ROADMAP.md` and `.agent/HANDOFF.md`.
 
-Build progress (V1.2): task 1 (built-in articles match the CMS, item 2, K-147) is committed on `goal/v1.2` (`a8182c3`); task 2 (the cookie policy tells the truth, item 1) is implemented and committed on `goal/v1.2`; both await review; tasks 3 to 6 are not started.
+Build progress (V1.2): task 1 (built-in articles match the CMS, item 2, K-147) is committed on `goal/v1.2` (`a8182c3`); task 2 (the cookie policy tells the truth, item 1) is implemented and committed on `goal/v1.2`; task 3 (the contact form turns bots away, item 3: honeypot `hp_site` and minimum fill time `openedAt`, audit `enquiry_bot_dropped` and `enquiry_too_fast`) is implemented and committed on `goal/v1.2`; all three await review; tasks 4 to 6 are not started.
 
 Spec history: a fresh agent checked the spec cold; its findings changed the design (item 4 dropped as already true, the 404 served by `server/notfound.php`, `services` exempt, Google kept in the cookie page; see the spec's "Builder check"). The build is under way task by task; nothing is pushed or released.
 

@@ -138,9 +138,15 @@ user outcome with a check, ticked on **local** evidence; what needs the host or 
   prerendered `/resources/` pages to the three CMS slugs; `scripts/live-check.test.mjs` (3 new tests) covers `articleSlugsFromSitemap` and the
   per-article check; the build still writes 32 pages and 32 sitemap URLs; `public-layout.test.ts` 66 of 66 with axe 0 violations. The live
   sitemap only changes at the next release, so the first `check:live` after it is the live proof.
-- [ ] **3. The contact form turns bots away without bothering people.** A hidden honeypot field and a minimum fill time. A
+- [x] **3. The contact form turns bots away without bothering people.** A hidden honeypot field and a minimum fill time. A
   honeypot hit saves nothing and sends no alert; a too-fast post gets a friendly retry; a real enquiry is unaffected. Check:
   server tests (honeypot, too fast, normal, the throttle still works) and `tests/browser/contact.test.ts` at 375 and 1280 px.
+  **Evidence 2026-11-11 (local, on `goal/v1.2`, not released):** `tests/server/contact-bots.test.ts` (8 tests, written first and seen failing 5 of 8) and the
+  existing `contact-hardening`, `enquiry-notify`, `enquiry-services`, `journey`, `references` and `alert-failures` files: 55 of 55; `tests/browser/contact.test.ts`
+  12 of 12 at 375 and 1280 px (friendly retry keeps what was typed and the retry goes through; a filled hidden field gets a thank-you and stores nothing;
+  `tabindex=-1`, `aria-hidden`, `autocomplete=off`, off screen, never reached by Tab); full `test:browser` 146 of 146 with axe on (0 violations on `/contact`).
+  The limit is stated in `docs/SECURITY.md` section 4 and `docs/API-SPEC.md`: it stops form-filling bots; a script that POSTs JSON directly is limited only by the throttle.
+  The server half is live only after the next release uploads `server/contact.php`.
 - [x] ~~**4. The contact throttle sees the real visitor IP behind Cloudflare.**~~ **Dropped 2026-11-11 after the builder check: already
   true.** `server/.htaccess` documents that Cloudflare IP restoration is on, and K-123 was closed with evidence (a forged
   `CF-Connecting-IP` ignored; 45 audit rows held visitor addresses). K-102 belongs to the retired reference sign-in.

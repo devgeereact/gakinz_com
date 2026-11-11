@@ -204,6 +204,10 @@ export type EnquiryPayload = {
   budget?: string
   projectType?: string
   message: string
+  /** Honeypot: hidden from people, so the real form always sends it empty. A filled value is a bot (contact.php). */
+  hp_site?: string
+  /** `Date.now()` when the form opened. The server asks for a retry when the post is under 2.5 s old. */
+  openedAt?: number
 }
 export const contact = {
   // `reference` is the enquiry's GK-E-YYYY-NNNN (SQL 19); null before that step has run.

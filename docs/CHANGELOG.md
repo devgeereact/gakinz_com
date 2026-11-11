@@ -4,6 +4,13 @@ What changed in the product, newest first. The checks behind each change are in 
 [VERIFICATION.md](VERIFICATION.md); why is in [DECISIONS.md](DECISIONS.md). Releases before 2026-11-10 are listed in
 [WORKBOOK.md](WORKBOOK.md) section 1.
 
+## 2026-11-11 (V1.2) · The contact form turns bots away (item 3; on `goal/v1.2`, not released)
+
+**Added**
+- `contact.php` checks two bot signals after the throttle and before validation. A hidden honeypot field (`hp_site`): any value answers `201 {id: 0, reference: null}` like success, saves and mails nothing, and writes the audit row `enquiry_bot_dropped` (detail `honeypot`). A minimum fill time (`openedAt`, `CONTACT_MIN_FILL_MS` = 2500 ms): a post under 2.5 s after the form opened answers `429 "That was quick. Please check your details and send again."`, saves nothing and writes `enquiry_too_fast`. A missing, future, non-numeric or over-a-day-old `openedAt` is no signal, so older clients still work.
+- The contact form carries the field (off screen with `.hp`, `tabindex="-1"`, `aria-hidden="true"`, `autocomplete="off"`, not named `website`) and sends when it opened. A visitor who sends at once sees the friendly message with everything they typed kept. No cookie, storage or third-party code is added.
+- The limit is stated in `docs/SECURITY.md` and `docs/API-SPEC.md`: this stops form-filling bots; a script that POSTs JSON directly is limited only by the per-IP throttle. The server half goes live at the next release.
+
 ## 2026-11-11 (V1.2) · The cookie policy lists what is really stored (item 1; on `goal/v1.2`, not released)
 
 **Fixed**

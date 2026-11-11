@@ -263,6 +263,8 @@ html.gk-site-root,html.gk-site-root body{background:#0F151D}
 .gk-site .sector p{color:var(--mute);font-size:.96rem;margin-bottom:14px}
 .gk-site .contact{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:clamp(32px,6vw,96px)}
 .gk-site .form{display:grid;gap:18px}
+/* Contact honeypot (hp_site): moved off screen, never display:none (some bots skip hidden fields). The markup also carries aria-hidden, tabindex -1 and autocomplete off, so keyboard, screen-reader and password-manager users never meet it. */
+.gk-site .hp{position:absolute;left:-10000px;top:auto;width:1px;height:1px}
 .gk-site .field{display:grid;gap:8px;align-content:start}
 .gk-site .field label{font-weight:600}
 .gk-site .field label span{color:var(--mute);font-weight:400}
