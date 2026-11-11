@@ -1134,3 +1134,11 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 2. **Why these:** one owner, a small database (about 60 rows) and no client files yet; a tighter point would need a more frequent dump for no stated need. Tighten the cadence if invoices or bookings start to matter hourly.
 3. **Still open under K-010:** copy dumps off the host, and try a files restore once client uploads exist.
 4. **OpenRouter:** the owner chose no monthly limit. The risk is spend with no ceiling if the AI module is used or its key is abused; the AI module stays switched as it is (Cut in the roadmap) and the exposed key is to be rotated by the owner. Revisit if the AI features are switched on.
+
+## D-063 · V1.1 finish line: five items, chosen from the parking lot
+**Date:** 2026-11-11 · **Status:** decided by the owner's "Phase 2: open V1.1 from the parking lot" (the owner named no items; the run chose them and the owner may overrule).
+
+1. `docs/ROADMAP.md` holds the frozen list: public pages laid out cleanly at 375 and 1280 px; a data deletion request on Today with its reply-by date; a failed alert email visible on Today; every CMS screen laid out cleanly with realistic data; `npm run lint` passing and run by CI.
+2. **Chosen by two tests:** it guards a flaw class the V1 run never looked for (layout on real pages and screens, never seen by an agent), or it closes a way the owner could miss something that matters (a legal deadline, a lost alert). Everything else stays in the parking lot.
+3. **Left out on purpose:** anything that needs a schema change (a hand-applied SQL step), the owner's facts, the adviser, Stripe or the Tailwind and pnpm migration (PR #33 is its own piece of work and changes `package.json`, so this run adds no dependency).
+4. **Unchanged from V1:** items are ticked on local evidence only; what needs the live system or the owner is BLOCKED; nothing is pushed or released by the run.

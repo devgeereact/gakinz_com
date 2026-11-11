@@ -60,6 +60,37 @@ one enquiry to a paid invoice and a client sees only their own work.
 
 **Progress (2026-11-10, released as `4bdaed7`): 8 of 10 ticked, 2 waiting for the owner (4, 10).** There is no `npm run finish` here; the boxes are the progress.
 
+## V1.1 finish line (frozen)
+
+**Frozen on 2026-11-11** (D-063) · opened by the owner's "Phase 2: open V1.1 from the parking lot"; the run chose the items and the owner may overrule them.
+V1 stays as it is (8 of 10 ticked, 4 and 10 wait for the owner). Same rules: at most 10 items, each something a real
+person can do or see, ticked on **local** evidence with the commit, anything that needs the live system or the owner
+is BLOCKED and says so. Chosen because each one either guards a flaw class the V1 run never looked for (layout on real
+pages and screens) or closes a way the owner could miss something that matters (a legal deadline, a lost alert).
+
+- [ ] **1. A visitor on a phone or a desktop sees every public page laid out cleanly.** Check: `tests/browser/public-layout.test.ts`
+  loads all 32 prerendered pages at 375 and 1280 px and fails on sideways page scroll, clipped text, a console error or a failed
+  request; every page screenshot looked at; an axe run over the same pages (WCAG 2.0 to 2.2 A and AA) recorded in `docs/VERIFICATION.md`.
+- [ ] **2. The owner sees a client's data deletion request on Today with its reply-by date.** No schema change: the date is the
+  ticket's creation date plus one month (K-095 remainder). Check: new cases in `tests/server/today.test.ts` (listed, oldest or
+  most urgent first, a closed ticket is not listed, an editor does not see it) and a unit test for the date rule.
+- [ ] **3. The owner is told when an alert email did not go out.** `enquiry_notify_failed` and `deletion_notify_failed` audit rows
+  from the last 7 days show as a Today notice that names the enquiry or ticket (D-061 left them invisible). Check: new cases
+  in `tests/server/today.test.ts` and `tests/server/enquiry-notify.test.ts`.
+- [ ] **4. Every CMS screen holds realistic data on a phone and a desktop.** Check: `tests/browser/cms-layout.test.ts` opens all
+  CMS routes at 375 and 1280 px from a test-only build with Clerk replaced by a stub and every API answer labelled sample data
+  (long names, many rows, empty and error states); no sideways page scroll, no page error; every screenshot looked at;
+  axe over the same screens. Not the live site, not real data (K-044).
+- [ ] **5. `npm run lint` passes and CI runs it instead of the ratchet** (K-002). The five errors are in Contracts, Portal and the
+  theme toggle; Portal is security-critical, so `portal-isolation.test.ts`, `journey.test.ts` and `support-client.test.ts` must stay
+  green. Check: `npm run lint` exits 0; `.github/workflows/ci.yml` calls it.
+
+**Discovery fixes (not items):** two parking-lot lines were checked against the code and were already untrue: Analytics and the
+Dashboard show "unavailable" for a failed source (K-031), and the browser holds no session token in `localStorage` (K-033).
+They are closed with that evidence in the same commit that proves it.
+
+**Progress V1.1 (2026-11-11): 0 of 5 ticked.**
+
 ## Needs the owner (BLOCKED, with the exact action)
 
 Prepared in this run: the scripts, tests and instructions below. None of these was done on the server.
@@ -82,8 +113,6 @@ opens a new scope. Nothing here was deleted from the code or the issue list.
 - Phase 8 public-site trust beyond the placeholders (needs legal inputs) and Phase 9 (drop retired legacy columns and tables).
 - Certificates screen checked live (issue, verify, revoke); recipient consent per certificate (K-061).
 - Demo flag for Work records in the CMS (WORKBOOK 3a.3); the three portfolio demos are already labelled "Demo" on the site.
-- Analytics shows "unavailable" instead of zero when a source fails (K-031).
-- `npm run lint` clean and replace the ratchet (5 errors left, K-002).
 - Enforce the app-shell CSP; move the session token out of `localStorage` (K-033).
 - ESLint 10 for the 13 moderate advisories (K-041).
 - The home-page H1 read twice by crawlers.
@@ -96,11 +125,11 @@ opens a new scope. Nothing here was deleted from the code or the issue list.
 - Server suite on MySQL 5.7 and 8 (K-099, K-111); CI runs MySQL 8.
 - Large files: `server/work.php`, `Dashboard.tsx`, `bookings.php`, `proposals.php`, `Invoicing.tsx` (over 600 lines each).
 - Acknowledgement email to the visitor (K-097).
-- A due-date column and a Today item for data deletion requests (K-095 remainder).
 - An index on `audit_log (action, created_at)`: the heartbeat, the contact throttle and the reminder memory all filter on `action`; fine at today's size, schema change when it grows.
-- Owner alerts: a retry or queue if a send fails (today: audited, the item is in Leads or Support either way).
 - Stripe: switch on pay links (owner steps in `docs/DEPLOYMENT.md`, then test mode, then live).
-- Real assistive-technology pass on the public site and the CMS.
+- Real assistive-technology pass (screen reader, keyboard-only) on the public site and the CMS. V1.1 item 1 and 4 run axe, which is not the same thing.
+- A due-date column for data deletion requests (V1.1 item 2 computes the date from the ticket instead).
+- Owner alerts: a retry or queue if a send fails (V1.1 item 3 only makes the failure visible).
 - One-step "Grant portal access" (CMS client account plus Clerk user) and a friendlier message than Clerk's "Couldn't find your account"; the manual steps are in `docs/OPERATIONS.md` 10.2.
 - Quotes list "Total" is the amount before VAT (label it, or show the VAT-inclusive total); Invoicing tiles refresh after "Mark paid" without a reload.
 
