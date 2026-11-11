@@ -18,6 +18,13 @@ describe("the cookie policy", () => {
     expect(out).not.toContain("gk-locked")
   })
 
+  it("claims no complete list of Clerk's cookies and names the suffixed copies", () => {
+    // Clerk's browser SDK can also set copies of __session and __client_uat with a suffix on the name, so
+    // "Clerk's three are the cookies it sets" would be a claim this page cannot back.
+    expect(out).not.toMatch(/Clerk's three are the cookies it sets/)
+    expect(out).toContain("can also set copies of the first two with a suffix added to the name")
+  })
+
   it("lists every stored item from one source", () => {
     for (const i of STORED_ITEMS) expect(out).toContain(i.name)
   })

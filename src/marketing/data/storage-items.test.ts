@@ -37,6 +37,12 @@ describe("STORED_ITEMS", () => {
     expect(names).not.toContain("gk-locked")
   })
 
+  it("says how long gk-auth lasts in words that follow the \"Lasts:\" label (store/auth.store.ts: sign-out keeps an empty entry)", () => {
+    const gkAuth = STORED_ITEMS.find((i) => i.name === "gk-auth")
+    expect(gkAuth?.lasts).toMatch(/^Until you sign out\./)
+    expect(gkAuth?.lasts).toContain("an empty entry stays")
+  })
+
   it("gives every item a kind, a setter, a purpose and a lifetime", () => {
     for (const i of STORED_ITEMS) {
       expect(["cookie", "local storage"]).toContain(i.kind)

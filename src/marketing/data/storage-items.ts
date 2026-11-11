@@ -11,7 +11,9 @@
  * 2026-11-11: session lifetime 60 seconds (the token), maximum session lifetime 7 days, Google and email
  * code enabled, CAPTCHA off. The 7 days is the session maximum, not a cookie expiry: Clerk's documentation
  * says the __client cookie's expiry is browser dependent. Clerk's sign-in service runs at clerk.gakinz.com, a subdomain of this site.
- * Clerk loads only on the sign-in page and under /app. Facts only: this is not legal advice.
+ * Clerk loads only on the sign-in page and under /app. Clerk's browser SDK can also set copies of __session and
+ * __client_uat with a suffix on the name; the page says so rather than claiming these three are all Clerk sets
+ * (not checked in a real signed-in browser). Facts only: this is not legal advice.
  */
 export type StoredItem = {
   name: string
@@ -49,7 +51,7 @@ export const STORED_ITEMS: StoredItem[] = [
     setBy: "this site",
     purpose:
       "Your name, email address and role, so the first screen can show who is signed in before the check finishes. It holds no password and no sign-in token.",
-    lasts: "Your name, email and role are removed when you sign out (an empty entry stays)",
+    lasts: "Until you sign out. Your name, email and role are then removed (an empty entry stays)",
   },
   {
     name: "__client",
