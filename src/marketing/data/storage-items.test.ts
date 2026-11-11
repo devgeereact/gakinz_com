@@ -6,6 +6,13 @@ import { STORED_ITEMS } from "./storage-items"
 const SRC = join(__dirname, "..", "..")
 const ROOT = join(SRC, "..")
 
+const KNOWN_FILES = [
+  "src/components/nav-main.tsx",
+  "src/components/ui/sidebar.tsx",
+  "src/providers/ui-theme-provider.tsx",
+  "src/store/auth.store.ts",
+]
+
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
     const p = join(dir, e.name)
@@ -40,12 +47,6 @@ describe("STORED_ITEMS", () => {
   })
 
   it("every use of cookies or local storage in src/ is in a known file", () => {
-    const KNOWN = [
-      "src/components/nav-main.tsx",
-      "src/components/ui/sidebar.tsx",
-      "src/providers/ui-theme-provider.tsx",
-      "src/store/auth.store.ts",
-    ]
     const found = sourceFiles(SRC)
       .filter((f) => /localStorage\.|sessionStorage\.|document\.cookie\s*=|\bpersist\(/.test(code(readFileSync(f, "utf8"))))
       .map((f) => relative(ROOT, f).split(sep).join("/"))
@@ -53,6 +54,33 @@ describe("STORED_ITEMS", () => {
     expect(
       found,
       "A file in src/ uses cookies or browser storage that this test does not know about: add the new item to STORED_ITEMS and to this list",
-    ).toEqual(KNOWN)
+    ).toEqual(KNOWN_FILES)
+  })
+
+  it("every name those files read, write or remove is listed in STORED_ITEMS", () => {
+    // The one key a file may touch without listing it: ui-theme-provider.tsx only REMOVES it, to clear a retired theme.
+    const RETIRED = ["ui-theme"]
+    const listed = STORED_ITEMS.map((i) => i.name)
+    const unlisted: string[] = []
+    for (const f of KNOWN_FILES) {
+      const src = code(readFileSync(join(ROOT, f), "utf8"))
+      // A name is a string literal, or an identifier declared as `const X = "literal"` in the same file.
+      const resolve = (arg: string) => {
+        const lit = arg.match(/^["'`]([^"'`$]+)["'`]$/)
+        if (lit) return lit[1]
+        return src.match(new RegExp(`const ${arg}\\s*=\\s*["']([^"']+)["']`))?.[1] ?? `UNRESOLVED(${arg})`
+      }
+      const used = [
+        ...[...src.matchAll(/localStorage\.(?:getItem|setItem|removeItem)\(\s*([^,)\s]+)/g)].map((m) => resolve(m[1])),
+        // document.cookie = `${NAME}=...` or "name=..."
+        ...[...src.matchAll(/document\.cookie\s*=\s*[`"']\$?\{?([\w-]+)\}?=/g)].map((m) =>
+          /^[A-Z_]+$/.test(m[1]) ? resolve(m[1]) : m[1],
+        ),
+        // zustand persist options: name: "x" or name: IDENT
+        ...[...src.matchAll(/\bname:\s*(["'][^"']+["']|[A-Z_]+)\s*,/g)].map((m) => resolve(m[1])),
+      ]
+      for (const name of used) if (!listed.includes(name) && !RETIRED.includes(name)) unlisted.push(`${f}: ${name}`)
+    }
+    expect(unlisted, "These browser storage names are not in STORED_ITEMS: add each one there, so the cookie policy lists it").toEqual([])
   })
 })

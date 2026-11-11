@@ -9,7 +9,8 @@
  * Sources: the code (sidebar.tsx, nav-main.tsx, next-themes, store/auth.store.ts) and, for Clerk, its
  * documentation ("Cookies", production instance cookies) with the live production settings read on
  * 2026-11-11: session lifetime 60 seconds (the token), maximum session lifetime 7 days, Google and email
- * code enabled, CAPTCHA off. Clerk's sign-in service runs at clerk.gakinz.com, a subdomain of this site.
+ * code enabled, CAPTCHA off. The 7 days is the session maximum, not a cookie expiry: Clerk's documentation
+ * says the __client cookie's expiry is browser dependent. Clerk's sign-in service runs at clerk.gakinz.com, a subdomain of this site.
  * Clerk loads only on the sign-in page and under /app. Facts only: this is not legal advice.
  */
 export type StoredItem = {
@@ -48,7 +49,7 @@ export const STORED_ITEMS: StoredItem[] = [
     setBy: "this site",
     purpose:
       "Your name, email address and role, so the first screen can show who is signed in before the check finishes. It holds no password and no sign-in token.",
-    lasts: "Until you sign out",
+    lasts: "Your name, email and role are removed when you sign out (an empty entry stays)",
   },
   {
     name: "__client",
@@ -56,7 +57,7 @@ export const STORED_ITEMS: StoredItem[] = [
     setBy: "Clerk",
     purpose:
       "Keeps you signed in with Clerk. Set by Clerk's sign-in service at clerk.gakinz.com, a subdomain of this site, and marked HttpOnly, so scripts on the page cannot read it.",
-    lasts: "Up to 7 days, the longest a session can last",
+    lasts: "Kept by your browser while you stay signed in; the session it supports lasts at most 7 days",
   },
   {
     name: "__client_uat",

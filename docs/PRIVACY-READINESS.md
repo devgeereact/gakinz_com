@@ -84,10 +84,10 @@ request left for another domain. The CMS rows come from source, not from a signe
 
 | Name | Type | Provider | Purpose | Set when | Lasts | Category (provisional) | Consent likely needed? |
 |---|---|---|---|---|---|---|---|
-| `gk-auth` | localStorage | first party | basic account details (name, email, role). Since 2026-11-09 it holds no token: the Clerk session is the credential, and a stored legacy token is dropped on first load | sign-in | until sign-out | strictly necessary | no |
+| `gk-auth` | localStorage | first party | basic account details (name, email, role). Since 2026-11-09 it holds no token: the Clerk session is the credential, and a stored legacy token is dropped on first load | sign-in | removed at sign-out (an empty entry stays) | strictly necessary | no |
 | `gk-locked` | sessionStorage | first party | inactivity lock | Retired 2026-11-09 (lock screen deleted); no longer set | n/a | n/a | n/a |
 | `gk_oauth_state` | cookie, HttpOnly, Secure, Lax | first party | forgery protection for Google sign-in | Retired 2026-11-09 (`oauth.php` is a 404 stub); no longer set | n/a | n/a | n/a |
-| `__client` | cookie, HttpOnly, set by Clerk's sign-in service at `clerk.gakinz.com` | Clerk | keeps the sign-in session | sign-in page and `/app` only | up to 7 days (the maximum session lifetime in the production Clerk settings, read 2026-11-11) | strictly necessary | **owner to confirm against Clerk's documentation** |
+| `__client` | cookie, HttpOnly, set by Clerk's sign-in service at `clerk.gakinz.com` | Clerk | keeps the sign-in session | sign-in page and `/app` only | kept by the browser (Clerk: expiry is browser dependent); the session it supports lasts at most 7 days (production Clerk settings, read 2026-11-11) | strictly necessary | **owner to confirm against Clerk's documentation** |
 | `__client_uat` | cookie, set by Clerk | Clerk | notes when the session last changed | sign-in page and `/app` only | set by Clerk (lifetime not confirmed) | strictly necessary | **owner to confirm** |
 | `__session` | cookie, set by Clerk | Clerk | short-lived session token sent to the API | sign-in page and `/app` only | about a minute (production session token lifetime, 60 s) | strictly necessary | **owner to confirm** |
 | Google sign-in | cookies under Google's and Clerk's own policies | Google, Clerk | optional sign-in method (enabled in the production Clerk settings, read 2026-11-11) | only if the person chooses Google | set by them | n/a | the cookie policy says it is handled by Clerk and Google |

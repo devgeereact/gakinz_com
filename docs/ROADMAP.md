@@ -127,8 +127,8 @@ user outcome with a check, ticked on **local** evidence; what needs the host or 
   `gk_oauth_state` or `gk-locked`, or if a key used in `src/` is missing. Google sign-in is enabled in Clerk (read 2026-11-11), so
   the page says it is handled by Clerk and Google rather than denying it. Facts only; the adviser still reviews the wording (V1 item 4).
   **Evidence 2026-11-11 (local, on `goal/v1.2`, not released):** `src/marketing/data/storage-items.ts` is the one list (`STORED_ITEMS`: the four
-  items this site stores plus Clerk's `__client`, `__client_uat`, `__session`) and `/cookies` renders it; `storage-items.test.ts` (4 tests) fails
-  on the retired items and on any file in `src/` that uses cookies or storage but is not in its list of four; `cookies.test.tsx` (4 tests) checks the
+  items this site stores plus Clerk's `__client`, `__client_uat`, `__session`) and `/cookies` renders it; `storage-items.test.ts` (5 tests) fails
+  on the retired items, on any file in `src/` that uses cookies or storage but is not in its list of four, and on any storage name those files use that `STORED_ITEMS` lacks; `cookies.test.tsx` (4 tests) checks the
   rendered page; `public-layout.test.ts` 66 of 66 with axe 0 violations (`/cookies`, `/privacy` included).
 - [x] **2. The sitemap lists exactly the articles that exist (K-147).** The built-in articles are made to match the three posts in
   the live CMS (`fixed-price-how-we-scope`, `what-makes-a-website-fast`, `why-one-team-design-and-build`); the two built-in

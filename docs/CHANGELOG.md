@@ -12,7 +12,7 @@ What changed in the product, newest first. The checks behind each change are in 
 - The privacy policy's Cookies paragraph points to the cookie policy and says what is stored in one sentence.
 
 **Added**
-- `STORED_ITEMS` (`src/marketing/data/storage-items.ts`) is the single list the cookie page renders; a test scans `src/` and fails when code starts using cookies or browser storage that the list does not know about.
+- `STORED_ITEMS` (`src/marketing/data/storage-items.ts`) is the single list the cookie page renders; a test scans `src/` and fails when code starts using cookies or browser storage that the list does not know about, or a new storage name in a known file that the list lacks.
 
 ## 2026-11-11 (V1.2) · The built-in articles match the CMS (K-147; on `goal/v1.2`, not released)
 

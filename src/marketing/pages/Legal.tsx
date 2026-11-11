@@ -291,7 +291,7 @@ export function Cookies() {
             h: "Signing in",
             p: [
               "The client area at /app and the sign-in page use Clerk, a sign-in service, which runs at clerk.gakinz.com, a subdomain of this site. Clerk's code loads only on the sign-in page and under /app, never on the public pages. You sign in with an email code or with Google.",
-              "Once you sign in, your browser holds the items below. Each says whether this site or Clerk sets it; Clerk's three are the cookies its documentation lists for a production site.",
+              "Once you sign in, your browser holds the items below. Each says whether this site or Clerk sets it; Clerk's three are the cookies it sets for a signed-in session.",
             ],
             stored: true,
           },
