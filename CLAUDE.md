@@ -90,6 +90,9 @@ When this file and the code disagree, the code wins and this file is wrong.
   `docs/STATUS.md` and `docs/KNOWN-ISSUES.md` before starting, update the affected documents in
   the same pull request, and run `npm run docs:check`.
 
+- Plan before building: follow `AGENTS.md`, "How work is planned and built" (the Superpowers skills: brainstorming, writing-plans,
+  test-driven-development, verification-before-completion). Scope per version is in `docs/ROADMAP.md`.
+
 - TypeScript throughout. `npm run build` runs `tsc -b`, so a type error blocks the build and
   the deploy.
 - Public pages render inside the `.gk-site` wrapper (`src/marketing/site.css`, D-046) on a

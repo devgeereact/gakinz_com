@@ -1,8 +1,27 @@
 # Roadmap
 
-One list decides when GAkinz V1 is **finished**. Nothing else does. Adopted on 2026-11-10 from the
-draft in `~/Developer/build-kit/docs/finish-drafts/gakinz_com.md` after checking it against the code
-(corrections are in "Draft corrections" below).
+The one place for what is done, what is left and what is parked on GAkinz. Everything planned lives here; the task in
+progress is `.agent/CURRENT-TASK.md`, the history is `docs/WORKBOOK.md`, the issue list is `docs/KNOWN-ISSUES.md`.
+Updated 2026-11-11. An earlier planning folder (`.planning/`, nine GSD phases) was folded into this file on that date.
+
+## At a glance
+
+**Live today:** V0 and V1 (8 of 10). **Built locally, not released:** V1.1 (5 of 5).
+
+| | What | State |
+|---|---|---|
+| **Done** | **V0**, go-live and repair (GSD phases 1 to 7): hardening, CI gate on deploys, Clerk repairs, safe writes, Clerk-only sign-in, certificates, daily-flow speed-ups | Released (`ae01cec` to `825600e`) |
+| **Done** | **V1**, enquiry to paid invoice (ten items): public site, Clerk sign-in, enquiry email to the owner, enquiry to invoice, payment and VAT, client portal isolation, backup restored and targets agreed, scheduled jobs visible, deletion-request alert | Released `4bdaed7`; **8 of 10 ticked** |
+| **Done** | **V1.1**, safety nets (five items): layout tests for every public page and CMS screen, Today shows deletion requests and failed alerts, lint is the gate | Finished locally 2026-11-11, **not released** |
+| **Left 1** | Release V1.1 | Your "approved:"; a push to `main` releases |
+| **Left 2** | V1 items 4 and 10, and the small owner list | Waiting for you: business facts, the adviser's retention periods, rotate one key, two clean-ups (table "Needs the owner") |
+| **Left 3** | **V1.2**, public-site trust (rest of GSD phase 8) | Planned, not frozen; scope notes below |
+| **Left 4** | **V2**, clean-up and live verification (rest of GSD phase 9) | Planned, not frozen; scope notes below |
+| **Parked** | Everything else, grouped by theme | "Parking lot" below; nothing deleted |
+
+How a new version opens: you say so, I propose at most ten items from the parking lot by value to users, we freeze the list
+in this file with a date and a check per item, then each item is designed and planned before it is built (`AGENTS.md`,
+"How work is planned and built").
 
 ## V1 finish line (frozen)
 
@@ -98,18 +117,39 @@ They are closed with that evidence in the same commit that proves it.
 
 ## Versions and the nine GSD phases (2026-11-11)
 
-An earlier planning sheet (`.planning/ROADMAP.md`, local only, not in git) split the work into nine phases. This file is the
-authority; the table says where each phase went so the two cannot disagree.
+The nine phases of the earlier planning sheet are mapped onto versions so the two cannot disagree.
 
 | Version | What it holds | GSD phases | State |
 |---|---|---|---|
 | **V0** (go-live and repair) | Hardening, docs and CI gate, Clerk repairs, safe writes, Clerk-only sign-in, certificates, daily-flow speed-ups | 1 to 7 | **Released** (`ae01cec`, `b301ec7`, `cbfd527`, `ed58064`, `01d2269`, `825600e`; Phase 2 closed 2026-11-08 with the CI gate, K-138, and the `release.mjs` wording) |
 | **V1** (frozen 2026-11-10) | Ten outcomes from enquiry to paid invoice | the owner-input core of 8 (items 4 and 10) | Released `4bdaed7`; 8 of 10 ticked; 4 and 10 BLOCKED on the owner |
 | **V1.1** (frozen 2026-11-11) | The five items above | the lint slice of 9 (item 5); layout and Today safety nets are new | **Finished locally 2026-11-11**, not released |
-| **V1.2** (PLANNED, not frozen) | The buildable rest of Phase 8: cookie policy that names Clerk, spam protection beyond the per-IP limit, a real 404 status for unknown paths (hand-applied rewrite, K-139), prerendered pages and sitemap entries for CMS-published posts and work | 8 | Waits for V1.1, and for the owner's legal inputs on the cookie and legal wording |
-| **V2** (PLANNED, not frozen) | Phase 9 rest: dead code (K-139), drop the orphan `items` table and legacy auth columns (hand-applied SQL after a backup), unique keys and the `audit_log` index, one formatter and one error banner, large-file splits, ESLint 10 (K-041), refresh the codebase map, and the owner's signed-in walk on real data (K-044) | 9 | Opens only when the owner says so |
+| **V1.2** (PLANNED, not frozen) | The buildable rest of Phase 8 | 8 | Waits for V1.1, and for the owner's legal inputs on the cookie and legal wording |
+| **V2** (PLANNED, not frozen) | The rest of Phase 9 | 9 | Opens only when the owner says so |
 
 A planned version is not started and not frozen: its items are chosen when it opens, by the same two tests as D-063.
+
+### Scope notes for the planned versions
+
+Carried over from the planning sheet (goals, what is in, what is out, how we will know). They are starting points for the
+design step, not a frozen list.
+
+**V1.2, public-site trust.** *Goal:* the public site has no placeholder gaps and no easy abuse.
+*In:* the cookie policy names Clerk; spam protection on the contact form beyond the per-IP limit (the real client IP behind
+Cloudflare is still unchecked, K-101); a real 404 status for unknown paths (a hand-applied server rewrite, K-139); prerendered
+pages and sitemap entries for CMS-published posts and work, which also closes K-147; the legal "[to supply]" gaps once the owner
+supplies them (V1 item 4). *Out:* new pages, copywriting beyond the gaps, ads.
+*Done when:* a search for "[" placeholders on the built public pages finds none (`npm run check:facts -- --strict` exits 0); an
+unknown URL returns 404 over HTTP; a scripted burst on the contact form is blocked; every sitemap page renders its own content.
+*Gate:* the owner supplies the legal inputs; they are never invented.
+
+**V2, clean-up and live verification.** *Goal:* no dead code or schema drift remains, and the whole app is checked signed in on
+real data. *In:* remove dead client functions, `fallbackWork`, weather leftovers and unused UI exports (K-139); drop the orphan
+`items` table and the legacy auth columns and tables (hand-applied SQL, approved, backed up first); add the missing unique keys
+(`files.share_token`, `invoices.number`) and the `audit_log` index; one shared formatter and one error banner; split the files over
+600 lines; ESLint 10 for the 13 moderate advisories (K-041); the owner's signed-in walk on real data, which closes K-044.
+*Out:* new features. *Done when:* `schema.sql` and the live database are compared, not assumed; docs match measured counts; the
+walk is recorded in `docs/AUDIT.md`.
 
 ## Needs the owner (BLOCKED, with the exact action)
 
@@ -125,34 +165,42 @@ Prepared in this run: the scripts, tests and instructions below. None of these w
 | f | ~~One live walk~~ **done 2026-11-10, all seven steps** (`docs/VERIFICATION.md`). Left: the invoice PDF, a real phone | gate 6 (real browser and phone) | `docs/VERIFICATION.md` "Owner walk" |
 | g | ~~`$OWNER_ALERTS`~~ **done 2026-11-10** (`hello@gakinz.com`, SMTP login proven). Confirmed by the owner: the TEST email arrived | item 3 live | `docs/DEPLOYMENT.md` section 5 |
 
-## Parking lot (V1.1 and later)
+## Parking lot (V1.2 and later)
 
-Every other idea, refactor and audit finding, one line each. Do not build from this list until the owner
-opens a new scope. Nothing here was deleted from the code or the issue list.
+Every other idea, refactor and audit finding, one line each, grouped by theme; the version in brackets is where it would join.
+Do not build from this list until the owner opens a new scope. Nothing here was deleted from the code or the issue list.
 
-- Phase 8 public-site trust beyond the placeholders (needs legal inputs) and Phase 9 (drop retired legacy columns and tables).
-- Certificates screen checked live (issue, verify, revoke); recipient consent per certificate (K-061).
-- Demo flag for Work records in the CMS (WORKBOOK 3a.3); the three portfolio demos are already labelled "Demo" on the site.
-- Enforce the app-shell CSP (K-033). The session token is already out of `localStorage` (checked 2026-11-11, D-057).
-- ESLint 10 for the 13 moderate advisories (K-041).
-- The home-page H1 read twice by crawlers.
-- Strict tsc leftovers: K-072, K-074, K-077, K-078, K-083, K-020.
-- Ad pilot (K-104 to K-107), switched off.
-- Client anonymisation switch-on (K-108).
-- Cloudflare Authenticated Origin Pulls.
-- OpenRouter-backed AI assistant features.
-- PayPal (hidden until a webhook exists).
-- Server suite on MySQL 5.7 and 8 (K-099, K-111); CI runs MySQL 8.
-- Large files: `server/work.php`, `Dashboard.tsx`, `bookings.php`, `proposals.php`, `Invoicing.tsx` (over 600 lines each).
-- Acknowledgement email to the visitor (K-097).
-- An index on `audit_log (action, created_at)`: the heartbeat, the contact throttle and the reminder memory all filter on `action`; fine at today's size, schema change when it grows.
-- Stripe: switch on pay links (owner steps in `docs/DEPLOYMENT.md`, then test mode, then live).
-- Phone tables: eight CMS tables scroll sideways inside their box on a phone (K-148); stacked rows or a column picker would fix it.
-- Real assistive-technology pass (screen reader, keyboard-only) on the public site and the CMS. V1.1 item 1 and 4 run axe, which is not the same thing.
-- A due-date column for data deletion requests (V1.1 item 2 computes the date from the ticket instead).
-- Owner alerts: a retry or queue if a send fails (V1.1 item 3 only makes the failure visible).
-- One-step "Grant portal access" (CMS client account plus Clerk user) and a friendlier message than Clerk's "Couldn't find your account"; the manual steps are in `docs/OPERATIONS.md` 10.2.
-- Quotes list "Total" is the amount before VAT (label it, or show the VAT-inclusive total); Invoicing tiles refresh after "Mark paid" without a reload.
+**Public site**
+- Two built-in article pages in the sitemap render the not-found view on the live CMS (K-147). [V1.2]
+- Certificates screen checked live (issue, verify, revoke); recipient consent per certificate (K-061). [V1.2]
+- Demo flag for Work records in the CMS, which needs a schema change (WORKBOOK 3a.3); the three portfolio demos are already labelled "Demo" on the site. [V1.2]
+- The home-page H1 is read twice by crawlers (needs the owner's OK). [V1.2]
+- Acknowledgement email to the visitor with the enquiry reference (K-097; held back on purpose, a spam-relay risk). [later]
+
+**CMS and daily use**
+- Eight CMS tables scroll sideways inside their box on a phone (K-148); stacked rows or a column picker would fix it. [V1.2]
+- Quotes list "Total" is the amount before VAT (label it, or show the VAT-inclusive total); Invoicing tiles refresh after "Mark paid" without a reload. [V1.2]
+- One-step "Grant portal access" (CMS client account plus Clerk user) and a friendlier message than Clerk's "Couldn't find your account"; the manual steps are in `docs/OPERATIONS.md` 10.2. [V1.2]
+- Real assistive-technology pass (screen reader, keyboard-only) on the public site and the CMS; axe in V1.1 is not the same thing. [V2]
+
+**Safety, privacy and money**
+- Enforce the app-shell CSP, which is Report-Only today (K-033; the session token is already out of `localStorage`, checked 2026-11-11, D-057). [V2]
+- Cloudflare Authenticated Origin Pulls. [V2]
+- A due-date column for data deletion requests (V1.1 item 2 computes the date from the ticket instead). [V2]
+- Owner alerts: a retry or queue if a send fails (V1.1 item 3 only makes the failure visible). [V2]
+- An index on `audit_log (action, created_at)`: the heartbeat, the contact throttle and the reminder memory all filter on `action`; fine at today's size, a schema change when it grows. [V2]
+- Client anonymisation switch-on (K-108; needs the adviser). [owner]
+- Stripe: switch on pay links (owner steps in `docs/DEPLOYMENT.md`, then test mode, then live). [owner]
+- Server suite on MySQL 5.7 and 8 (K-099, K-111); CI runs MySQL 8. [V2]
+
+**Code health**
+- ESLint 10 for the 13 moderate advisories (K-041). [V2]
+- Strict tsc leftovers: K-072, K-074, K-077, K-078, K-083, K-020. [V2]
+- Large files: `server/work.php`, `Dashboard.tsx`, `bookings.php`, `proposals.php`, `Invoicing.tsx` (over 600 lines each). [V2]
+- Dead code and schema drift (K-139): the `items` table, unused client functions, `fallbackWork`, missing unique keys, duplicated formatters and error banners. [V2]
+
+**Switched off on purpose**
+- Ad pilot (K-104 to K-107). OpenRouter-backed AI assistant features. PayPal (hidden until a webhook exists). [later, only if you ask]
 
 ## Cut (decided not to build for V1; the code stays)
 

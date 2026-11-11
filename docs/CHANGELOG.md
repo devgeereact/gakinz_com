@@ -4,6 +4,11 @@ What changed in the product, newest first. The checks behind each change are in 
 [VERIFICATION.md](VERIFICATION.md); why is in [DECISIONS.md](DECISIONS.md). Releases before 2026-11-10 are listed in
 [WORKBOOK.md](WORKBOOK.md) section 1.
 
+## 2026-11-11 (later) · One planning home (documents only)
+
+- `.planning/` (nine GSD phases, a 2026-11-08 baseline) is folded into `docs/ROADMAP.md`: an "At a glance" table of what is done, what is left and what is parked; scope notes for the planned V1.2 and V2; the parking lot grouped by theme with the version each item would join. The folder is removed; a copy of the old files is kept in `.local-state/` (gitignored).
+- `AGENTS.md` gains "How work is planned and built": brainstorm, plan in `.agent/CURRENT-TASK.md`, build test first, prove with evidence, using the Superpowers skills. `CLAUDE.md` points to it.
+
 ## 2026-11-11 · V1.1 finish-line run (local branch `goal/finish`, not released; D-063)
 
 **Added**

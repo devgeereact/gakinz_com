@@ -94,6 +94,23 @@ decision.
   production mutation, deploy, DNS change or database change without explicit approval in
   the current task contract.
 
+## How work is planned and built
+
+New behaviour is designed before it is built, with the Superpowers skills (Claude Code). The order:
+
+1. **Brainstorm** (`superpowers:brainstorming`) before any new feature or change of behaviour: the purpose, the options, one
+   recommendation. A decision that constrains later work goes in `docs/DECISIONS.md` as a dated D-number. There is no separate spec file.
+2. **Plan** (`superpowers:writing-plans`) for anything of more than one step: ordered steps, each with its check, written in
+   `.agent/CURRENT-TASK.md` (the only task file). What a version contains stays in `docs/ROADMAP.md`.
+3. **Build** test first (`superpowers:test-driven-development`), one step at a time. A bug or a red test goes through
+   `superpowers:systematic-debugging` before any fix.
+4. **Prove** (`superpowers:verification-before-completion`): run the ladder in "Completion standard" and report it with evidence.
+   Money, authentication, ownership and client-isolation changes also get `superpowers:requesting-code-review`.
+
+Those skills default to `docs/superpowers/` and `.superpowers/`; this project does not use them. Documents stay flat in `docs/`,
+there is one task file, and scratch goes in `.local-state/` or `.local-test/` (both gitignored). A small fix, such as a typo or a
+one-line defect with a failing test, skips steps 1 and 2.
+
 ## Completion standard
 
 A change is complete when all of the following hold and are stated with evidence. The full
