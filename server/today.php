@@ -57,6 +57,7 @@ require __DIR__ . '/_bootstrap.php';
 const TODAY_ITEMS_MAX = 20;
 const TODAY_ASSET_WAIT_DAYS = 3;
 const TODAY_CALL_AHEAD_DAYS = 7;
+const TODAY_CRON_STALE_HOURS = 36;
 const TODAY_LEADS_ROLES = ['super_admin', 'admin', 'manager', 'editor'];              // leads.php STAFF
 const TODAY_BOOKINGS_ROLES = ['super_admin', 'admin', 'manager', 'editor'];           // bookings.php STAFF
 const TODAY_TASKS_ROLES = ['super_admin', 'admin', 'manager', 'editor', 'employee'];  // tasks.php STAFF
@@ -207,4 +208,42 @@ try {
 } catch (Throwable $e) {
   $now = null;
 }
-ok(['generated_at' => td_utc($now ?? time()), 'sections' => (object)$sections]);
+$reply = ['generated_at' => td_utc($now ?? time()), 'sections' => (object)$sections];
+
+// Which scheduled jobs (cron.php) are running? Owner roles only: it is about money and client email. The host needs a
+// cron entry (docs/OPERATIONS.md section 2); with none, reminders, retainer billing, the weekly digest, uptime checks and
+// pruning silently never happen (K-145), so say so here. A job counts as running when a `cron_run` heartbeat for it, or
+// for `all`, was written in the last 36 hours, which a daily entry never trips. A failed lookup omits the key.
+const TODAY_CRON_JOBS = [
+  'chase'   => 'Overdue-invoice reminders',
+  'billing' => 'Retainer billing',
+  'digest'  => 'The weekly digest',
+  'uptime'  => 'Uptime checks',
+  'prune'   => 'Clean-up of expired sign-in records',
+];
+if (in_array($user['role'], TODAY_INVOICES_ROLES, true)) {
+  try {
+    $beats = [];
+    foreach (td_rows($conn, "SELECT detail, UNIX_TIMESTAMP(MAX(created_at)) AS t FROM audit_log WHERE action = 'cron_run' GROUP BY detail") as $b) {
+      $beats[(string)$b['detail']] = (int)$b['t'];
+    }
+    $clock = $now ?? time();
+    $fresh = fn($t) => $t !== null && ($clock - $t) <= TODAY_CRON_STALE_HOURS * 3600;
+    $off = [];
+    foreach (TODAY_CRON_JOBS as $job => $label) {
+      $t = max($beats[$job] ?? 0, $beats['all'] ?? 0);
+      if (!$fresh($t ?: null)) $off[] = $label;
+    }
+    $last = $beats ? max($beats) : null;
+    $reply['scheduled_jobs'] = [
+      'last_run' => td_utc($last),
+      'stale'    => count($off) > 0,
+      'all_off'  => count($off) === count(TODAY_CRON_JOBS),
+      'off'      => $off,
+    ];
+  } catch (Throwable $e) {
+    error_log('today.php scheduled_jobs unavailable: ' . $e->getMessage());
+  }
+}
+
+ok($reply);

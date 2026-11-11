@@ -2,8 +2,8 @@
 // Read only: every request is an unauthenticated GET. It sends nothing, logs in nowhere and
 // changes nothing, so it is safe to run before or after a release.
 //
-//   npm run check:live                      # https://gakinz.com
-//   npm run check:live -- https://example   # another origin
+//   pnpm run check:live                      # https://gakinz.com
+//   pnpm run check:live https://example   # another origin
 //
 // Exit code 0 when every check passes, 1 otherwise.
 import { pathToFileURL } from "node:url"

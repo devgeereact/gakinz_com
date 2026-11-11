@@ -26,6 +26,7 @@ One fact, one home. Where two documents disagree, the code is the authority.
 
 | Fact | Authority |
 |---|---|
+| What "finished V1" means, what is parked or cut | `docs/ROADMAP.md` (frozen 2026-11-10, D-060) |
 | Product scope, journeys, planned features and exclusions | `docs/PRODUCT-SPEC.md` |
 | Content, social and monetisation policy | `docs/CONTENT-AND-GROWTH.md` |
 | Public copy | `src/marketing/data/site.ts` for defaults; published Site content (`server/site.php`) overrides the sections it covers (D-046) |
@@ -50,7 +51,7 @@ decision.
 
 ## Styling
 
-Tailwind CSS v4 is the styling system (D-060): utility classes in the markup, `tailwindcss()` in `vite.config.ts`, `@import "tailwindcss";` and the `@theme inline` token map in `src/index.css`. The shadcn variables in `:root` and `.dark` stay the single source of every CMS colour, radius and shadow; add a token to the variable and to `@theme inline` together, and record it in `docs/DESIGN-SYSTEM.md`. No `tailwind.config.js`, PostCSS, Sass or CSS-in-JS. Element defaults go in `@layer base` so utilities can override them. Plain unlayered CSS (the rest of `src/index.css`, `src/marketing/site.css`) beats every utility, so do not put a utility on an element and expect it to win over a rule there. Installed per project (`pnpm add -D tailwindcss @tailwindcss/vite`), never relied on from a global install. Packages are managed with pnpm; `pnpm-lock.yaml` is the only lockfile.
+Tailwind CSS v4 is the styling system (D-062): utility classes in the markup, `tailwindcss()` in `vite.config.ts`, `@import "tailwindcss";` and the `@theme inline` token map in `src/index.css`. The shadcn variables in `:root` and `.dark` stay the single source of every CMS colour, radius and shadow; add a token to the variable and to `@theme inline` together, and record it in `docs/DESIGN-SYSTEM.md`. No `tailwind.config.js`, PostCSS, Sass or CSS-in-JS. Element defaults go in `@layer base` so utilities can override them. Plain unlayered CSS (the rest of `src/index.css`, `src/marketing/site.css`) beats every utility, so do not put a utility on an element and expect it to win over a rule there. Installed per project (`pnpm add -D tailwindcss @tailwindcss/vite`), never relied on from a global install. Packages are managed with pnpm; `pnpm-lock.yaml` is the only lockfile.
 
 ## Commands
 

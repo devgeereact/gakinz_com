@@ -1104,7 +1104,31 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 
 **Why:** these were the places where the enquiry-to-paid-invoice flow stopped or repeated itself. Item 1 is the one that touches clients, so it comes with the strongest tests (a fake mail server; 13 tests).
 
-## D-060 · Tailwind CSS v4 through the Vite plugin, pnpm, and tw-animate-css
+## D-060 · The V1 finish line is frozen, and what "finished" means for GAkinz
+**Date:** 2026-11-10 · **Status:** decided by the owner's `/finish-app` brief (the eight items and their order), recorded by the run that carried it out.
+
+1. `docs/ROADMAP.md` holds the frozen list: ten items, two already true (public pages, Clerk-only sign-in), eight open in the owner's order: enquiry reaches the owner, true business facts, enquiry to invoice, invoice and payment with the right VAT, client portal isolation, restore drill and recovery targets, scheduled work running or visibly off, privacy basics.
+2. **An item is ticked on local evidence** (tests on a throwaway database, a browser run on localhost, a scripted drill). What only the live system or the owner can show is gate item 6 of the live-ready gate and is listed as BLOCKED, not hidden.
+3. **Everything else is parked, not deleted**: the parking lot and "Cut" in the roadmap name each thing and why. "Cut" means no V1 work, not removal of code.
+4. **Owner-only items stay BLOCKED**: business facts, adviser sign-off, the host cron entry, the host restore and recovery targets, the OpenRouter limit, the Clerk dev user and the `TEST owner` row. Each has an exact action in the roadmap.
+5. `docs/KNOWN-ISSUES.md` was compacted by merging closed issues into a table (2,397 to about 1,460 lines); the full earlier text stays in git (`git show d30e95b:docs/KNOWN-ISSUES.md`).
+
+**Why:** the app was built far past what a one-owner services business needs to start; nothing defined done, so every session found more. A short frozen list with a check per item stops that.
+
+## D-061 · Owner alerts: tell the owner when something would otherwise wait unseen
+**Date:** 2026-11-10 · **Status:** decided by the finish-line run (item 3 would not otherwise be true).
+
+1. `contact.php` saved an enquiry and sent no mail, and the weekly digest cannot run without a cron entry (K-145), so the owner only learned of an enquiry by opening Leads. `server/_notify.php` now emails `$OWNER_ALERTS` when an enquiry is saved and when a client files a data deletion request (K-095).
+2. **Best effort, after the response.** The alert runs in a shutdown function after `fastcgi_finish_request()` / `litespeed_finish_request()`, so the visitor never waits for SMTP and a mail failure never turns a saved enquiry into an error. The outcome is an audit row (`enquiry_notified`, `enquiry_notify_failed`, `deletion_notified`, `deletion_notify_failed`).
+3. **No queue and no retry**: the enquiry is in Leads and the ticket in Support either way. With no `$OWNER_ALERTS` or no `$SMTP_HOST`, nothing is sent and the behaviour is exactly as before. **No fallback to `$REPORT_RECIPIENTS`**: an alert carries personal details and the digest list was chosen for another purpose (a review finding). **At most 20 alerts of a kind an hour** (then an `alert_suppressed` audit row), so the public form cannot become an inbox flood; SMTP timeout 8 seconds.
+4. **The alert carries the visitor's own words** in a plain-text body only; subject and audit detail are one line with control characters stripped (header injection test).
+5. **Scheduled jobs get a heartbeat per job**: every `cron.php` run writes a `cron_run` audit row naming the job (at most one per job per 10 minutes); Today tells the owner roles which jobs have not been seen for 36 hours (`all` counts for every job, so a prune-only line cannot make billing look alive). That makes item 9 true whichever way the owner decides K-145.
+6. Deletion requests open at `high` priority. A due-date column and a Today section for them are parked.
+
+**Why:** the cheapest change that makes "a visitor sends an enquiry and the owner receives it" true without a cron entry, a queue, or a schema change.
+
+
+## D-062 · Tailwind CSS v4 through the Vite plugin, pnpm, and tw-animate-css
 **Date:** 2026-11-10 · **Status:** decided by the owner (house standard, 10 Nov 2026), done locally on `chore/tailwind-v4`, **not pushed or released**. **Mode A** (full `@import "tailwindcss";` with Preflight), because `src/index.css` is one 480-line file with the shadcn variables and the CMS is mostly utilities already.
 
 1. **pnpm first.** `package-lock.json` became `pnpm-lock.yaml` (`pnpm import`, so every version carried over). Install scripts of `esbuild`, `core-js` and `@clerk/shared` stay blocked (`pnpm-workspace.yaml`, reviewed: none is needed). `ci.yml` and `deploy.yml` now run `pnpm install --frozen-lockfile`. `release.json` is untouched: its `npm run ...` commands only run package scripts and still work.

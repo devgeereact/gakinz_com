@@ -66,10 +66,10 @@ const UK = { "@type": "Country", name: "United Kingdom" }
 /**
  * The business behind the site, as a service-area business. Only what the site
  * itself states: London at town level, the public email, and the services it
- * lists. No street address, telephone or company number is claimed until a real
- * one exists (site.ts).
+ * lists, and the telephone number only when the owner has supplied one. No street
+ * address or company number is claimed until a real one exists (site.ts).
  */
-export function businessSchema(opts: { description: string; email: string; services: ServiceRef[] }) {
+export function businessSchema(opts: { description: string; email: string; phone?: string | null; services: ServiceRef[] }) {
   return {
     "@context": "https://schema.org",
     "@type": "ProfessionalService",
@@ -79,6 +79,7 @@ export function businessSchema(opts: { description: string; email: string; servi
     image: OG_IMAGE,
     description: opts.description,
     email: opts.email,
+    ...(opts.phone ? { telephone: opts.phone.replace(/[^+\d]/g, "") } : {}),
     founder: { "@id": `${SITE_URL}/#person` },
     address: { "@type": "PostalAddress", addressLocality: "London", addressCountry: "GB" },
     areaServed: UK,

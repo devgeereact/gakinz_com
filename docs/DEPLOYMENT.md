@@ -110,7 +110,7 @@ Approved 2026-10-10. Until then CI ran no tests and the deploy did not wait for 
 - **Dependencies.** Identify reachable advisories, update compatible versions in small
   batches, and remove unnecessary exports only with approval (K-041). A CSV-only export may
   remove the `xlsx` problem if nobody needs workbooks (K-017). A Tailwind major migration is
-  never an automatic audit fix (v4 was done on purpose, D-060). Any lockfile update needs a fresh build and test run.
+  never an automatic audit fix (v4 was done on purpose, D-062). Any lockfile update needs a fresh build and test run.
 
 ## 3. Server deploy
 
@@ -144,6 +144,8 @@ during the demo-surface cleanup, so step 5 of the old instructions could not pas
 This is the one list of server work a release cannot carry: SQL, `server/.htaccess` and keys in the
 private `config.php`. A change that needs one of them records it here in the same pull request
 (`AGENTS.md`, "Keeping documents current"; `pnpm run docs:check` enforces it in CI).
+
+**Finish-line run (2026-11-10, D-060, D-061; released as `4bdaed7`, PR #32): no SQL and no `.htaccess` change. Done on the host the same day with the owner's go-ahead: `$OWNER_ALERTS = "hello@gakinz.com"` added to `~/private-config/gakinz_com/config.php` (backed up first as `~/backups/gakinz_com/config.php.before-owner-alerts.*`, linted, mode 600); SMTP login proven (235, no mail sent); `~/gakinz-backup.sh` installed; two crontab lines added (`docs/OPERATIONS.md` 2.1 and 5).** The release replaces `contact.php`, `support.php`, `cron.php`, `today.php`, adds `_notify.php` and the front end. **One `config.php` addition, the owner's, before the alerts do anything:** `$OWNER_ALERTS = 'hello@gakinz.com';` (a comma list; there is no fallback to `$REPORT_RECIPIENTS`; with it empty, or `$SMTP_HOST` empty, nothing is sent and nothing breaks). Check `$SMTP_*` first (send a test from Mail). After release, read-only: `GET /api.php` ok; `GET /today.php` without a token answers 401. Then submit one enquiry from `/contact` with an obvious TEST name and look for the email and the `enquiry_notified` audit row; delete the TEST row from Leads. With no cron entry (K-145) Today will show "Scheduled jobs are not running" to the owner roles: that is expected; it narrows as each job is seen and clears when all five have a run in the last 36 hours (`docs/OPERATIONS.md` 2.1). Not tested on the host: whether it has `litespeed_finish_request()` (if not, a visitor waits at most the 8-second SMTP timeout when the mail host is down). Rollback: `pnpm run release --rollback --go`; nothing in the database changes.
 
 **Phase 7 (2026-11-09, D-059, released as `825600e`): no SQL, no `.htaccess` and no `config.php` change is needed.** The release replaces
 `cron.php`, `tasks.php`, `invoices.php`, `_bootstrap.php` and the front end. `$CHASE_INTERVAL_DAYS` is optional (default 7) and is
@@ -463,6 +465,7 @@ breaking the application.
 | `$PAYPAL_CLIENT_ID`, `$PAYPAL_SECRET`, `$PAYPAL_MODE`, `$PAYPAL_ENABLED` | PayPal, off unless `$PAYPAL_ENABLED` is `true` |
 | `$GOOGLE_CLIENT_ID`, `$GOOGLE_CLIENT_SECRET`, `$GOOGLE_REDIRECT`, `$APP_URL` | Google SSO |
 | `$CRON_KEY`, `$REPORT_RECIPIENTS` | Scheduled jobs and the digest |
+| `$OWNER_ALERTS` | Optional (2026-11-10, D-061). Comma list emailed at once when an enquiry is saved or a client files a data deletion request. Empty sends nothing; it does not fall back to the digest list. At most 20 alerts of a kind an hour |
 | `$GITHUB_TOKEN`, `$FIGMA_TOKEN`, `$SLACK_WEBHOOK_URL`, `$CALENDLY_URL` | The four external connectors |
 | `$RETENTION_ENQUIRY_MONTHS`, `$RETENTION_CLIENT_MONTHS`, `$RETENTION_INVOICE_MONTHS`, `$RETENTION_AUDIT_MONTHS`, `$RETENTION_SUPPORT_MONTHS`, `$RETENTION_COMMS_MONTHS`, `$RETENTION_STAFF_MONTHS`, `$RETENTION_CERTIFICATE_MONTHS`, `$RETENTION_DELETED_FILE_DAYS` | What the read-only retention report counts. All `null` in the template; a missing key is the same as `null`. The enquiry and deleted-file periods are also what the gated executor deletes by, only with `$RETENTION_APPLY` and `--apply` too (section 5.4) |
 | `$RETENTION_APPLY` | The retention executor's switch. `false` in the template; keep it `false` (section 5.4) |

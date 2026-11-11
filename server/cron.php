@@ -101,6 +101,16 @@ if ($job === 'all' || $job === 'uptime')  $out['uptime']  = cron_uptime($conn);
 if ($job === 'all' || $job === 'digest')  $out['digest']  = cron_digest($conn);
 if ($job === 'all' || $job === 'prune')   $out['prune']   = cron_prune($conn);
 
+// The heartbeat. today.php reads these to tell the owner which scheduled jobs are running (K-145: a host with no
+// cron entry otherwise fails silently). The detail is the job asked for ('all', 'prune', ...). Written only when a job ran.
+// One row per job per 10 minutes at most, so a cron line that runs every minute cannot flood the log.
+if ($out) {
+  $beat = $conn->prepare("SELECT 1 FROM audit_log WHERE action = 'cron_run' AND detail = ? AND created_at > (NOW() - INTERVAL 10 MINUTE) LIMIT 1");
+  $beat->bind_param('s', $job);
+  $beat->execute();
+  if (!$beat->get_result()->fetch_row()) audit($conn, null, 'cron_run', $job);
+}
+
 ok(['ran' => $out]);
 
 // ── Jobs ─────────────────────────────────────────────────────────────────────

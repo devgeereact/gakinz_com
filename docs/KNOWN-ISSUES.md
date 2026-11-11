@@ -1,7 +1,7 @@
 # Known issues
 
-Open problems, each with evidence and a status. Fixed entries stay, marked, so their history
-is not lost. "Fixed" means fixed in the repository: client changes made after `c57eb4a` reach
+Open problems, each with evidence and a status. Fixed entries are kept as one row each
+under "Closed issues". "Fixed" means fixed in the repository: client changes made after `c57eb4a` reach
 the live site only when PR #8 merges, and anything under `server/` is not live until it is
 uploaded (`docs/DEPLOYMENT.md` section 5). Read this file before starting work, and update it
 in the same pull request as a fix (`AGENTS.md`, "Keeping documents current").
@@ -13,68 +13,33 @@ dated before 2026-10-22 describes that date only; check `docs/WORKBOOK.md` for w
 Severity is judged on impact to the live business, not on how hard it is to fix. Entries
 K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` section 1.
 
+**Compacted 2026-11-10.** Issues that are fully fixed, closed, moot or superseded are one row each in "Closed issues" near the end of this file, with the lessons worth keeping under "Lessons from closed issues". Open, partly fixed, mitigated, accepted and owner-action issues keep their full write-ups. The full text of every closed issue as it stood before compaction is retrievable with `git show d30e95b:docs/KNOWN-ISSUES.md`.
+
+## Open and partly open issues
+
 | ID | Issue | Severity | Status |
 |---|---|---|---|
 | K-001 | A live super-admin credential is in git history | Critical | **Password rotated 2026-10-12 (owner-reported). Sessions revoked and the account retired 2026-10-30:** the 32 session tokens of that account were deleted and the account soft-deleted (`users` id 1). The repository is now public, so the credential in history stays exposed to the web; it is rotated and its account is gone |
 | K-002 | Lint fails | Medium | Open. 5 errors, 0 warnings on 2026-10-21 after groups A to C moved onto `useLoad` (22 screens and the sign-in page); left: Contracts, Portal and the theme toggle; before that 33 errors, 0 warnings on 2026-10-19, all `set-state-in-effect`, down from 41 and 1 (2026-10-11) and 60 and 7; ratchet in CI. Not merged |
 | K-003 | `config.php.example` named a retired mail host | Medium | Fixed in the template. Server value UNVERIFIED |
-| K-004 | `api.php` accepts an unauthenticated POST | Medium | **Fixed 2026-09-22.** Not uploaded |
-| K-005 | `contact.php` has no spam protection | Medium | **Fixed 2026-09-22.** Not uploaded |
 | K-006 | Deployed server state is unknown | Medium | Mitigated 2026-10-21: everything to `3fc6a31` uploaded and checked (WORKBOOK section 1) |
-| K-007 | No MIME allowlist on upload | Low to medium | **Fixed 2026-09-22.** Not uploaded |
-| K-008 | Accessibility is unmeasured | Medium | **Closed 2026-09-22.** Measured. See `docs/AUDIT.md` |
-| K-009 | Marketing entry chunk is 556.94 kB | Low | **Closed 2026-09-22.** Now 181.76 kB |
-| K-010 | No backup procedure is known to exist | High | Open. Outside this repository |
+| K-010 | No backup procedure is known to exist | High | **Mostly closed 2026-11-10.** There was no daily GAkinz backup (only two manual dumps of 2026-10-30). `scripts/gakinz-backup.sh` now runs daily on the host (03:30; database and uploads, 14 days kept) and the host's own newest dump was restored once locally (`npm run drill:restore`: 42 of 42 tables, 0 orphans; `docs/OPERATIONS.md` 10.1). Open, owner: agree the recovery targets (proposed 1 working day / 24 hours); copy dumps off the host on a schedule; try a files restore once client files exist |
 | K-011 | `access.ts` can drift from the server role lists | Low | **Mostly closed 2026-09-22.** Three mismatches fixed, tests added |
-| K-012 | Stale design residue in `src/index.css` | Cosmetic | **Closed 2026-09-22** |
-| K-013 | Four shared includes are outside the `.htaccess` deny rule | Informational | **Fixed 2026-10-10.** Not uploaded |
-| K-014 | `auth.php` hard-codes a fallback seed-admin address | Low | **Fixed 2026-09-22.** Not uploaded |
-| K-015 | A seed super-admin password was written to a web-served file | **Critical** | **Fixed in code 2026-09-22. Live file checked 2026-10-30: `seed_admin_password.txt` does not exist in the document root** (`ls` over ssh; the HTTP 200 for that URL is the app shell) |
-| K-016 | Editing a draft blog post silently destroys its body | High | **Fixed 2026-10-10.** Not uploaded |
-| K-017 | `xlsx` carried a HIGH advisory with no fix on npm | Medium | **Fixed 2026-11-01** on `golive/2026-11`: SheetJS 0.20.3 from the SheetJS CDN, pinned by integrity |
 | K-018 | The public site is an empty shell to any client that does not run JavaScript | Medium | **Fixed in code 2026-10-16** for the 30 built-in public pages (prerender), not deployed. CMS-only records remain. The soft 404 lost its noindex in the D-046 rebuild; restored 2026-10-17 (K-066) |
 | K-019 | `sitemap.xml` is hand-maintained and omits database-driven URLs | Low | **Fixed in code 2026-10-16**: generated by the build from the prerendered pages, not deployed. CMS-only records still omitted |
 | K-020 | `tsc -b` does not use the strict project configs | Low | Open |
 | K-021 | The legal pages have no review date and several compliance gaps | Medium | Open. Owner decision |
-| K-022 | `SidebarMenuSub` drops its forwarded ref | Low | **Fixed 2026-10-11.** Not deployed |
-| K-023 | Two CMS account links point at routes that do not exist | Low | **Fixed 2026-10-10.** Not deployed |
-| K-024 | Non-admin roles cannot enable two-factor or revoke their own sessions | Medium | **Fixed 2026-10-10.** Not deployed or uploaded |
 | K-025 | Stripe charged the ex-VAT amount and marked the invoice fully paid | **Critical** | **Fixed 2026-10-10**, uploaded 2026-10-21. Past Stripe payments still need checking against their VAT-inclusive totals |
 | K-026 | PayPal payment is recorded only if the customer's browser returns | High | **Mitigated 2026-10-10:** PayPal checkout switched off |
-| K-027 | Magic links and Google sign-in bypassed two-factor; one link could mint several sessions | **Critical** | **Fixed 2026-10-10.** Not uploaded |
-| K-028 | Draft or declined quotes could be accepted; concurrent accepts duplicated projects and invoices | High | **Fixed 2026-10-10.** Not uploaded |
-| K-029 | Create endpoints returned the audit-log id instead of the new record's id | High | **Fixed 2026-10-10.** Not uploaded |
-| K-030 | CSV exports could run spreadsheet formulas from enquiry text | Medium | **Fixed 2026-10-10** |
-| K-031 | Dashboard showed £0 and "All on time" when data failed; two CMS screens overflowed phones | Medium | **Fixed 2026-10-10** |
-| K-032 | The CMS navigation is one flat list of 24 entries | Medium | **Fixed 2026-10-10.** Not deployed |
 | K-033 | The bearer token lives in `localStorage`, and unlocking the lock screen issues a second token | Medium | **Partly fixed 2026-10-10:** unlock revokes the old token; not deployed. Storage, lifetime and CSP open |
 | K-034 | A contract "signature" is a staff-typed name, not client signing | Medium | Open |
-| K-035 | CI ran no tests and the deploy did not wait for CI | High | **Fixed 2026-10-10** |
-| K-036 | Public pages bring back unpublished posts and work from the static fallback | Medium | **Fixed 2026-10-10.** Not deployed |
-| K-037 | The article renderer has no links or lists | Medium | **Fixed 2026-10-10.** Not deployed |
 | K-038 | Public fallback copy shows engineering counts and internal file paths | Medium | **Partly fixed:** engineering copy removed 2026-10-10; screenshot placeholders gone in the D-046 rebuild. **Correction 2026-10-17:** "Portrait to come" (About) and "Outcome figures: not measured yet" (every work page) are still shown, as D-027 labelled gaps, with the legal review date. Not deployed. **Update 2026-10-19:** the six service pages are built from spec 4.3 and not deployed; coverage and area, IT prices and package price confirmation remain owner inputs (K-090 to K-092) |
-| K-039 | Clients cannot message the owner from the portal | High | **Fixed 2026-10-10.** Not deployed or uploaded. Private feedback built 2026-10-16, not uploaded |
-| K-040 | `stored` is a MySQL 8 reserved word, so the schema failed on MySQL | High | **Fixed 2026-10-10.** Not uploaded |
 | K-041 | `npm audit` reported 25 affected packages (1 critical, 7 high) | Medium | **Fixed for runtime 2026-11-01**: 0 critical, 0 high. 13 moderate left, all ESLint dev tooling (needs ESLint 10, a planned major) |
-| K-042 | The Google Fonts `@import` still blocks rendering on public pages that no longer use those fonts | Low | **Fixed in code 2026-10-14** (D-046), not deployed. CLS measured 2026-10-16: see K-052 |
-| K-043 | A static canonical in `index.html` conflicts with the per-route canonical | Low | **Fixed 2026-10-16** (prerender), not deployed. SEO 100 on `/`, `/work`, `/contact` |
 | K-044 | The D-046 redesign is verified only against mocked API responses | Medium | Open. Owner test on real data pending |
-| K-045 | Accessibility and performance audits predate the D-046 rebuild and the font change | Medium | **Closed 2026-10-16.** Re-measured; five fixes, open findings are K-050 to K-053 |
-| K-046 | Dead redesign residue: `.gk-fadein` rules, the Sofia Sans dependency, D-037 brand assets | Cosmetic | **Fixed 2026-10-16**, not deployed. Re-checked 2026-10-18: no residue left |
 | K-047 | Three commit subjects on `feat/redesign-2026` contain a literal `$'\n\n'` | Informational | Open. Cannot be fixed without a history rewrite |
-| K-048 | Site content tabs scroll sideways at 390px with no visible cue | Low | **Fixed 2026-10-16** (tabs wrap), not deployed. Re-checked in source 2026-10-18 |
-| K-049 | Editing a Work record crashed on a detail response without images | Medium | **Fixed 2026-10-14** (`24c25ff`). Not deployed |
-| K-050 | RotaFlow blue `#3B6FE0` fails contrast for the reduced-opacity white text on it | Medium | **Fixed 2026-10-16** (`#2C5AC4`), not deployed |
-| K-051 | Amber hero slide: dark bar text on the dark bottom shading | Medium | **Fixed 2026-10-16** (light bar text), not deployed |
 | K-052 | Home CLS 0.114 from the font swap moving the hero, and LCP 4.9 s simulated | Medium | CLS **fixed**, FCP 2.7 to 1.8 s with the prerender (2026-10-16), not deployed. Home LCP still 4.5 to 4.8 s: open |
 | K-053 | The LCP image on `/work` is lazy-loaded | Low | Prerendered 2026-10-16: `/work` LCP 3.4 s, Performance 90 to 91. Eager first card re-measured, still no faster; lazy kept |
-| K-054 | A CMS heading rule shrank every public page heading | High | **Fixed 2026-10-16**, not deployed |
 | K-055 | Calls, the client timeline and private feedback are verified only locally, with owner decisions open | Medium | Open. Built 2026-10-16, not merged or uploaded |
-| K-056 | An admin could demote or suspend a super admin, locking the owner out | High | **Fixed 2026-10-17**, not uploaded |
-| K-057 | Sign-in lockout by anyone, unlimited code guesses on a signed-in account, a reusable reset link, and sign-in timing | Medium | **Fixed 2026-10-17**, not uploaded |
-| K-058 | No browser security headers on pages and static files; HSTS and directory listing unknown | Medium | **Fixed in `.htaccess` 2026-11-01** on `golive/2026-11` (HSTS, COOP, CSP, listing answers 404); checked on a local Apache 2.4.67, LiteSpeed NOT TESTED, not uploaded |
-| K-059 | Session, reset, magic-link and share tokens are stored in plain text | Medium | **Fixed 2026-10-17** for sessions, reset and magic links, no schema change, not uploaded. Share tokens open by design |
-| K-060 | Proposal share links never expire and cannot be revoked | Low | **Fixed 2026-10-17**, not uploaded |
 | K-061 | Smaller server findings from the 2026-10-17 audit | Low | Four fixed (PHP version, non-image Work files, cron key, PayPal return), not uploaded. The seed-password log is open; certificate ids were fixed in D-058 (released with Phase 6) |
 | K-062 | No retention, deletion or export: personal data is kept indefinitely | High | **Partly addressed 2026-10-19:** subject access export, a read-only retention dry run, a super admin's erase of one prospect's enquiry, a client's deletion request ticket and a retention executor gated off by `$RETENTION_APPLY = false`, all built, not uploaded. Periods and client erasure are owner and legal decisions (`docs/PRIVACY-READINESS.md`) |
 | K-063 | The privacy and cookie pages did not match what the site does | High | **Partly fixed 2026-10-17:** facts corrected and the full structure in place with labelled placeholders for owner facts, not deployed. Placeholders and adviser review outstanding (K-021) |
@@ -83,11 +48,9 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-066 | Public-site defects from the 2026-10-17 audit | Low to medium | **Fixed 2026-10-17**, not deployed; `favicon.ico` and web manifest added 2026-10-18, not deployed. VAT wording and `/sectors` open (owner) |
 | K-067 | "Not in the future" date checks use a server clock whose time zone is not set | Low | Open. Live PHP and database time zones UNVERIFIED |
 | K-068 | The 40/30/30 split moved to integer pence: on PHP 8.4 or later about 2.5% of subtotals move 1p between invoices | Low | Accepted 2026-10-18, not uploaded. Live PHP version UNVERIFIED |
-| K-069 | Header links at 0.85 opacity can fall below AA on a mid-tone owner hero colour | Low | **Fixed 2026-10-31** (`a907824`): header links at full opacity, current page underlined (K-115) |
 | K-070 | The client calendar file has no meeting link, and a cancelled call has no cancellation file | Low | Open. Owner decision |
 | K-071 | Portal call requests, update requests and supplied assets notify nobody | Low | Open. Owner decision |
 | K-072 | Asset supply is a note only: a client cannot upload a file | Low | Open. Needs a client upload path in `files.php` |
-| K-073 | Toasts failed AA contrast and ignored dark mode; the Projects board scroll region was not focusable; a refused acceptance showed only in a toast | Medium | **Fixed 2026-10-19**, not deployed |
 | K-074 | Today's three-day wait for a requested asset restarts whenever the item is edited | Low | Open. Needs a `requested_at` column (SQL) |
 | K-075 | Today's sections and "overdue" use the database clock, whose time zone is not set | Low | Open. Same cause as K-067; live time zones UNVERIFIED |
 | K-076 | The dashboard's "Updated" time covers the attention list only, not the totals or chart | Low | Open. Wording or design decision |
@@ -96,24 +59,21 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-079 | The subject access export includes staff notes about the client, and is built whole in memory | Medium | Open. Notes: owner and legal decision. Memory: accepted at current volumes |
 | K-080 | The handoff export's redaction is a safety net: other personal data typed by staff goes out as typed | Medium | Open. By design; staff must not type personal data into the brief |
 | K-081 | axe reports `aria-required-children` on the search dialog's empty state | Low | Open. Inside the third-party `cmdk` list |
-| K-082 | Strict SQL errors in `briefs.php`, `privacy.php` and `_retention.php` are not tested on PHP before 8.1 | Low | **Closed 2026-11-01.** The host runs PHP 8.4.26 (read 2026-10-21), so the pre-8.1 path does not arise |
 | K-083 | Draft protection does not cover the Brief Measurements form, the Work images, sign and accept dialogs, or the New project dialog | Low | Open. Six screens covered 2026-10-19, not deployed |
 | K-084 | Cancel on a dirty New quote or New contract dialog now asks, then discards the fields | Low | Behaviour change 2026-10-19, not deployed |
 | K-085 | Ticket time with no date, and template due dates, use PHP's time zone, which is not set | Low | Open. Same cause as K-067; live time zone UNVERIFIED |
 | K-086 | A template's client checklist appears in the client's portal as soon as the project is created | Low | Mitigated 2026-10-19: opt-in, off by default. Not uploaded |
 | K-087 | A never-expiring share link (Work images) is cached for up to a day | Low | Accepted 2026-10-19, not uploaded |
-| K-088 | Several CMS selects had no accessible name (New project Client first) | Medium | **Fixed 2026-10-19.** Found by axe; predates the batch |
-| K-089 | Server test runs left `php -S` workers on the port, making later runs flaky | Low | **Fixed 2026-10-19** in `tests/server/global-setup.ts` |
 | K-090 | The IT support pages omit coverage, area and response time, so spec 4.2 acceptance is unmet | Medium | Open, waiting on the owner. Built 2026-10-19, not deployed |
 | K-091 | Enquiry budget bands are unchanged, so the lowest is still "Under £1,500" | Low | Open by owner decision 2026-10-19; not deployed |
 | K-092 | Three exclusions on the website service pages are inferred from `site.ts`, not stated in spec 4.3 | Low | Open, waiting on the owner. Built 2026-10-19, not deployed |
 | K-093 | An older services list shows the built-in six until the owner saves once, and a custom row without every page field is no longer published | Medium | Open by design (D-048). Built 2026-10-19, not uploaded or deployed |
 | K-094 | Sequential work references reveal roughly how many enquiries and projects there were that year | Low | Open, owner decision (random yearly offset is the option). Built 2026-10-19, not uploaded |
-| K-095 | A client's deletion request has no priority, due date or notification | Medium | Open, owner decision. Built 2026-10-19, not uploaded |
+| K-095 | A client's deletion request has no priority, due date or notification | Medium | **Mostly fixed and released 2026-11-10** (D-061, `4bdaed7`): opens at high priority and emails the owner with the reply-by date (one month on). Not built: a due-date column, a Today item. The legal deadline wording is still the adviser's. Not tested live (needs a client login) |
 | K-096 | Erasing an enquiry scans and briefly locks `audit_log` rows | Low | Accepted 2026-10-19 at the current size. Not uploaded |
 | K-097 | No acknowledgement email carries the enquiry reference | Low | Open by ruling 2026-10-19 (spam relay risk); the thank-you shows it |
 | K-098 | A retention dry run writes no audit row | Low | Accepted 2026-10-19: a dry run changes nothing |
-| K-099 | SQL 19 step 2 passed on MariaDB and MySQL 8.0.46, not MySQL 5.7 | Low | Open. Live database engine and version UNVERIFIED |
+| K-099 | SQL 19 step 2 passed on MariaDB and MySQL 8.0.46, not MySQL 5.7 | Low | Open. **Live engine evidenced 2026-11-10:** the host's dump header says `11.4.13-MariaDB-cll-lve` (as at 2026-10-30), so MariaDB 11.4, the same series as the Mac. Owner to confirm it still is |
 | K-100 | Reference sign-in links share `magic_links`, so `magic_consume` also redeems them, for up to 15 minutes after the switch goes off | Low | Open, pre-enable gate: a `purpose` column (future SQL). Built 2026-10-19, switched off, not uploaded |
 | K-101 | The reference sign-in timing floor relies on early finish or fast SMTP | Low | Open, pre-enable gate. Host SAPI UNVERIFIED |
 | K-102 | Reference sign-in per-IP throttles read `REMOTE_ADDR`, which may be Cloudflare's address | Medium if switched on | Open, pre-enable gate. Real-IP setup on the host UNVERIFIED |
@@ -123,44 +83,13 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-106 | The CMP host allow-list is not checked against Google's certified CMP list | Medium if switched on | Open, check before switching on |
 | K-107 | Some CMPs need more than a script URL | Low | Open, check when a CMP is chosen |
 | K-108 | Client anonymisation is built but switched off, awaiting adviser confirmation | Medium | Built 2026-10-20, switched off, not uploaded. Adviser confirms the rules first |
-| K-117 | The live sign-in page shows "Continue with Google", while D-052 records Google as switched off | Low | **Resolved 2026-10-31 by owner decision: Google stays on.** D-052 amended. Whether production uses the owner's own Google OAuth credentials is UNVERIFIED |
-| K-118 | In the icon rail (768 to 1023px) 26 sidebar links and Sign out had no accessible name | Medium | **Fixed 2026-10-31** on `feat/design-finalisation`, deployed 2026-10-31 (`a907824`) |
-| K-119 | AI features stopped working: one provider, on a free model | Medium | **Fixed 2026-11-01** on `chore/cleanup-2026-11-01` (D-054), not released; live cause UNVERIFIED |
-| K-120 | A client email with a line break reached the SMTP `RCPT TO` command (invoice chase and the cron chase) | Medium | **Fixed 2026-11-01** on `golive/2026-11`, not released |
-| K-121 | Clerk sign-in gave a full session to an account with app two-factor on, without the code (K-027 rule not applied to Clerk) | High if any account had TOTP on | **Fixed 2026-11-01**, released 2026-11-08 as `ae01cec`: Clerk must prove a second factor (`fva`), pending sessions refused. Checked before the merge: 0 accounts have app two-factor on |
-| K-122 | The AI daily cap counted only successful replies and checked before it recorded | Low | **Fixed 2026-11-01** on `golive/2026-11`: every attempt counts, slot taken under a lock |
-| K-123 | The Cloudflare origin lock trusts any CF-RAY; if the host takes the client IP from a header without checking the peer, every per-IP throttle can be bypassed | Medium if the host setting is open | **Closed 2026-11-08 with evidence.** One probe straight at the origin with a fake `CF-RAY` and a forged `CF-Connecting-IP` recorded the real peer address, so the header is not trusted from arbitrary peers; all 45 recent audit rows hold non-Cloudflare (visitor) addresses. Left open as a hardening idea only: the origin still answers any request carrying a `CF-RAY` header (Cloudflare Authenticated Origin Pulls would close that) |
+| K-110 | A burst of 31 `Class "mysqli" not found` fatals in the live PHP error log | Medium | Open, found 2026-10-30. None since; cause UNVERIFIED |
 | K-124 | The settings stub was not in the repository, and CLERK_CACHE_DIR was not in the template | Low | **Template fixed 2026-11-01** (`config.stub.php.example`); the live stub and key UNVERIFIED |
-| K-125 | Directory listing on `/assets/` and `/uploads/`, and the PHP version in every API reply | **Medium** (raised 2026-11-08: observed live) | **Observed live 2026-11-08** with `npm run check:live`: `https://gakinz.com/assets/` and `/uploads/` answer 200 with an "Index of" page, and `/api.php` still sends `X-Powered-By`. Listing contents were not read. **Fixed 2026-11-01** in `.htaccess` and `_bootstrap.php` on `golive/2026-11`; the `.htaccess` part **went live on 2026-11-08** (owner-approved, backup first): both listings now answer 404, `X-Powered-By` is gone from `/api.php`, and `npm run check:live` passes 16 of 16. The `_bootstrap.php` part ships with the release (`docs/DEPLOYMENT.md` section 5) |
-| K-126 | SMTP and IMAP do not check the mail server's certificate | Medium if the mail path can be intercepted | **Fixed 2026-11-08:** switch added 2026-11-01; tested (certificate chain and host name verify on SMTP 465 and IMAP 993, inbox opens read-only with validation) and turned on in the private config |
-| K-127 | Staff file downloads read only the stored legacy token (`Files.tsx:73`), but under Clerk there is none (`api.ts` falls back to a Clerk token) | Medium | **Fixed and released 2026-11-08** (`b301ec7`, PR #27): `Files.tsx` now uses `files.download` -> `api.download`, which attaches the Clerk token. 4 tests first, mutation-checked. A real signed-in download is NOT TESTED live: the live system has no files to download |
-| K-128 | `files.php` action `share` overwrites `share_token` and `expires_at` on any file, while `work.php` serves public portfolio images by that token and says it is never rotated | Medium | **Fixed and released 2026-11-08** (`b301ec7`, PR #27): a file that already has a link with no expiry keeps it (the server test pins the portfolio image case and the two unchanged behaviours), and the Files screen no longer says "7 days" for it. Tests first (1 red: the token was rotated), mutation-checked. Server tests only: not exercised on live data, which has no files |
-| K-129 | Updates reset fields they were not sent: `blog.php` update sets `status` to `draft` (unpublishes a live post), and `testimonials.php`, `leads.php` meta and `dev.php` meta do the same for `approved`, `tags`/`score` and `checklist` | Medium | **Fixed and released 2026-11-09** (`cbfd527`, PR #28): blog, testimonials, content, clients, leads meta and dev meta load the stored row (`gk_live_row`) and keep every field a request did not send; a blog edit no longer unpublishes a post or changes its address. 18 tests first (14 red), four mutations caught. The first finding was **confirmed**; the other three were **reported** and then reproduced by the tests |
-| K-130 | Several update and delete routes answer ok and write an audit row for an id that does not exist (`clients` update, `blog`, `content`, `testimonials` approve, `support` assign) | Low | **Fixed and released 2026-11-09** (`cbfd527`, PR #28): update, approve and assign answer 404 for a missing id (testimonials, content, clients, dev meta, support assign), using a lookup, because UPDATE reports 0 affected rows for a harmless no-op. Same tests as K-129. **Verified live 2026-11-09:** nine routes answer 404 with a clear message for an id that does not exist (testimonials approve and update, content, clients, blog, leads meta, dev meta, support assign, invoices status) |
-| K-131 | "Paid" is recorded differently: `status=paid`, the Stripe webhook and PayPal set only `paid_at`, while `record_payment` fills the `paid_*` columns; drafts can be paid or chased | Medium | **Fixed and released 2026-11-09** (`cbfd527`, PR #28): `gk_mark_invoice_paid` (in `_money.php`) records the same evidence (method, reference, amount, who) for manual mark-paid, the Stripe webhook and PayPal. **A draft can still be paid, on purpose**: the owner's flow is accept quote, draft deposit invoice, Stripe link, webhook (`journey.test.ts`), and my first draft of this fix would have broken it; `record_payment` keeps its stricter sent-only rule, and chase and link creation are unchanged. Also fixed: re-marking a paid invoice answered a false 404 (now 409). 13 tests first, three mutations caught. PayPal's return path uses the same function but is NOT TESTED (no fake; PayPal ships off) |
-| K-132 | `auth.php` action `forgot` stores a reset token and never emails it ("Phase 2" in the code), and nothing in the UI calls it | Low | **Fixed and released 2026-11-09** (D-057, `ed58064`): `forgot` and the whole reset flow are gone |
-| K-133 | The legacy sign-in (password, magic link, reference link, Google bounce) is unreachable in the Clerk build: its `#magic`, `#access` and `#sso_token` handlers live only in `LegacyLogin` | Low | **Fixed and released 2026-11-09** (D-057, `ed58064`): the legacy sign-in is retired |
-| K-134 | Certificates cannot be issued: `/verify` reads `certificates`, nothing writes it and there is no screen; ids are short and unthrottled (see K-061) | Medium | **Fixed and released 2026-11-09** (D-058, `01d2269`): `certificates.php` issues, lists and revokes; the verify page is throttled and uniform |
-| K-135 | `STAFF` is a different role list in different endpoints, and `MODULE_ROLES` copies them by hand: editors open the dashboard, but `invoices.php` is manager-only, so the editor dashboard shows a permanent warning | Low | **Fixed and released 2026-11-09** (`cbfd527`, PR #28), by a guard and not a refactor: `access-drift.test.ts` compares each module's roles in `access.ts` with the PHP list that serves it (30 pairs, all agree today) and fails on drift or an undecided new module. The roadmap's "define the lists once on the server" was not done: a shared file touching every endpoint was higher risk than a test that makes drift impossible to miss. The editor dashboard no longer loads invoices or shows the permanent banner (`dashboardSources.ts`, 5 tests). The editor view is NOT TESTED in a browser: the only live account is a super admin; as the super admin the dashboard shows no banner and all 24 screens load |
 | K-136 | The contact form has only an IP rate limit: no honeypot or challenge (D-055 rejected a honeypot; a challenge such as Turnstile is not decided). K-123 is closed, so the limit does work per visitor | Low | Open, found 2026-11-08. **Reported** |
 | K-137 | The legal pages carry about 15 "[to supply]" gaps (data controller, retention, governing law, review date) and the cookie policy does not mention Clerk | Medium | Open, found 2026-11-08. **Reported**; needs owner inputs (roadmap Phase 8) |
-| K-138 | `deploy.yml` does not wait for `ci.yml`: both start on a push to `main`, so a failing CI job does not stop a release | Medium | **Fixed and live 2026-11-08** (`7457e5e`, PR #26): on its first run the release job started 3 seconds after the slowest check finished (22:11:41 to 22:11:44) and reported "Nothing to upload"; the release is a job of `ci.yml` that `needs` every check, and `scripts/deploy-needed.mjs` (tests first, mutation-checked) keeps the docs-only skip. Found **confirmed**: both runs were `in_progress` together on the pushes of `ae01cec` and `983606c` |
 | K-139 | Dead code and schema drift: the `items` table, unused client functions (`content.update`, `invoices.paypalLink`, `mail.setSeen`, `files.downloadUrl`, `clientMessages.get`), `fallbackWork`, weather leftovers; `files.share_token` and `invoices.number` have no unique key on a fresh install; unknown public paths answer 200 (soft 404, **confirmed**) | Low | Open, found 2026-11-08. Mostly **reported**; the list above is the whole list found |
-| K-140 | Three screens could hang or mislead under Clerk: the signed-in gate spun for ever after a 401 mid-session or a failed first user lookup; a failed ticket load showed the loading skeleton for ever (and a failed load of another ticket left the old one on screen); a project's status dropdown snapped back after a change | Medium | **Fixed and released 2026-11-08** (`b301ec7`, PR #27): `guardModel.ts` (13 tests), `ticketPanelModel.ts` and `projectStateModel.ts` (7 tests), all written first and mutation-checked. **Verified live in the browser:** after an injected 401 the app re-loaded the signed-in user by itself and showed the screen (before the fix that sequence hung); a failing ticket load shows the server's message with Try again, and Try again asks the server again. NOT TESTED live: the project status dropdown (needs a project and a write) |
-| K-141 | `cron.php job=chase` re-emailed every overdue invoice on every run, and `job=digest` (the "weekly" digest) went on every run of `job=all` | Medium | **Fixed and released 2026-11-09** (D-059, `825600e`): one reminder per invoice per `$CHASE_INTERVAL_DAYS`, digest at most once every 6 days. **Found 2026-11-09 (read-only `crontab -l`, owner-approved): the host has no GAkinz cron entry at all**, so nothing has been re-emailing clients, and also no retainer billing, uptime check, prune or weekly digest has been running (see K-145). Closed |
-| K-142 | A task cannot be edited, assigned or dated after it is created; a move to the status it already has answers 404; a malformed due date reached the database | Low | **Fixed and released 2026-11-09** (D-059, `825600e`): `tasks.php` update, date validation and the status lookup. |
-| K-143 | No way to edit a client in the CMS (`clients.update` existed with no screen) | Low | **Fixed and released 2026-11-09** (D-059, `825600e`): Edit in the client detail sheet. |
-| K-144 | Accepting a quote left you on the project list, and a quote could not start from an enquiry | Low | **Fixed and released 2026-11-09** (D-059, `825600e`): lands on the new project; "Draft a quote" on the enquiry. |
-| K-145 | **No scheduled jobs are set up for GAkinz on the host:** `crontab -l` for the account lists only other projects and the backup script, so `cron.php` (retainer billing, overdue reminders, weekly digest, uptime checks, pruning) never runs. The docs (`docs/OPERATIONS.md` section 2) say to add the entry; it was never added | Medium | Open, found 2026-11-09. **Confirmed** by a read-only `crontab -l`. Owner decision: adding a cron line is a server change and switches on retainer billing and emails to clients, so it needs approval and the `$REPORT_RECIPIENTS` and `$SMTP_*` checks first |
-| K-116 | `vite preview` inherits the dev proxy and sends `.php` calls to the live API | Medium | **Fixed 2026-10-31** on `feat/design-finalisation` (`preview.proxy: {}`), merged 2026-10-31 (`a907824`) |
-| K-115 | Header links over a light project colour fail contrast (Harni's pink) | Medium | **Fixed 2026-10-31** on `feat/design-finalisation`, deployed 2026-10-31 (`a907824`). Cause corrected: the link tint and opacity, not `onColour` |
-| K-114 | Accessible names that do not match visible text (WCAG 2.5.3) | Low | **Fixed 2026-10-31** on `feat/design-finalisation`, deployed 2026-10-31 (`a907824`): logo links, CMS sidebar link, search, account button, Files drop zone |
-| K-113 | Form field borders are below 3:1 against their background (WCAG 1.4.11) | Medium | **Fixed 2026-10-31** on `feat/design-finalisation` with the owner-approved values, deployed 2026-10-31 (`a907824`) |
-| K-112 | Layout and composition gaps on the public site, sign-in and GAkinzOS (register P1 to P9, C1 to C3) | Medium | **Fixed 2026-10-31** on `feat/design-finalisation`, deployed 2026-10-31 (`a907824`). C1 live: card frame and footer panel gone, tokens applied (`fdc5d94`) |
-| K-111 | SQL 20 was written as live statements at the foot of `schema.sql` and stopped the schema loading on MySQL | High (CI only) | **Fixed 2026-10-30** (commented out; found by the first CI run after Actions came back) |
-| K-110 | A burst of 31 `Class "mysqli" not found` fatals in the live PHP error log | Medium | Open, found 2026-10-30. None since; cause UNVERIFIED |
-| K-109 | GitHub Actions is switched off, so no CI runs and no deploy runs; the FTP deploy state on the host is stale | Medium | **Fixed 2026-10-30.** Actions on; the new no-delete upload ran green on `608dc7b` |
-
+| K-145 | **No scheduled jobs were set up for GAkinz on the host:** `cron.php` (retainer billing, overdue reminders, weekly digest, uptime checks, pruning) never ran | Medium | **Closed 2026-11-10.** Found 2026-11-09 by a read-only `crontab -l`. Now `15 6 * * * php ~/gakinz.com/cron.php job=all` is in the host's crontab, after counting 0 clients, 0 invoices and 0 retainers so the first run could not email or bill anyone, and one hand run (all counts 0). Every run writes a per-job heartbeat and Today lists any job not seen in 36 hours (D-061). The digest is off until `$REPORT_RECIPIENTS` is set |
+| K-146 | `contact.php` saved an enquiry and sent no mail, so with no cron entry the owner only saw it by opening Leads | Medium | **Fixed and released 2026-11-10** (D-061, `4bdaed7`). `$OWNER_ALERTS = hello@gakinz.com` is set on the host and SMTP login was proven (235). Live check: one TEST enquiry produced the `enquiry_notified` audit row (deleted afterwards). **Owner to confirm the email arrived in hello@gakinz.com** (subject "New enquiry from TEST Finish Run (ignore)") |
 
 ---
 
@@ -263,58 +192,6 @@ the values.
 
 ---
 
-## K-004 · `api.php` accepts an unauthenticated POST
-**Severity:** medium · **Status:** **fixed in code on 2026-09-22. NOT UPLOADED.**
-
-`server/api.php` was rewritten as a read-only health check: a `SELECT 1` and a JSON
-reply. The `items` listing and the anonymous `INSERT` are both gone, and
-`server/README.md`'s post-install step was updated to match. The endpoint is still
-unauthenticated, which is intended for a health check, but it no longer writes.
-
-The repository copy is fixed. Whether the live document root still serves the old file
-is **UNVERIFIED**.
-
-**The original finding, for the record.**
-
-
-`server/api.php` is the original smoke test. `GET` lists rows from `items`; `POST {name}`
-inserts one. Neither calls `require_auth`.
-
-**Impact:** anyone who can reach the domain can insert rows into a production table
-indefinitely. It is not a data-disclosure path, since `items` holds no business data, but it
-is an unauthenticated write to the live database and an easy way to fill the disk.
-
-**Options:** gate the POST behind `require_auth`, or remove `api.php` from the document root
-now that it has served its purpose. Note that `server/README.md` still uses `GET /api.php`
-returning `[]` as the post-install check, so removing it means replacing that step.
-
----
-
-## K-005 · `contact.php` has no spam protection
-**Severity:** medium · **Status:** **fixed in code on 2026-09-22. NOT UPLOADED.**
-
-An IP throttle was added, modelled on the login counter already in `auth.php`: more than
-five `enquiry_submit` rows from one address within fifteen minutes returns 429. Each
-accepted enquiry also writes an `audit()` row, which it did not before.
-
-No captcha and no new dependency. Note that the throttle counts rows in `audit_log`, so
-purging that table resets it.
-
-**The original finding, for the record.**
-
-
-The public enquiry endpoint validates a name, an email format and a message of at least 10
-characters, then inserts into `enquiries` with the caller IP. There is no rate limit, no
-honeypot, no captcha and no duplicate check.
-
-**Impact:** the leads pipeline is the studio's front door. Automated submissions land directly
-in it as apparently real leads.
-
-**Note:** the pattern to reuse already exists. `auth.php` throttles by counting recent
-`audit_log` rows for the same email or IP.
-
----
-
 ## K-006 · Deployed server state is unknown
 **Severity:** medium · **Status:** open, needs server access
 
@@ -327,83 +204,6 @@ up to date.
 
 **What closes it:** compare the approved file versions, schema and configuration on the host
 with the repository, and record each result and its rollback in `docs/DEPLOYMENT.md`.
-
----
-
-## K-007 · No MIME allowlist on upload
-**Severity:** low to medium · **Status:** **fixed in code on 2026-09-22. NOT UPLOADED.**
-
-`server/files.php` now checks the extension against an allowlist and cross-checks the
-real type with `finfo_file()` before the file is stored. The browser-supplied
-`Content-Type` is no longer stored, and the download path sends only an allowlisted
-type.
-
-Two residuals, both recorded rather than fixed. Existing rows keep whatever MIME their
-uploader's browser claimed, though the download filter now neutralises them. And nothing
-scans `uploads/` for files already there whose extension the new allowlist would reject.
-The host must have the PHP `fileinfo` extension enabled or uploads return 503.
-
-**The original finding, for the record.**
-
-
-`files.php` caps size at 20 MB, generates a random stored name and sanitises the extension to
-alphanumerics, but accepts any file type.
-
-**Mitigation in place:** the upload directory gets a generated `.htaccess` with
-`Require all denied` and `Deny from all`, and everything is streamed back through PHP with
-`X-Content-Type-Options: nosniff`.
-
-**Residual risk:** the whole defence against an uploaded script being executed is that one
-generated `.htaccess`. If it is missing, unreadable or not honoured by the web server, an
-uploaded PHP file sits in a directory under the document root. That the deny works on the live
-host is **NOT TESTED**.
-
----
-
-## K-008 · Accessibility is unmeasured
-**Severity:** medium · **Status:** **closed on 2026-09-22.** Measured.
-
-The public surface was measured at runtime rather than declared. axe-core 4.10.2 across
-16 routes returned 0 violations; Lighthouse's accessibility category scored 100; contrast
-was computed on rendered pixels across 28 distinct combinations with 0 failures; 353
-focusable elements were checked for a visible indicator with 0 failures; reflow at 200%
-and target size at 390px both pass.
-
-Two real defects were found by that measurement and fixed: the focus indicator painted
-nothing on part of the masthead, and the ring colour was inverted on dark controls.
-Neither was reported by axe.
-
-Full method, figures and the list of what remains NOT TESTED are in
-`docs/AUDIT.md`. The largest remaining gap is that **no screen-reader pass
-with real assistive technology has been done**, and GAkinzOS at `/app/*` is unaudited.
-
-**The original finding, for the record.**
-
-A previous session recorded an axe run with zero violations on three pages. That claim is
-withdrawn: no report was kept, the run is not reproducible from this tree, there is no
-accessibility tooling in `package.json`, and the palette has been replaced twice since.
-
-See `docs/AUDIT.md` and `docs/DECISIONS.md` D-020.
-
----
-
-## K-009 · The marketing entry chunk is over the warning threshold
-**Severity:** low · **Status:** **closed on 2026-09-22.**
-
-The entry chunk is 181.76 kB, down from 556.94 kB, and Vite no longer emits the 500 kB
-warning. `vite.config.ts` gained a `manualChunks` rule that splits the framework into a
-long-cacheable `vendor` chunk and folds roughly 30 lucide micro-chunks into one.
-
-`dist/` fell from 43 MB to 2.6 MB, almost all of it from removing 35.92 MiB of
-unreferenced images in `public/`. Figures in `docs/AUDIT.md`.
-
-**The original finding, for the record.**
-
-
-556.94 kB raw, 173.79 kB gzipped, against Vite's 500 kB warning. The heavy libraries are
-already lazy; this is the eager public-site entry.
-
-Previous documentation recorded 539 kB, so it has grown. See `docs/AUDIT.md`.
 
 ---
 
@@ -454,161 +254,6 @@ returning 403, or as a hidden module the user could actually use.
 `src/lib/access.test.ts` covers the client side only.
 
 ---
-
-## K-012 · Stale design residue in `src/index.css`
-**Severity:** cosmetic · **Status:** **closed on 2026-09-22.**
-
-Both commented-out gradient blocks are gone, including the committed keyboard-mash
-(`=-09876543567987654321`, `200014b0f2a,456895e//`, `#111a3,a,`) that was sitting inside
-one of them, and the leftover URL pointing at a third-party template demo site. The
-FullCalendar reset went with FullCalendar. The five unused custom properties and the
-misnamed `--gk-violet` / `--gk-indigo` / `--gk-sky` override on `.gk-public` are gone.
-
-The effect classes themselves (`.gk-aurora`, `.gk-grid`, `.gk-shine`, `.gk-grad-text`)
-remained at the time because `src/app/Login.tsx` and `SetPassword.tsx` used them. On
-2026-10-14 (D-046) the sign-in pages were restyled, those classes were deleted, `.gk-shine`
-became a no-op, and the gradient helpers and the custom background themes went too.
-
-**The original finding, for the record.**
-
-- A Pulse-kit block of `gradient-red` through `gradient-cyan` helpers and a `.dark-blue`,
-  `.gaussian-black`, `.classic-light` scrollbar rule, none of which belongs to this brand.
-- Two section comments still say "Forest Editorial", and one points at `DESIGN-SYSTEM.md §5`.
-  The rules under them are current; only the labels are stale.
-
-Those two items were part of the original finding. The gradient helpers and the
-scrollbar rule remain, because the CMS themes still use them; the stale section labels
-were corrected with the rest of the block.
-
----
-
-## K-013 · Four shared includes are outside the `.htaccess` deny rule
-**Severity:** informational · **Status:** **fixed 2026-10-10, not uploaded.** The deny pattern
-is now `^(config|_[A-Za-z0-9_-]+)\.php$`. Regex checked locally; Apache/LiteSpeed behaviour
-NOT TESTED. The original finding follows.
-
-`server/.htaccess` denies `config.php` and `_bootstrap.php` by name. It does not deny
-`_smtp.php`, `_sms.php`, `_slack.php` or `_monitor.php`.
-
-All four contain function definitions only and produce no output when requested directly, so
-the practical impact is nil today. It is recorded because the rule's intent was to cover
-shared includes, and a future include that runs code at load would be exposed.
-
-The same `FilesMatch` also still names only `(api|contact|ai|verify)\.php` in its
-non-rewrite rule, which is a stale list. It is harmless, because an earlier rule already lets
-every real file through.
-
----
-
-## K-014 · `auth.php` hard-codes a fallback seed-admin address
-**Severity:** low · **Status:** **fixed in code on 2026-09-22. NOT UPLOADED.**
-
-The `'dev@gakinz.com'` fallback is gone. `ensure_seed()` now returns early when
-`$GLOBALS['SEED_ADMIN_EMAIL']` is not set, rather than inventing an address.
-
-**This changes first-run behaviour.** With the key unset, a first run against an empty
-`users` table now creates no account at all and nobody can sign in. `$SEED_ADMIN_EMAIL`
-must be set in the live `config.php`.
-
-**The original finding, for the record.**
-
-
-`server/auth.php` line 484:
-
-```php
-$email = $GLOBALS['SEED_ADMIN_EMAIL'] ?? 'dev@gakinz.com';
-```
-
-`ensure_seed()` runs only against an empty `users` table, so this fires once on a fresh
-install and never again. It is the last remaining production identifier hard-coded in tracked
-source, now that `config.php.example` uses a placeholder.
-
-**Impact:** low. It names the seeded super-admin account in a public-readable file, and on a
-fresh install with an unfilled config it would silently create an account under an address the
-operator may not control.
-
-**Not fixed here** because it is application code, and this documentation migration does not
-change behaviour. The fix is one line: fail with a clear message when `$SEED_ADMIN_EMAIL` is
-unset or still a placeholder, rather than defaulting.
-
----
-
-## K-015 · A seed super-admin password was written to a web-served file
-**Severity:** critical · **Status:** **fixed in code on 2026-09-22. An operator action is
-still outstanding on the live server.**
-
-`server/auth.php` generated a random super-admin password on first run and wrote it, in
-plaintext, to `server/seed_admin_password.txt`. `__DIR__` there is the document root,
-and the `.htaccess` deny list covered only `.md`, `.sql` and `.log`. A `.txt` file in the
-document root was served to anyone who requested it by name.
-
-The empty-password path was the documented default: `config.php.example` says
-`$SEED_ADMIN_PASSWORD = '';   // '' → random, written to seed_admin_password.txt`. The
-`chmod 0600` on the file did not help, because Apache runs as the same cPanel user.
-
-**Fixed in code:** the file write is gone and the generated password goes to the PHP
-error log instead. The `.htaccess` deny pattern now covers `.txt`, with `robots.txt`
-exempted by a negative lookahead so the public site still works.
-
-**Outstanding, and it is the operator's:** check whether
-`https://gakinz.com/seed_admin_password.txt` exists on the live server and delete it. If
-it was there, treat that password as public: change it and revoke that account's
-sessions. Whether the file exists is **UNVERIFIED** from this repository.
-
-This is related to K-001 but is a separate exposure with a separate fix.
-
----
-
-## K-016 · Editing a draft blog post silently destroys its body
-**Severity:** high · **Status:** **fixed 2026-10-10, not uploaded.** The editor now loads the
-full post from a new editors-only `GET blog.php?id=` before Save is enabled, and an update that
-omits `excerpt` or `body` keeps the stored values (`tests/server/blog.test.ts`). The original
-finding follows.
-
-In `server/blog.php` the staff list branch (`?all=1`) selects `id, slug, title, category,
-cover, read_mins, status, published_at, updated_at`. It does not select `body` or
-`excerpt`. The only branch that returns `body` is the public single-post read, which
-filters on `status = "published"`.
-
-So a **draft** post has no endpoint that returns its body, and `blog.php?action=update`
-rewrites `excerpt` and `body` unconditionally. Opening a draft in the CMS and saving it
-writes back the empty fields the form was given, wiping whatever was there. No error, no
-trace, and it looks to the author like the text was never saved in the first place.
-
-Published posts are safe, because the public read can supply the body. Drafts are the
-posts nobody misses until they open them, which is why this has gone unnoticed.
-
-**The same bug existed in `work.php` and was fixed there** on 2026-09-22: the narrative
-columns were added to `listAll`, and an EDITORS-gated `getAdmin` returns a full record
-whatever its status. The same shape of fix applies here.
-
-**Not fixed** because `blog.php` was outside the scope of this work and a change to it
-needs its own verification. Recorded so it is not lost.
-
----
-
-## K-017 · `xlsx` carries a HIGH advisory with no fix available
-**Severity:** medium · **Status:** open. Owner decision.
-
-`npm audit` reports 7 findings, down from 33. Six have fixes upstream. One does not.
-
-`xlsx` is a **direct** dependency with two HIGH advisories, Prototype Pollution
-(GHSA-4r6h-8v6p-xvw6) and ReDoS (GHSA-5pgg-2g8v-p4x9), and `fixAvailable: false`. It is
-genuinely used at `src/lib/csv.ts:5` for workbook export in the CMS.
-
-It does not touch the public site, and the input it parses is generated by this
-application rather than uploaded by a visitor, which lowers the practical risk. That is
-a mitigation, not a fix.
-
-**The options, none of which should be chosen by an agent:** accept the risk and record
-that decision; pin to the vendor's own CDN build, which is where the maintained version
-now lives; migrate the export to a maintained alternative such as `exceljs`; or drop XLSX
-and keep CSV only, if nobody needs workbooks. The 7-finding count above is the 2026-09-22
-figure; the 2026-10-10 audit is K-041.
-
----
-
-**Update 2026-11-01 (`golive/2026-11`).** SheetJS no longer publishes to npm; its fixed builds ship from its own CDN. `xlsx` now resolves to `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz` (the latest; no dependencies, no install scripts), pinned in `package-lock.json` by its sha512 integrity. Both advisories are fixed in 0.20.x. `src/lib/csv.test.ts` passes (8 tests). `npm ci` now also fetches from cdn.sheetjs.com.
 
 ## K-018 · The public site is an empty shell to any client that does not run JavaScript
 **Severity:** medium · **Status:** **fixed in code 2026-10-16** for the built-in public pages,
@@ -740,70 +385,6 @@ substance of a legal notice is not an agent's to draft:
 
 ---
 
-## K-022 · `SidebarMenuSub` drops its forwarded ref
-**Severity:** low · **Status:** fixed 2026-10-11 on `test/work-and-journey`; not deployed.
-
-The ref is now attached to the `<ul>`. No caller passes one (`src/components/nav-main.tsx`),
-so rendering is unchanged; the fix also clears the one `unused-imports/no-unused-vars` lint warning.
-
-`src/components/ui/sidebar.tsx:698`. `SidebarMenuSub` is a `React.forwardRef` whose `ref`
-is destructured but never attached to the `<ul>`, so any ref passed to it is silently
-discarded.
-
-Nothing currently passes one, so nothing is broken today. Attaching it is a behaviour
-change rather than a pure fix, which is why it was reported rather than done during the
-dead-code removal.
-
-CMS only. The public surface does not use this component.
-
----
-
-## K-023 · Two CMS account links point at routes that do not exist
-**Severity:** low · **Status:** **fixed 2026-10-10, not deployed.** The user menu now links to
-`/app/account` (My account), which every signed-in role can open (`186474c`). The original
-finding follows.
-
-`src/components/nav-user.tsx:122` and `:128` link to `/app/account/profile` and
-`/app/account/notifications`. Neither route is declared in `src/routes/index.tsx`, so
-both fall through to the catch-all and render the 404 page.
-
-These are in the user dropdown, which every signed-in person sees. Either declare the
-routes and build the two screens, or remove the menu entries. Removing them is the
-smaller change and is honest about what exists.
-
-CMS only. The public surface is unaffected.
-
----
-
-## K-024 · Non-admin roles cannot enable two-factor or revoke their own sessions
-**Severity:** medium · **Status:** **fixed 2026-10-10, not deployed or uploaded.** My account
-(`src/app/modules/Account.tsx`, `AccountSecurity.tsx`) gives every role, client included, a
-read-only profile, two-factor setup and its own sessions with revoke. `auth.php` `me` now
-returns the caller's `totp_enabled`. `tests/server/account.test.ts` checks that each
-self-service action touches only the caller. The `auth.php` change is in the upload list. The
-original finding follows.
-
-The two-factor setup, the recovery codes and the "my sessions" list all live in the
-`Platform` module, which `src/lib/access.ts` gates to `super_admin` and `admin`.
-
-The endpoints behind them do not have that restriction: `auth.php`'s `twofa_setup`,
-`twofa_enable`, `twofa_disable`, `twofa_recodes`, `sessions` and `revoke` all call
-`require_auth($conn)` with no role list, because they act on the caller's own account.
-
-So a `manager`, `trainer`, `editor`, `employee` or `client` **cannot turn on two-factor
-authentication at all**, and cannot see or revoke their own sessions, even though the
-server would let them. On a system whose tokens last 30 days and live in `localStorage`,
-that is the wrong group of people to deny.
-
-The fix is a small self-service account screen reachable by every authenticated role,
-rather than widening access to the whole Platform module. Note it pairs with **K-023**:
-the dropdown already links to an account area that does not exist, and this is what
-belongs in it.
-
-CMS only, and not touched by this relaunch.
-
----
-
 ## K-025 · Stripe charged the ex-VAT amount and marked the invoice fully paid
 **Severity:** critical · **Status:** **fixed 2026-10-10, not uploaded.**
 
@@ -818,6 +399,8 @@ in the new `payment_events` table so redeliveries are ignored (`tests/server/pay
 7 of its first 8 cases failed against the old file). **Operator action:** check invoices already
 paid through Stripe against their VAT-inclusive totals (`docs/DEPLOYMENT.md` section 5.1).
 
+---
+
 ## K-026 · PayPal payment is recorded only if the customer's browser returns
 **Severity:** high · **Status:** **mitigated 2026-10-10.**
 
@@ -826,65 +409,7 @@ tab leaves money captured against an unpaid invoice. PayPal checkout now returns
 `$PAYPAL_ENABLED = true`, and the CMS button is removed. A proper fix needs a verified PayPal
 webhook or a manual reconciliation step.
 
-## K-027 · Alternative sign-in paths bypassed two-factor
-**Severity:** critical · **Status:** **fixed 2026-10-10, not uploaded.**
-
-`magic_consume` issued a full session for any active user, including `super_admin`, without
-checking two-factor, and burned the link with an unguarded UPDATE, so concurrent clicks minted
-several sessions (reproduced locally). Google sign-in (`oauth.php`) also ignored two-factor.
-The magic-link constants were declared after the request dispatch and so were never defined:
-a configured `magic_request` would have failed with a fatal error.
-
-Fix: magic links sign in `client` accounts without two-factor only, the link is claimed with a
-guarded UPDATE, and Google sign-in refuses accounts with two-factor on
-(`tests/server/auth.test.ts`).
-
-## K-028 · Quote acceptance accepted the wrong quotes, and twice
-**Severity:** high · **Status:** **fixed 2026-10-10, not uploaded.**
-
-`proposals.php?action=accept` never checked `status`, so a draft or declined quote converted.
-The `project_id` check ran outside the transaction, so concurrent accepts created duplicate
-projects and invoice schedules (reproduced locally). Fix: accept only `sent`, unexpired quotes,
-claimed by a guarded UPDATE inside the transaction; an accepted quote cannot be moved back to
-draft (`tests/server/proposals.test.ts`).
-
-## K-029 · Create endpoints returned the wrong id
-**Severity:** high · **Status:** **fixed 2026-10-10, not uploaded.**
-
-Seventeen create handlers read `$conn->insert_id` after `audit()` had inserted its own row, so
-they returned the audit-log id. In three handlers an UPDATE ran in between, which would have
-returned 0. Found while testing K-016. Fix: read the id straight after the INSERT
-(`tests/server/create-ids.test.ts`).
-
-## K-030 · CSV exports could run spreadsheet formulas
-**Severity:** medium · **Status:** **fixed 2026-10-10.**
-
-`toCsv` quoted fields but did not neutralise a leading `=`, `+`, `-`, `@`, tab or CR, and
-enquiry text comes from the public form. Formula-like strings are now prefixed with an
-apostrophe; real numbers are untouched. SheetJS already writes XLSX strings as text cells
-(`src/lib/csv.test.ts`).
-
-## K-031 · Dashboard zeros on failure and phone overflow
-**Severity:** medium · **Status:** **fixed 2026-10-10.**
-
-A failed source showed as £0 and "All on time"; it now shows "—" with a retry hint. Invoicing
-and Platform widened a 390px screen to 448px and 642px; header actions now wrap and the shared
-tab list scrolls inside itself. Checked in an isolated local preview with every API call
-stubbed: all 24 CMS routes fit at 320px and 390px. Data-filled tables NOT TESTED.
-
-## K-032 · The CMS navigation is one flat list of 24 entries
-**Severity:** medium · **Status:** **fixed 2026-10-10, not deployed.** `app-sidebar.tsx` groups
-the entries under the seven D-040 destinations, relabels Dashboard, Leads, Proposals and
-Platform as Today, Enquiries, Quotes and Settings, and hides a group the role cannot use. URLs
-are unchanged. Checked in an isolated preview: the owner sees seven groups, a client sees
-Client Portal and My account. Moving supporting tools inside their records is later work
-(`docs/PRODUCT-SPEC.md` section 5.2). The original finding follows.
-
-`src/components/app-sidebar.tsx` renders one flat, ungrouped list of 24 entries, filtered per
-role by `canAccess`. A sole owner has to choose between 24 destinations to find the next
-action, and the supporting tools sit beside the core journeys rather than inside the records
-they serve. Resolution: the seven destinations in D-040 (`docs/PRODUCT-SPEC.md` section 5.2),
-with existing URLs kept until the migration is verified.
+---
 
 ## K-033 · The bearer token lives in `localStorage`, and unlocking issues a second token
 **Severity:** medium · **Status:** **partly fixed 2026-10-10, not deployed.** The second-token
@@ -910,6 +435,8 @@ remain open.
 
 **Update 2026-11-01 (`golive/2026-11`, not uploaded).** CSP enforced on the 32 prerendered public pages (inline script allowed by its sha256 only; `npm run build` fails if the hash and `.htaccess` disagree, `src/prerender/csp.ts`); checked in headless Chromium through the real `.htaccess` on a local Apache: 64 of 64 page loads with no violation. The CMS, sign-in and proposal shell get the same policy plus Clerk as Report-Only, because Clerk cannot run locally. The API answers `default-src 'none'; frame-ancestors 'none'`. The token is still in `localStorage`.
 
+---
+
 ## K-034 · A contract "signature" is a staff-typed name, not client signing
 **Severity:** medium · **Status:** open.
 
@@ -918,42 +445,7 @@ caller's IP. The person typing is a member of staff, so the record cannot show t
 agreed. Resolution: label it as an internal acknowledgement, and use an externally signed
 document at first (`docs/PRODUCT-SPEC.md` section 5.5, "Contracts and agreements").
 
-## K-035 · CI ran no tests and the deploy did not wait for CI
-**Severity:** high · **Status:** **fixed 2026-10-10.**
-
-`.github/workflows/ci.yml` ran the type check, an advisory lint (`continue-on-error: true`) and
-the build only: no `npm test` and no `php -l`. `deploy.yml` deployed `dist/` on every push to
-`main` with no dependency on CI, so a failing build could ship. Fix: CI runs unit tests, the
-server tests, `php -l` and the lint ratchet, and `deploy.yml` runs only after CI succeeds on a
-push to `main` (D-036, `docs/DEPLOYMENT.md` section 2). The new server-test job found K-040.
-
-## K-036 · Public pages bring back unpublished posts and work from the static fallback
-**Severity:** medium · **Status:** **fixed 2026-10-10, not deployed.** A successful CMS answer,
-empty included, now decides what the public pages show; the static fallback is used only when
-the request fails, and a JSON 404 is a real not-found (`src/marketing/data/cmsResult.ts`,
-`cmsResult.test.ts`, `3eadfd3`). The private content-health warning is not built. The original
-finding follows.
-
-At the 2026-10-10 audit, `src/marketing/data/blog.ts` and `src/marketing/data/work.ts` started
-with static content and kept it both on failure and on a **successful empty** response, and
-`useMarketingPost` still served a static post by slug. So unpublishing a record in the CMS
-does not remove it from the public site if a static copy exists. Resolution: treat
-success-empty differently from failure, so unpublishing never brings fallback content back,
-and give the owner a private content-health warning (`docs/PRODUCT-SPEC.md` section 4.4).
-
-## K-037 · The article renderer has no links or lists
-**Severity:** medium · **Status:** **fixed 2026-10-10, not deployed.**
-`src/marketing/lib/articleFormat.ts` supports `##` and `###` headings, bullet and numbered
-lists, bold and `[text](url)` links as React elements with no raw HTML. Only `https`, `http`
-and `mailto` become anchors; `[text](url){sponsored}` adds `rel="sponsored"`
-(`articleFormat.test.ts`, `d5276cb`). Recommendation blocks are not built. The original
-finding follows.
-
-`src/marketing/pages/ResourceDetail.tsx` renders only `h2`, `h3` and plain paragraphs: no
-links, lists or emphasis. Articles cannot cite sources, and affiliate recommendations cannot
-be published at all. Resolution: a small safe format for links, lists and recommendation
-blocks, with no raw HTML, before any affiliate content (`docs/CONTENT-AND-GROWTH.md` section
-4).
+---
 
 ## K-038 · Public fallback copy shows engineering counts and internal file paths
 **Severity:** medium · **Status:** **partly fixed 2026-10-10, not deployed.** The work fallback
@@ -987,32 +479,7 @@ prices with a stated VAT basis; the three inferred exclusions (K-092); and the b
 a smaller band is wanted (K-091). Checked in the browser against mocked responses only; the
 live server and published rows are UNVERIFIED.
 
-## K-039 · Clients cannot message the owner from the portal
-**Severity:** high · **Status:** **fixed 2026-10-10, not deployed or uploaded.** `support.php`
-has a client branch: a `client` user lists, reads, starts and replies to tickets of their own
-client only. The client id comes from the token, another client's ticket answers 404, and
-clients cannot set status, priority or assignee. The portal has a Messages area
-(`tests/server/support-client.test.ts`, 22 isolation tests with two synthetic clients, 8 of
-which failed on the old code; `cf534cf`). `support.php` is now security-critical like
-`portal.php` (`docs/SECURITY.md` section 3). Private feedback with a separate publication
-consent was built on 2026-10-16 (`feedback.php`, `tests/server/feedback.test.ts`), not
-uploaded; see K-055. The original finding follows.
-
-The portal aggregates projects, invoices and tickets, but Comms is staff-only and
-`server/support.php` requires STAFF for creating a ticket and replying, with no client branch.
-`server/testimonials.php` requires editors, so a client cannot leave feedback either. Do not
-promise client messaging, assets or approvals until they are delivered and isolation is shown.
-Resolution: an ownership-checked client branch in `support.php`, and private feedback with a
-separate publication consent (`docs/PRODUCT-SPEC.md` sections 6.2 and 6.3).
-
-## K-040 · `stored` is a MySQL 8 reserved word, so the schema failed on MySQL
-**Severity:** high · **Status:** **fixed 2026-10-10, not uploaded.**
-
-The `files` table has a column named `stored`, which is a reserved word in MySQL 8 but not in
-MariaDB. `server/schema.sql` therefore failed to install on MySQL, and `files.php` queries
-would fail there. Found by the new CI server-test job (K-035). Fix: the column name is quoted
-with backticks in `schema.sql` and `files.php`, which works on both engines (`9db80b2`).
-`files.php` is in the upload set (`docs/DEPLOYMENT.md` section 5).
+---
 
 ## K-041 · `npm audit` reports 15 affected packages, ten of them high
 **Severity:** medium · **Status:** open. Owner decision.
@@ -1027,45 +494,7 @@ individually, and update compatible versions in small batches with a fresh build
 
 **Update 2026-11-01 (`golive/2026-11`).** `npm update` within the existing ranges (no major) plus K-017: from 25 affected packages (1 critical: `dompurify` through `jspdf`; 7 high, among them `vite`) to 13 moderate, 0 high, 0 critical. All 13 are `minimatch` inside ESLint and `typescript-eslint`: development only, never in `dist/`. Their fix is ESLint 10, a major upgrade to plan, not to drive by.
 
-## K-042 · The Google Fonts `@import` still blocks rendering on public pages
-**Severity:** low · **Status:** fixed in code on 2026-10-14 (D-046), now on branch
-`feat/redesign-2026`; not merged or deployed. The `@import` and the two
-`preconnect` links in `index.html` are removed; every face is now self-hosted from
-`@fontsource-variable` and imported in `src/main.tsx`. Lighthouse and CLS were **not
-re-measured** after the change.
-
-Since the D-037 public rebuild (2026-10-10) the public surface sets Sofia Sans, self-hosted
-from `@fontsource-variable/sofia-sans`. The `@import` at the top of `src/index.css` now loads
-only Newsreader, Manrope and JetBrains Mono, which the public pages do not use (Manrope is only
-Sofia Sans's fallback). It is still in the one shared stylesheet, so every public page waits
-for it. Lighthouse 12.8.2, mobile, against the production build served by `vite preview` on
-2026-10-10: render-blocking resources, estimated saving 450 ms, on both `/` and `/contact`;
-first contentful paint 2.1 s, performance 96. Fix: load those three families only for the CMS
-(for example from the CMS layout), then measure CLS again, because the comment above the
-`@import` records that moving fonts once raised CLS.
-
-## K-043 · A static canonical in `index.html` conflicts with the per-route canonical
-**Severity:** low · **Status:** **fixed 2026-10-16** on `perf/prerender-public`, not deployed.
-
-**Resolution.** The static canonical and `og:url` are gone from `index.html`. The public pages
-are prerendered at build time (`docs/ARCHITECTURE.md` section 2), and each page's head carries
-the tags `Seo.tsx` declares: one `<title>`, one description, one canonical. After hydration
-React adopts those tags rather than adding a second set; checked with Playwright on all 30
-prerendered pages, with JavaScript off and on, and after client-side navigation (one title and
-one canonical each time). Lighthouse 12.8.2 mobile, 3 runs each, local production build behind
-a gzip server that applies the `.htaccess` rules: SEO **100** on `/`, `/work` and `/contact`
-(was 100, 92, 92). Client-only routes (`/verify/:id`, the CMS) get their canonical from React
-once JavaScript runs, and the shell carries none.
-
-History:
-
-`index.html` declares `<link rel="canonical" href="https://gakinz.com/" />` and `Seo.tsx`
-renders a per-route canonical as well. On any route other than `/` the page then carries two
-different canonical URLs. Lighthouse 12.8.2, mobile, 2026-10-10, against the production build:
-`/contact` scored SEO 92 with `Multiple conflicting URLs (https://gakinz.com/,
-https://gakinz.com/contact)`; `/` scored 100 because both values agree there. Fix: remove the
-static canonical from `index.html` or have `Seo.tsx` replace it, then re-run the audit on
-several routes. Not caused by the D-037 rebuild.
+---
 
 ## K-044 · The D-046 redesign is verified only against mocked API responses
 **Severity:** medium · **Status:** open. Found 2026-10-14.
@@ -1081,42 +510,7 @@ Resolution: after SQL 7 and 8 and the `site.php` and `work.php` uploads (`docs/D
 section 5), the owner tests those flows and the Client Portal as a client on the other
 computer, and records the result in `docs/STATUS.md`.
 
-## K-045 · Accessibility and performance audits predate the D-046 rebuild and the font change
-**Severity:** medium · **Status:** **closed 2026-10-16.** Found 2026-10-14.
-
-**Resolution.** Re-measured on 2026-10-16 against a local production build of
-`feat/redesign-2026` (`89c7829`) on branch `qa/redesign-audits`: axe-core 4.13.0 on 15 public
-routes at 1440 and 390px and on 8 CMS screens in light and dark, contrast on rendered pixels for
-every hero slide and case hero, keyboard, reduced motion, and Lighthouse 12.8.2 mobile on three
-pages. Five defects were fixed (`0a1d62f`, `bb9ac2e`, `ceb418c`, `dae9f3e`, `ffaa083`). The open
-findings are K-050 to K-053. Results: `docs/AUDIT.md` section 9 and
-`docs/AUDIT.md` section 9. Real assistive technology, CMS screens with data, and the
-live site remain NOT TESTED. The original report follows.
-
-`docs/AUDIT.md` and `docs/AUDIT.md` measured the 2026-09-22 build, with a
-partial re-check after the D-037 rebuild on 2026-10-10. The D-046 rebuild replaced every public
-page, the palette, the type families and the hero motion, and moved all fonts to self-hosted
-files (K-042). No axe sweep, contrast measurement, focus check, Lighthouse run or CLS
-measurement has been made since. The CMS has never been audited (K-008). Resolution: re-run
-the audit method in `docs/AUDIT.md` and Lighthouse against a local production
-build of the redesign, then on the live site after merge.
-
-## K-046 · Dead redesign residue: `.gk-fadein` rules, the Sofia Sans dependency, D-037 brand assets
-**Severity:** cosmetic · **Status:** **fixed 2026-10-16**, not deployed. The unused public
-motion rules and the stale Sofia Sans comment were removed from `src/index.css`, the
-dependency was uninstalled, and the favicon (SVG, 32px, Apple touch icon), the share image
-`public/og.png` and `theme-color` were redrawn in the D-046 graphite and chalk. The new brand
-assets await the owner's look before merge. Found 2026-10-14.
-
-After D-046 no component uses `.gk-fadein` (a search of `src` for the class finds only its
-rules in `src/index.css`), and `@fontsource-variable/sofia-sans` is still listed in
-`package.json` although nothing imports it (`src/main.tsx` imports only Bricolage Grotesque,
-Hanken Grotesk and JetBrains Mono; one comment in `src/index.css` still names Sofia Sans). The
-`.gk-public` block is not dead: `ProposalView.tsx` still uses it. Related: the favicon, icons,
-share image and the `theme-color` meta (`#F3F0EE`) are still on the D-037 cream palette, which
-no longer matches the graphite public site. Resolution: remove the unused rules and the
-dependency in a small hygiene change, then build and test; redraw the brand assets for D-046
-when the owner approves them.
+---
 
 ## K-047 · Three commit subjects on `feat/redesign-2026` contain a literal `$'\n\n'`
 **Severity:** informational · **Status:** open, and left as is.
@@ -1127,62 +521,7 @@ when the owner approves them.
 of a shared branch, which is not allowed (`AGENTS.md`, `.agent/PROJECT.yml` exclusions).
 Resolution: none needed; a squash merge of the branch would drop the subjects from `main`.
 
-## K-048 · Site content tabs scroll sideways at 390px with no visible cue
-**Severity:** low · **Status:** **fixed 2026-10-16**, not deployed. The shared `TabsList` now
-wraps onto a second row instead of scrolling hidden, so every tab stays visible on a phone and
-the page still never widens. Applies to every tab row (Site content, Settings, Analytics,
-Content Hub). Found 2026-10-14.
-
-Site content (`src/app/modules/Site.tsx`) has eight section tabs. At 390px they do not fit, and
-the shared `TabsList` (`src/components/ui/tabs.tsx`) scrolls inside itself with its scrollbar
-hidden, so the page does not overflow but the later tabs sit off-screen with nothing to show
-they exist. Seen in the mocked browser check. Resolution: wrap the tabs on narrow screens or
-replace them with a select below 640px.
-
-## K-049 · Editing a Work record crashed on a detail response without images
-**Severity:** medium · **Status:** **fixed 2026-10-14** in `24c25ff`, not deployed.
-
-`Work.tsx` read `res.data.images` from the detail response without a default, so a record whose
-detail carried no `images` key broke the edit view. It now falls back to an empty list.
-
-## K-050 · RotaFlow blue `#3B6FE0` fails contrast for the reduced-opacity white text on it
-**Severity:** medium · **Status:** **fixed 2026-10-16**, not deployed. Owner chose `#2C5AC4` (white text passes at every opacity used); applied in `showcase.ts`, the hero fallback in `site.css` and the sign-in colour strip. A CMS Work record keeps whatever colour is entered there. Found 2026-10-16 (K-045 audit).
-
-`#3B6FE0` is the RotaFlow brand colour, used for hero slide 1, the `/work/rotaflow` case hero
-and, while either is on screen, the navigation bar. It holds pure white at **4.63:1**, just over
-AA, but the design sets secondary text at reduced opacity, and every such use fails 1.4.3
-(measured on rendered pixels, local build):
-
-| Text | Opacity | Ratio |
-|---|---|---|
-| Case line (`01 · Own product · Staff scheduling`) | 80% | 3.57:1 |
-| Status line and London clock; navigation links | 85% | 3.80 to 3.99:1 |
-| Hero lede | 92% | 4.18:1 |
-| Current-page link on its 12% white tint | 100% | 3.76:1 |
-| "See all the work" on its lighter fill | 100% | 3.73 to 4.07:1 |
-
-axe confirms the navigation links on `/` and `/work/rotaflow` at 1440 (5 nodes each). The other
-11 project colours pass everywhere; the lowest is `/work/harni` at 4.55:1.
-
-Not fixed here because either remedy changes the approved look. Options for the owner:
-
-1. Darken the RotaFlow colour to `#2F5FCC` (white 5.79:1; 4.67:1 at 85%, so lift the 80% text
-   to 85%) or `#2C5AC4` (4.62:1 even at 80%). One value in `src/marketing/data/showcase.ts`,
-   and the CMS Work record if it carries a colour.
-2. Keep the colour and render hero and bar text at full opacity whenever `onColour()` returns
-   white and the base ratio is under 5:1.
-
-## K-051 · Amber hero slide: dark bar text on the dark bottom shading
-**Severity:** medium · **Status:** **fixed 2026-10-16**, not deployed. Owner chose light bar text: on slides whose text is dark, the hero bar (project names, counter, controls) uses `#ECE9E2` over the bottom shading (6.73:1 measured by the audit). Found 2026-10-16 (K-045 audit).
-
-On slide 5 (Herit Clothing, `#F59E0B`) `onColour()` correctly picks dark text (8.69:1 on the
-flat colour). But `.hero::after` shades the bottom 18% of the hero towards graphite, to about
-`#7B5411` behind the slide bar, and the bar's text stays dark. The segment labels (65% opacity)
-measure **1.90 to 2.67:1** and the `05 / 05` counter **2.77 to 2.87:1** at 1440 and 390, against
-4.5:1 required. The other four slides use white text, which the shading only helps.
-
-Options for the owner: render the slide bar in light text whenever the slide text is dark
-(white on the shaded band measures 6.73:1), or leave the shading off dark-text slides.
+---
 
 ## K-052 · Home CLS 0.114 from the font swap moving the hero, and LCP 4.9 s simulated
 **Severity:** medium · **Status:** CLS fixed, first paint faster, home LCP still open. Prerender on `perf/prerender-public`, 2026-10-16, not deployed.
@@ -1232,6 +571,8 @@ Grotesque so the swap moves nothing, or preload its Latin file; align the hero g
 rather than centre; prerendering (`docs/AUDIT.md` section 6) addresses the LCP delay.
 Re-measure after any of them.
 
+---
+
 ## K-053 · The LCP image on `/work` is lazy-loaded
 **Severity:** low · **Status:** prerendered 2026-10-16 on `perf/prerender-public`, not deployed. `/work` LCP 3.38 to 3.45 s and Performance 90 to 91 (was 3.48 to 3.63 s and 86 to 87; K-052 table). With the page prerendered, an eager first card with high fetch priority was measured again, and was still slower (LCP 3.53 to 3.54 s, 3 runs), so lazy loading stays. Earlier entry: measured 2026-10-16. Loading the first card eagerly with high fetch priority made `/work` slower on the local preview (LCP 3.8 s against 3.5 to 3.6 s lazy, 3 runs each), because the page is rendered by JavaScript and the request only competes with scripts and fonts. Lazy loading is kept; the fix is the same prerendering as K-052. Found 2026-10-16 (K-045 audit).
 
@@ -1240,16 +581,7 @@ card image `loading="lazy"`, so Lighthouse fails `lcp-lazy-loaded` (LCP 3.5 s si
 performance 87). Resolution: let `ProjectCard` take an eager flag and pass it for the first row
 on `/work` and Home, then re-measure.
 
-## K-054 · A CMS heading rule shrank every public page heading
-**Severity:** high · **Status:** **fixed 2026-10-16**, not deployed. Found 2026-10-16.
-
-The CMS restyle added `#main h1 { font-size: clamp(1.7rem, 2.6vw, 2.2rem) }` to
-`src/index.css` so module titles override their utility classes. The public layout's `<main>`
-also has `id="main"`, and the id selector outranked `.gk-site .hero h1`, so from the CMS merge
-until this fix every public page `h1` rendered at about 35px instead of its design size (the
-home hero headline is 77.76px at 1440). The rule is now `#main.gk-app-main h1`, with the class
-on the CMS `<main>` in `src/layouts/AppLayout.tsx`. Measured after the fix: hero `h1`
-77.76px. The K-045 audit figures for the public site were taken with the bug present.
+---
 
 ## K-055 · Calls, the client timeline and private feedback are verified only locally
 **Severity:** medium · **Status:** open. Built 2026-10-16 on `feat/bookings-timeline-feedback`.
@@ -1285,92 +617,6 @@ Owner decisions that the specification left open, each built the simplest way:
 
 Resolution: run the SQL and upload, then exercise one call and one feedback on real data the
 owner chooses, and decide items 1 to 4.
-
----
-
-## K-056 · An admin could demote or suspend a super admin
-**Severity:** high · **Status:** fixed 2026-10-17, not uploaded. Found by the 2026-10-17 audit.
-
-`users.php` `role` and `status` checked only "not yourself" and "only a super admin may grant
-super admin". Nothing checked the target's current role, so an `admin` (or anyone holding an
-admin token) could set the owner to `employee` or `suspended`, and a suspension deletes every
-one of the owner's sessions. Now `refuse_super_admin_target()` answers 403 unless the caller is
-a super admin. `tests/server/security-hardening.test.ts` failed before the change and passes
-after it.
-
----
-
-## K-057 · Sign-in lockout, unlimited code guesses, reusable reset link, sign-in timing
-**Severity:** medium · **Status:** fixed 2026-10-17, not uploaded.
-
-1. **Lockout by anyone.** The login throttle counted failures for an email from any address,
-   so ten requests every fifteen minutes kept the owner out of password sign-in. It now counts
-   10 failures for that email from that address, plus 30 from one address for any email.
-2. **Code guessing on a signed-in account.** `twofa_setup`, `twofa_enable`, `twofa_disable`
-   and `twofa_recodes` had no attempt limit, so a stolen token could try codes until one
-   matched. `gk_totp_check()` now allows ten wrong codes in fifteen minutes per account, then
-   answers 429. Replay of one valid code inside its 90-second window was blocked later the same
-   day: the accepted step is stored in `users.totp_last_step` (SQL 12) and an equal or earlier
-   step is refused, at login and in the signed-in checks. Until SQL 12 runs, codes work as
-   before.
-3. **Reset race.** The reset link was checked, then marked used, in two steps. The `used_at`
-   update now runs first with `AND used_at IS NULL` and must change one row.
-4. **Timing.** An unknown email skipped `password_verify`, so it answered faster. It now checks
-   against a hash of a random value.
-
-Items 1 and 2 fail on the old code in `tests/server/security-hardening.test.ts`; item 3 is
-covered for single use, not for a true race; item 4 is not measured.
-
----
-
-## K-058 · Browser security headers, HSTS and directory listing
-**Severity:** medium · **Status:** partly fixed 2026-10-17, not uploaded.
-
-`_bootstrap.php` set `nosniff`, `Referrer-Policy` and `X-Frame-Options` on PHP JSON only. The
-prerendered pages, the SPA shell and every static file had none. `server/.htaccess` now sets
-those three and a `Permissions-Policy` on every response, inside `<IfModule mod_headers.c>`.
-Not added, on purpose: **HSTS**, which belongs to the TLS and Cloudflare set-up this repository
-does not own, and `Options -Indexes`, which returns 500 for every request on a host that does
-not allow `Options` overrides. The operator should confirm HSTS at Cloudflare and that
-directory listing is off (`docs/DEPLOYMENT.md` section 5.6, check 12). The CSP gap stays in
-K-033. Live headers: NOT TESTED.
-
----
-
-**Update 2026-11-01 (`golive/2026-11`, not uploaded).** `server/.htaccess` now sends `Strict-Transport-Security: max-age=31536000` (no `includeSubDomains`, no preload), `Cross-Origin-Opener-Policy: same-origin-allow-popups`, removes `X-Powered-By` and LiteSpeed's `X-Turbo-Charged-By`, sets `ServerSignature Off`, and answers a directory request with no `index.html` with 404. The live site was listing `/assets/` (every build file since October) and `/uploads/` (empty from outside), found by reading the live pages on 2026-11-01. `_bootstrap.php` also removes `X-Powered-By` (the live API sent `PHP/8.4.27`). Checked on Apple's Apache 2.4.67 with listing switched on, against a staged copy of the document root: listing 404, every deny 403, robots, llms and sitemap 200, headers present. Not settable from `.htaccess`: `ServerTokens` (host). Cloudflare already replaces the `Server` header. NOT TESTED on LiteSpeed.
-
-## K-059 · Tokens are stored in plain text
-**Severity:** medium · **Status:** fixed 2026-10-17 for sessions, reset links and magic links, not uploaded.
-
-`auth_tokens.token`, `password_resets.token`, `magic_links.token`, `files.share_token` and the
-proposal token are stored as issued (`_bootstrap.php`, `auth.php`, `files.php`,
-`proposals.php`). Anyone who reads the database or a backup holds working 30-day sessions for
-every user, the owner included. Fix: store `hash('sha256', $token)` and look up by the hash.
-Fixed without a schema change and without signing anyone out. `token_hash()` stores the first
-62 hex characters of SHA-256, which fits `CHAR(64)` and can never be mistaken for a raw
-64-character token. Lookups match the hash, or a raw value only in a 64-character row, so
-sessions issued before the upload work until they expire and the `prune` job removes them, while
-a stolen 62-character hash presented as a token matches nothing. Tests:
-`tests/server/token-hashing.test.ts`. **Upload `_bootstrap.php` with `auth.php`, `oauth.php` and
-`users.php`** (`docs/DEPLOYMENT.md` section 5.3). File and proposal share tokens stay as issued:
-the CMS shows them back to staff to copy the link, and they are capability links by design
-(D-029); proposal links can now be revoked (K-060).
-
----
-
-## K-060 · Proposal share links never expire and cannot be revoked
-**Severity:** low · **Status:** fixed 2026-10-17, not uploaded.
-
-`proposals.php` serves a proposal by token with no expiry or status check and always reuses
-the same token, yet its error text says "expired". A declined or old proposal (scope, prices,
-client company) stays readable by anyone holding the link. `docs/PRODUCT-SPEC.md` asks for
-expiry and revocation.
-
-Fixed with no schema change: the public view answers 410 for a declined proposal, and for one
-past its existing `valid_until` date unless it was accepted (an accepted proposal stays
-readable as the record of the agreement). A new `unshare` action clears the token, so the next
-Share issues a different link, and Proposals has a Revoke button. Six tests in
-`tests/server/proposals.test.ts`; the button was checked in a browser with mocked responses.
 
 ---
 
@@ -1558,20 +804,6 @@ a different rounding rule; record it if the live PHP version is checked.
 
 ---
 
-## K-069 · Header links at 0.85 opacity can fall below AA on a mid-tone owner hero colour
-**Severity:** low · **Status:** open, a design decision. Found 2026-10-19 in the browser check.
-
-Over the home hero the header links, the new "Client sign in" link (`.nav__signin`,
-`src/marketing/site.css`) included, are drawn at 0.85 opacity in the colour `onColour`
-(`src/marketing/data/showcase.ts`) picks for the slide, which assumes full opacity. Every
-current slide passes AA for 14px text (lowest RotaFlow, 4.99:1; on `/about` 11.08:1). But the
-hero colour is the owner's choice in Work, and computed figures for mid-tone colours fail:
-`#E0457B` 4.05:1, `#D9534F` 4.02:1, `#7A7A7A` 3.70:1, and 33 of 256 pure greys. Those figures
-were computed, not rendered. Resolution: draw the header links at full opacity over the hero,
-or have `onColour` allow for the opacity, or check contrast when the owner saves a colour.
-
----
-
 ## K-070 · The client calendar file has no meeting link, and a cancelled call has no cancellation file
 **Severity:** low · **Status:** open. Owner decision. Built 2026-10-18, not uploaded.
 
@@ -1612,27 +844,6 @@ has no file picker yet; it only shows a linked file's name. Reopening an item ke
 client's last note and the linked file. Resolution: a client upload path with the same
 isolation rules as the other client branches, when the owner wants it
 (`docs/PRODUCT-SPEC.md` section 6.2).
-
----
-
-## K-073 · Toast contrast, the Projects board scroll region and a refused acceptance shown only in a toast
-**Severity:** medium · **Status:** **fixed 2026-10-19** on `feat/journeys-2026-10-18`, not
-deployed. Found 2026-10-19 in the browser check; all three predate this branch.
-
-1. `<Toaster richColors>` in `src/AppRoot.tsx` sat outside the theme provider and had no
-   `theme`, so rich-colour toasts stayed light in dark mode and failed AA at 13px: success
-   4.25:1, error 4.34:1. The toaster now follows the CMS theme and takes its colours from CMS
-   tokens in `src/index.css`. Measured after: light 5.22 to 5.99:1, dark 7.22 to 8.79:1
-   (warning and info on synthetic elements only).
-2. The Projects task board (`overflow-x-auto`) had nothing focusable when a project had no
-   tasks, so axe reported `scrollable-region-focusable` at 390px. It is now a labelled,
-   focusable region.
-3. A refused quote acceptance appeared only in a toast. The message now shows inside the
-   accept dialog, which stays open with the typed reference kept.
-
-Evidence: axe 0 violations on the rerun at 1440 and 390px, light and dark, against a mocked
-API. Screen-reader announcement of the new alert and the focus ring in a screenshot: NOT
-TESTED.
 
 ---
 
@@ -1751,24 +962,6 @@ outside the list, or upgrade `cmdk` if a later version fixes it.
 
 ---
 
-## K-082 · Strict SQL errors in `briefs.php`, `privacy.php` and `_retention.php` are not tested on PHP before 8.1
-**Severity:** low · **Status:** open. Recorded 2026-10-19.
-
-PHP 8.1 made mysqli throw on SQL errors by default. On an older PHP a failed statement
-returns `false`, which could let a route answer `ok` after a failed write or export a section
-it failed to read. `briefs.php` and `privacy.php` now call
-`mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT)` themselves, `briefs.php` checks
-every `execute()` through `br_exec()`, and `_retention.php` checks each step and throws
-(`fa8849d`). One side effect on an older PHP: a `briefs.php` prepare error other than a
-missing table (1146) now surfaces as an uncaught exception, a 500 without a JSON body, rather
-than `fail('Database error.', 500)`. PHP 8.1 and later already behaved that way, and either
-way nothing answers `ok`. The tests ran on PHP 8.5.10 only; no PHP before 8.1 was available, so the older
-path is NOT TESTED. The live PHP version is UNVERIFIED (K-068 also depends on it). Resolution:
-read the version in cPanel and record it in `docs/STATUS.md` (`docs/DEPLOYMENT.md` section 5.1
-step 10).
-
----
-
 ## K-083 · Draft protection does not cover the Brief Measurements form, the Work images, sign and accept dialogs, or the New project dialog
 **Severity:** low · **Status:** open. Recorded 2026-10-19 with the draft protection work.
 
@@ -1847,40 +1040,6 @@ place.
 
 ---
 
-## K-088 · Several CMS selects had no accessible name (New project Client first)
-**Severity:** medium · **Status:** **fixed 2026-10-19.** Found 2026-10-19 in the batch 3 browser check; older than the batch.
-
-axe 4.13 reports `button-name` (critical) on the Client `SelectTrigger` in the New project
-dialog (`src/app/modules/Projects.tsx`, around line 220, from `2cdff4a` on 2026-10-14): its
-`<Label>Client</Label>` has no `htmlFor` and the trigger no `id`, so a screen reader announces
-an unnamed button. It shows in all ten captures of the dialog (390 and 1440px, light and
-dark, mocked API). The new "Start from template" select (`#ptemplate`) is labelled correctly.
-Real assistive technology: NOT TESTED. Fix: each trigger now has an `id` and its label a
-matching `htmlFor`. Fields fixed: New project Client; Blog editor Cover and Status; New quote
-Client (Proposals); Clients Tag; Content Tone and Goal; Contracts Template, Client, Project and
-NDA triage; Design Project; Invoicing Client; Knowledge Audience; Leads Score; Platform Role
-and Client; Resourcing Team member and Type; Support Client and Priority; Testimonials Rating.
-
----
-
-## K-089 · Server test runs left `php -S` workers on the port, making later runs flaky
-**Severity:** low · **Status:** **fixed 2026-10-19** (`af151cb`, `650be1e`), test harness only.
-
-`tests/server/global-setup.ts` starts `php -S` with `PHP_CLI_SERVER_WORKERS=6` and used to
-stop only the parent process. The six workers survived (re-parented to PID 1) and kept
-answering on the port, so a later run on the same port could silently use workers serving an
-older copy of `server/`. On 2026-10-19 this explained intermittent failures during the batch
-work, for example two `payments.test.ts` cases that passed alone and passed again once 6
-orphaned workers were stopped, and an agent stopped 48 leaked processes on ports 5291 to
-5309. The earlier failures were most likely this or machine load; that is not proven for each
-one. Fix: setup refuses a busy PHP or provider port with a message naming the port, starts
-`php -S` detached in its own process group, and stops the whole group on teardown, on a setup
-failure, and on Ctrl-C, SIGTERM or exit. Checked: no listener left on the port after a full
-run, setup refused a port held by a dummy listener, and Ctrl-C mid-run left 0 PHP processes.
-One later failure is not this: on 2026-10-19 a full run timed out in a `blog.test.ts`
-`beforeEach` under a load average of about 25, then passed alone and in a full rerun with the
-fixed harness (`docs/STATUS.md` section 0). How to run with other ports: `docs/OPERATIONS.md` section 8.
-
 ## K-090 · The IT support pages omit coverage, area and response time, so spec 4.2 acceptance is unmet
 **Severity:** medium · **Status:** open, waiting on the owner. Built 2026-10-19, not deployed.
 
@@ -1895,6 +1054,8 @@ coverage and area" is **not met** until the owner answers (`docs/STATUS.md` sect
 add the answers as service page text in Site content, or in `site.ts`, and a test that the
 words appear.
 
+---
+
 ## K-091 · Enquiry budget bands are unchanged: the lowest is still "Under £1,500"
 **Severity:** low · **Status:** open by owner decision, 2026-10-19. Not deployed.
 
@@ -1904,6 +1065,8 @@ asked for bands that fit small IT jobs; the owner decided to leave the bands as 
 now. The band list lives in `src/marketing/pages/Contact.tsx`. Revisit when IT prices are known
 (K-090).
 
+---
+
 ## K-092 · Three exclusions on the website service pages are inferred, not approved
 **Severity:** low · **Status:** open, waiting on the owner. Built 2026-10-19, not deployed.
 
@@ -1912,6 +1075,8 @@ Spec 4.3 gives exclusions for the IT pages only. For the website pages the build
 an add-on, new pages at £180 each, and integrations quoted as Bespoke. They match the existing
 price list, which itself awaits confirmation with a VAT basis (`docs/STATUS.md` section 5), but
 the owner has not approved the wording. Confirm or replace them in Site content.
+
+---
 
 ## K-093 · An older services list shows the built-in six until the owner saves once, and an incomplete custom row is no longer published
 **Severity:** medium · **Status:** open by design (D-048). Built 2026-10-19, not uploaded or deployed.
@@ -1933,6 +1098,8 @@ Two behaviour changes follow from making a service a whole page.
 Neither is tested against the live server or real published rows (UNVERIFIED). The server
 refuses a half page on save, so no new incomplete row can reach the public site.
 
+---
+
 ## K-094 · Sequential work references reveal roughly how many enquiries and projects there were that year
 **Severity:** low · **Status:** open, owner decision. Built 2026-10-19, not uploaded.
 
@@ -1944,6 +1111,8 @@ up by reference. The option, if the owner minds: start each year at a random off
 than 0001 (a seed in `reference_counters`). Raised in the Task 21 review; recorded for the
 owner in `docs/STATUS.md` section 5.
 
+---
+
 ## K-095 · A client's deletion request has no priority, due date or notification
 **Severity:** medium · **Status:** open, owner decision. Built 2026-10-19, not uploaded.
 
@@ -1954,6 +1123,8 @@ and procedure need legal review (`docs/PRIVACY-READINESS.md` section 7). Until t
 decides, someone must watch Support for tickets titled "Data deletion request". Options:
 create it at high priority, show it in Today with its age, or email the owner. Same family as
 K-071.
+
+---
 
 ## K-096 · Erasing an enquiry scans and briefly locks `audit_log` rows
 **Severity:** low · **Status:** accepted 2026-10-19 at the current size. Not uploaded.
@@ -1967,6 +1138,8 @@ super admin action. The executor runs the same scrub per enquiry. If the log gro
 batch the scrub or add a pruning rule for the audit log (`docs/PRIVACY-READINESS.md` section
 6). Raised as minor 3 in the batch 5 final review. NOT TESTED on the live database.
 
+---
+
 ## K-097 · No acknowledgement email carries the enquiry reference
 **Severity:** low · **Status:** open by ruling, 2026-10-19.
 
@@ -1978,6 +1151,8 @@ only ("Your reference is GK-E-... Mention it if you write to me about this."). I
 wants an acknowledgement email, it is a separate task with its own throttle, and it should
 carry the reference.
 
+---
+
 ## K-098 · A retention dry run writes no audit row
 **Severity:** low · **Status:** accepted 2026-10-19.
 
@@ -1986,6 +1161,8 @@ counts only, and none for a dry run, because a dry run changes nothing. So the a
 keeps no record of who ran a dry run or when; the only trace is the host's own shell or cron
 log. Accepted in the Task 22 review as a deviation. Revisit if the owner wants every run
 recorded.
+
+---
 
 ## K-099 · SQL 19 step 2 passed on MariaDB and MySQL 8.0.46, not MySQL 5.7
 **Severity:** low · **Status:** open. Live database engine and version UNVERIFIED.
@@ -2001,6 +1178,8 @@ is NOT TESTED, and the live host's engine is UNVERIFIED. Before
 running step 2 on the host, read its engine and version in cPanel (phpMyAdmin shows it) and
 record it in `docs/STATUS.md` section 3. If step 2 fails part way, it is safe to repeat
 (`docs/DEPLOYMENT.md` section 5.2).
+
+---
 
 ## K-100 · Reference sign-in links share `magic_links`, so `magic_consume` also redeems them
 **Severity:** low · **Status:** open, a gate before switching on. Built 2026-10-19, switched off,
@@ -2018,6 +1197,8 @@ client-only rule across the two routes. The real gap is the switch: after
 is next opened, so each route accepts only its own rows. That is a future SQL number, not
 written yet.
 
+---
+
 ## K-101 · The reference sign-in timing floor relies on early finish or fast SMTP
 **Severity:** low · **Status:** open, a gate before switching on. Host SAPI UNVERIFIED.
 
@@ -2029,6 +1210,8 @@ on the PHP built-in server, which has neither function, so only the floor path i
 host with neither, an SMTP send slower than 1000 ms makes a match slower than a miss. **Before
 switching on:** confirm the host's SAPI, or cap the SMTP time below the floor (a shorter SMTP
 timeout or a local relay).
+
+---
 
 ## K-102 · Reference sign-in per-IP throttles read `REMOTE_ADDR`
 **Severity:** medium if switched on · **Status:** open, a gate before switching on. Real-IP
@@ -2042,6 +1225,8 @@ unaffected. **Before switching on:** confirm that `REMOTE_ADDR` is the real clie
 related residual: three or more IPs together can hold one address at its overall ceiling (15
 in 15 minutes), which only delays that person's sign-in link.
 
+---
+
 ## K-103 · The sign-in page logs a 404 in the browser console while reference sign-in is off
 **Severity:** low · **Status:** accepted 2026-10-19.
 
@@ -2051,6 +1236,8 @@ answers 404 while off. The page treats it as "off" silently and shows nothing, b
 still prints the failed request in its console, and script cannot suppress that. Answering 200
 `{enabled:false}` instead would break the "404 on every route while off" rule, so the line
 stays. Documented in `src/lib/clientAccess.ts`. Not seen in a browser run (none was done).
+
+---
 
 ## K-104 · Withdrawing consent hides ad slots but cannot unload a loaded script
 **Severity:** low · **Status:** open. Built 2026-10-19, switched off, not deployed.
@@ -2062,6 +1249,8 @@ only on the next page load. Moving to a private route (`/app`, `/login`, `/p`, `
 inside the CMS, the portal, a proposal or a certificate. NOT TESTED in a browser, and no
 network check of accept, reject and withdraw was done (`docs/CONTENT-AND-GROWTH.md` section 3).
 
+---
+
 ## K-105 · An ad slot shifts the article text when it appears after consent
 **Severity:** low · **Status:** open, not measured. Switched off.
 
@@ -2069,6 +1258,8 @@ network check of accept, reject and withdraw was done (`docs/CONTENT-AND-GROWTH.
 So the slot's own arrival pushes the text below it down, which counts towards layout shift
 (CLS). Not measured; no real AdSense unit was loaded. Measure it in the pilot before deciding
 whether to reserve space earlier.
+
+---
 
 ## K-106 · The CMP host allow-list is not checked against Google's certified CMP list
 **Severity:** medium if switched on · **Status:** open, check before switching on.
@@ -2078,6 +1269,8 @@ platforms as the implementer knew them. They have NOT been verified against Goog
 certified CMPs, which AdSense requires in the EEA, the UK and Switzerland. **Before switching
 on:** confirm the chosen CMP is certified and its loader host is the one listed.
 
+---
+
 ## K-107 · Some CMPs need more than a script URL
 **Severity:** low · **Status:** open, check when a CMP is chosen.
 
@@ -2086,6 +1279,8 @@ The setting holds one https loader URL. Some platforms need attributes on the sc
 (Google's `signalGooglefcPresent`). For those, a URL alone may not be enough, and the loader
 would need a small change. Recorded in `docs/PRIVACY-READINESS.md` section 4 and
 `docs/CONTENT-AND-GROWTH.md` section 3.
+
+---
 
 ## K-108 · Client anonymisation is built but switched off, awaiting adviser confirmation
 **Severity:** medium · **Status:** built 2026-10-20 (Task 26), switched off, not uploaded. An
@@ -2134,38 +1329,7 @@ MySQL 5.7, and Google sign-in for an anonymised
 login. Upload and gates: `docs/DEPLOYMENT.md` sections 5.1 step 14 and 5.4. Rules for the
 adviser: `docs/PRIVACY-READINESS.md` section 7.
 
-## K-109 · GitHub Actions is switched off, so no CI and no deploy runs
-
-**Found:** 2026-10-30. **Severity:** Medium. **Status:** Fixed 2026-10-30. Actions is on (the repository is public) and the no-delete upload passed in CI; see the end of this entry.
-
-`gh api repos/devgeereact/gakinz_com/actions/permissions` returns `enabled: false`. This is the
-cause of the missing runs recorded in `docs/WORKBOOK.md` section 1, item 6 (earlier "cause
-UNVERIFIED"). Merging `a034e40` to `main` on 2026-10-30 started no workflow. The last run in
-`gh run list` is from 2026-10-17. Consequences:
-
-1. **No CI on a pull request or a push**: tests, the lint ratchet, gitleaks and Semgrep do not run
-   in GitHub. Only the Mac runs them.
-2. **No automatic deploy of `dist/`**: `dist/` goes up by hand (`rsync`, as on 2026-10-21 and
-   2026-10-30).
-3. **Deploy step replaced, 2026-10-30.** `SamKirkland/FTP-Deploy-Action@v4.4.0` compares against
-   `.ftp-deploy-sync-state.json` on the host and can delete remote files absent from the build,
-   which `RULES.md` section 7 forbids. `.github/workflows/deploy.yml` now calls
-   `scripts/deploy-ftps.sh` (lftp over FTPS with certificate checking; two mirror passes, the HTML
-   entry points last; no delete). **PASS locally** against a folder (`DEPLOY_TARGET_URL=file://...`):
-   a pre-existing old asset and an unrelated file were kept, every file in `dist/` arrived, and
-   `index.html`, `pricing/index.html` and `app-shell.html` were replaced. **NOT TESTED** against the
-   real host (FTPS handshake, that `FTP_SERVER` is the verified origin hostname, passive mode, the
-   account's folder scope) and not run in GitHub Actions. The `VITE_CLERK_PUBLISHABLE_KEY`
-   variable is set, so a CI build keeps Clerk sign-in.
-
-Still open: Actions is switched off. Switching on is
-`gh api -X PUT repos/OWNER/REPO/actions/permissions -F enabled=true` and needs the owner's
-approval; the first deploy after it should be watched, because it is the first run of the new step.
-No agent has changed the setting.
-
-**Update, 2026-10-30:** the owner made the repository public and instructed Actions back on. It was
-switched on with `gh api -X PUT repos/devgeereact/gakinz_com/actions/permissions -F enabled=true`.
-The result of the first CI and deploy runs is in `docs/STATUS.md` section 0.8.
+---
 
 ## K-110 · A burst of `Class "mysqli" not found` fatals in the live PHP error log
 
@@ -2180,189 +1344,7 @@ built 2026-10-26. Possible causes, none confirmed: a PHP handler or extension ch
 at that moment, or a CLI run under a PHP build without mysqli. Check with the host if it recurs.
 The log is mode 644 but answers 403 over HTTP.
 
-## K-111 · SQL 20 stopped the schema loading on MySQL
-
-**Found and fixed:** 2026-10-30. **Severity:** High for CI, none for the live site.
-
-`ALTER TABLE ... ADD COLUMN IF NOT EXISTS` and `CREATE UNIQUE INDEX IF NOT EXISTS` are MariaDB-only.
-They were live statements at the foot of `server/schema.sql`, so the CI server-test job (MySQL)
-failed at line 1076 with error 1064 and the schema never loaded. The local test run passed because
-the Mac database is MariaDB. Every other migration at the foot is a comment; SQL 20 now is too, and
-the `CREATE TABLE users` block already holds the column and key. The live host (MariaDB 11.4) ran
-SQL 20 on 2026-10-30 and is unaffected. CI had not run since 2026-10-17, which is why it was
-found after the Clerk merge, not before. Lesson: the Mac and CI databases differ; run the server
-tests in CI before merging.
-
-The same run also failed one test, `references.test.ts` "recovers a database where an earlier draft opened the gate before the backfill": it read the SQL 19 block to the end of the file, so the SQL 20 comments became part of the "recovery" line it ran. The test now stops the block before SQL 20. All other tests (526 of 527) passed on MySQL in CI.
-
-**First deploy run, 2026-10-30 (run 41073485903 on `42359ed`):** CI passed, then the new upload step
-failed after 90 s with `mirror: Fatal error: max-retries exceeded` (3 retries of 30 s timeouts).
-Cause: the script used `ftps://`, which lftp treats as implicit TLS on port 990. It failed closed:
-nothing was uploaded and the live site was unchanged. The script now uses `ftp://` with
-`ftp:ssl-force` (explicit TLS on port 21, certificate verified). Still NOT TESTED against the host
-until a deploy run passes; this Mac has no access to the FTP secrets.
-
-**Result, 2026-10-30:** deploy run 41075764726 on `608dc7b` passed (build, lftp install, upload, about
-2 minutes). Checked from outside afterwards: `/`, `/pricing`, `/services`, `/contact`, `/login`,
-`/app`, `/app/leads`, `/sitemap.xml` and `/robots.txt` return 200; the home bundle is
-`index-BOepCWBo.js` (the same name the Mac build produced, so the CI build is reproducible); the
-files carry the new modified time (14:54 UTC); the Clerk live key is in the login chunks; the API
-answers 401 JSON to a bad bearer. Nothing was deleted from the host by design. The uploader was
-not read back file by file: PASS means the run and these public checks, not a byte comparison.
-
-## K-112 · Layout and composition gaps on the public site, sign-in and GAkinzOS
-
-**Found:** 2026-10-31, on gakinz.com (read-only) and a local build with synthetic data. **Severity:** Medium (first impression and usability).
-
-Each was seen in a browser or measured on the rendered page at 390, 700 to 1050 and 1440px: hero text
-overlapping during the swap (P1); lone cards and 3 + 2 rows in Selected work, the /work filters and the
-process steps (P2 to P4); page headers using 42% of the width (P5); section heads with an empty column (P6);
-pricing lists stretched to four different line spacings (P7); a "Portrait to come" circle (P8); a
-1248×535 slab repeating the name on case studies without screenshots (P9); Clerk's stock card on the
-graphite sign-in with about three seconds of blank screen (C1); project stage tiles 3 + 2 on phones (C2);
-two identical "New project" buttons on an empty screen (C3). Evidence, fixes and status per item:
-`.claude/skills/gakinz-design/references/findings.md`. All except C3 are fixed in the approved prototype
-(D-053); none is built into the site yet.
-
-## K-113 · Form field borders are below 3:1
-
-**Found:** 2026-10-31. **Severity:** Medium (WCAG 2.2 AA 1.4.11, Non-text Contrast).
-
-The edge that shows where a field is measures `#334252` on `#0F151D` 1.78:1 (public site and CMS dark) and
-`#CDD2DA` on white 1.52:1 (CMS light). axe does not test 1.4.11, so earlier audits passed. Measured
-replacements, **approved by the owner 2026-10-31**: public `#647183` (3.32 to 3.69:1), CMS light `#7F8896` (3.28 to 3.58:1),
-CMS dark `#6B7787` (3.33 to 4.03:1). Values and surfaces: `.claude/skills/gakinz-design/references/tokens.md`.
-
-## K-114 · Logo links' accessible names do not match their visible text
-
-**Found:** 2026-10-31. **Severity:** Low (WCAG 2.5.3, Label in Name; speech-input users).
-
-axe-core 4.14.0 reports `label-content-name-mismatch` on the public header link (`aria-label="GAkinz, home"`,
-`site-ui.tsx`) on every page and width checked, and on the sign-in frame's link (`aria-label="GAkinz home"`,
-visible "GAkinzOS", `AuthFrame.tsx`). axe-core 4.10.2 did not flag the same markup. Fix: start the
-accessible name with the visible text, or drop the `aria-label` and let the visible text name the link.
-
-## K-115 · White text on a light project colour
-
-**Found:** 2026-10-31. **Severity:** Medium (WCAG 1.4.3).
-
-axe fails the active `Work` link on `/work/harni` at 1440, 1920 and 2560px.
-
-**Cause corrected 2026-10-31 after reading the code.** The first note blamed a brightness threshold in
-`onColour`; that was the prototype's code. The site's `onColour` already compares measured ratios and picks
-near-black `#16120A` on the pink (5.31:1). The failure came from the header links: 85% opacity and a 12%
-tint behind the active link, which darkened the pink to `#E33352` (4.33:1).
-
-**Fixed 2026-10-31** on `feat/design-finalisation`: header links at full opacity, hover and the current page
-marked with an underline instead of a tint, labels on project colours at full opacity, and the main call to
-action graphite on chalk (15.12:1) instead of the project colour as text. Verified: zero contrast
-violations on all twelve case studies at five widths, and on every hero slide.
-
-## K-116 · `vite preview` sends `.php` calls to the live API
-
-**Found:** 2026-10-31. **Severity:** Medium (a preview can write to the real business).
-
-`vite.config.ts` sets `server.proxy` for `^/…\.php` to `https://gakinz.com`, and `vite preview` uses
-`server.proxy` when `preview.proxy` is unset. During a local check one read (`auth.php?action=me` with a fake
-token) reached the live API, which answered 401; nothing was written. Fix: `preview: { proxy: {} }`. **Fixed 2026-10-31** on `feat/design-finalisation`.
-The skill's `serve.mjs` remains the safer way to serve `dist/`: it answers every `.php` with 404.
-
-## K-117 · Google sign-in shows although D-052 records it as off
-
-**Found:** 2026-10-31. **Severity:** Low.
-
-The live `/login` (viewed 2026-10-31, morning) shows "Continue with Google" in the Clerk form. D-052 point 3
-says Google and passwords are off in the Clerk instance. Which is intended is UNVERIFIED; the owner decides,
-then either the Clerk instance or D-052 changes.
-
-**Resolved 2026-10-31.** Owner decision: Google sign-in stays on. D-052 point 3 is amended. Production Clerk
-instances need the owner's own Google OAuth credentials; whether those are set is UNVERIFIED from this
-repository (the Clerk dashboard is the authority).
-
-## K-118 · Sidebar links had no accessible name in the icon rail
-
-**Found and fixed:** 2026-10-31 (`feat/design-finalisation`, not deployed). **Severity:** Medium (WCAG 4.1.2).
-
-Between 768 and 1023px the CMS sidebar collapses to an icon rail. `SidebarMenuButton` in
-`src/components/ui/sidebar.tsx` hid each label with `display: none` (`[&>span]:hidden`), which also removes it
-from the accessibility tree, so axe-core 4.14.0 found 26 links and the Sign out button with no name at 834px.
-The label is now visually hidden instead (`sr-only`), as is the GAkinzOS name in the rail. The same run found
-four controls whose `aria-label` differed from their visible text (K-114): each now takes its name from the
-visible words. Verified on a build without Clerk with every `.php` answered locally: 208 captures, 26 CMS
-screens in light and dark at 390, 834, 1440 and 2560px.
-
-## K-119 · AI features stopped working: one provider, on a free model
-
-**Found and fixed:** 2026-11-01 (`chore/cleanup-2026-11-01`, not released). **Severity:** Medium.
-
-The owner reported the AI section not working. `ai.php` had one provider, OpenRouter, and the template set a
-free model (`openai/gpt-oss-120b:free`); free models are rate-limited and withdrawn without notice, and any
-failure answered "AI provider error". `integrations.php` also reported OpenRouter as configured while the key
-was still the `REPLACE_…` placeholder. The live cause is UNVERIFIED: the live `config.php` was not read and
-no live AI call was made. Fix (D-054): Anthropic first, OpenRouter as the backup, a placeholder key counted as
-not set, and `scripts/set-server-key.sh` to save the keys. Verified with `tests/server/ai.test.ts` (9 tests,
-both providers stubbed). NOT TESTED: a real call to either provider.
-
-## K-120 · A client email with a line break reached the SMTP `RCPT TO` command
-
-**Found and fixed:** 2026-11-01 (security audit, `golive/2026-11`, not released). **Severity:** Medium.
-
-`clients.php` stored the email with `str_field` alone, which keeps a line break inside the value, and an
-editor may create and update clients. The invoice chase (`invoices.php`, manager and above) and the
-scheduled chase (`cron.php`, `job=chase` and `job=all`) sent to that stored value after only an `empty()`
-check, and `_smtp.php` wrote each recipient raw into `RCPT TO:<…>` and the `To:` header, trusting callers
-to validate. A stored value such as `a@x>` + CRLF + `RCPT TO:<b@y` therefore added commands to the
-studio's authenticated SMTP session. Whether the live mail server would have delivered an injected message
-is UNVERIFIED (it depends on its pipelining and synchronisation checks); no live send was made.
-
-Fix: `gk_send_email` refuses any to or cc address that fails `FILTER_VALIDATE_EMAIL` or holds CR, LF, `<`
-or `>`, before it connects (`gk_valid_recipient`), which covers every caller; `clients.php` create and
-update refuse such an email with 400 (empty stays allowed). Verified with `tests/server/smtp-recipients.test.ts`
-(5 tests): written first and seen failing (201, 200 and "Connect failed"), then passing. Behaviour change:
-a client email holding two addresses (`a@x, b@y`) is now refused on save. NOT TESTED: the real mail server;
-existing rows were not read (owner check: `SELECT id FROM clients WHERE email REGEXP '[\r\n<>,;]'`).
-
-## K-121 · Clerk sign-in skips the app's two-factor
-
-**Found:** 2026-11-01 (security audit, source only). **Severity:** High if any active account has `totp_enabled = 1`; none otherwise.
-
-`require_auth()` sends a three-part bearer to `_clerk.php`, and `gk_clerk_resolve_user()` returns the linked
-row after checking only status and role; neither reads `users.totp_enabled`. Under K-027 every other
-alternative sign-in refuses such accounts: `auth.php` magic links (line 576), Google SSO in `oauth.php`
-(148) and the reference redeem in `client_access.php` (251). So whoever completes Clerk's email code (or
-Clerk's Google sign-in, K-117) for that address gets the account's role, super_admin included, with no
-TOTP code, and the CMS hides the two-factor controls under Clerk (`AccountSecurity.tsx`). D-052 adopted
-Clerk but never said whether app TOTP enrolments are retired. **Not fixed on purpose:** refusing those
-accounts could lock the owner out of production. Owner: run
-`SELECT id, role FROM users WHERE totp_enabled = 1 AND deleted_at IS NULL`, check whether the Clerk
-production instance requires its own second factor, then decide (record in D-052): retire app TOTP and clear
-the flags, or make the Clerk branch refuse those accounts, or require Clerk MFA. NOT TESTED locally (the
-case is written out in `docs/AUDIT.md`, 2026-11-01).
-
-**Fixed 2026-11-01 (`golive/2026-11`, not released).** Reproduced first: a super_admin with `totp_enabled = 1` got 200 from `auth.php?action=me` through Clerk with `fva: [0, -1]`. Now `require_auth()` answers 403 for such an account unless Clerk's token shows a verified second factor (`fva[1] >= 0`, Clerk session token v2), on both the first-link and linked paths; a `pending` session (`sts`) gets 401; accounts without app two-factor are unchanged; a database without the column still signs in. `tests/server/clerk.test.ts` (7 new tests). Why this and not the alternatives: it closes the gap without retiring anyone's enrolment, and an owner who turns on Clerk MFA keeps working. Owner check before release: `SELECT id, role FROM users WHERE totp_enabled = 1 AND deleted_at IS NULL`; any row listed must add a second factor in Clerk or have app two-factor cleared by an admin.
-
-## K-122 · The AI daily cap counts only successes
-
-**Found:** 2026-11-01 (security audit, source only). **Severity:** Low.
-
-`ai.php` counts today's `ai_call` rows before the paid call and writes the row only after a successful
-reply. A refused, timed-out or failed provider call is never counted (the existing test asserts this), and
-parallel requests all pass the same count. Effect: a signed-in staff account can make more paid calls than
-D-011 allows. Fix when convenient: write a reservation row before the call and count attempts, not
-successes. Backstop now: a spending limit on both provider accounts (owner). NOT TESTED.
-
-**Fixed 2026-11-01 (`golive/2026-11`, not released).** `ai.php` takes a slot (an `ai_call` row reading "pending") under `GET_LOCK` per user before the paid call, then marks it "via <provider>" or "failed". A failed attempt now counts. `tests/server/ai.test.ts` (3 new or changed tests): seen failing first, then passing.
-
-## K-123 · Per-IP throttles depend on how the host trusts the client-IP header
-
-**Found:** 2026-11-01 (security audit, source only). **Severity:** Medium if the host trusts the header from any peer.
-
-The origin lock in `.htaccess` refuses only an empty `CF-RAY`, which anyone can send. If LiteSpeed's
-"Use Client IP in Header" (or mod_remoteip) believes `CF-Connecting-IP` from any peer, a client that reaches
-the origin directly picks a new `REMOTE_ADDR` per request, so the login, enquiry and reference throttles
-never trigger and `audit_log` records invented addresses. K-102 is the opposite failure. Owner: read that
-host setting (it must trust Cloudflare's ranges only) and switch on Cloudflare Authenticated Origin Pulls.
-Nothing in the repository can settle it.
+---
 
 ## K-124 · The settings stub and the Clerk key cache folder
 
@@ -2376,22 +1358,105 @@ default resolves above the home folder, where the host will not let PHP write: e
 fetches the keys again and the failure back-off cannot be recorded. Template fixed. Owner: compare the live
 stub, and set `CLERK_CACHE_DIR` (`docs/DEPLOYMENT.md` section 5).
 
-## K-125 · Directory listing and server version on the live site
+---
 
-**Found:** 2026-11-01 (read-only requests to the live site). **Severity:** Low. **Fixed in `.htaccess`** on `golive/2026-11`, not uploaded (K-058).
+## Closed issues
 
-`/assets/` and `/uploads/` answered the host's file listing ("Proudly Served by LiteSpeed Web Server"), and
-every PHP reply carried `X-Powered-By: PHP/8.4.27`. Nothing sensitive was listed (uploads are denied
-individually), but the build history and versions help an attacker choose. Every other probe of a
-sensitive path answered 403, or the app shell (no file).
+Dates are when the fix was written or confirmed. A phrase such as "not uploaded" in the pre-compaction text described that date only: the note "Reading old statuses" above applies, and `docs/WORKBOOK.md` section 1 records what is live.
 
-## K-126 · SMTP and IMAP do not check the mail server's certificate
+| ID | Issue | How it was closed |
+|---|---|---|
+| K-004 | `api.php` accepts an unauthenticated POST | Fixed 2026-09-22: `server/api.php` rewritten as a read-only health check (`SELECT 1` and a JSON reply). The `items` listing and the anonymous INSERT are gone, and the post-install step in `server/README.md` was updated. Whether the live document root still served the old file was UNVERIFIED on that date. |
+| K-005 | `contact.php` has no spam protection | Fixed 2026-09-22: an IP throttle (more than five `enquiry_submit` rows from one address in fifteen minutes returns 429), modelled on the login counter in `auth.php`; each accepted enquiry now writes an `audit()` row. No captcha. The throttle counts `audit_log` rows, so purging that table resets it. The remaining gap is K-136. |
+| K-007 | No MIME allowlist on upload | Fixed 2026-09-22: `server/files.php` checks the extension against an allowlist and cross-checks the real type with `finfo_file()`; the browser-supplied Content-Type is no longer stored and downloads send only an allowlisted type. Residuals: old rows keep the MIME their browser claimed (the download filter neutralises it); nothing scans `uploads/` for files the allowlist would now reject; the host needs the PHP `fileinfo` extension or uploads return 503; the generated `.htaccess` deny in `uploads/` is the only defence against an uploaded script running, and that it works on the live host was NOT TESTED. |
+| K-008 | Accessibility is unmeasured | Closed 2026-09-22 by measurement: axe-core 4.10.2 over 16 routes, 0 violations; Lighthouse accessibility 100; contrast on rendered pixels across 28 combinations, 0 failures; 353 focusable elements checked for a visible indicator; reflow at 200% and target size at 390px pass. Two real defects that axe did not report were found and fixed (focus ring painted nothing on part of the masthead; ring colour inverted on dark controls). Method and figures in `docs/AUDIT.md`. No screen-reader pass with real assistive technology has been done (see K-045). |
+| K-009 | Marketing entry chunk is 556.94 kB | Closed 2026-09-22: entry chunk 556.94 kB down to 181.76 kB through a `manualChunks` rule in `vite.config.ts` (a long-cacheable `vendor` chunk, roughly 30 lucide micro-chunks folded into one); `dist/` fell from 43 MB to 2.6 MB, mostly by removing 35.92 MiB of unreferenced images from `public/`. Figures in `docs/AUDIT.md`. |
+| K-012 | Stale design residue in `src/index.css` | Closed 2026-09-22: the commented-out gradient blocks (including a committed keyboard-mash), the third-party template URL, unused custom properties and the misnamed `.gk-public` overrides were removed. The effect classes that remained for the old sign-in pages went with the D-046 restyle (2026-10-14). |
+| K-013 | Four shared includes are outside the `.htaccess` deny rule | Fixed 2026-10-10: the `server/.htaccess` deny pattern is now `^(config|_[A-Za-z0-9_-]+)\.php$`, which covers every `_`-prefixed include. Regex checked locally; Apache and LiteSpeed behaviour were NOT TESTED at the time. A stale `(api|contact|ai|verify)` list in the non-rewrite rule is harmless. |
+| K-014 | `auth.php` hard-codes a fallback seed-admin address | Fixed 2026-09-22: the `dev@gakinz.com` fallback is gone and `ensure_seed()` returns early when `$SEED_ADMIN_EMAIL` is not set. Consequence: with the key unset, a first run against an empty `users` table creates no account, so the key must be set in the live `config.php`. |
+| K-015 | A seed super-admin password was written to a web-served file | Fixed in code 2026-09-22: the write of the generated super-admin password to `server/seed_admin_password.txt` is gone (it goes to the PHP error log) and the `.htaccess` deny now covers `.txt` (`robots.txt` exempted by a negative lookahead). Live check 2026-10-30: `seed_admin_password.txt` does not exist in the document root (`ls` over ssh; the HTTP 200 for that URL is the app shell). The seed-password log line is still open under K-061. |
+| K-016 | Editing a draft blog post silently destroys its body | Fixed 2026-10-10: the editor loads the full post from a new editors-only `GET blog.php?id=` before Save is enabled, and an update that omits `excerpt` or `body` keeps the stored values (`tests/server/blog.test.ts`). The same bug in `work.php` was fixed 2026-09-22 (narrative columns in `listAll`, an editors-only `getAdmin`). The same class of bug returned in K-129. |
+| K-017 | `xlsx` carried a HIGH advisory with no fix on npm | Fixed 2026-11-01 on `golive/2026-11`: `xlsx` (two HIGH advisories, no fix on npm; used only for the CMS workbook export in `src/lib/csv.ts`) now resolves to SheetJS 0.20.3 from the SheetJS CDN, pinned in `package-lock.json` by sha512 integrity. `npm ci` therefore also fetches from cdn.sheetjs.com. |
+| K-022 | `SidebarMenuSub` drops its forwarded ref | Fixed 2026-10-11: the ref is now attached to the `<ul>` in `src/components/ui/sidebar.tsx`. No caller passed one, so rendering is unchanged; it also cleared one lint warning. |
+| K-023 | Two CMS account links point at routes that do not exist | Fixed 2026-10-10: the user menu now links to `/app/account` (My account), which every signed-in role can open (`186474c`). |
+| K-024 | Non-admin roles cannot enable two-factor or revoke their own sessions | Fixed 2026-10-10: My account (`Account.tsx`, `AccountSecurity.tsx`) gives every role, client included, a read-only profile, two-factor setup and its own sessions with revoke; `auth.php` `me` returns the caller's `totp_enabled`. `tests/server/account.test.ts` checks each self-service action touches only the caller. |
+| K-027 | Magic links and Google sign-in bypassed two-factor; one link could mint several sessions | Fixed 2026-10-10: magic links sign in `client` accounts without two-factor only, the link is claimed with a guarded UPDATE (concurrent clicks used to mint several sessions), and Google sign-in refuses accounts with two-factor on. The magic-link constants were declared after the request dispatch, so a configured `magic_request` would have died. Tests in `tests/server/auth.test.ts`. The same rule was missing for Clerk (K-121). |
+| K-028 | Draft or declined quotes could be accepted; concurrent accepts duplicated projects and invoices | Fixed 2026-10-10: `proposals.php` accepts only `sent`, unexpired quotes, claimed by a guarded UPDATE inside the transaction (the `project_id` check used to run outside it, so concurrent accepts duplicated projects and invoice schedules); an accepted quote cannot go back to draft (`tests/server/proposals.test.ts`). |
+| K-029 | Create endpoints returned the audit-log id instead of the new record's id | Fixed 2026-10-10: seventeen create handlers read `$conn->insert_id` after `audit()` had inserted its own row (three had an UPDATE in between and would have returned 0). The id is now read straight after the INSERT (`tests/server/create-ids.test.ts`). Found while testing K-016. |
+| K-030 | CSV exports could run spreadsheet formulas from enquiry text | Fixed 2026-10-10: `toCsv` prefixes values starting with `=`, `+`, `-`, `@`, tab or CR with an apostrophe; real numbers are untouched, and SheetJS already writes XLSX strings as text cells (`src/lib/csv.test.ts`). |
+| K-031 | Dashboard showed £0 and "All on time" when data failed; two CMS screens overflowed phones | Fixed 2026-10-10: a failed source shows a dash and a retry hint instead of £0 and "All on time"; header actions wrap and the shared tab list scrolls inside itself, so Invoicing and Platform no longer widen a 390px screen. All 24 CMS routes fit at 320 and 390px in a local preview with every API call stubbed; data-filled tables NOT TESTED. |
+| K-032 | The CMS navigation is one flat list of 24 entries | Fixed 2026-10-10: `app-sidebar.tsx` groups the entries under the seven D-040 destinations, relabels Dashboard, Leads, Proposals and Platform as Today, Enquiries, Quotes and Settings, and hides a group the role cannot use. URLs unchanged. Moving supporting tools inside their records is later work (`docs/PRODUCT-SPEC.md` section 5.2). |
+| K-035 | CI ran no tests and the deploy did not wait for CI | Fixed 2026-10-10: CI runs unit tests, server tests, `php -l` and the lint ratchet, and the deploy runs only after CI succeeds (D-036). The new server-test job found K-040. The deploy wait was later found not to work in practice and was fixed under K-138. |
+| K-036 | Public pages bring back unpublished posts and work from the static fallback | Fixed 2026-10-10: a successful CMS answer, empty included, now decides what the public pages show; the static fallback is used only when the request fails, and a JSON 404 is a real not-found (`src/marketing/data/cmsResult.ts`, `3eadfd3`). The private content-health warning is not built. |
+| K-037 | The article renderer has no links or lists | Fixed 2026-10-10: `src/marketing/lib/articleFormat.ts` renders `##`/`###` headings, bullet and numbered lists, bold and `[text](url)` links as React elements with no raw HTML; only `https`, `http` and `mailto` become anchors, and `{sponsored}` adds `rel="sponsored"` (`d5276cb`). Recommendation blocks are not built. |
+| K-039 | Clients cannot message the owner from the portal | Fixed 2026-10-10: `support.php` has a client branch (list, read, start and reply to tickets of the caller's own client only; the client id comes from the token, another client's ticket answers 404, clients cannot set status, priority or assignee) and the portal has a Messages area. 22 isolation tests with two synthetic clients, 8 of which failed on the old code (`cf534cf`). `support.php` is now security-critical like `portal.php` (`docs/SECURITY.md` section 3). Private feedback with separate publication consent was built 2026-10-16 (`feedback.php`); see K-055. |
+| K-040 | `stored` is a MySQL 8 reserved word, so the schema failed on MySQL | Fixed 2026-10-10: `stored` is a reserved word in MySQL 8 but not MariaDB, so `schema.sql` failed on MySQL; the column is now backtick-quoted in `schema.sql` and `files.php` (`9db80b2`). Found by the new CI server-test job. |
+| K-042 | The Google Fonts `@import` still blocks rendering on public pages that no longer use those fonts | Fixed in code 2026-10-14 (D-046): the Google Fonts `@import` and two `preconnect` links are gone and every face is self-hosted from `@fontsource-variable`, imported in `src/main.tsx`. CLS was measured afterwards: see K-052. |
+| K-043 | A static canonical in `index.html` conflicts with the per-route canonical | Fixed 2026-10-16 (prerender): the static canonical and `og:url` are gone from `index.html`; each prerendered page carries one title, one description and one canonical, and React adopts them on hydration. Checked with Playwright on all 30 prerendered pages, JavaScript off and on, and after client-side navigation. Lighthouse SEO 100 on `/`, `/work` and `/contact` (was 100, 92, 92). Client-only routes get their canonical from React once JavaScript runs. |
+| K-045 | Accessibility and performance audits predate the D-046 rebuild and the font change | Closed 2026-10-16: re-measured against a local production build (axe-core 4.13.0 on 15 public routes at 1440 and 390px and 8 CMS screens in light and dark; contrast on rendered pixels for every hero slide and case hero; keyboard; reduced motion; Lighthouse 12.8.2 mobile). Five defects fixed (`0a1d62f`, `bb9ac2e`, `ceb418c`, `dae9f3e`, `ffaa083`); the open findings became K-050 to K-053. Results in `docs/AUDIT.md` section 9. Real assistive technology, CMS screens with data and the live site remain NOT TESTED. |
+| K-046 | Dead redesign residue: `.gk-fadein` rules, the Sofia Sans dependency, D-037 brand assets | Fixed 2026-10-16: unused `.gk-fadein` rules and the stale Sofia Sans comment removed, the dependency uninstalled, and the favicon (SVG, 32px, Apple touch icon), `public/og.png` and `theme-color` redrawn in the D-046 graphite and chalk. Re-checked 2026-10-18: no residue left. `.gk-public` is not dead (`ProposalView.tsx` uses it). |
+| K-048 | Site content tabs scroll sideways at 390px with no visible cue | Fixed 2026-10-16: the shared `TabsList` wraps onto a second row instead of scrolling hidden, for every tab row (Site content, Settings, Analytics, Content Hub). |
+| K-049 | Editing a Work record crashed on a detail response without images | Fixed 2026-10-14 (`24c25ff`): `Work.tsx` read `res.data.images` without a default; it now falls back to an empty list. |
+| K-050 | RotaFlow blue `#3B6FE0` fails contrast for the reduced-opacity white text on it | Fixed 2026-10-16: the owner chose `#2C5AC4` (white text passes at every opacity used), applied in `showcase.ts`, the hero fallback in `site.css` and the sign-in colour strip. A CMS Work record keeps whatever colour is entered there. The other 11 project colours passed. |
+| K-051 | Amber hero slide: dark bar text on the dark bottom shading | Fixed 2026-10-16: the owner chose light bar text; on slides whose text is dark the hero bar uses `#ECE9E2` over the bottom shading (6.73:1 measured). |
+| K-054 | A CMS heading rule shrank every public page heading | Fixed 2026-10-16. Cause: the CMS rule `#main h1 { font-size: ... }` outranked `.gk-site .hero h1` because the public layout's `<main>` also has `id="main"`, so every public `h1` rendered at about 35px instead of 77.76px from the CMS merge onward. The rule is now `#main.gk-app-main h1`, with the class on the CMS `<main>` in `AppLayout.tsx`. The K-045 public-site figures were taken with the bug present. |
+| K-056 | An admin could demote or suspend a super admin, locking the owner out | Fixed 2026-10-17: `refuse_super_admin_target()` in `users.php` answers 403 unless the caller is a super admin, so an admin can no longer demote or suspend the owner (a suspension also deletes every session). `tests/server/security-hardening.test.ts` failed before the change. |
+| K-057 | Sign-in lockout by anyone, unlimited code guesses on a signed-in account, a reusable reset link, and sign-in timing | Fixed 2026-10-17: (1) the login throttle counts 10 failures for that email from that address plus 30 from one address, so nobody else can lock the owner out; (2) `gk_totp_check()` allows ten wrong codes in fifteen minutes per account, then 429, and replay of a valid code is refused via `users.totp_last_step` (SQL 12; until it runs, codes work as before); (3) the reset link is claimed first with `AND used_at IS NULL`; (4) an unknown email now checks against a hash of a random value. Items 1 and 2 failed on the old code; item 3 is tested for single use, not a true race; item 4 is not measured. |
+| K-058 | No browser security headers on pages and static files; HSTS and directory listing unknown | Fixed. 2026-10-17: `server/.htaccess` sets `nosniff`, `Referrer-Policy`, `X-Frame-Options` and `Permissions-Policy` on every response (`Options -Indexes` deliberately avoided: it returns 500 on hosts that disallow `Options` overrides). 2026-11-01 on `golive/2026-11`: HSTS (`max-age=31536000`, no `includeSubDomains`, no preload), COOP `same-origin-allow-popups`, CSP, `X-Powered-By` and `X-Turbo-Charged-By` removed, `ServerSignature Off`, and a directory request with no `index.html` answers 404. Checked on a local Apache 2.4.67; LiteSpeed was NOT TESTED until the `.htaccess` went live on 2026-11-08 (K-125). `ServerTokens` is host-only. |
+| K-059 | Session, reset, magic-link and share tokens are stored in plain text | Fixed 2026-10-17 for sessions, reset links and magic links, with no schema change and nobody signed out: `token_hash()` stores the first 62 hex characters of SHA-256 (fits `CHAR(64)`, never mistaken for a raw 64-character token); lookups match the hash, or a raw value only in a 64-character row, so old sessions work until they expire. Upload `_bootstrap.php` with `auth.php`, `oauth.php` and `users.php`. File and proposal share tokens stay as issued by design (D-029); proposal links can now be revoked (K-060). Tests: `tests/server/token-hashing.test.ts`. |
+| K-060 | Proposal share links never expire and cannot be revoked | Fixed 2026-10-17, no schema change: the public view answers 410 for a declined proposal and for one past `valid_until` unless it was accepted (an accepted proposal stays readable as the record); a new `unshare` action clears the token so the next Share issues a different link, and Proposals has a Revoke button. Six tests in `tests/server/proposals.test.ts`. |
+| K-069 | Header links at 0.85 opacity can fall below AA on a mid-tone owner hero colour | Fixed 2026-10-31 (`a907824`): header links at full opacity and the current page underlined (see K-115). The earlier section still described it as an open design decision; the table row was the later record. |
+| K-073 | Toasts failed AA contrast and ignored dark mode; the Projects board scroll region was not focusable; a refused acceptance showed only in a toast | Fixed 2026-10-19: (1) the toaster now follows the CMS theme and takes colours from CMS tokens (light 5.22 to 5.99:1, dark 7.22 to 8.79:1; before: success 4.25:1, error 4.34:1, and light in dark mode); (2) the Projects task board is a labelled, focusable region; (3) a refused quote acceptance shows inside the accept dialog, which stays open with the typed reference kept. axe 0 violations at 1440 and 390px, light and dark, against a mocked API. Screen-reader announcement NOT TESTED. |
+| K-082 | Strict SQL errors in `briefs.php`, `privacy.php` and `_retention.php` are not tested on PHP before 8.1 | Closed 2026-11-01: the host runs PHP 8.4.26 (read 2026-10-21), so the pre-8.1 path does not arise. For the record, `briefs.php` and `privacy.php` call `mysqli_report(MYSQLI_REPORT_ERROR | MYSQLI_REPORT_STRICT)` themselves, `briefs.php` checks every `execute()`, and `_retention.php` checks each step and throws (`fa8849d`). The earlier section still said open; the table row was the later record. |
+| K-088 | Several CMS selects had no accessible name (New project Client first) | Fixed 2026-10-19: axe reported `button-name` (critical) on `SelectTrigger`s whose `<Label>` had no `htmlFor` and the trigger no `id` (New project Client first, from `2cdff4a`). Every such select now has a matching `id` and `htmlFor`: Blog, Proposals, Clients, Content, Contracts, Design, Invoicing, Knowledge, Leads, Platform, Resourcing, Support and Testimonials fields. Real assistive technology NOT TESTED. |
+| K-089 | Server test runs left `php -S` workers on the port, making later runs flaky | Fixed 2026-10-19 (`af151cb`, `650be1e`), test harness only: `tests/server/global-setup.ts` stopped only the parent `php -S`, so six workers survived on the port and a later run could silently serve an older copy of `server/`. Setup now refuses a busy port with a message naming it, starts `php -S` detached in its own process group, and stops the whole group on teardown, setup failure, Ctrl-C, SIGTERM or exit. Other ports: `docs/OPERATIONS.md` section 8. |
+| K-109 | GitHub Actions is switched off, so no CI runs and no deploy runs; the FTP deploy state on the host is stale | Fixed 2026-10-30: GitHub Actions had been switched off, so no CI or deploy ran since 2026-10-17. The owner made the repository public and switched Actions on. The deploy step was replaced the same day: `FTP-Deploy-Action` could delete remote files, so a no-delete lftp upload (`scripts/deploy-ftps.sh`) was used; its first run failed closed because `ftps://` is implicit TLS on port 990 (nothing uploaded), and `ftp://` with `ftp:ssl-force` fixed it (run 41075764726 on `608dc7b`, public checks passed; PASS meant the run plus those checks, not a byte comparison). Releases now go through `scripts/release.mjs` (see `CLAUDE.md`). |
+| K-111 | SQL 20 was written as live statements at the foot of `schema.sql` and stopped the schema loading on MySQL | Fixed 2026-10-30 (found by the first CI run after Actions came back): `ADD COLUMN IF NOT EXISTS` and `CREATE UNIQUE INDEX IF NOT EXISTS` are MariaDB-only and were live statements at the foot of `schema.sql`, so the MySQL CI job failed with error 1064; SQL 20 is now commented out like every other migration there (the live MariaDB 11.4 ran it on 2026-10-30). `references.test.ts` read the SQL 19 block to end of file and now stops at the block boundary. |
+| K-112 | Layout and composition gaps on the public site, sign-in and GAkinzOS (register P1 to P9, C1 to C3) | Fixed 2026-10-31 on `feat/design-finalisation`, deployed 2026-10-31 (`a907824`; C1 live in `fdc5d94`): hero overlap during the swap, lone cards and 3 + 2 rows, narrow page headers, empty section-head column, stretched pricing lists, the "Portrait to come" circle, the case-study slab, Clerk's stock card on the graphite sign-in, 3 + 2 stage tiles on phones, two identical "New project" buttons (register P1 to P9, C1 to C3). Evidence per item: `.claude/skills/gakinz-design/references/findings.md`. |
+| K-113 | Form field borders are below 3:1 against their background (WCAG 1.4.11) | Fixed 2026-10-31, deployed (`a907824`), with owner-approved values: public `#647183` (3.32 to 3.69:1), CMS light `#7F8896` (3.28 to 3.58:1), CMS dark `#6B7787` (3.33 to 4.03:1); the old edges measured 1.78:1 and 1.52:1. axe does not test WCAG 1.4.11, so earlier audits passed. Values: `.claude/skills/gakinz-design/references/tokens.md`. |
+| K-114 | Accessible names that do not match visible text (WCAG 2.5.3) | Fixed 2026-10-31, deployed (`a907824`): accessible names now start with the visible words (logo links, CMS sidebar link, search, account button, Files drop zone). axe-core 4.14.0 flagged `label-content-name-mismatch`; 4.10.2 had not. |
+| K-115 | Header links over a light project colour fail contrast (Harni's pink) | Fixed 2026-10-31, deployed (`a907824`). Cause: the header links' 85% opacity and the 12% tint behind the active link darkened Harni's pink to 4.33:1; `onColour` was already correct (the first note blamed the prototype's code). Now links are full opacity with an underline for hover and current page, labels on project colours are full opacity, and the main call to action is graphite on chalk (15.12:1). Zero contrast violations on all twelve case studies at five widths. |
+| K-116 | `vite preview` inherits the dev proxy and sends `.php` calls to the live API | Fixed 2026-10-31 (`preview.proxy: {}`), merged `a907824`: `vite preview` inherited the dev proxy and sent `.php` calls to `https://gakinz.com` (one read, 401, nothing written). The skill's `serve.mjs` stays the safer way to serve `dist/` because it answers every `.php` with 404. |
+| K-117 | The live sign-in page shows "Continue with Google", while D-052 records Google as switched off | Resolved 2026-10-31 by owner decision: Google sign-in stays on and D-052 point 3 is amended. Whether production uses the owner's own Google OAuth credentials is UNVERIFIED (the Clerk dashboard is the authority). |
+| K-118 | In the icon rail (768 to 1023px) 26 sidebar links and Sign out had no accessible name | Fixed 2026-10-31, deployed (`a907824`): in the 768 to 1023px icon rail `SidebarMenuButton` hid labels with `display: none`, which also removes them from the accessibility tree (26 links and Sign out had no name); the label is now visually hidden (`sr-only`). 208 captures, 26 CMS screens in light and dark at four widths. |
+| K-119 | AI features stopped working: one provider, on a free model | Fixed 2026-11-01 on `chore/cleanup-2026-11-01` (D-054): `ai.php` had one provider (OpenRouter) on a rate-limited free model, and `integrations.php` reported a `REPLACE_...` placeholder key as configured. Now Anthropic first, OpenRouter as backup, a placeholder counts as not set, and `scripts/set-server-key.sh` saves keys. `tests/server/ai.test.ts` (9 tests, both providers stubbed). The live cause is UNVERIFIED and a real provider call is NOT TESTED. |
+| K-120 | A client email with a line break reached the SMTP `RCPT TO` command (invoice chase and the cron chase) | Fixed 2026-11-01 on `golive/2026-11`: `clients.php` kept line breaks in a stored email and `_smtp.php` wrote recipients raw into `RCPT TO:<...>`, so a stored value could inject SMTP commands (invoice chase and cron chase). `gk_send_email` now refuses any to or cc address that fails `FILTER_VALIDATE_EMAIL` or holds CR, LF, `<` or `>`, and `clients.php` create and update answer 400 for such an email. `tests/server/smtp-recipients.test.ts` (5 tests, seen failing first). A client email holding two addresses is now refused on save. Existing rows were not read; owner check: `SELECT id FROM clients WHERE email REGEXP '[\r\n<>,;]'`. |
+| K-121 | Clerk sign-in gave a full session to an account with app two-factor on, without the code | Fixed 2026-11-01, released 2026-11-08 as `ae01cec`: `require_auth()` now answers 403 for an account with app two-factor on unless Clerk's token proves a second factor (`fva[1] >= 0`, session token v2), on both first-link and linked paths, and a `pending` session (`sts`) gets 401 (reproduced first: 200 through Clerk with `fva: [0, -1]`; `tests/server/clerk.test.ts`, 7 new tests). Chosen because it retires nobody's enrolment. Checked before the merge: 0 accounts have app two-factor on. |
+| K-122 | The AI daily cap counted only successful replies and checked before it recorded | Fixed 2026-11-01 on `golive/2026-11`: `ai.php` takes a slot (an `ai_call` row reading "pending") under a per-user `GET_LOCK` before the paid call and marks it "via <provider>" or "failed", so failed attempts count and parallel requests cannot all pass the same count (`tests/server/ai.test.ts`). Backstop: a spending limit on both provider accounts (owner). |
+| K-123 | The Cloudflare origin lock trusts any CF-RAY; if the host takes the client IP from a header without checking the peer, every per-IP throttle can be bypassed | Closed 2026-11-08 with evidence: one probe straight at the origin with a fake `CF-RAY` and a forged `CF-Connecting-IP` recorded the real peer address, so the header is not trusted from arbitrary peers, and all 45 recent audit rows hold non-Cloudflare (visitor) addresses. Hardening idea left: the origin still answers any request carrying a `CF-RAY` header (Cloudflare Authenticated Origin Pulls would close that). K-102 is the opposite failure. |
+| K-125 | Directory listing on `/assets/` and `/uploads/`, and the PHP version in every API reply | Fixed. `/assets/` and `/uploads/` answered the host's file listing and every PHP reply carried `X-Powered-By: PHP/8.4.27` (found 2026-11-01; observed live again 2026-11-08 with `npm run check:live`, raised to Medium). Fixed in `.htaccess` and `_bootstrap.php` on `golive/2026-11`. The `.htaccess` part went live 2026-11-08 (owner-approved, backup first): both listings answer 404, `X-Powered-By` is gone from `/api.php`, `npm run check:live` passes 16 of 16. The `_bootstrap.php` part ships with the release (`docs/DEPLOYMENT.md` section 5). |
+| K-126 | SMTP and IMAP do not check the mail server's certificate | Fixed 2026-11-08: the `$MAIL_VERIFY_TLS` switch (added 2026-11-01; `_smtp.php` had `verify_peer` off and `mail.php` used `/novalidate-cert`) was tested (certificate chain and host name verify on SMTP 465 and IMAP 993, inbox opens read-only with validation) and turned on in the private config. |
+| K-127 | Staff file downloads read only the stored legacy token (`Files.tsx:73`), but under Clerk there is none (`api.ts` falls back to a Clerk token) | Fixed and released 2026-11-08 (`b301ec7`, PR #27): `Files.tsx` used only the stored legacy token, which does not exist under Clerk; it now uses `files.download` and `api.download`, which attach the Clerk token. 4 tests first, mutation-checked. A real signed-in download is NOT TESTED live (no files exist). |
+| K-128 | `files.php` action `share` overwrites `share_token` and `expires_at` on any file, while `work.php` serves public portfolio images by that token and says it is never rotated | Fixed and released 2026-11-08 (`b301ec7`, PR #27): `files.php` action `share` overwrote `share_token` and `expires_at` on any file, rotating the portfolio-image links `work.php` serves by that token. A file that already has a link with no expiry now keeps it, and the Files screen no longer says "7 days" for it. The server test pins the portfolio image case; 1 red first, mutation-checked. Server tests only: not exercised on live data. |
+| K-129 | Updates reset fields they were not sent (`blog.php` update unpublished a live post; testimonials, leads meta and dev meta did the same) | Fixed and released 2026-11-09 (`cbfd527`, PR #28): updates reset fields they were not sent (a blog edit set `status` to `draft`, unpublishing a live post; testimonials, leads meta and dev meta did the same). Blog, testimonials, content, clients, leads meta and dev meta now load the stored row (`gk_live_row`) and keep every field a request did not send. 18 tests first (14 red), four mutations caught. The first finding was confirmed, the other three reported then reproduced. |
+| K-130 | Update and delete routes answered ok and wrote an audit row for an id that does not exist | Fixed and released 2026-11-09 (`cbfd527`, PR #28): update, approve and assign routes (testimonials, content, clients, dev meta, support assign) answered ok and wrote an audit row for an id that does not exist; they now answer 404 using a lookup, because UPDATE reports 0 affected rows for a harmless no-op. Verified live 2026-11-09: nine routes answer 404 with a clear message for a missing id. |
+| K-131 | "Paid" was recorded differently by manual mark-paid, the Stripe webhook and PayPal; drafts could be paid or chased | Fixed and released 2026-11-09 (`cbfd527`, PR #28): `gk_mark_invoice_paid` (in `_money.php`) records the same evidence (method, reference, amount, who) for manual mark-paid, the Stripe webhook and PayPal. A draft can still be paid on purpose (the owner's flow is accept quote, draft deposit invoice, Stripe link, webhook; `journey.test.ts`); `record_payment` keeps its stricter sent-only rule. Re-marking a paid invoice now answers 409, not a false 404. 13 tests first, three mutations caught. PayPal's return path is NOT TESTED (PayPal ships off). |
+| K-132 | `auth.php` action `forgot` stores a reset token and never emails it ("Phase 2" in the code), and nothing in the UI calls it | Fixed and released 2026-11-09 (D-057, `ed58064`): `forgot` and the whole password-reset flow are gone. |
+| K-133 | The legacy sign-in (password, magic link, reference link, Google bounce) is unreachable in the Clerk build: its `#magic`, `#access` and `#sso_token` handlers live only in `LegacyLogin` | Fixed and released 2026-11-09 (D-057, `ed58064`): the legacy sign-in is retired. |
+| K-134 | Certificates cannot be issued: `/verify` reads `certificates`, nothing writes it and there is no screen; ids are short and unthrottled (see K-061) | Fixed and released 2026-11-09 (D-058, `01d2269`): `certificates.php` issues, lists and revokes; the verify page is throttled and uniform. |
+| K-135 | `STAFF` is a different role list in different endpoints and `MODULE_ROLES` copies them by hand (editor dashboard showed a permanent warning) | Fixed and released 2026-11-09 (`cbfd527`, PR #28), by a guard and not a refactor: `access-drift.test.ts` compares each module's roles in `access.ts` with the PHP list that serves it (30 pairs, all agree) and fails on drift or an undecided new module. "Define the lists once on the server" was not done (a shared file touching every endpoint was higher risk). The editor dashboard no longer loads invoices or shows the permanent banner (`dashboardSources.ts`, 5 tests). The editor view is NOT TESTED in a browser (the only live account is a super admin). |
+| K-138 | `deploy.yml` does not wait for `ci.yml`: both start on a push to `main`, so a failing CI job does not stop a release | Fixed and live 2026-11-08 (`7457e5e`, PR #26): both workflows started together on a push to `main`, so a failing CI job did not stop a release. The release is now a job of `ci.yml` that `needs` every check, and `scripts/deploy-needed.mjs` (tests first, mutation-checked) keeps the docs-only skip. On the first run the release job started 3 seconds after the slowest check finished and reported "Nothing to upload". |
+| K-140 | Three screens could hang or mislead under Clerk (signed-in gate spun after a 401 or failed first lookup; failed ticket load showed the skeleton for ever; project status dropdown snapped back) | Fixed and released 2026-11-08 (`b301ec7`, PR #27): `guardModel.ts` (13 tests), `ticketPanelModel.ts` and `projectStateModel.ts` (7 tests), all written first and mutation-checked. Verified live: after an injected 401 the app reloaded the signed-in user and showed the screen; a failing ticket load shows the server's message with Try again. The project status dropdown is NOT TESTED live (needs a write). |
+| K-141 | `cron.php job=chase` re-emailed every overdue invoice on every run, and `job=digest` (the "weekly" digest) went on every run of `job=all` | Fixed and released 2026-11-09 (D-059, `825600e`): one reminder per invoice per `$CHASE_INTERVAL_DAYS`, digest at most once every 6 days. **Found 2026-11-09 (read-only `crontab -l`, owner-approved): the host has no GAkinz cron entry at all**, so nothing has been re-emailing clients, and also no retainer billing, uptime check, prune or weekly digest has been running (see K-145). Closed |
+| K-142 | A task cannot be edited, assigned or dated after it is created; a move to the status it already has answers 404; a malformed due date reached the database | Fixed and released 2026-11-09 (D-059, `825600e`): `tasks.php` update, date validation and the status lookup. |
+| K-143 | No way to edit a client in the CMS (`clients.update` existed with no screen) | Fixed and released 2026-11-09 (D-059, `825600e`): Edit in the client detail sheet. |
+| K-144 | Accepting a quote left you on the project list, and a quote could not start from an enquiry | Fixed and released 2026-11-09 (D-059, `825600e`): lands on the new project; "Draft a quote" on the enquiry. |
 
-**Found:** 2026-11-01 (go-live audit). **Severity:** Medium if the path to the mail host can be intercepted. **Switch added, off by default.**
+## Lessons from closed issues
 
-`_smtp.php` set `verify_peer` off and `mail.php` used `/novalidate-cert`, so the mailbox password could be
-read by anyone able to sit on that connection. `$MAIL_VERIFY_TLS = true` in the private config now turns
-both checks on. It stays off by default because the host's certificate was not checked against the mail
-hostname, and a mismatch would stop all mail. Owner: set it, send one message, open the inbox; if both
-work, leave it on.
-
+- Updates must keep what they were not sent: an endpoint that rewrites a field the form never loaded destroys data (K-016 `blog.php` body, K-129 blog status, testimonials, leads and dev meta). Load the stored row (`gk_live_row`) and merge.
+- Read `insert_id` straight after the INSERT: `audit()` inserts its own row and changes it (K-029). Create endpoints must be tested for the returned id.
+- The Mac and CI databases differ: the Mac runs MariaDB, CI runs MySQL. MariaDB-only SQL (`IF NOT EXISTS` on ALTER or CREATE INDEX) and MySQL 8 reserved words such as `stored` break the schema only in CI (K-040, K-111). Migrations at the foot of `schema.sql` stay commented out until someone runs them.
+- Any alternative sign-in path must apply the two-factor rule (K-027 magic links and Google, K-121 Clerk). A new path is not finished until it refuses an account with two-factor on, or proves a second factor.
+- Do not trust the stored value in anything that reaches SMTP: validate recipients in the sender (`gk_valid_recipient`), not in each caller (K-120).
+- Guarded UPDATEs (`... WHERE used_at IS NULL`, `WHERE status = 'sent'`) inside the transaction stop concurrent clicks minting several sessions or accepting a quote twice (K-027, K-028, K-057).
+- Tokens: sessions, reset and magic links are stored as `token_hash()` (first 62 hex characters of SHA-256 in `CHAR(64)`); share tokens are capability links by design (D-029, K-059).
+- CSS: an id selector in shared CSS (`#main h1`) outranks class rules on the public site, because both layouts use `id="main"` (K-054). Scope CMS rules with `.gk-app-main`.
+- Accessibility traps: `display: none` removes a label from the accessibility tree (use `sr-only`, K-118); Radix `SelectTrigger` needs an `id` with a matching `<Label htmlFor>` (K-088); axe does not test WCAG 1.4.11 (field borders, K-113) or the reduced-opacity text contrast, so measure rendered pixels (K-050, K-115).
+- `vite preview` inherits the dev proxy and reaches the live API unless `preview.proxy` is `{}` (K-116). Serve `dist/` with the skill's `serve.mjs`, which answers every `.php` with 404.
+- Test harness: `php -S` workers must be started in their own process group and killed as a group, or a later run silently serves an older `server/` (K-089).
+- Uploads: the generated `uploads/.htaccess` deny is the only defence against an uploaded script running, and the host needs the PHP `fileinfo` extension or uploads return 503 (K-007).
+- First run: with `$SEED_ADMIN_EMAIL` unset an empty `users` table creates no account (K-014). `$MAIL_VERIFY_TLS = true` turns on mail certificate checks and is on in the private config (K-126).
+- A paid-invoice flow runs through a draft on purpose (accept quote, draft deposit invoice, Stripe link, webhook): do not make `gk_mark_invoice_paid` refuse drafts (K-131).
+- The CI deploy wait must be a `needs` dependency inside one workflow; two workflows triggered by the same push run in parallel (K-035, K-138).
+- Several sections were stale against their table row when this file was compacted (K-017, K-069, K-082, K-123); the table row was the later record and was used.

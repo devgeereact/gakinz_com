@@ -83,6 +83,29 @@ export function applyTodayResult(prev: TodayView, res: ApiResult<unknown>): Toda
   return { data: null, updatedAt: prev.updatedAt, error: res.ok ? BAD_REPLY_ERROR : res.error }
 }
 
+export type ScheduledJobsNotice = { title: string; detail: string; off: string[] }
+
+/**
+ * The notice for the owner when the host is not running cron.php (K-145), or null when it is, when the reply
+ * does not say, or when the load failed (a failed load already shows its own error). Defensive about the shape
+ * because an older today.php on the server will not send the key.
+ */
+export function scheduledJobsNotice(view: TodayView): ScheduledJobsNotice | null {
+  const j = view.data?.scheduled_jobs
+  if (!j || j.stale !== true) return null
+  const off = Array.isArray(j.off) ? j.off.filter((x): x is string => typeof x === "string") : []
+  const last = typeof j.last_run === "string" ? new Date(j.last_run) : null
+  const when = last && !Number.isNaN(last.getTime()) ? `The last run was on ${last.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}.` : "No run has ever been seen."
+  const all = j.all_off === true
+  return {
+    title: all ? "Scheduled jobs are not running" : "Some scheduled jobs are not running",
+    detail: all
+      ? `${when} Until the host runs cron.php, nothing is sent or billed automatically.`
+      : `${when} These have not run in the last 36 hours:`,
+    off,
+  }
+}
+
 export type TodayRow =
   | { key: TodaySectionKey; label: string; state: "unavailable" }
   | { key: TodaySectionKey; label: string; state: "empty" }

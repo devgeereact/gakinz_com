@@ -7,6 +7,7 @@ import {
   initialTodayView,
   itemRoute,
   itemWhen,
+  scheduledJobsNotice,
   sectionRoute,
   todayPanel,
   todayRows,
@@ -238,5 +239,43 @@ describe("sectionRoute", () => {
     expect(sectionRoute("unpaid_invoices")).toBe("/app/invoicing")
     expect(sectionRoute("overdue_tasks")).toBe("/app/projects")
     for (const k of expectedSections("super_admin")) expect(itemRoute({ route: sectionRoute(k) })).toBe(sectionRoute(k))
+  })
+})
+
+describe("scheduledJobsNotice", () => {
+  const view = (scheduled_jobs: unknown): TodayView => ({
+    data: { generated_at: "2026-11-10T09:00:00Z", sections: {}, scheduled_jobs } as TodayData,
+    updatedAt: "2026-11-10T09:00:00Z",
+    error: null,
+  })
+
+  it("names what is off when no run has ever been seen", () => {
+    const n = scheduledJobsNotice(view({ last_run: null, stale: true, all_off: true, off: ["Retainer billing", "The weekly digest"] }))
+    expect(n?.title).toBe("Scheduled jobs are not running")
+    expect(n?.detail).toContain("No run has ever been seen.")
+    expect(n?.detail).toContain("nothing is sent or billed automatically")
+    expect(n?.off).toEqual(["Retainer billing", "The weekly digest"])
+  })
+
+  it("says only some are off when others run", () => {
+    const n = scheduledJobsNotice(view({ last_run: "2026-11-10T02:00:00Z", stale: true, all_off: false, off: ["Retainer billing"] }))
+    expect(n?.title).toBe("Some scheduled jobs are not running")
+    expect(n?.detail).toContain("have not run in the last 36 hours")
+  })
+
+  it("gives the date of the last run when there was one", () => {
+    const n = scheduledJobsNotice(view({ last_run: "2026-11-01T02:00:00Z", stale: true, off: [] }))
+    expect(n?.detail).toContain("The last run was on 1 Nov 2026.")
+  })
+
+  it("says nothing when the jobs are running, when the server does not say, or when the load failed", () => {
+    expect(scheduledJobsNotice(view({ last_run: "2026-11-10T02:00:00Z", stale: false, off: [] }))).toBeNull()
+    expect(scheduledJobsNotice(view(undefined))).toBeNull()
+    expect(scheduledJobsNotice({ data: null, updatedAt: null, error: "boom" })).toBeNull()
+  })
+
+  it("ignores junk in the list of what is off", () => {
+    const n = scheduledJobsNotice(view({ last_run: null, stale: true, off: ["Retainer billing", 7, null] }))
+    expect(n?.off).toEqual(["Retainer billing"])
   })
 })

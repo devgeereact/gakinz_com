@@ -13,6 +13,7 @@
 require __DIR__ . '/_bootstrap.php';
 // Optional: without it the enquiry is saved exactly as before, with no reference.
 if (is_file(__DIR__ . '/_reference.php')) require_once __DIR__ . '/_reference.php';
+require_once __DIR__ . '/_notify.php';
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') fail('Method not allowed.', 405);
 
@@ -66,5 +67,23 @@ if (!$stmt->execute()) fail('Could not save your enquiry.', 500);
 $newId = $conn->insert_id; // read before audit(), which inserts its own row
 $reference = function_exists('gk_ref_assign') ? gk_ref_assign($conn, 'enquiries', (int)$newId) : null;
 audit($conn, null, 'enquiry_submit', $email);
+
+// Tell the owner, after the visitor has their answer (see _notify.php). Nothing here can fail the request.
+$appUrl = rtrim((string)($GLOBALS['APP_URL'] ?? 'https://gakinz.com'), '/');
+gk_owner_alert(
+  $conn,
+  gk_oneline('New enquiry from ' . $name, 100),
+  "A new enquiry has come in through the website.\n\n"
+    . 'Reference: ' . ($reference ?: '(none)') . "\n"
+    . "Name: $name\nEmail: $email\n"
+    . ($company !== '' ? "Company: $company\n" : '')
+    . ($type !== '' ? "Project type: $type\n" : '')
+    . ($budget !== '' ? "Budget: $budget\n" : '')
+    . "\nMessage:\n$message\n\n"
+    . "Open it in Leads: $appUrl/app/leads\n",
+  'enquiry_notified',
+  'enquiry_notify_failed',
+  $reference ? (string)$reference : ('enquiry ' . $newId)
+);
 
 ok(['id' => $newId, 'reference' => $reference], 201);

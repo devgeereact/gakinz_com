@@ -2,9 +2,10 @@ project:
   name: "GAkinz (gakinz.com)"
   type: "application"
   lifecycle: "maintenance"
+  status: "finishing-v1"   # 7 of 10 finish-line items ticked; 3 wait for the owner. Becomes finished-v1 when docs/ROADMAP.md is fully ticked
   risk: "production"
 
-styling: "tailwind-v4"   # @tailwindcss/vite, tokens in src/index.css (D-060); package manager: pnpm
+styling: "tailwind-v4"   # @tailwindcss/vite, tokens in src/index.css (D-062); package manager: pnpm
 
 defaults:
   mode: "existing-application"
@@ -24,6 +25,7 @@ exclusions:
   - "git history rewriting"
 
 sources_of_truth:
+  finish_line: "docs/ROADMAP.md (frozen 2026-11-10, D-060)"
   product: "docs/PRODUCT-SPEC.md (approved 2026-10-10, docs/DECISIONS.md D-043)"
   content_and_growth: "docs/CONTENT-AND-GROWTH.md"
   public_copy: "src/marketing/data/site.ts (defaults); published Site content via server/site.php overrides its sections (D-046)"

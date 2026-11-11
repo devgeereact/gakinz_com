@@ -14,8 +14,12 @@ const html = (business: Parameters<typeof BusinessDetails>[0]["business"]) =>
   )
 
 describe("BusinessDetails", () => {
-  it("prints nothing at all before the owner has published any detail (no placeholders)", () => {
-    expect(html(DEFAULT_COPY.business)).toBe("")
+  it("prints only the owner's phone by default, and no address, hours or profiles (nothing invented)", () => {
+    const out = html(DEFAULT_COPY.business)
+    expect(out).toContain('href="tel:+442080598757"')
+    expect(out).toContain("+44 20 8059 8757")
+    expect(out).not.toContain("<span style")
+    expect(out).not.toContain("0000")
   })
 
   it("prints only the published fields, with a tel link and profile links", () => {
@@ -37,7 +41,8 @@ describe("BusinessDetails", () => {
 
   it("never links an unsafe profile address that reached it", () => {
     const out = html(mergeBusiness({ social: [{ platform: "x", url: "javascript:alert(1)" }, { platform: "x", url: "http://x.com/a" }] }, "a@b.co"))
-    expect(out).toBe("")
+    expect(out).not.toContain("javascript:")
+    expect(out).not.toContain("x.com")
   })
 
   it("keeps the leading plus and drops spaces and brackets in a tel link", () => {

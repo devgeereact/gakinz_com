@@ -104,7 +104,7 @@ When this file and the code disagree, the code wins and this file is wrong.
   hides the feature.
 - Public entrances (`.rise` in `src/marketing/site.css`) are visible at rest and animate only
   when motion is allowed. Never gate a marketing entrance on JavaScript.
-- Tailwind v4 through `@tailwindcss/vite`; the tokens live in `src/index.css` (D-060). There is no `tailwind.config.js` and no PostCSS config. Plain CSS outside a layer beats utilities, and `space-y-*` margins now sit on the earlier child, so a child's own `mb-*` overrides the gap. Packages: pnpm.
+- Tailwind v4 through `@tailwindcss/vite`; the tokens live in `src/index.css` (D-062). There is no `tailwind.config.js` and no PostCSS config. Plain CSS outside a layer beats utilities, and `space-y-*` margins now sit on the earlier child, so a child's own `mb-*` overrides the gap. Packages: pnpm.
 - Visual work follows the project skill `.claude/skills/gakinz-design/`; token values and their
   measured contrast are in `docs/DESIGN-SYSTEM.md`.
 

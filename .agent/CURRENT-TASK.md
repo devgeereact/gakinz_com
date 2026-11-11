@@ -2,142 +2,45 @@
 
 ## Outcome
 
-**2026-11-10, branch `chore/tailwind-v4` (worktree `~/Developer/worktrees/gakinz-tailwind-v4`, local only, not pushed):**
-adopt Tailwind CSS v4 through the Vite plugin as the house styling standard (D-060), with no change to
-behaviour, copy or look. Four commits on `main` at `d30e95b`: npm to pnpm; the upgrade tool, reviewed; PostCSS
-swapped for `@tailwindcss/vite`; `tailwindcss-animate` swapped for `tw-animate-css` with the token map in
-`@theme inline`; then the documents.
+**Also open (2026-11-11): branch `chore/tailwind-v4`, Tailwind v4 and pnpm (D-062), pushed as a branch and a draft PR, not merged.** Merging it to `main` deploys; the first CI run with pnpm is its first real test. Details: `docs/AUDIT.md` 2026-11-10 and `.agent/HANDOFF.md`. The commands below say `pnpm`.
 
-Success criteria and where each stands (evidence: `docs/AUDIT.md`, 2026-11-10):
-1. `pnpm` is the only package manager, one lockfile, CI installs with it. DONE (CI itself NOT TESTED until pushed).
-2. Tailwind v4 builds through `@tailwindcss/vite`; no `tailwind.config.js`, PostCSS config, `autoprefixer` or `tailwindcss-animate`. DONE.
-3. Shadcn variables stay the one token source, mapped by `@theme inline`. DONE.
-4. No page changes: 0 element boxes moved and no screenshot over 0.1 percent of pixels different in 128 captures (Chromium); 0 boxes moved in WebKit. DONE for the states the harness reaches; non-empty CMS states, Firefox and real Safari NOT TESTED.
-5. Gate green: `tsc -b`, lint ratchet 5 of 5, 660 unit tests, build (32 pages), `docs:check`, `pnpm verify`. DONE.
+**2026-11-10, branch `goal/finish` (worktree `.local-state/wt-finish`), RELEASED as `4bdaed7` (PR #32) on the owner's "Go ahead and Push": take GAkinz to
+its frozen V1 finish line (`docs/ROADMAP.md`, D-060).** Owner's brief: adopt the draft finish line, correct it, build only the eight
+open items in the owner's order, park the rest, cut the documents' sprawl by merging, leave everything local.
 
-Waiting on the owner: approval to push (then watch the first CI run, which is the first time the workflows use pnpm).
-Follow-ups, not done here: move ESLint to Biome; add a Playwright browser suite; migrate screens to new utilities one at a time.
-`release.json` still says `npm run ...` (it was not to be touched); it works because it only runs package scripts.
+**Status: 7 of 10 items ticked with evidence; 3 wait for the owner. Not FINISHED.** Released and live-checked (`docs/VERIFICATION.md`). Also done on the host with the owner's go-ahead: `$OWNER_ALERTS`, daily backup, cron entry.
 
----
+| # | Item | Status |
+|---|---|---|
+| 1, 2 | Public pages prerendered; Clerk-only sign-in | DONE (already true; re-built, 32 pages) |
+| 3 | A visitor's enquiry reaches the owner | DONE locally: `$OWNER_ALERTS` email (D-061, K-146). **Owner sets `$OWNER_ALERTS`** |
+| 4 | True business facts, no placeholder | BLOCKED, owner. `pnpm run check:facts` lists 9 open facts |
+| 5, 6, 7 | Enquiry to invoice; payment and VAT; portal isolation | DONE locally (existing journey tests plus 34 new cases); live walk is the owner's |
+| 8 | Restore once; recovery targets | PARTIAL: daily host backup installed; the host's own fresh dump restored (42 of 42 tables, 0 orphans); the owner's yes on the targets is left |
+| 9 | Scheduled work running or visibly off | DONE and live: per-job heartbeat, Today notice, and the cron entry now exists (first scheduled run 06:15 on 2026-11-11) |
+| 10 | Privacy basics | PARTIAL: deletion requests high priority plus owner email (K-095); retention periods need the owner and an adviser |
 
-## Earlier task (before 2026-11-10)
+## Next actions (owner)
 
-**2026-11-01 to 02, branch `golive/2026-11` (released 2026-11-08, see below).** Owner asked: get ready for
-live, then "make the best call for me ... fix all".
+1. Look in hello@gakinz.com for "New enquiry from TEST Finish Run (ignore)": that confirms item 3 end to end.
+2. Say yes (or change) the recovery targets: back within one working day, lose at most 24 hours (K-010).
+3. Business facts still missing (`pnpm run build && pnpm run check:facts`) and the adviser's retention periods (K-062).
+4. Set the OpenRouter monthly limit and **rotate that key** (it was shown in a session log by mistake); delete the Clerk dev user; say what to rename the `TEST owner` row to.
+5. The signed-in walk, steps 2 to 7 in `docs/VERIFICATION.md`. Tomorrow also check that `backup.log` has a 03:30 line and Today shows no scheduled-jobs notice after 06:15.
+6. Set `$REPORT_RECIPIENTS` if you want the weekly digest.
 
-1. **First pass:** security audit (quick profile) and SEO audit; K-120 fixed; schema, sitemap, caching.
-2. **Second pass (D-055):** K-121 Clerk two-factor and K-122 AI cap fixed; contact form JSON only; staff
-   links and GitHub input checked; cron billing locked; bcrypt cost 12 with rehash; API and page headers
-   (CSP, HSTS, no version headers, no directory listing); `weather.php` retired; mail TLS switch; dependencies
-   to 0 critical and 0 high; gitleaks and Semgrep in CI. Details and evidence: `docs/AUDIT.md`.
+## Resume
 
-Live: `cbfd527` (released 2026-11-09, snapshot `20261109T002637Z`; before that `b301ec7`, `983606c` and `ae01cec` on 2026-11-08). The order of work is [WORKBOOK.md](../docs/WORKBOOK.md) section 3; finished
-sessions are in [HANDOFF.md](HANDOFF.md).
+1. `cd ~/Developer/Projects/gakinz_com/.local-state/wt-finish` (or `git switch goal/finish`); `pnpm install --frozen-lockfile` (Node 24).
+2. Local database for the server and browser tests: `mariadbd --no-defaults --datadir=<repo>/.local-test/mariadb/data --port=3329 --bind-address=127.0.0.1 --socket=<repo>/.local-test/mariadb/mysqld.sock --skip-name-resolve` (passwordless root, local only; stop it with `mariadb-admin -S <socket> -uroot shutdown`), then
+   `GK_TEST_DB_HOST=127.0.0.1 GK_TEST_DB_PORT=3329 GK_TEST_DB_USER=root GK_TEST_DB=gakinz_finish_test GK_TEST_PHP_PORT=5441 GK_TEST_PROVIDER_PORT=5442 pnpm run test:server`.
+3. Gate: `pnpm test`, `pnpm run test:server`, `pnpm run build && pnpm run test:browser`, `pnpm run lint:ratchet`, `pnpm run docs:check --base main`, `pnpm run verify`. Results: `docs/VERIFICATION.md`.
+4. `pnpm run dev` talks to the live API: any save is real.
 
-**2026-11-08, branch `phase-1/release-readiness` (from `golive/2026-11`, local only):** release readiness for
-the 13 unreleased commits. `npm run verify` passes on the candidate, and so does the server suite (44 files,
-562 tests, throwaway local MariaDB 11.4). Added `npm run check:live`
-(`scripts/live-check.mjs`, read-only GETs, tests written first). Before any server change it passed 9 of 16
-checks; the 7 failures were the unreleased hardening, including **a live directory listing on `/assets/` and
-`/uploads/` (K-125)**.
+## Mode, authority
 
-**Released 2026-11-08, owner-approved at each gate:** K-121 query (0 accounts with app two-factor); `server/.htaccess`
-uploaded after a backup; branch pushed; draft PR #24 ran CI (MySQL server tests, gitleaks, Semgrep, build: all green);
-`main` fast-forwarded to `ae01cec` and `deploy.yml` released it (smoke checks passed). `npm run check:live` on
-production: **16 of 16**. Phase 1 of the GSD roadmap is complete except the hand-applied items below.
-
-**Hand-applied items finished 2026-11-08 (owner-approved):** private config (`CLERK_CACHE_DIR` set and in use,
-stale localhost origin removed, `MAIL_VERIFY_TLS` on after a verified SMTP and IMAP test), live stub aligned,
-K-123 closed by a direct-to-origin probe, AI default model `anthropic/claude-sonnet-5.5` live on the existing
-OpenRouter key (D-056). Signed-in check: the app loads for the owner, and 24 of 24 CMS screens visited client-side
-gave 0 CSP violations and 0 console errors (listener proven on a deliberate violation; the console tool alone cannot
-see CSP reports). PR #24 was already merged by GitHub.
-
-## Next actions, in order
-
-1. Done: the OpenRouter backup model was released as `983606c` (PR #25) and `OR_FALLBACK_MODEL=openai/gpt-oss-120b` is set; a live
-   test answered on both models.
-2. Owner: set a monthly spending limit on the OpenRouter key in the OpenRouter dashboard (the key has none today).
-3. **Phase 3 (fix what Clerk broke): released 2026-11-08 as `b301ec7` (PR #27) and checked live** (see the 2026-11-08 later section of
-   `docs/AUDIT.md`). K-127 staff downloads send the Clerk token; K-128 sharing keeps a public image's permanent link; K-140 the gate,
-   the ticket panel and the project dropdown no longer hang. Owner: when a real file and a real project exist, try a download and a status
-   change once; those two could not be tested live.
-4. **Phase 4 (make writes safe): released 2026-11-09 as `cbfd527` (PR #28) and checked live** (see the 2026-11-09 section of
-   `docs/AUDIT.md`). Owner: when a real invoice is paid, look once that it shows the method and amount; PayPal and the editor
-   dashboard could not be tested live.
-5. **Phase 5 (retire the legacy sign-in, D-057): released 2026-11-09 as `ed58064` (PR #29) and checked live.** Clerk is the only
-   sign-in; `auth.php` answers `me` only; `oauth.php` and `client_access.php` are 404 stubs; nobody has a password; My account opens
-   Clerk's panel (see the 2026-11-09 Phase 5 section of `docs/AUDIT.md`). `npm run check:live` 16 of 16 and the retired routes answer 404.
-   Owner: sign out and sign in once by email code to confirm the fresh path (an agent only saw the existing session).
-6. **Phase 6 (certificates end to end, D-058): released 2026-11-09 as `01d2269` (PR #30) and probed live read-only.** `certificates.php`
-   (issue, list, revoke), a hardened `verify.php`, the Certificates screen and a reference form on `/verify`. Not seen in a browser yet. Owner: open Certificates, issue one,
-   check it on `/verify`, then revoke it, once and in a signed-in session; and confirm each recipient agrees to being public on `/verify` (K-061).
-7. **Phase 7 (daily-flow speed-ups, D-059): released 2026-11-09 as `825600e` (PR #31) and probed live read-only.** Reminders and the digest
-   remember what they sent (no schema change), edit a client, edit/assign/date a task, accepting a quote opens the new project, a quote can
-   start from an enquiry. The live crontab has NO GAkinz entry (K-145), so reminders, retainer billing, the digest, uptime and prune are not running; adding
-   one is an owner decision. Not seen in a browser. Owner: try each once in a signed-in session.
-8. Next after that: Phase 8 (public site trust, needs the owner's legal inputs), then Phase 9.
-
-## Resume on another computer
-
-1. `git fetch origin`, `git switch main`, `git pull --ff-only`, then `npm ci` (Node 24).
-2. Read `docs/WORKBOOK.md`, `docs/STATUS.md` and `docs/KNOWN-ISSUES.md`.
-3. Baseline: `npm run build`, `npm test`, `npm run lint:ratchet`, `npm run docs:check`; for server
-   work `npm run test:server` with its own database and free ports, for example
-   `GK_TEST_DB=gakinz_docs_test GK_TEST_PHP_PORT=5309 GK_TEST_PROVIDER_PORT=5310`.
-4. `npm run dev` talks to the live API: any save is real. For browser checks serve `dist/` with the
-   design skill's `serve.mjs` and stub the calls.
-
-## Mode
-
-Existing Application (GEE OS `modes/EXISTING-APPLICATION.md`, workflow
-`workflows/EXISTING-APPLICATION.md`). Production risk. Development calls the live API, so no
-agent write runs through the dev server.
-
-## Scope
-
-- In scope: the go-live security audit and SEO audit, every fix that can be tested locally, safe SEO fixes,
-  in-range dependency updates, CI security checks, and the documents they touch.
-- Out of scope: switching on any gated feature (D-050); DNS, TLS, Cloudflare and mail hosting;
-  rewriting git history.
-
-## Authority
-
-- Research: yes.
-- Create planning artefacts: yes.
-- Edit local files: yes, on a feature branch. One concern per commit.
-- Commit and push: on a feature branch. Merge to `main` only with the owner's approval for that
-  action, because a push to `main` with code changes releases `dist/` and `server/*.php`.
-- Use external services: no. No real send, no real payment, no live API call.
-- Change production: only through an owner-approved release. SQL, `.htaccess` and `config.php` keys
-  are applied by a person (`docs/DEPLOYMENT.md` section 5).
-- MCP reads: local only.
-- MCP mutations: none.
-- Local database: creating and dropping `*_test` databases on the local MariaDB or MySQL is
-  permitted. Synthetic data only.
-
-## Risk and dependencies
-
-- Risk level: production. The next release changes sign-in (K-121: a TOTP account needs a Clerk second factor),
-  the AI cap, the contact form (JSON only) and client emails (one valid address). All covered by tests.
-- `server/.htaccess` and `CLERK_CACHE_DIR` are applied by a person; nothing on the server was read or changed.
-
-## Evidence
-
-- Required checks:
-  - `npm run typecheck` and `npm run build`
-  - `npm test`, and `npm run test:server` for any server change
-  - `npm run lint:ratchet` (must not grow)
-  - `npm run docs:check`, with `-- --base origin/<base branch>` before opening a pull request
-  - `php -l` over any touched PHP
-- Completion conditions:
-  - Each change has a test or a recorded manual check.
-  - The documents it affects are updated in the same pull request.
-  - Anything not checked on the live system is marked NOT TESTED.
+Existing Application, production risk. Local files and commits on `goal/finish` only. No push, merge to `main`, deploy, server change, real send or real payment without the owner's "approved:". SQL, `.htaccess` and `config.php` keys are applied by a person.
 
 ## Previous contracts
 
-Earlier contracts and their next-action lists are in git history: the 2026-11-01 cleanup at `3225e01`,
-the one before it at `ee1281f`, the readiness audit at `8499761`, the D-046 redesign at `ef2d6f9`, 2026-10-10 at
-`d314833`, batch 1 at `9db80b2`, the 2026-09-22 relaunch as `f67f05b` (#5).
+The 2026-11-01 to 11-09 contract (go-live, Phases 1 to 7) is in git at `d30e95b:.agent/CURRENT-TASK.md`; its releases are in `docs/WORKBOOK.md` section 1.
