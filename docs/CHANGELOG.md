@@ -4,6 +4,11 @@ What changed in the product, newest first. The checks behind each change are in 
 [VERIFICATION.md](VERIFICATION.md); why is in [DECISIONS.md](DECISIONS.md). Releases before 2026-11-10 are listed in
 [WORKBOOK.md](WORKBOOK.md) section 1.
 
+## 2026-11-11 (V1.2) · The home headline is read once (item 6; on `goal/v1.2`, not released)
+
+**Fixed**
+- The home page's `<h1>` held a visually hidden sentence and an `aria-hidden` animated copy of the same words, so a crawler (which ignores `aria-hidden`) read the line twice. The hidden span is gone: the `<h1>` now carries the sentence ("I design and build websites for small businesses: ...") in `aria-label`, and the animated words stay in the markup, `aria-hidden`, so the lead and each name appear once in its text. Nothing changes on screen. Owner approved the design change on 2026-11-11.
+
 ## 2026-11-11 (V1.2) · An unknown URL gets a real 404 (item 5, K-139; on `goal/v1.2`, not released)
 
 **Fixed**

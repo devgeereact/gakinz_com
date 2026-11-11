@@ -129,10 +129,9 @@ function Hero({ list }: { list: Project[] }) {
               London <LondonClock />
             </span>
           </p>
-          <h1>
-            <span className="sr">
-              {copy.lead} small businesses: {list.map((x) => x.who).join(", ")}.
-            </span>
+          {/* One sentence for a crawler and a screen reader: the label carries it, and the animated words are
+              marked aria-hidden, so the lead and each name are not read a second time. */}
+          <h1 aria-label={`${copy.lead} small businesses: ${list.map((x) => x.who).join(", ")}.`}>
             <span aria-hidden="true">
               {copy.lead}{" "}
               <span className="swap">

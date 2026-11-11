@@ -2,6 +2,12 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-11 (V1.2 task 5) · The home headline is read once (item 6)
+
+**Scope:** `src/marketing/pages/Home.tsx` (the hero `<h1>`), `src/marketing/pages/home-heading.test.tsx` (new). Method: test first (`pnpm exec vitest run src/marketing/pages/home-heading.test.tsx` seen failing, the lead counted 2 times, before any change), then the change.
+**Checks:** the new test 1 of 1 (the `<h1>` text holds the lead once and each name once, no `.sr` span inside it, and `aria-label` equals `<lead> small businesses: <names>.`); `pnpm test` 698 of 698; `pnpm run lint` 0 problems; `pnpm run build` writes 32 pages and 32 sitemap URLs, and the built `dist/index.html` has `<h1 aria-label="I design and build websites for small businesses: shift teams, care agencies, trainers, tailors.">` around one `aria-hidden` copy of the words; `pnpm run test:browser` 146 of 146 with axe on (0 violations on `/`, no layout flaws at 375 and 1280 px). The `.sr` rule in `site.css` stays: the nav brand link and other elements still use it.
+**Not checked:** a real screen reader (VoiceOver announces the heading from `aria-label` by the accessible-name rules; not run); a crawler's own reading of the page (reasoned from the markup: a crawler that ignores `aria-hidden` now sees the sentence once in the text; one that reads `aria-label` sees it once more, as the heading's name, which is not repeated text); the live site (not released).
+
 ## 2026-11-11 (V1.2 task 4) · An unknown URL gets a real 404 (item 5, K-139)
 
 **Scope:** `src/prerender/not-found.ts`, `scripts/prerender.mjs` (`dist/404.html`), `server/notfound.php`, `server/.htaccess` (the unknown-path rule and the CSP `FilesMatch`), `scripts/live-check.mjs` (`unknown URL answers 404`), `scripts/htaccess-check.mjs` (new, `pnpm run check:htaccess`). Method: test first: `src/prerender/not-found.test.ts` failed (no module), `tests/server/notfound.test.ts` failed 2 of 3 (the JSON test is a guard and passed), the new `live-check` test failed, and `check:htaccess` failed 12 of 62 (unknown paths answered 200 with the app page) before any implementation.
@@ -298,7 +304,7 @@ or Analytics data was available, so field data is NOT TESTED. **Estimated health
 | Caching | Hashed JS cached 4 hours, CSS 7 days | **Fixed in `.htaccess`** (1 year, immutable); hand-applied, and Cloudflare must respect origin headers |
 | Titles and descriptions | Unique on every page, but brand-first with no service or place ("Web design · Gideon Akinlotan"); several descriptions under 80 characters (pricing 50) | Copy: left for the owner (list below) |
 | Content depth | Service pages 206 to 341 words, case studies about 230 to 260 | Copy: left for the owner |
-| Home H1 | Screen-reader sentence plus the animated words, so a crawler reads the line twice | Left: design change, needs the owner's OK |
+| Home H1 | Screen-reader sentence plus the animated words, so a crawler reads the line twice | **Fixed (V1.2 item 6, owner approved 2026-11-11):** the `.sr` span is gone; the `<h1>` carries the sentence in `aria-label` and the animated words stay `aria-hidden`, so its text holds the lead once and each name once |
 | AI search | `llms.txt` matches the site; search and answer bots allowed; Cloudflare's managed `robots.txt` blocks training bots (ClaudeBot, GPTBot, Google-Extended, Applebot-Extended), which does not stop AI search citing the site | Owner's Cloudflare choice |
 | Trust signals | No portrait, no real social profiles (`sameAs` empty), no company number, no reviews | Owner inputs |
 

@@ -163,12 +163,14 @@ user outcome with a check, ticked on **local** evidence; what needs the host or 
   `/resources` slugs 200; unknown paths 404 with the built page, `noindex`, `no-store` and the same CSP as `/`; `/missing.php` and `/assets/` 404);
   all written first and seen failing. The build writes 32 pages, `404.html` and 32 sitemap URLs; `pnpm test` 697, `test:server` 684 and
   `test:browser` 146, all passing. **Live: BLOCKED, owner** until the `.htaccess` upload; `check:live`'s new `unknown URL answers 404` fails until then.
-- [ ] **6. The home page's headline is read once by crawlers.** The animated words are marked so a crawler or a screen reader gets
+- [x] **6. The home page's headline is read once by crawlers.** The animated words are marked so a crawler or a screen reader gets
   the sentence one time. Check: a test on the prerendered home page. **Needs the owner's OK** (asked 2026-11-11; "Go ahead").
+  Done on `goal/v1.2` (not released): the `.sr` span is removed and the `<h1>` carries the sentence in `aria-label`; the animated words stay `aria-hidden`.
+  Evidence: `src/marketing/pages/home-heading.test.tsx` (seen failing, the lead twice; then passing: the lead once, each name once, label equals the sentence); built `dist/index.html` checked; `pnpm test` 698, `pnpm run lint` 0, `pnpm run build` 32 pages, `test:browser` 146 with axe 0 violations on `/`.
 
 **Not in V1.2 (parked or the owner's):** the legal "[to supply]" gaps (V1 item 4), prerendering CMS posts and work automatically
 (parked: new posts work in the browser but are not in the sitemap until the next build), the phone tables (K-148), the owner
-list. **Progress V1.2: 4 of 5 open items ticked on local evidence (1, 2, 3, 5; item 5 live BLOCKED on the owner's `.htaccess` upload; item 4 dropped as already true).**
+list. **Progress V1.2: 5 of 5 open items ticked on local evidence (1, 2, 3, 5, 6; item 5 live BLOCKED on the owner's `.htaccess` upload; item 4 dropped as already true).**
 
 ## Versions and the nine GSD phases (2026-11-11)
 
