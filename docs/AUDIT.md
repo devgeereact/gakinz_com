@@ -4,7 +4,7 @@ Every audit, review and checklist run for this project, newest first. Add new re
 
 ## 2026-11-10 · Tailwind v3 to v4 and npm to pnpm (D-062, on `chore/tailwind-v4`)
 
-**Scope:** `chore/tailwind-v4`, four commits on `main` at `d30e95b`. **Method:** a before and after comparison with an offline harness (kept in `.local-test/`, untracked): the real build with Clerk stubbed and the API mocked (a signed-in super admin, empty lists), served locally; 128 captures per browser (34 public pages and 27 CMS routes at 1280 and 375 px, plus six CMS routes in dark), computed style of every element, element boxes and screenshots, baseline against final. Reduced motion on; two baseline runs gave identical styles (0 differences in 128).
+**Scope:** `chore/tailwind-v4`, merged with `origin/main` (`63945bc`) before the push; PR #33. **Method:** a before and after comparison with an offline harness (kept in `.local-test/`, untracked): the real build with Clerk stubbed and the API mocked (a signed-in super admin, empty lists), served locally; 128 captures per browser (34 public pages and 27 CMS routes at 1280 and 375 px, plus six CMS routes in dark), computed style of every element, element boxes and screenshots, baseline against final. Reduced motion on; two baseline runs gave identical styles (0 differences in 128).
 
 | Check | Result |
 |---|---|
@@ -19,7 +19,9 @@ Every audit, review and checklist run for this project, newest first. Add new re
 
 **Defects found and fixed:** the upgrade tool corrupted `"outline"` variants and one sentence of public copy (6 places); it dropped the animate plugin; `space-y` plus `mb-0` lost 16px on Analytics and Care plan; v4 line-height ratios shrank a menu label row by 4px; `duration-*` would have slowed the dialog and sheet.
 
-**NOT TESTED:** Firefox (the installed build does not launch); Safari on a real device; signed-in screens with real data and every non-empty state (the harness returns empty lists, so tables with rows, open dialogs other than the two checked, the Sheet on mobile and the proposal page `/p/:token` were not captured); the `.gk-public` palette in a browser; CI and the deploy workflow on GitHub with pnpm (not pushed); `test:server`.
+**NOT TESTED:** Firefox (the installed build does not launch); Safari on a real device; signed-in screens with real data and every non-empty state (the harness returns empty lists, so tables with rows, open dialogs other than the two checked, the Sheet on mobile and the proposal page `/p/:token` were not captured); the `.gk-public` palette in a browser; the release job (skipped on a pull request by design; its pnpm install in `deploy.yml` first runs on a merge to `main`).
+
+**CI on PR #33 (pnpm), 2026-11-11:** typecheck, lint ratchet, docs, unit tests and build PASS (49 s); PHP syntax and server tests on MySQL 8 PASS (7 m 45 s); gitleaks and Semgrep PASS; release skipped. Locally on the merged tree: unit 675, server 661 (MariaDB 11.4), browser 6.
 
 ## 2026-11-10 · V1 finish-line run (released as `4bdaed7`, PR #32)
 

@@ -2,7 +2,7 @@
 
 ## Outcome
 
-**Also open (2026-11-11): branch `chore/tailwind-v4`, Tailwind v4 and pnpm (D-062), pushed as a branch and a draft PR, not merged.** Merging it to `main` deploys; the first CI run with pnpm is its first real test. Details: `docs/AUDIT.md` 2026-11-10 and `.agent/HANDOFF.md`. The commands below say `pnpm`.
+**Also open (2026-11-11): branch `chore/tailwind-v4`, Tailwind v4 and pnpm (D-062), pushed as a branch and draft PR #33 (CI green on pnpm), not merged.** Merging it to `main` deploys; the first CI run with pnpm is its first real test. Details: `docs/AUDIT.md` 2026-11-10 and `.agent/HANDOFF.md`. The commands below say `pnpm`.
 
 **2026-11-10, branch `goal/finish` (worktree `.local-state/wt-finish`), RELEASED as `4bdaed7` (PR #32) on the owner's "Go ahead and Push": take GAkinz to
 its frozen V1 finish line (`docs/ROADMAP.md`, D-060).** Owner's brief: adopt the draft finish line, correct it, build only the eight
