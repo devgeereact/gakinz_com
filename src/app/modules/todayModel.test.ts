@@ -7,6 +7,7 @@ import {
   initialTodayView,
   itemRoute,
   itemWhen,
+  ownerAlertsNotice,
   scheduledJobsNotice,
   sectionRoute,
   todayPanel,
@@ -57,6 +58,7 @@ describe("todayRows", () => {
       "overdue_tasks",
       "waiting_material",
       "unpaid_invoices",
+      "deletion_requests",
     ])
     expect(rows.every((r) => r.state === "unavailable")).toBe(true)
     // An editor cannot read invoices, so a failed load does not invent that section.
@@ -106,7 +108,7 @@ describe("todayRows", () => {
 
 describe("expectedSections", () => {
   it("mirrors the server's role rules", () => {
-    expect(expectedSections("employee")).toEqual(["overdue_tasks", "waiting_material"])
+    expect(expectedSections("employee")).toEqual(["overdue_tasks", "waiting_material", "deletion_requests"])
     expect(expectedSections("trainer")).toEqual([])
     expect(expectedSections(undefined)).toEqual([])
   })
@@ -238,6 +240,8 @@ describe("sectionRoute", () => {
     expect(sectionRoute("calls")).toBe("/app/leads?view=calls")
     expect(sectionRoute("unpaid_invoices")).toBe("/app/invoicing")
     expect(sectionRoute("overdue_tasks")).toBe("/app/projects")
+    expect(sectionRoute("deletion_requests")).toBe("/app/support")
+    expect(itemRoute({ route: "/app/support?ticket=7" })).toBe("/app/support?ticket=7")
     for (const k of expectedSections("super_admin")) expect(itemRoute({ route: sectionRoute(k) })).toBe(sectionRoute(k))
   })
 })
@@ -277,5 +281,42 @@ describe("scheduledJobsNotice", () => {
   it("ignores junk in the list of what is off", () => {
     const n = scheduledJobsNotice(view({ last_run: null, stale: true, off: ["Retainer billing", 7, null] }))
     expect(n?.off).toEqual(["Retainer billing"])
+  })
+})
+
+describe("ownerAlertsNotice", () => {
+  const view = (owner_alerts: unknown): TodayView => ({
+    data: { generated_at: "2026-11-11T09:00:00Z", sections: {}, owner_alerts } as TodayData,
+    updatedAt: "2026-11-11T09:00:00Z",
+    error: null,
+  })
+
+  it("says nothing when no alert failed, when the server does not say, or when the load failed", () => {
+    expect(ownerAlertsNotice(view({ failed: 0, items: [] }))).toBeNull()
+    expect(ownerAlertsNotice(view(undefined))).toBeNull()
+    expect(ownerAlertsNotice({ data: null, updatedAt: null, error: "Network error" })).toBeNull()
+    expect(ownerAlertsNotice(view({ failed: "3", items: [] }))).toBeNull()
+  })
+
+  it("names one failed alert in the singular and says the record itself is safe", () => {
+    const n = ownerAlertsNotice(view({ failed: 1, items: [{ kind: "enquiry", detail: "GK-E-2026-0002 · connection refused", at: "2026-11-10T14:30:00Z" }] }))
+    expect(n?.title).toBe("1 alert email did not go out in the last 7 days")
+    expect(n?.detail).toContain("saved")
+    expect(n?.lines).toEqual(["New enquiry GK-E-2026-0002 · connection refused, 10 Nov"])
+  })
+
+  it("labels each kind, counts the ones beyond the list, and survives a malformed item", () => {
+    const n = ownerAlertsNotice(
+      view({
+        failed: 9,
+        items: [
+          { kind: "deletion", detail: "ticket #9 · 550 no", at: "2026-11-10T14:30:00Z" },
+          { kind: "suppressed", detail: "enquiry_notified GK-E-2026-0003", at: null },
+          { kind: "other", detail: 5 },
+        ],
+      }),
+    )
+    expect(n?.title).toBe("9 alert emails did not go out in the last 7 days")
+    expect(n?.lines).toEqual(["Data deletion request ticket #9 · 550 no, 10 Nov", "Held back (20 an hour limit) enquiry_notified GK-E-2026-0003", "And 6 more."])
   })
 })

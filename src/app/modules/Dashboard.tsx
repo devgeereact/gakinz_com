@@ -41,6 +41,7 @@ import {
 } from "@/lib/api"
 import {
   applyTodayResult,
+  ownerAlertsNotice,
   scheduledJobsNotice,
   fallbackFollowUps,
   initialTodayView,
@@ -348,6 +349,7 @@ export default function Dashboard() {
   const updated = updatedLabel(todayView)
   const attention = todayPanel(todayView, role)
   const jobsNotice = scheduledJobsNotice(todayView)
+  const alertsNotice = ownerAlertsNotice(todayView)
 
   const header = (
     <PageHeader
@@ -456,6 +458,23 @@ export default function Dashboard() {
               <ul className="mt-2 list-disc pl-5 text-muted-foreground">
                 {jobsNotice.off.map((o) => (
                   <li key={o}>{o}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {alertsNotice && (
+        <div role="status" className="mb-4 flex flex-wrap items-start gap-3.5 rounded-2xl border border-warn/30 bg-warn-soft p-[18px] text-foreground">
+          <AlertTriangle aria-hidden className="mt-0.5 size-[18px] shrink-0 text-warn" />
+          <div className="min-w-[min(100%,200px)] flex-1">
+            <p className="font-semibold">{alertsNotice.title}</p>
+            <p className="mt-1 text-muted-foreground [overflow-wrap:anywhere]">{alertsNotice.detail}</p>
+            {alertsNotice.lines.length > 0 && (
+              <ul className="mt-2 list-disc pl-5 text-muted-foreground [overflow-wrap:anywhere]">
+                {alertsNotice.lines.map((l, i) => (
+                  <li key={i}>{l}</li>
                 ))}
               </ul>
             )}

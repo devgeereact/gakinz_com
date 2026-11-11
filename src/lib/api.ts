@@ -911,10 +911,11 @@ export const TODAY_SECTION_KEYS = [
   "overdue_tasks",
   "waiting_material",
   "unpaid_invoices",
+  "deletion_requests",
 ] as const
 export type TodaySectionKey = (typeof TODAY_SECTION_KEYS)[number]
 export type TodayItem = {
-  type: "enquiry" | "booking" | "task" | "asset" | "invoice"
+  type: "enquiry" | "booking" | "task" | "asset" | "invoice" | "ticket"
   id: number
   title: string
   reason: string
@@ -926,7 +927,14 @@ export type TodaySection =
   | { status: "unavailable"; count: null; items: TodayItem[] }
 // Present for the owner roles only: which scheduled jobs (cron.php) have not been seen in 36 hours (K-145).
 export type ScheduledJobs = { last_run: string | null; stale: boolean; all_off: boolean; off: string[] }
-export type TodayData = { generated_at: string; sections: Partial<Record<TodaySectionKey, TodaySection>>; scheduled_jobs?: ScheduledJobs }
+// Owner roles only: alert emails (a new enquiry, a data deletion request) that failed or were held back in the last 7 days.
+export type OwnerAlerts = { failed: number; items: { kind: "enquiry" | "deletion" | "suppressed"; detail: string; at: string | null }[] }
+export type TodayData = {
+  generated_at: string
+  sections: Partial<Record<TodaySectionKey, TodaySection>>
+  scheduled_jobs?: ScheduledJobs
+  owner_alerts?: OwnerAlerts
+}
 export const today = {
   get: () => api.get<TodayData>("/today.php"),
 }

@@ -30,13 +30,17 @@
  *                     asset `supplied` and waiting for the owner to accept it.
  *   unpaid_invoices   invoices `sent` and past `due_at`: the same rule as the
  *                     `overdue` flag in invoices.php. Earliest due first.
+ *   deletion_requests a client's open "Data deletion request" ticket (the one
+ *                     support.php creates), with the reply-by date: the day it
+ *                     was filed plus one month, the date the owner alert quotes
+ *                     (K-095). Past that date the reason says so. Oldest first.
  *
  * Each item: { type, id, title, reason, at, route }. `at` is a UTC ISO time
  * ("…Z") for a moment, or a plain date ("YYYY-MM-DD") for a due date. `route`
  * opens the record through the screen deep links in src/lib/deepLink.ts:
  * /app/leads?enquiry=, /app/leads?due=1&enquiry=, /app/leads?view=calls&call=,
  * /app/projects?project=&task=, /app/projects?project=&asset=,
- * /app/invoicing?invoice=.
+ * /app/invoicing?invoice=, /app/support?ticket=.
  *
  * Dates use the database clock throughout, as invoices.php and bookings.php
  * do: CURRENT_DATE for due dates, NOW() for the TIMESTAMP columns, and
@@ -63,6 +67,9 @@ const TODAY_BOOKINGS_ROLES = ['super_admin', 'admin', 'manager', 'editor'];     
 const TODAY_TASKS_ROLES = ['super_admin', 'admin', 'manager', 'editor', 'employee'];  // tasks.php STAFF
 const TODAY_ASSETS_ROLES = ['super_admin', 'admin', 'manager', 'editor', 'employee']; // assets.php STAFF
 const TODAY_INVOICES_ROLES = ['super_admin', 'admin', 'manager'];                     // invoices.php STAFF
+const TODAY_TICKETS_ROLES = ['super_admin', 'admin', 'manager', 'editor', 'employee']; // support.php STAFF
+// Must equal DELETION_SUBJECT in support.php; tests/server/today.test.ts reads both files to check it.
+const TODAY_DELETION_SUBJECT = 'Data deletion request';
 const TODAY_SECTIONS = [
   'new_enquiries'    => TODAY_LEADS_ROLES,
   'follow_ups_due'   => TODAY_LEADS_ROLES,
@@ -70,6 +77,7 @@ const TODAY_SECTIONS = [
   'overdue_tasks'    => TODAY_TASKS_ROLES,
   'waiting_material' => TODAY_ASSETS_ROLES,
   'unpaid_invoices'  => TODAY_INVOICES_ROLES,
+  'deletion_requests' => TODAY_TICKETS_ROLES,
 ];
 
 /** Every row of a parameterless prepared query. Throws on any failure. */
@@ -181,6 +189,21 @@ function td_section(mysqli $conn, string $key): array {
       }, $rows);
       return ['count' => td_count($conn, $where), 'items' => $items];
     }
+    case 'deletion_requests': {
+      // A request whose client row was removed is still a request that needs an answer, hence the LEFT JOIN. The
+      // subject is a literal inside the prepared text because td_rows takes no parameters.
+      $where = " FROM tickets t LEFT JOIN clients c ON c.id = t.client_id AND c.deleted_at IS NULL
+        WHERE t.deleted_at IS NULL AND t.subject = '" . TODAY_DELETION_SUBJECT . "' AND t.status <> 'resolved'";
+      $rows = td_rows($conn, 'SELECT t.id, c.company, DATE_FORMAT(t.created_at + INTERVAL 1 MONTH, \'%Y-%m-%d\') AS due,
+        (DATE(t.created_at + INTERVAL 1 MONTH) < CURRENT_DATE) AS late' . $where . ' ORDER BY t.created_at ASC, t.id ASC' . $limit);
+      $items = array_map(function ($r) {
+        $when = gmdate('j M Y', (int)strtotime($r['due'] . ' 12:00:00 UTC'));
+        $reason = (int)$r['late'] === 1 ? "Reply was due $when, overdue" : "Reply due by $when";
+        $title = trim((string)($r['company'] ?? '')) !== '' ? $r['company'] : 'A client';
+        return td_item('ticket', $r['id'], $title, $reason, $r['due'], '/app/support?ticket=' . (int)$r['id']);
+      }, $rows);
+      return ['count' => td_count($conn, $where), 'items' => $items];
+    }
   }
   throw new RuntimeException('unknown section');
 }
@@ -243,6 +266,26 @@ if (in_array($user['role'], TODAY_INVOICES_ROLES, true)) {
     ];
   } catch (Throwable $e) {
     error_log('today.php scheduled_jobs unavailable: ' . $e->getMessage());
+  }
+}
+
+// Did an alert email fail? D-061 emails the owner on a new enquiry and a deletion request and audits a failed or held-back
+// send, but nothing showed it, so a missed email stayed missed. The last 7 days, newest first, at most 5 listed; `failed`
+// counts them all. Owner roles only, like the jobs notice above. A failed lookup omits the key.
+const TODAY_ALERT_DAYS = 7;
+const TODAY_ALERT_LIST_MAX = 5;
+const TODAY_ALERT_KINDS = ['enquiry_notify_failed' => 'enquiry', 'deletion_notify_failed' => 'deletion', 'alert_suppressed' => 'suppressed'];
+if (in_array($user['role'], TODAY_INVOICES_ROLES, true)) {
+  try {
+    $in = "'" . implode("', '", array_keys(TODAY_ALERT_KINDS)) . "'";
+    $where = " FROM audit_log WHERE action IN ($in) AND created_at > (NOW() - INTERVAL " . TODAY_ALERT_DAYS . ' DAY)';
+    $rows = td_rows($conn, 'SELECT action, detail, UNIX_TIMESTAMP(created_at) AS t' . $where . ' ORDER BY created_at DESC, id DESC LIMIT ' . TODAY_ALERT_LIST_MAX);
+    $reply['owner_alerts'] = [
+      'failed' => td_count($conn, $where),
+      'items'  => array_map(fn($r) => ['kind' => TODAY_ALERT_KINDS[$r['action']], 'detail' => (string)($r['detail'] ?? ''), 'at' => td_utc($r['t'])], $rows),
+    ];
+  } catch (Throwable $e) {
+    error_log('today.php owner_alerts unavailable: ' . $e->getMessage());
   }
 }
 
