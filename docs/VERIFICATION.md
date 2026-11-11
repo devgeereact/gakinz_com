@@ -4,6 +4,47 @@ What was actually run, with the result, and what only the owner can show. Result
 [AUDIT.md](AUDIT.md); the finish line they serve is [ROADMAP.md](ROADMAP.md). Status words: DONE (seen), PARTIAL,
 NOT TESTED, BLOCKED.
 
+## Local ladder, 2026-11-11, branch `goal/v1.2` (V1.2)
+
+Head `d4ddac3` (five V1.2 commits over `d355c49`). Node 24.22.1, PHP 8.5.12, local MariaDB 11.4.13 on port 3329, throwaway databases only (`gakinz_t6_test`, `gakinz_t6b_test`); nothing touched the live host or live data. Every rung was run fresh in this session.
+
+| Rung | Result |
+|---|---|
+| `pnpm exec tsc -b --noEmit` | DONE, clean |
+| `pnpm run lint` | DONE, 0 errors, 0 warnings |
+| `pnpm test` | DONE, 698 tests in 66 files |
+| `pnpm run test:server` | DONE, 684 tests in 55 files |
+| `pnpm run build` | DONE, 32 public pages, `404.html` and `app-shell.html` written, 32 sitemap URLs |
+| `pnpm run test:browser` with axe (WCAG 2.0 to 2.2 A and AA), three runs in a row | DONE, 146 of 146 each time (3 files: contact, public pages 66, CMS screens), axe 0 violations, no intermittent failure |
+| `pnpm run check:htaccess` (the real `server/.htaccess` under local Apache, `notfound.php` under PHP-FPM) | DONE, 60 of 60: unknown URLs answer 404 with the built not-found page, the same Content-Security-Policy as `/`, `noindex` and `no-store`; known pages, the app shell and client-only records still answer 200; a request without `CF-RAY` is refused |
+| `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` | DONE, 69 of 69 files clean |
+| `pnpm run verify` (release dry run) | DONE, PASS, nothing sent |
+| `pnpm run docs:check --base main` | DONE, PASS (29 documents, 29 relative links, 481 files, 45 changed files against `main`) |
+
+### Visual review (V1.2 pages), same day
+
+Full-page screenshots at 375 and 1280 px, 13 contact sheets, every one looked at: `/` (headline), `/contact` empty, filled, after a too-fast send and after success (viewport shots at both sizes as well), `/cookies`, `/privacy`, `/resources`, the three articles, and the 404 page (an unknown URL through local Apache, so the page is the one the rule serves, with its 404 status). Public pages came from `public-layout.test.ts` with `GK_SHOTS`; the contact states and the 404 from throwaway Playwright scripts in `.local-test/`. Screenshots are in `.local-test/shots/v12/` (gitignored).
+
+| Check | Seen |
+|---|---|
+| Home headline | "I design and build websites for shift teams." reads once at both sizes; the underlined last words are the synced word |
+| Contact, both sizes | Fields aligned and full width on a phone, two columns on desktop; no sideways scroll |
+| Honeypot | Not visible anywhere: its box sits at x = -10000 px (measured), no stray label or gap in the layout |
+| Too-fast send | "That was quick. Please check your details and send again." in the error colour above the button; name, email and message kept |
+| Success | "Thanks, Ada." card with the reference, at both sizes |
+| 404 page | Headline "That page is not here.", two buttons, header and footer intact at both sizes; page width equals viewport width (375/375, 1280/1280) |
+| `/cookies`, `/privacy` | Lay out cleanly; the "to supply" boxes are visible (see findings) |
+| `/resources` and the three articles | Lay out cleanly; the "Test post." text and the date come from the throwaway database, not from the build |
+
+Defects in V1.2 found by the review: none, so no code change and no new guard was needed (the existing public-layout test already fails on sideways scroll, clipped text, console errors and failed requests for all 32 pages at both sizes).
+
+**Findings, not V1.2 defects, not fixed:**
+- The home hero eyebrow reads "Designer and developer · London" and, beside it, "London 21:11": London twice, and on a phone the clock wraps to its own line. It dates from the public rebuild (`9859760`), not from V1.2.
+- `/cookies` and `/privacy` show the bracketed "[... to supply]" boxes (K-137, owner inputs, ROADMAP Phase 8). On `/cookies` the `gk-auth` line reads "Lasts: Your name, email and role are removed when you sign out (an empty entry stays)." The sentence is accurate but the "Lasts:" label does not fit it; worth a wording pass with the adviser's review.
+- The local Apache document root holds only `dist/`, `.htaccess` and `notfound.php`, so the 404 page's own `site.php` and `work.php` calls return 404 there. That is the test harness, not the site; on the host those endpoints exist.
+
+**NOT TESTED:** a real phone, Safari, Firefox, a real password manager (the honeypot's `autocomplete`/ignore attributes are checked by unit and browser tests, not against 1Password, Bitwarden or Chrome autofill), a real screen reader, LiteSpeed (the `.htaccess` rule is proved under Apache only), `server/.htaccess` and `server/notfound.php` on the live host (not uploaded; the owner applies them), anything on the live site, the first CI run of this branch. Full-page captures taken after a scroll show the sticky header and the (hidden) skip link at the scroll position; that is a capture artefact (skip link measured at top -80 px, focus on `body`), not a page fault.
+
 ## Release and live checks, 2026-11-11 (owner said "Push and Deploy now")
 
 Two pushes to `main`. The checks are read-only; nothing was written to the live site by the agent.
