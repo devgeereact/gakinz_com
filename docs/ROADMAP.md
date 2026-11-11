@@ -91,6 +91,21 @@ They are closed with that evidence in the same commit that proves it.
 
 **Progress V1.1 (2026-11-11): 0 of 5 ticked.**
 
+## Versions and the nine GSD phases (2026-11-11)
+
+An earlier planning sheet (`.planning/ROADMAP.md`, local only, not in git) split the work into nine phases. This file is the
+authority; the table says where each phase went so the two cannot disagree.
+
+| Version | What it holds | GSD phases | State |
+|---|---|---|---|
+| **V0** (go-live and repair) | Hardening, docs and CI gate, Clerk repairs, safe writes, Clerk-only sign-in, certificates, daily-flow speed-ups | 1 to 7 | **Released** (`ae01cec`, `b301ec7`, `cbfd527`, `ed58064`, `01d2269`, `825600e`; Phase 2 closed 2026-11-08 with the CI gate, K-138, and the `release.mjs` wording) |
+| **V1** (frozen 2026-11-10) | Ten outcomes from enquiry to paid invoice | the owner-input core of 8 (items 4 and 10) | Released `4bdaed7`; 8 of 10 ticked; 4 and 10 BLOCKED on the owner |
+| **V1.1** (frozen 2026-11-11) | The five items above | the lint slice of 9 (item 5); layout and Today safety nets are new | **In progress**, local only |
+| **V1.2** (PLANNED, not frozen) | The buildable rest of Phase 8: cookie policy that names Clerk, spam protection beyond the per-IP limit, a real 404 status for unknown paths (hand-applied rewrite, K-139), prerendered pages and sitemap entries for CMS-published posts and work | 8 | Waits for V1.1, and for the owner's legal inputs on the cookie and legal wording |
+| **V2** (PLANNED, not frozen) | Phase 9 rest: dead code (K-139), drop the orphan `items` table and legacy auth columns (hand-applied SQL after a backup), unique keys and the `audit_log` index, one formatter and one error banner, large-file splits, ESLint 10 (K-041), refresh the codebase map, and the owner's signed-in walk on real data (K-044) | 9 | Opens only when the owner says so |
+
+A planned version is not started and not frozen: its items are chosen when it opens, by the same two tests as D-063.
+
 ## Needs the owner (BLOCKED, with the exact action)
 
 Prepared in this run: the scripts, tests and instructions below. None of these was done on the server.
