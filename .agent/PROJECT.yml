@@ -2,7 +2,7 @@ project:
   name: "GAkinz (gakinz.com)"
   type: "application"
   lifecycle: "maintenance"
-  status: "finished-v1.1"   # V1.1 finished and released 2026-11-11 (5 of 5, D-063, `ed5a724`). V1 is 8 of 10: items 4 and 10 wait for the owner
+  status: "building"   # V1.2 opened 2026-11-11 (D-065, 6 items). V1.1 released `ed5a724`. V1 is 8 of 10: items 4 and 10 wait for the owner
   risk: "production"
 
 styling: "tailwind-v4"   # @tailwindcss/vite, tokens in src/index.css (D-064); package manager: pnpm

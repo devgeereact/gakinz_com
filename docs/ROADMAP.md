@@ -15,7 +15,7 @@ Updated 2026-11-11. An earlier planning folder (`.planning/`, nine GSD phases) w
 | **Done** | **V1.1**, safety nets (five items): layout tests for every public page and CMS screen, Today shows deletion requests and failed alerts, lint is the gate | **Released 2026-11-11** (`ed5a724`) |
 | **Left 1** | Look once, signed in, at Today (deletion requests, alert notice) and at the restyled CMS | You; the agent has only seen them against test data |
 | **Left 2** | V1 items 4 and 10, and the small owner list | Waiting for you: business facts, the adviser's retention periods, rotate one key, two clean-ups (table "Needs the owner") |
-| **Left 3** | **V1.2**, public-site trust (rest of GSD phase 8) | Planned, not frozen; scope notes below |
+| **Left 3** | **V1.2**, public-site trust (rest of GSD phase 8) | **In progress, frozen 2026-11-11 (6 items)**, local only |
 | **Left 4** | **V2**, clean-up and live verification (rest of GSD phase 9) | Planned, not frozen; scope notes below |
 | **Parked** | Everything else, grouped by theme | "Parking lot" below; nothing deleted |
 
@@ -115,6 +115,39 @@ They are closed with that evidence in the same commit that proves it.
 
 **Progress V1.1 (2026-11-11): 5 of 5 ticked. Released as `ed5a724` on 2026-11-11.** The ladder is in `docs/VERIFICATION.md` (lint 0, 678 unit, 669 server, 140 browser three runs in a row, axe 0, `pnpm run verify`).
 
+## V1.2 finish line (frozen)
+
+**Frozen on 2026-11-11** (D-065) · opened by the owner's "Let's go with V1.2 /finish-app" after a short brainstorm; the owner said "Go ahead" to the list below.
+Goal: the public site says only true things, and does not invite abuse. Same rules as V1 and V1.1: at most ten items, each a
+user outcome with a check, ticked on **local** evidence; what needs the host or the owner is BLOCKED and says so.
+
+- [ ] **1. The cookie policy tells the truth.** Today it describes a Google sign-in cookie that was retired in Phase 5 and names
+  neither Clerk nor the `gk-auth` browser storage. Check: a test compares the policy with the storage keys the code really uses
+  (`sidebar_state`, `gkos-groups`, `theme`, `gk-auth`) and with Clerk's documented cookies; it fails if the page names Google or
+  `gk_oauth_state`, or if a key used in `src/` is missing. The wording is facts only; the adviser still reviews it (V1 item 4).
+- [ ] **2. The sitemap lists exactly the articles that exist (K-147).** The built-in articles are made to match the three posts in
+  the live CMS (`fixed-price-how-we-scope`, `what-makes-a-website-fast`, `why-one-team-design-and-build`); the two built-in
+  articles the CMS does not hold are dropped (they stay in git). Check: a unit test ties the sitemap's article URLs to that list;
+  `check:live` gains a read-only check that every article in the live sitemap answers 200 from `blog.php?slug=`.
+- [ ] **3. The contact form turns bots away without bothering people.** A hidden honeypot field and a minimum fill time. A
+  honeypot hit or a too-fast post saves nothing and sends no alert; a real enquiry is unaffected. Check: server tests (honeypot,
+  too fast, normal, the throttle still works) and `tests/browser/contact.test.ts` at 375 and 1280 px.
+- [ ] **4. The contact throttle sees the real visitor IP behind Cloudflare.** Behind a proxy `REMOTE_ADDR` may be Cloudflare's
+  address (K-102), so one throttle would cover many visitors. A config key (`$TRUST_CLOUDFLARE_IP`, off by default, so no change
+  until set) makes the form and the audit log use `CF-Connecting-IP`, and only when the connection really comes from Cloudflare.
+  Check: server tests with forged headers (ignored when the key is off or the peer is not Cloudflare). **Live: BLOCKED, owner**
+  (one read-only look at an audit row, then the key).
+- [ ] **5. An unknown URL gets a real 404.** Today it answers 200 with the not-found page (a soft 404 in Search Console, K-139).
+  The build writes `404.html` (noindex, not in the sitemap). Check: a build test that `404.html` exists and carries the not-found
+  page; a local Apache run of the rewrite rule shows 404 for an unknown path and 200 for every sitemap page, `/login`, `/app` and
+  `/p/<token>`. **Live: BLOCKED, owner** (the rule goes in the host's `.htaccess`, `docs/DEPLOYMENT.md`).
+- [ ] **6. The home page's headline is read once by crawlers.** The animated words are marked so a crawler or a screen reader gets
+  the sentence one time. Check: a test on the prerendered home page. **Needs the owner's OK** (asked 2026-11-11; "Go ahead").
+
+**Not in V1.2 (parked or the owner's):** the legal "[to supply]" gaps (V1 item 4), prerendering CMS posts and work automatically
+(parked: new posts work in the browser but are not in the sitemap until the next build), the phone tables (K-148), the owner
+list. **Progress V1.2: 0 of 6 ticked.**
+
 ## Versions and the nine GSD phases (2026-11-11)
 
 The nine phases of the earlier planning sheet are mapped onto versions so the two cannot disagree.
@@ -124,7 +157,7 @@ The nine phases of the earlier planning sheet are mapped onto versions so the tw
 | **V0** (go-live and repair) | Hardening, docs and CI gate, Clerk repairs, safe writes, Clerk-only sign-in, certificates, daily-flow speed-ups | 1 to 7 | **Released** (`ae01cec`, `b301ec7`, `cbfd527`, `ed58064`, `01d2269`, `825600e`; Phase 2 closed 2026-11-08 with the CI gate, K-138, and the `release.mjs` wording) |
 | **V1** (frozen 2026-11-10) | Ten outcomes from enquiry to paid invoice | the owner-input core of 8 (items 4 and 10) | Released `4bdaed7`; 8 of 10 ticked; 4 and 10 BLOCKED on the owner |
 | **V1.1** (frozen 2026-11-11) | The five items above | the lint slice of 9 (item 5); layout and Today safety nets are new | **Released 2026-11-11** (`ed5a724`) |
-| **V1.2** (PLANNED, not frozen) | The buildable rest of Phase 8 | 8 | Waits for V1.1, and for the owner's legal inputs on the cookie and legal wording |
+| **V1.2** (frozen 2026-11-11) | The six items above, the buildable rest of Phase 8 | 8 | **In progress**, local only; the legal wording still waits for the owner's V1 inputs |
 | **V2** (PLANNED, not frozen) | The rest of Phase 9 | 9 | Opens only when the owner says so |
 
 A planned version is not started and not frozen: its items are chosen when it opens, by the same two tests as D-063.
@@ -171,10 +204,9 @@ Every other idea, refactor and audit finding, one line each, grouped by theme; t
 Do not build from this list until the owner opens a new scope. Nothing here was deleted from the code or the issue list.
 
 **Public site**
-- Two built-in article pages in the sitemap render the not-found view on the live CMS (K-147). [V1.2]
+- Prerender CMS-published posts and work and list them in the sitemap automatically (a build that reads the live CMS; today the built-in articles mirror the CMS by hand, V1.2 item 2). [V2]
 - Certificates screen checked live (issue, verify, revoke); recipient consent per certificate (K-061). [V1.2]
 - Demo flag for Work records in the CMS, which needs a schema change (WORKBOOK 3a.3); the three portfolio demos are already labelled "Demo" on the site. [V1.2]
-- The home-page H1 is read twice by crawlers (needs the owner's OK). [V1.2]
 - Acknowledgement email to the visitor with the enquiry reference (K-097; held back on purpose, a spam-relay risk). [later]
 
 **CMS and daily use**

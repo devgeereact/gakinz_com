@@ -1156,3 +1156,11 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 8. **Out:** converting screens to new utilities, moving ESLint to Biome, a Playwright suite (the project has none; the harness used here lives in `.local-test/`, untracked).
 
 **Why:** one styling system across every project, a smaller config surface (no PostCSS, one token file), and a toolchain Tailwind still maintains. **Evidence:** `docs/AUDIT.md`, 2026-11-10.
+
+## D-065 · V1.2 finish line: six items on public-site trust
+**Date:** 2026-11-11 · **Status:** decided by the owner's "Let's go with V1.2 /finish-app" and "Go ahead" after a short brainstorm (the run proposed the list; the owner approved it as written, including dropping the two built-in articles the CMS does not hold and changing the home headline).
+
+1. `docs/ROADMAP.md` holds the frozen list: a true cookie policy; a sitemap that lists exactly the articles that exist (K-147); bot protection on the contact form; the real visitor IP behind Cloudflare; a real 404 status; the home headline read once.
+2. **My calls, for the owner to overrule:** the built-in articles mirror the CMS by hand (the build stays offline and deterministic) instead of the build reading the live CMS; the honeypot silently drops a bot's post so it learns nothing; the Cloudflare IP is off by default behind `$TRUST_CLOUDFLARE_IP`; the 404 rule is prepared and tested locally but never applied by the run.
+3. **Left out on purpose:** the legal placeholders (V1 item 4), automatic prerender of CMS posts and work, the phone tables (K-148).
+
