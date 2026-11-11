@@ -90,8 +90,8 @@ When this file and the code disagree, the code wins and this file is wrong.
   `docs/STATUS.md` and `docs/KNOWN-ISSUES.md` before starting, update the affected documents in
   the same pull request, and run `pnpm run docs:check`.
 
-- Plan before building: follow `AGENTS.md`, "How work is planned and built" (the Superpowers skills: brainstorming, writing-plans,
-  test-driven-development, verification-before-completion). Scope per version is in `docs/ROADMAP.md`.
+- Spec first, then plan, then agents build and review: follow `AGENTS.md`, "How work is planned and built". Specs and plans live in
+  `docs/superpowers/`; all work stays inside this folder on a branch. Scope per version is in `docs/ROADMAP.md`.
 
 - TypeScript throughout. `pnpm run build` runs `tsc -b`, so a type error blocks the build and
   the deploy.

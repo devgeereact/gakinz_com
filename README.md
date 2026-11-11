@@ -105,6 +105,7 @@ once.
 | `.agent/MCP-PROFILE.yml` | Which integrations an agent may read or change |
 | `server/README.md` | The server folder: install steps and what each file is for |
 | `docs/ROADMAP.md` | What is done, what is left and what is parked: the V1 and V1.1 finish lines, the planned V1.2 and V2, the parking lot by theme, what was cut and what waits for the owner |
+| `docs/superpowers/` | The planning: `specs/` (what and why, with the constraints) and `plans/` (the tasks agents build from), one pair per piece of work |
 | `docs/CHANGELOG.md` | What changed in the product, newest first |
 | `docs/VERIFICATION.md` | What was actually run for the finish line, and the owner's own walk through it |
 | `docs/WORKBOOK.md` | The one page to work from: state, what is left, standing rules and order of work. Start here |

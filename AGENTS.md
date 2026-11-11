@@ -98,22 +98,29 @@ Tailwind CSS v4 is the styling system (D-064): utility classes in the markup, `t
   production mutation, deploy, DNS change or database change without explicit approval in
   the current task contract.
 
-## How work is planned and built
+## How work is planned and built (spec-driven, with agents)
 
-New behaviour is designed before it is built, with the Superpowers skills (Claude Code). The order:
+Everything that adds or changes behaviour goes spec, plan, build, review, fix, in that order, with the Superpowers skills.
+The planning lives in `docs/superpowers/`; nothing is built until its spec and plan exist there.
 
-1. **Brainstorm** (`superpowers:brainstorming`) before any new feature or change of behaviour: the purpose, the options, one
-   recommendation. A decision that constrains later work goes in `docs/DECISIONS.md` as a dated D-number. There is no separate spec file.
-2. **Plan** (`superpowers:writing-plans`) for anything of more than one step: ordered steps, each with its check, written in
-   `.agent/CURRENT-TASK.md` (the only task file). What a version contains stays in `docs/ROADMAP.md`.
-3. **Build** test first (`superpowers:test-driven-development`), one step at a time. A bug or a red test goes through
-   `superpowers:systematic-debugging` before any fix.
-4. **Prove** (`superpowers:verification-before-completion`): run the ladder in "Completion standard" and report it with evidence.
-   Money, authentication, ownership and client-isolation changes also get `superpowers:requesting-code-review`.
+1. **Spec** (`superpowers:brainstorming`): the intent, goals, non-goals and constraints, written to
+   `docs/superpowers/specs/YYYY-MM-DD-<topic>-design.md`. A fresh agent reads it cold (the builder check) and the questions it
+   raises are answered in the spec before anything else happens. A decision that constrains later work also gets a
+   dated D-number in `docs/DECISIONS.md`. The frozen item list for a version stays in `docs/ROADMAP.md`.
+2. **Plan** (`superpowers:writing-plans`): bite-sized, test-first tasks written to
+   `docs/superpowers/plans/YYYY-MM-DD-<topic>.md`, each with exact files, signatures and checks.
+3. **Build** (`superpowers:subagent-driven-development`): a fresh agent implements each task test first; a fresh reviewer
+   checks that task before the next one starts; findings are fixed and re-reviewed. A bug or red test goes through
+   `superpowers:systematic-debugging` first.
+4. **Prove and review**: the ladder in "Completion standard", then one fresh reviewer over the whole branch
+   (`superpowers:requesting-code-review`; always for money, authentication, ownership, client isolation, `.htaccess`).
+5. **Record**: roadmap ticks, changelog, verification, audit and handoff, in the same commits. `.agent/CURRENT-TASK.md` stays the
+   one task file: it says where the work stands and points to the spec and plan; it does not repeat them.
 
-Those skills default to `docs/superpowers/` and `.superpowers/`; this project does not use them. Documents stay flat in `docs/`,
-there is one task file, and scratch goes in `.local-state/` or `.local-test/` (both gitignored). A small fix, such as a typo or a
-one-line defect with a failing test, skips steps 1 and 2.
+Where the work happens: **inside this project folder, on a branch** (`git switch -c goal/<name>`), never in a worktree or clone
+outside it, so nothing is built where the owner cannot see it. Scratch goes in `.local-state/` or `.local-test/` (gitignored).
+A small fix (a typo, a one-line defect with a failing test) skips steps 1 and 2 and says so in its commit. Nothing is pushed,
+merged to `main` or deployed without the owner's say-so.
 
 ## Completion standard
 

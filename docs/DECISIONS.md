@@ -1164,3 +1164,12 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 2. **My calls, for the owner to overrule:** the built-in articles mirror the CMS by hand (the build stays offline and deterministic) instead of the build reading the live CMS; the honeypot silently drops a bot's post so it learns nothing; the Cloudflare IP is off by default behind `$TRUST_CLOUDFLARE_IP`; the 404 rule is prepared and tested locally but never applied by the run.
 3. **Left out on purpose:** the legal placeholders (V1 item 4), automatic prerender of CMS posts and work, the phone tables (K-148).
 
+## D-066 · Spec-driven work with agents, planned in `docs/superpowers/`, built inside the project folder
+**Date:** 2026-11-11 · **Status:** decided by the owner ("a superpower SDD ... in docs/superpowers where the planning takes place ... I don't want the code built outside this workspace ... I send agents to do the planning, the job, the review and the fix").
+
+1. Each piece of work has a spec in `docs/superpowers/specs/` and a plan in `docs/superpowers/plans/` before any code. A fresh agent checks the spec cold; fresh agents build the plan task by task and review each task; one fresh reviewer reads the whole branch. This replaces the rule written earlier the same day in `AGENTS.md` (plans in the task file, no `docs/superpowers/`).
+2. All work is done in `~/Developer/Projects/gakinz_com` on a branch. No worktree or clone outside the folder; `.local-state/` and `.local-test/` are the scratch places.
+3. `.agent/CURRENT-TASK.md` remains the one task file (status and next steps) and links to the spec and plan; the roadmap still holds the frozen list and the parking lot.
+
+**Why:** planning that lives in one visible folder, and work that happens where the owner can see it, cannot drift or be missed.
+

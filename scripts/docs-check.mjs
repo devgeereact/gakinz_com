@@ -4,7 +4,7 @@
 //   node scripts/docs-check.mjs --base origin/main  also the change-to-document rule
 //   DOCS_CHECK_BASE=origin/main node scripts/docs-check.mjs
 //
-// (a) Every relative Markdown link in the root *.md, docs/*.md, qa/*.md,
+// (a) Every relative Markdown link in the root *.md, docs/*.md, docs/superpowers/{specs,plans}/*.md, qa/*.md,
 //     server/README.md and .agent/*.md resolves to a file or folder, and none
 //     points into the owner's temporary planning folder under docs/.
 // (b) No file outside that folder names it.
@@ -46,6 +46,8 @@ function mdFilesIn(dir) {
 const sources = [
   ...mdFilesIn("."),
   ...mdFilesIn("docs"),
+  ...mdFilesIn("docs/superpowers/specs"),
+  ...mdFilesIn("docs/superpowers/plans"),
   ...mdFilesIn("qa"),
   ...mdFilesIn(".agent"),
   join(ROOT, "server", "README.md"),

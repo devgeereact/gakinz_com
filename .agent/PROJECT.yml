@@ -25,6 +25,7 @@ exclusions:
   - "git history rewriting"
 
 sources_of_truth:
+  planning: "docs/superpowers/specs/ and docs/superpowers/plans/ (D-066); the frozen list per version is docs/ROADMAP.md"
   finish_line: "docs/ROADMAP.md (frozen 2026-11-10, D-060)"
   product: "docs/PRODUCT-SPEC.md (approved 2026-10-10, docs/DECISIONS.md D-043)"
   content_and_growth: "docs/CONTENT-AND-GROWTH.md"
