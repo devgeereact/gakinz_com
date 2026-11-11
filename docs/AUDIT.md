@@ -2,7 +2,14 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
-## 2026-11-11 · V1.1 finish-line run (local branch `goal/finish`, not released)
+## 2026-11-11 (release) · V1.1 with Tailwind v4 and pnpm released (`ed5a724`)
+
+**Scope:** the release of the merged branch (V1.1, D-063, and Tailwind v4 with pnpm, D-064) and the check that it is what is live. Evidence: `docs/VERIFICATION.md` "Release and live checks, 2026-11-11".
+**Finding, fixed:** K-149. The release-check job of `ci.yml` failed on the first push because `setup-node` tried to cache with pnpm; a pull request run does not exercise that job (it runs only on a push to `main`), so the earlier green PR #33 could not show it. The failed run released nothing. Fixed and released in `ed5a724`.
+**Result:** CI green on `ed5a724` (typecheck, lint, docs, unit tests, build, PHP and server tests on MySQL 8, gitleaks, Semgrep); released 08:34 UTC with a snapshot; `check:live` 16 of 16; the live CSS and JS equal the local build.
+**Not checked:** the live pages in a browser, the new Today sections signed in, Safari, Firefox, a real phone, the first run of `deploy.yml`'s other steps beyond "Released".
+
+## 2026-11-11 · V1.1 finish-line run (released as `ed5a724`)
 
 **Scope:** the five V1.1 items (D-063): layout of every public page and CMS screen, Today for deletion requests and failed alerts, lint as the gate. Method: tests first where there was behaviour to test, a visual review of side-by-side screenshots, axe-core over every page and screen. Commands and counts: `docs/VERIFICATION.md`.
 

@@ -6,14 +6,14 @@ Updated 2026-11-11. An earlier planning folder (`.planning/`, nine GSD phases) w
 
 ## At a glance
 
-**Live today:** V0 and V1 (8 of 10). **Built locally, not released:** V1.1 (5 of 5).
+**Live today:** V0, V1 (8 of 10) and V1.1 (5 of 5), released together with Tailwind v4 and pnpm as `ed5a724` on 2026-11-11.
 
 | | What | State |
 |---|---|---|
 | **Done** | **V0**, go-live and repair (GSD phases 1 to 7): hardening, CI gate on deploys, Clerk repairs, safe writes, Clerk-only sign-in, certificates, daily-flow speed-ups | Released (`ae01cec` to `825600e`) |
 | **Done** | **V1**, enquiry to paid invoice (ten items): public site, Clerk sign-in, enquiry email to the owner, enquiry to invoice, payment and VAT, client portal isolation, backup restored and targets agreed, scheduled jobs visible, deletion-request alert | Released `4bdaed7`; **8 of 10 ticked** |
-| **Done** | **V1.1**, safety nets (five items): layout tests for every public page and CMS screen, Today shows deletion requests and failed alerts, lint is the gate | Finished locally 2026-11-11, **not released** |
-| **Left 1** | Release V1.1 | Your "approved:"; a push to `main` releases |
+| **Done** | **V1.1**, safety nets (five items): layout tests for every public page and CMS screen, Today shows deletion requests and failed alerts, lint is the gate | **Released 2026-11-11** (`ed5a724`) |
+| **Left 1** | Look once, signed in, at Today (deletion requests, alert notice) and at the restyled CMS | You; the agent has only seen them against test data |
 | **Left 2** | V1 items 4 and 10, and the small owner list | Waiting for you: business facts, the adviser's retention periods, rotate one key, two clean-ups (table "Needs the owner") |
 | **Left 3** | **V1.2**, public-site trust (rest of GSD phase 8) | Planned, not frozen; scope notes below |
 | **Left 4** | **V2**, clean-up and live verification (rest of GSD phase 9) | Planned, not frozen; scope notes below |
@@ -113,7 +113,7 @@ pages and screens) or closes a way the owner could miss something that matters (
 Dashboard show "unavailable" for a failed source (K-031), and the browser holds no session token in `localStorage` (K-033).
 They are closed with that evidence in the same commit that proves it.
 
-**Progress V1.1 (2026-11-11): 5 of 5 ticked. Finished locally, not released.** The ladder is in `docs/VERIFICATION.md` (lint 0, 678 unit, 669 server, 140 browser three runs in a row, axe 0, `pnpm run verify`).
+**Progress V1.1 (2026-11-11): 5 of 5 ticked. Released as `ed5a724` on 2026-11-11.** The ladder is in `docs/VERIFICATION.md` (lint 0, 678 unit, 669 server, 140 browser three runs in a row, axe 0, `pnpm run verify`).
 
 ## Versions and the nine GSD phases (2026-11-11)
 
@@ -123,7 +123,7 @@ The nine phases of the earlier planning sheet are mapped onto versions so the tw
 |---|---|---|---|
 | **V0** (go-live and repair) | Hardening, docs and CI gate, Clerk repairs, safe writes, Clerk-only sign-in, certificates, daily-flow speed-ups | 1 to 7 | **Released** (`ae01cec`, `b301ec7`, `cbfd527`, `ed58064`, `01d2269`, `825600e`; Phase 2 closed 2026-11-08 with the CI gate, K-138, and the `release.mjs` wording) |
 | **V1** (frozen 2026-11-10) | Ten outcomes from enquiry to paid invoice | the owner-input core of 8 (items 4 and 10) | Released `4bdaed7`; 8 of 10 ticked; 4 and 10 BLOCKED on the owner |
-| **V1.1** (frozen 2026-11-11) | The five items above | the lint slice of 9 (item 5); layout and Today safety nets are new | **Finished locally 2026-11-11**, not released |
+| **V1.1** (frozen 2026-11-11) | The five items above | the lint slice of 9 (item 5); layout and Today safety nets are new | **Released 2026-11-11** (`ed5a724`) |
 | **V1.2** (PLANNED, not frozen) | The buildable rest of Phase 8 | 8 | Waits for V1.1, and for the owner's legal inputs on the cookie and legal wording |
 | **V2** (PLANNED, not frozen) | The rest of Phase 9 | 9 | Opens only when the owner says so |
 

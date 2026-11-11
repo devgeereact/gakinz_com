@@ -4,6 +4,20 @@ What was actually run, with the result, and what only the owner can show. Result
 [AUDIT.md](AUDIT.md); the finish line they serve is [ROADMAP.md](ROADMAP.md). Status words: DONE (seen), PARTIAL,
 NOT TESTED, BLOCKED.
 
+## Release and live checks, 2026-11-11 (owner said "Push and Deploy now")
+
+Two pushes to `main`. The checks are read-only; nothing was written to the live site by the agent.
+
+| Step | Result |
+|---|---|
+| Push `e73748f` (V1.1 and Tailwind v4 merged, 23 commits) | CI: typecheck, lint, docs, unit tests and build PASS; PHP and server tests on MySQL 8 PASS; gitleaks and Semgrep PASS; **"does this push need a release" FAILED** (`Unable to locate executable file: pnpm`, K-149); release skipped, nothing deployed |
+| Fix and push `ed5a724` | CI green on every job; release to gakinz.com ran at 08:34 UTC: snapshot `~/backups/gakinz_com/releases/20261111T083401Z`, smoke checks passed, "Released ed5a724" |
+| `node scripts/live-check.mjs` (read-only GETs) | DONE, 16 of 16: headers, no directory listings, `config.php` 403, anonymous `auth.php?action=me` 401, hashed bundle cached |
+| Pages | `/`, `/work/`, `/services/web-design/`, `/pricing/`, `/contact/`, `/login`, `/app`, `/sitemap.xml` all 200; `today.php` anonymous 401 |
+| Bundle | Live `index-DbqHNpCb.js` and `index-DzeMEWpu.css` (143,872 bytes) equal the local verify build, so the Tailwind v4 output is what is served |
+
+**NOT TESTED:** the site in a browser after the release (no screenshot of the live pages), the Today deletion and alert sections signed in (they were seen only against seeded test data), Safari, Firefox, a real phone. Rollback: `npm run release -- --rollback --go`.
+
 ## Merge of V1.1 and Tailwind v4 with pnpm, 2026-11-11, branch `chore/tailwind-v4`
 
 `main` (V1.1) merged into `chore/tailwind-v4`; 17 files conflicted (docs, CI, `stack.ts`), resolved by keeping the V1.1 text, converting its commands to pnpm and renumbering the Tailwind decision from D-062 to D-064. The CMS test build (`vite.cms-test.config.ts`) gained the Tailwind plugin, or it would have built unstyled. Same worktree and MariaDB 11.4.13 on port 3329, throwaway databases only.

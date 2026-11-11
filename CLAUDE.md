@@ -116,7 +116,7 @@ The current state, what is left and the order of work are in **`docs/WORKBOOK.md
 counts are in `docs/STATUS.md` section 0. This file does not repeat them, so it cannot drift
 (consolidated 2026-10-21; the earlier text is in git history at `5d5f95b`).
 
-- `main` is live. The last code release was `983606c` (2026-11-08) through `release.mjs`; each
+- `main` is live. The last code release was `ed5a724` (2026-11-11, V1.1 with Tailwind v4 and pnpm) through `release.mjs`; each
   release is recorded in `docs/WORKBOOK.md` section 1 and its checks in `docs/AUDIT.md`.
 - `pnpm run lint` passes with 0 errors and 0 warnings (K-002 closed 2026-11-11); CI and the release checks run it,
   so a new problem blocks the build.

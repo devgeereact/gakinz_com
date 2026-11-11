@@ -1136,7 +1136,7 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 4. **OpenRouter:** the owner chose no monthly limit. The risk is spend with no ceiling if the AI module is used or its key is abused; the AI module stays switched as it is (Cut in the roadmap) and the exposed key is to be rotated by the owner. Revisit if the AI features are switched on.
 
 ## D-063 · V1.1 finish line: five items, chosen from the parking lot
-**Date:** 2026-11-11 · **Status:** decided by the owner's "Phase 2: open V1.1 from the parking lot" (the owner named no items; the run chose them and the owner may overrule).
+**Date:** 2026-11-11 · **Status:** decided by the owner's "Phase 2: open V1.1 from the parking lot" (the owner named no items; the run chose them and the owner may overrule); released 2026-11-11 as `ed5a724`.
 
 1. `docs/ROADMAP.md` holds the frozen list: public pages laid out cleanly at 375 and 1280 px; a data deletion request on Today with its reply-by date; a failed alert email visible on Today; every CMS screen laid out cleanly with realistic data; `pnpm run lint` passing and run by CI.
 2. **Chosen by two tests:** it guards a flaw class the V1 run never looked for (layout on real pages and screens, never seen by an agent), or it closes a way the owner could miss something that matters (a legal deadline, a lost alert). Everything else stays in the parking lot.
@@ -1144,7 +1144,7 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 4. **Unchanged from V1:** items are ticked on local evidence only; what needs the live system or the owner is BLOCKED; nothing is pushed or released by the run.
 
 ## D-064 · Tailwind CSS v4 through the Vite plugin, pnpm, and tw-animate-css
-**Date:** 2026-11-10 · **Status:** decided by the owner (house standard, 10 Nov 2026), done locally on `chore/tailwind-v4`, **not pushed or released**. **Mode A** (full `@import "tailwindcss";` with Preflight), because `src/index.css` is one 480-line file with the shadcn variables and the CMS is mostly utilities already.
+**Date:** 2026-11-10 · **Status:** decided by the owner (house standard, 10 Nov 2026), done on `chore/tailwind-v4` and **released 2026-11-11 as `ed5a724`** together with V1.1. **Mode A** (full `@import "tailwindcss";` with Preflight), because `src/index.css` is one 480-line file with the shadcn variables and the CMS is mostly utilities already.
 
 1. **pnpm first.** `package-lock.json` became `pnpm-lock.yaml` (`pnpm import`, so every version carried over). Install scripts of `esbuild`, `core-js` and `@clerk/shared` stay blocked (`pnpm-workspace.yaml`, reviewed: none is needed). `ci.yml` and `deploy.yml` now run `pnpm install --frozen-lockfile`. `release.json` is untouched: its `pnpm run ...` commands only run package scripts and still work.
 2. **Upgrade tool, then review.** `@tailwindcss/upgrade` moved the config into `@theme` and renamed v3 utilities. It also (a) rewrote the strings `"outline"` to `"outline-solid"` in Badge and Button variant props and in one line of public copy (reverted), and (b) silently dropped `tailwindcss-animate`.

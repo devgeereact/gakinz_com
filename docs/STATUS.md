@@ -1,7 +1,7 @@
 # Status
 
-**As at:** 2026-11-01. `main` is `ee1281f`; the last code release is `fdc5d94` (2026-10-31), live on
-gakinz.com through `scripts/release.mjs`. The order of work and what is left are in
+**As at:** 2026-11-11. `main` is `ed5a724`, which is live on
+gakinz.com through `scripts/release.mjs` (released 2026-11-11 08:34 UTC). The order of work and what is left are in
 [WORKBOOK.md](WORKBOOK.md); open issues are in [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
 
 This is the one home for measured counts: other documents point here rather than repeat a number.
@@ -26,12 +26,12 @@ Anything about signed-in use of the live system is NOT TESTED unless a row says 
 
 ## 0. Current measurements
 
-Measured on 2026-11-11 on the Mac on branch `goal/finish` (V1.1 run on top of the released V1, `4bdaed7`; local only, not released); the live checks and the host's PHP version are from 2026-11-09. Re-measure and update
+Measured on 2026-11-11 on the Mac before the release of `ed5a724` (V1.1 with Tailwind v4 and pnpm); the live checks (`pnpm run check:live`, 16 of 16) are from 2026-11-11 after that release, the host's PHP version from 2026-11-09. Re-measure and update
 this table when a count changes; the previous figures are in the history above.
 
 | Measure | Command | Result |
 |---|---|---|
-| Styling and packages | `vite.config.ts`, `package.json` | Tailwind CSS v4 through `@tailwindcss/vite`, pnpm (`pnpm-lock.yaml`) on branch `chore/tailwind-v4`, **not released** (D-064, `docs/AUDIT.md` 2026-11-10) |
+| Styling and packages | `vite.config.ts`, `package.json` | Tailwind CSS v4 through `@tailwindcss/vite`, pnpm (`pnpm-lock.yaml`), **released 2026-11-11 as `ed5a724`** (D-064, `docs/AUDIT.md` 2026-11-11) |
 | Unit tests | `pnpm test` | **PASS.** 678 tests in 61 files (V1.1: the Today deletion section and the owner-alert notice added to `todayModel.test.ts`) |
 | Server integration tests | `pnpm run test:server`, local throwaway `*_test` database | **PASS.** 669 tests in 53 files on local MariaDB 11.4.13 (V1.1: `today` 3 added, `alert-failures` 5 added), run as `GK_TEST_DB_HOST=127.0.0.1 GK_TEST_DB_PORT=3329 GK_TEST_DB_USER=root GK_TEST_DB=<name>_test GK_TEST_PHP_PORT=<port> GK_TEST_PROVIDER_PORT=<port> pnpm run test:server` |
 | Browser tests | `pnpm run build && pnpm run test:browser` | **PASS.** 140 tests in 3 files, three runs in a row: the contact form (6); all 32 public pages at 375 and 1280 px (66); 34 CMS screens at both sizes as owner, client and editor against real PHP and a seeded throwaway database, with Clerk stubbed in a test-only build (68). `GK_AXE=<axe.min.js>` adds axe (0 violations). Signed-in use with real data, Safari and a real phone are NOT covered |
