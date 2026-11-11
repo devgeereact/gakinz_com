@@ -1,8 +1,27 @@
 # Roadmap
 
-One list decides when GAkinz V1 is **finished**. Nothing else does. Adopted on 2026-11-10 from the
-draft in `~/Developer/build-kit/docs/finish-drafts/gakinz_com.md` after checking it against the code
-(corrections are in "Draft corrections" below).
+The one place for what is done, what is left and what is parked on GAkinz. Everything planned lives here; the task in
+progress is `.agent/CURRENT-TASK.md`, the history is `docs/WORKBOOK.md`, the issue list is `docs/KNOWN-ISSUES.md`.
+Updated 2026-11-11. An earlier planning folder (`.planning/`, nine GSD phases) was folded into this file on that date.
+
+## At a glance
+
+**Live today:** V0 and V1 (8 of 10). **Built locally, not released:** V1.1 (5 of 5).
+
+| | What | State |
+|---|---|---|
+| **Done** | **V0**, go-live and repair (GSD phases 1 to 7): hardening, CI gate on deploys, Clerk repairs, safe writes, Clerk-only sign-in, certificates, daily-flow speed-ups | Released (`ae01cec` to `825600e`) |
+| **Done** | **V1**, enquiry to paid invoice (ten items): public site, Clerk sign-in, enquiry email to the owner, enquiry to invoice, payment and VAT, client portal isolation, backup restored and targets agreed, scheduled jobs visible, deletion-request alert | Released `4bdaed7`; **8 of 10 ticked** |
+| **Done** | **V1.1**, safety nets (five items): layout tests for every public page and CMS screen, Today shows deletion requests and failed alerts, lint is the gate | Finished locally 2026-11-11, **not released** |
+| **Left 1** | Release V1.1 | Your "approved:"; a push to `main` releases |
+| **Left 2** | V1 items 4 and 10, and the small owner list | Waiting for you: business facts, the adviser's retention periods, rotate one key, two clean-ups (table "Needs the owner") |
+| **Left 3** | **V1.2**, public-site trust (rest of GSD phase 8) | Planned, not frozen; scope notes below |
+| **Left 4** | **V2**, clean-up and live verification (rest of GSD phase 9) | Planned, not frozen; scope notes below |
+| **Parked** | Everything else, grouped by theme | "Parking lot" below; nothing deleted |
+
+How a new version opens: you say so, I propose at most ten items from the parking lot by value to users, we freeze the list
+in this file with a date and a check per item, then each item is designed and planned before it is built (`AGENTS.md`,
+"How work is planned and built").
 
 ## V1 finish line (frozen)
 
@@ -42,7 +61,7 @@ one enquiry to a paid invoice and a client sees only their own work.
 - [x] **7. A client signs in to the portal and sees only their own project, invoice and files.** Check:
   `journey.test.ts` step 10, `portal-files.test.ts`, `support-client.test.ts` and the signed-out, wrong-role
   and other-client matrix in `tests/server/portal-isolation.test.ts`.
-- [~] **8. A backup is restored once and the recovery target is agreed (K-010).** **Update 2026-11-10 (released): the host had no daily backup; `gakinz-backup.sh` now runs daily and the host's own fresh dump was restored locally (42 of 42 tables, 0 orphans). Only the owner's yes on the targets is left.** Check: `npm run
+- [x] **8. A backup is restored once and the recovery target is agreed (K-010).** **Update 2026-11-10 (released): the host had no daily backup; `gakinz-backup.sh` now runs daily and the host's own fresh dump was restored locally (42 of 42 tables, 0 orphans). Targets agreed the same day (D-062: back within one working day, lose at most 24 hours).** Still open under K-010: dumps are not copied off the host, and the first 03:30 run is not yet seen. Check: `npm run
   drill:restore` restores the newest Mac copy of the database dump into a throwaway database and compares
   tables and row counts; the dated result is in `docs/OPERATIONS.md` section 10. Restoring the **host's**
   copy, the uploads, and agreeing the targets are BLOCKED (owner).
@@ -58,7 +77,79 @@ one enquiry to a paid invoice and a client sees only their own work.
   column and a Today item (parked). Open, owner and adviser: the `$RETENTION_*` periods (K-062, proposals in
   `docs/PRIVACY-READINESS.md` section 6) and the legal deadline wording; `$RETENTION_APPLY` stays false. BLOCKED.
 
-**Progress (2026-11-10, released as `4bdaed7`): 7 of 10 ticked, 3 waiting for the owner (4, 8, 10).** There is no `pnpm run finish` here; the boxes are the progress.
+**Progress (2026-11-10, released as `4bdaed7`): 8 of 10 ticked, 2 waiting for the owner (4, 10).** There is no `pnpm run finish` here; the boxes are the progress.
+
+## V1.1 finish line (frozen)
+
+**Frozen on 2026-11-11** (D-063) · opened by the owner's "Phase 2: open V1.1 from the parking lot"; the run chose the items and the owner may overrule them.
+V1 stays as it is (8 of 10 ticked, 4 and 10 wait for the owner). Same rules: at most 10 items, each something a real
+person can do or see, ticked on **local** evidence with the commit, anything that needs the live system or the owner
+is BLOCKED and says so. Chosen because each one either guards a flaw class the V1 run never looked for (layout on real
+pages and screens) or closes a way the owner could miss something that matters (a legal deadline, a lost alert).
+
+- [x] **1. A visitor on a phone or a desktop sees every public page laid out cleanly.** Check: `tests/browser/public-layout.test.ts`
+  loads all 32 prerendered pages at 375 and 1280 px and fails on sideways page scroll, clipped text, a console error or a failed
+  request; every page screenshot looked at; an axe run over the same pages (WCAG 2.0 to 2.2 A and AA) recorded in `docs/VERIFICATION.md`.
+  **Evidence 2026-11-11:** 66 tests (the sitemap list, then 32 pages at 375 and at 1280 px) pass; axe-core (WCAG 2.0 to 2.2 A and AA) over the same 64 loads found 0 violations; 11 pages viewed side by side at both sizes (home, services, a service, pricing, work, a work page, about, contact, privacy, an article, the 404) and every template class is among them. Found and parked: K-147 (two sitemap articles render the not-found page on the live CMS), and the pricing, privacy and work pages still carry the V1 item 4 placeholders (owner). The test also fails if a sitemap page shows the not-found view.
+- [x] **2. The owner sees a client's data deletion request on Today with its reply-by date.** No schema change: the date is the
+  ticket's creation date plus one month (K-095 remainder). Check: new cases in `tests/server/today.test.ts` (listed, oldest or
+  most urgent first, a closed ticket is not listed, an editor does not see it) and a unit test for the date rule.
+  **Evidence 2026-11-11:** `tests/server/today.test.ts` (4 new cases, 13 in the file): listed oldest first with company, reply-by date and `/app/support?ticket=`; "Reply was due ..., overdue" past the date; resolved, deleted and other-subject tickets left out; a request whose client row is gone still listed; the subject literal is checked against `support.php`; the section list for every role. `todayModel.test.ts` mirrors the roles (support.php STAFF: all five staff roles). Not seen in a browser with real data.
+- [x] **3. The owner is told when an alert email did not go out.** `enquiry_notify_failed` and `deletion_notify_failed` audit rows
+  from the last 7 days show as a Today notice that names the enquiry or ticket (D-061 left them invisible). Check: new cases
+  in `tests/server/today.test.ts` and `tests/server/enquiry-notify.test.ts`.
+  **Evidence 2026-11-11:** `tests/server/alert-failures.test.ts` (5 tests): empty when nothing failed; failed enquiry, failed deletion and held-back alerts newest first; older than 7 days left out and at most 5 listed while all are counted; owner roles only (an editor gets no key); end to end, a mail host that refuses leaves the enquiry saved and Today names its reference. `todayModel.test.ts` (3 new cases) covers the wording. Rendered in `Dashboard.tsx` next to the scheduled-jobs notice; not seen in a browser.
+- [x] **4. Every CMS screen holds realistic data on a phone and a desktop.** Check: `tests/browser/cms-layout.test.ts` opens all
+  CMS routes at 375 and 1280 px from a test-only build with Clerk replaced by a stub and every API answer labelled sample data
+  (long names, many rows, empty and error states); no sideways page scroll, no page error; every screenshot looked at;
+  axe over the same screens. Not the live site, not real data (K-044).
+  **Evidence 2026-11-11:** `tests/browser/cms-layout.test.ts`, 68 tests: 27 owner screens, the 3 client screens and 4 editor screens, each at 375 and 1280 px, against the real PHP and a throwaway MariaDB seeded with 40 clients (one with a 100-character name), 40 enquiries in every stage, 14 projects, 70 tasks, 30 invoices in every status, proposals, tickets, posts, certificates, calls and time entries (`tests/browser/seed.ts`); the Clerk package is replaced by a stub in a separate test-only build (`vite.cms-test.config.ts`, never shipped). No sideways page scroll, no console error, no failed request; axe (WCAG 2.0 to 2.2 A and AA) 0 violations on all 68. Found and fixed: (1) every client and editor login asked `invoices.php` and got a 403 on every screen (the notification bell); (2) axe label-in-name on the Today lead lists and the Leads cards (an `aria-label` that dropped visible text); (3) Invoicing and Contracts row actions ran 209 px and 42 px past the box at 1280 px, now they wrap. Looked at: 8 screens side by side at both sizes (Enquiries, Clients, Invoicing, Contracts and others). **Not fixed, parked as K-148:** on a phone, 8 tables (Blog, Certificates, Clients, Contracts, Invoicing, Platform, Proposals, Time) scroll sideways inside their box, so the last columns need a swipe. Not real data, not Safari or a real phone, not the Today, Support and Portal screens beyond the automated checks.
+- [x] **5. `pnpm run lint` passes and CI runs it instead of the ratchet** (K-002). The five errors are in Contracts, Portal and the
+  theme toggle; Portal is security-critical, so `portal-isolation.test.ts`, `journey.test.ts` and `support-client.test.ts` must stay
+  green. Check: `pnpm run lint` exits 0; `.github/workflows/ci.yml` calls it.
+  **Evidence 2026-11-11:** `pnpm run lint` exits 0 (0 errors, 0 warnings). Portal (staff preview and client login) and Contracts moved onto `useLoad`, the theme toggle onto `useSyncExternalStore`; the template of a new contract is now applied by the handlers that change it instead of an effect. `ci.yml` and `release.json` run `pnpm run lint`; `scripts/lint-ratchet.mjs` and its npm script are deleted; the living docs are updated. `portal-isolation`, `journey` and `support-client` are server-side and unchanged; the Portal screen itself is NOT TESTED in a browser yet (item 4 covers it).
+
+**Discovery fixes (not items):** two parking-lot lines were checked against the code and were already untrue: Analytics and the
+Dashboard show "unavailable" for a failed source (K-031), and the browser holds no session token in `localStorage` (K-033).
+They are closed with that evidence in the same commit that proves it.
+
+**Progress V1.1 (2026-11-11): 5 of 5 ticked. Finished locally, not released.** The ladder is in `docs/VERIFICATION.md` (lint 0, 678 unit, 669 server, 140 browser three runs in a row, axe 0, `pnpm run verify`).
+
+## Versions and the nine GSD phases (2026-11-11)
+
+The nine phases of the earlier planning sheet are mapped onto versions so the two cannot disagree.
+
+| Version | What it holds | GSD phases | State |
+|---|---|---|---|
+| **V0** (go-live and repair) | Hardening, docs and CI gate, Clerk repairs, safe writes, Clerk-only sign-in, certificates, daily-flow speed-ups | 1 to 7 | **Released** (`ae01cec`, `b301ec7`, `cbfd527`, `ed58064`, `01d2269`, `825600e`; Phase 2 closed 2026-11-08 with the CI gate, K-138, and the `release.mjs` wording) |
+| **V1** (frozen 2026-11-10) | Ten outcomes from enquiry to paid invoice | the owner-input core of 8 (items 4 and 10) | Released `4bdaed7`; 8 of 10 ticked; 4 and 10 BLOCKED on the owner |
+| **V1.1** (frozen 2026-11-11) | The five items above | the lint slice of 9 (item 5); layout and Today safety nets are new | **Finished locally 2026-11-11**, not released |
+| **V1.2** (PLANNED, not frozen) | The buildable rest of Phase 8 | 8 | Waits for V1.1, and for the owner's legal inputs on the cookie and legal wording |
+| **V2** (PLANNED, not frozen) | The rest of Phase 9 | 9 | Opens only when the owner says so |
+
+A planned version is not started and not frozen: its items are chosen when it opens, by the same two tests as D-063.
+
+### Scope notes for the planned versions
+
+Carried over from the planning sheet (goals, what is in, what is out, how we will know). They are starting points for the
+design step, not a frozen list.
+
+**V1.2, public-site trust.** *Goal:* the public site has no placeholder gaps and no easy abuse.
+*In:* the cookie policy names Clerk; spam protection on the contact form beyond the per-IP limit (the real client IP behind
+Cloudflare is still unchecked, K-101); a real 404 status for unknown paths (a hand-applied server rewrite, K-139); prerendered
+pages and sitemap entries for CMS-published posts and work, which also closes K-147; the legal "[to supply]" gaps once the owner
+supplies them (V1 item 4). *Out:* new pages, copywriting beyond the gaps, ads.
+*Done when:* a search for "[" placeholders on the built public pages finds none (`pnpm run check:facts -- --strict` exits 0); an
+unknown URL returns 404 over HTTP; a scripted burst on the contact form is blocked; every sitemap page renders its own content.
+*Gate:* the owner supplies the legal inputs; they are never invented.
+
+**V2, clean-up and live verification.** *Goal:* no dead code or schema drift remains, and the whole app is checked signed in on
+real data. *In:* remove dead client functions, `fallbackWork`, weather leftovers and unused UI exports (K-139); drop the orphan
+`items` table and the legacy auth columns and tables (hand-applied SQL, approved, backed up first); add the missing unique keys
+(`files.share_token`, `invoices.number`) and the `audit_log` index; one shared formatter and one error banner; split the files over
+600 lines; ESLint 10 for the 13 moderate advisories (K-041); the owner's signed-in walk on real data, which closes K-044.
+*Out:* new features. *Done when:* `schema.sql` and the live database are compared, not assumed; docs match measured counts; the
+walk is recorded in `docs/AUDIT.md`.
 
 ## Needs the owner (BLOCKED, with the exact action)
 
@@ -69,37 +160,47 @@ Prepared in this run: the scripts, tests and instructions below. None of these w
 | a | Business facts: trading identity and number, VAT status and whether prices include VAT, confirmed prices, IT support pricing and coverage area, ~~public phone~~ (done: +44 20 8059 8757), working hours, cancellation terms | item 4 | `pnpm run check:facts` lists each gap; answers go into `src/marketing/data/site.ts` and the legal pages (`docs/STATUS.md` section 5) |
 | b | Adviser sign-off: privacy, terms, retention periods, anonymisation (K-021, K-062, K-108) | items 4, 10 | proposed periods and the questions to ask are in `docs/PRIVACY-READINESS.md` section 6 |
 | c | ~~Cron entry~~ **done 2026-11-10.** Still yours: `$REPORT_RECIPIENTS` if you want the weekly digest (K-145) | item 9 | exact line and checks in `docs/OPERATIONS.md` section 2 |
-| d | ~~Restore the host's latest backup~~ **done 2026-11-10**; engine recorded (MariaDB 11.4.13). Still yours: say yes to the recovery targets (1 working day / 24 hours) and decide how dumps get off the host (K-010) | item 8 | steps in `docs/OPERATIONS.md` section 10 |
-| e | OpenRouter monthly spending limit; delete the Clerk user for `dev@gakinz.com`; rename the `TEST owner` row | safety | Clerk and OpenRouter dashboards; one `UPDATE` in `docs/DEPLOYMENT.md` section 5 |
-| f | One live walk with TEST records: contact form to paid invoice, certificates, downloads, a client sign-in | gate 6 (real browser and phone) | `docs/VERIFICATION.md` "Owner walk" |
-| g | ~~`$OWNER_ALERTS`~~ **done 2026-11-10** (`hello@gakinz.com`, SMTP login proven). Still yours: confirm the TEST email arrived | item 3 live | `docs/DEPLOYMENT.md` section 5 |
+| d | ~~Restore the host's latest backup~~ **done 2026-11-10**; engine recorded (MariaDB 11.4.13). **Targets agreed (D-062).** Still open: decide how dumps get off the host (K-010) | item 8 | steps in `docs/OPERATIONS.md` section 10 |
+| e | ~~OpenRouter limit~~ owner chose none (D-062), but **rotate the exposed key**; delete the Clerk user for `dev@gakinz.com`; rename the `TEST owner` row (name needed) | safety | Clerk and OpenRouter dashboards; one `UPDATE` in `docs/DEPLOYMENT.md` section 5 |
+| f | ~~One live walk~~ **done 2026-11-10, all seven steps** (`docs/VERIFICATION.md`). Left: the invoice PDF, a real phone | gate 6 (real browser and phone) | `docs/VERIFICATION.md` "Owner walk" |
+| g | ~~`$OWNER_ALERTS`~~ **done 2026-11-10** (`hello@gakinz.com`, SMTP login proven). Confirmed by the owner: the TEST email arrived | item 3 live | `docs/DEPLOYMENT.md` section 5 |
 
-## Parking lot (V1.1 and later)
+## Parking lot (V1.2 and later)
 
-Every other idea, refactor and audit finding, one line each. Do not build from this list until the owner
-opens a new scope. Nothing here was deleted from the code or the issue list.
+Every other idea, refactor and audit finding, one line each, grouped by theme; the version in brackets is where it would join.
+Do not build from this list until the owner opens a new scope. Nothing here was deleted from the code or the issue list.
 
-- Phase 8 public-site trust beyond the placeholders (needs legal inputs) and Phase 9 (drop retired legacy columns and tables).
-- Certificates screen checked live (issue, verify, revoke); recipient consent per certificate (K-061).
-- Demo flag for Work records in the CMS (WORKBOOK 3a.3); the three portfolio demos are already labelled "Demo" on the site.
-- Analytics shows "unavailable" instead of zero when a source fails (K-031).
-- `pnpm run lint` clean and replace the ratchet (5 errors left, K-002).
-- Enforce the app-shell CSP; move the session token out of `localStorage` (K-033).
-- ESLint 10 for the 13 moderate advisories (K-041).
-- The home-page H1 read twice by crawlers.
-- Strict tsc leftovers: K-072, K-074, K-077, K-078, K-083, K-020.
-- Ad pilot (K-104 to K-107), switched off.
-- Client anonymisation switch-on (K-108).
-- Cloudflare Authenticated Origin Pulls.
-- OpenRouter-backed AI assistant features.
-- PayPal (hidden until a webhook exists).
-- Server suite on MySQL 5.7 and 8 (K-099, K-111); CI runs MySQL 8.
-- Large files: `server/work.php`, `Dashboard.tsx`, `bookings.php`, `proposals.php`, `Invoicing.tsx` (over 600 lines each).
-- Acknowledgement email to the visitor (K-097).
-- A due-date column and a Today item for data deletion requests (K-095 remainder).
-- An index on `audit_log (action, created_at)`: the heartbeat, the contact throttle and the reminder memory all filter on `action`; fine at today's size, schema change when it grows.
-- Owner alerts: a retry or queue if a send fails (today: audited, the item is in Leads or Support either way).
-- Real assistive-technology pass on the public site and the CMS.
+**Public site**
+- Two built-in article pages in the sitemap render the not-found view on the live CMS (K-147). [V1.2]
+- Certificates screen checked live (issue, verify, revoke); recipient consent per certificate (K-061). [V1.2]
+- Demo flag for Work records in the CMS, which needs a schema change (WORKBOOK 3a.3); the three portfolio demos are already labelled "Demo" on the site. [V1.2]
+- The home-page H1 is read twice by crawlers (needs the owner's OK). [V1.2]
+- Acknowledgement email to the visitor with the enquiry reference (K-097; held back on purpose, a spam-relay risk). [later]
+
+**CMS and daily use**
+- Eight CMS tables scroll sideways inside their box on a phone (K-148); stacked rows or a column picker would fix it. [V1.2]
+- Quotes list "Total" is the amount before VAT (label it, or show the VAT-inclusive total); Invoicing tiles refresh after "Mark paid" without a reload. [V1.2]
+- One-step "Grant portal access" (CMS client account plus Clerk user) and a friendlier message than Clerk's "Couldn't find your account"; the manual steps are in `docs/OPERATIONS.md` 10.2. [V1.2]
+- Real assistive-technology pass (screen reader, keyboard-only) on the public site and the CMS; axe in V1.1 is not the same thing. [V2]
+
+**Safety, privacy and money**
+- Enforce the app-shell CSP, which is Report-Only today (K-033; the session token is already out of `localStorage`, checked 2026-11-11, D-057). [V2]
+- Cloudflare Authenticated Origin Pulls. [V2]
+- A due-date column for data deletion requests (V1.1 item 2 computes the date from the ticket instead). [V2]
+- Owner alerts: a retry or queue if a send fails (V1.1 item 3 only makes the failure visible). [V2]
+- An index on `audit_log (action, created_at)`: the heartbeat, the contact throttle and the reminder memory all filter on `action`; fine at today's size, a schema change when it grows. [V2]
+- Client anonymisation switch-on (K-108; needs the adviser). [owner]
+- Stripe: switch on pay links (owner steps in `docs/DEPLOYMENT.md`, then test mode, then live). [owner]
+- Server suite on MySQL 5.7 and 8 (K-099, K-111); CI runs MySQL 8. [V2]
+
+**Code health**
+- ESLint 10 for the 13 moderate advisories (K-041). [V2]
+- Strict tsc leftovers: K-072, K-074, K-077, K-078, K-083, K-020. [V2]
+- Large files: `server/work.php`, `Dashboard.tsx`, `bookings.php`, `proposals.php`, `Invoicing.tsx` (over 600 lines each). [V2]
+- Dead code and schema drift (K-139): the `items` table, unused client functions, `fallbackWork`, missing unique keys, duplicated formatters and error banners. [V2]
+
+**Switched off on purpose**
+- Ad pilot (K-104 to K-107). OpenRouter-backed AI assistant features. PayPal (hidden until a webhook exists). [later, only if you ask]
 
 ## Cut (decided not to build for V1; the code stays)
 
@@ -134,7 +235,7 @@ The commit message says which.
 | 1 | Enquiry notification and the contact browser test | 3 | DONE |
 | 2 | Placeholder check and owner input list | 4 | DONE (the facts: owner) |
 | 3 | Money, VAT and portal isolation evidence | 5, 6, 7 | DONE |
-| 4 | Restore drill | 8 | DONE (host copy, uploads and targets: owner) |
+| 4 | Restore drill | 8 | DONE (targets agreed, D-062; off-host copy still open) |
 | 5 | Cron heartbeat and visible notice | 9 | DONE |
 | 6 | Deletion request handling | 10 | DONE (retention periods: owner and adviser) |
 | 7 | Docs merge, audit, ladder, handoff | all | DONE |

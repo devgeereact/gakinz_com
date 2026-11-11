@@ -93,7 +93,7 @@ opacity; the current page in the header is marked with an underline, never a tin
 | Sidebar muted | `#8C96A4` | same | `--os-side-mute` | 6.12:1 / 6.37:1 |
 | Sidebar active bar | `#8EC5FF` | same | `--sidebar-primary` | n/a |
 
-### Tailwind v4 token map (D-062)
+### Tailwind v4 token map (D-064)
 
 Tailwind v4 reads its tokens from CSS, so `src/index.css` is the only place a token is declared; `tailwind.config.js` is gone.
 

@@ -41,6 +41,7 @@ import {
 } from "@/lib/api"
 import {
   applyTodayResult,
+  ownerAlertsNotice,
   scheduledJobsNotice,
   fallbackFollowUps,
   initialTodayView,
@@ -348,6 +349,7 @@ export default function Dashboard() {
   const updated = updatedLabel(todayView)
   const attention = todayPanel(todayView, role)
   const jobsNotice = scheduledJobsNotice(todayView)
+  const alertsNotice = ownerAlertsNotice(todayView)
 
   const header = (
     <PageHeader
@@ -456,6 +458,23 @@ export default function Dashboard() {
               <ul className="mt-2 list-disc pl-5 text-muted-foreground">
                 {jobsNotice.off.map((o) => (
                   <li key={o}>{o}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+
+      {alertsNotice && (
+        <div role="status" className="mb-4 flex flex-wrap items-start gap-3.5 rounded-2xl border border-warn/30 bg-warn-soft p-[18px] text-foreground">
+          <AlertTriangle aria-hidden className="mt-0.5 size-[18px] shrink-0 text-warn" />
+          <div className="min-w-[min(100%,200px)] flex-1">
+            <p className="font-semibold">{alertsNotice.title}</p>
+            <p className="mt-1 text-muted-foreground [overflow-wrap:anywhere]">{alertsNotice.detail}</p>
+            {alertsNotice.lines.length > 0 && (
+              <ul className="mt-2 list-disc pl-5 text-muted-foreground [overflow-wrap:anywhere]">
+                {alertsNotice.lines.map((l, i) => (
+                  <li key={i}>{l}</li>
                 ))}
               </ul>
             )}
@@ -629,7 +648,6 @@ export default function Dashboard() {
                     <button
                       type="button"
                       onClick={() => navigate("/app/leads")}
-                      aria-label={`Lead ${l.name}${l.company ? `, ${l.company}` : ""}, status ${l.status}. Open leads.`}
                       className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3 text-left hover:text-acc"
                     >
                       <span className="flex min-w-0 items-center gap-2.5">
@@ -643,6 +661,7 @@ export default function Dashboard() {
                         </span>
                       </span>
                       <StatusBadge status={l.status} />
+                      <span className="sr-only">. Open leads.</span>
                     </button>
                   </li>
                 ))}
@@ -730,7 +749,6 @@ function FollowUpsCard({ leads, down }: { leads: Lead[]; down: boolean }) {
                   <button
                     type="button"
                     onClick={() => navigate("/app/leads?due=1")}
-                    aria-label={`Follow up ${l.name}${l.company ? `, ${l.company}` : ""}, ${overdue ? `overdue since ${when}` : "due today"}. Open enquiries.`}
                     className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-3 py-3 text-left hover:text-acc"
                   >
                     <span className="min-w-0">
@@ -740,6 +758,7 @@ function FollowUpsCard({ leads, down }: { leads: Lead[]; down: boolean }) {
                       </span>
                     </span>
                     <StatusBadge status={overdue ? "overdue" : "due today"}>{overdue ? `Overdue, ${when}` : "Due today"}</StatusBadge>
+                    <span className="sr-only">. Open enquiries.</span>
                   </button>
                 </li>
               )

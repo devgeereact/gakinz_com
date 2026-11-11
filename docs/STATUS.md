@@ -26,18 +26,18 @@ Anything about signed-in use of the live system is NOT TESTED unless a row says 
 
 ## 0. Current measurements
 
-Measured on 2026-11-10 on the Mac on branch `goal/finish` (from `main` at `d30e95b`, local only, not released); the live checks and the host's PHP version are from 2026-11-09. Re-measure and update
+Measured on 2026-11-11 on the Mac on branch `goal/finish` (V1.1 run on top of the released V1, `4bdaed7`; local only, not released); the live checks and the host's PHP version are from 2026-11-09. Re-measure and update
 this table when a count changes; the previous figures are in the history above.
 
 | Measure | Command | Result |
 |---|---|---|
-| Styling and packages | `vite.config.ts`, `package.json` | Tailwind CSS v4 through `@tailwindcss/vite`, pnpm (`pnpm-lock.yaml`) on branch `chore/tailwind-v4`, **not released** (D-062, `docs/AUDIT.md` 2026-11-10) |
-| Unit tests | `pnpm test` | **PASS.** 674 tests in 61 files (finish run: the scheduled-jobs notice model, `check:facts` and `drill:restore` helpers) |
-| Server integration tests | `pnpm run test:server`, local throwaway `*_test` database | **PASS.** 661 tests in 52 files on local MariaDB 11.4.13 (finish run: `enquiry-notify` 8, `deletion-alert` 4, `cron-heartbeat` 8, `vat-totals` 10, `portal-isolation` 24 added), run as `GK_TEST_DB_HOST=127.0.0.1 GK_TEST_DB_PORT=3329 GK_TEST_DB_USER=root GK_TEST_DB=gakinz_finish_test GK_TEST_PHP_PORT=5441 GK_TEST_PROVIDER_PORT=5442 pnpm run test:server`; CI (MySQL 8) has not run this branch |
-| Browser tests | `pnpm run build && pnpm run test:browser` | **PASS.** 6 tests in 1 file: the contact form in headless Chromium at 375 and 1280 px against local PHP and a throwaway database (`tests/browser/contact.test.ts`). Signed-in screens and axe are NOT covered |
+| Styling and packages | `vite.config.ts`, `package.json` | Tailwind CSS v4 through `@tailwindcss/vite`, pnpm (`pnpm-lock.yaml`) on branch `chore/tailwind-v4`, **not released** (D-064, `docs/AUDIT.md` 2026-11-10) |
+| Unit tests | `pnpm test` | **PASS.** 678 tests in 61 files (V1.1: the Today deletion section and the owner-alert notice added to `todayModel.test.ts`) |
+| Server integration tests | `pnpm run test:server`, local throwaway `*_test` database | **PASS.** 669 tests in 53 files on local MariaDB 11.4.13 (V1.1: `today` 3 added, `alert-failures` 5 added), run as `GK_TEST_DB_HOST=127.0.0.1 GK_TEST_DB_PORT=3329 GK_TEST_DB_USER=root GK_TEST_DB=<name>_test GK_TEST_PHP_PORT=<port> GK_TEST_PROVIDER_PORT=<port> pnpm run test:server` |
+| Browser tests | `pnpm run build && pnpm run test:browser` | **PASS.** 140 tests in 3 files, three runs in a row: the contact form (6); all 32 public pages at 375 and 1280 px (66); 34 CMS screens at both sizes as owner, client and editor against real PHP and a seeded throwaway database, with Clerk stubbed in a test-only build (68). `GK_AXE=<axe.min.js>` adds axe (0 violations). Signed-in use with real data, Safari and a real phone are NOT covered |
 | Server suite on MySQL 8 | `pnpm run test:server` against MySQL 8.0 (`docs/OPERATIONS.md` section 8) | Last PASS 2026-10-20 (519 tests). MySQL 5.7 NOT TESTED; the live engine is UNVERIFIED (K-099) |
 | Type check and build | `pnpm run build` | **PASS.** 32 public pages and `app-shell.html` prerendered, `sitemap.xml` with 32 URLs |
-| Lint | `pnpm run lint:ratchet` | **PASS** at the ceiling: 5 errors, 0 warnings. **`pnpm run lint` still fails** (K-002) |
+| Lint | `pnpm run lint` | **PASS.** 0 errors, 0 warnings (K-002 closed 2026-11-11); the ratchet script is gone |
 | Documentation | `pnpm run docs:check` | **PASS.** 27 documents |
 | PHP files | `ls server/*.php`, `php -l` | 68: 50 endpoints and 18 `_`-prefixed includes (`_notify.php` added 2026-11-10), all passing `php -l` (PHP 8.5.12 locally; the host runs 8.4.27, checked 2026-11-08) |
 | Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 42 |

@@ -24,6 +24,7 @@ export const TODAY_SECTION_LABELS: Record<TodaySectionKey, string> = {
   overdue_tasks: "Overdue tasks",
   waiting_material: "Waiting client material",
   unpaid_invoices: "Unpaid invoices",
+  deletion_requests: "Data deletion requests",
 }
 
 /**
@@ -42,6 +43,7 @@ const SECTION_ROLES: Record<TodaySectionKey, Role[]> = {
   overdue_tasks: DELIVERY,
   waiting_material: DELIVERY,
   unpaid_invoices: ["super_admin", "admin", "manager"],
+  deletion_requests: DELIVERY, // support.php STAFF: the same five roles
 }
 
 /** The sections a role should receive, in screen order. */
@@ -106,6 +108,38 @@ export function scheduledJobsNotice(view: TodayView): ScheduledJobsNotice | null
   }
 }
 
+export type OwnerAlertsNotice = { title: string; detail: string; lines: string[] }
+
+const ALERT_KIND_LABELS: Record<string, string> = {
+  enquiry: "New enquiry",
+  deletion: "Data deletion request",
+  suppressed: "Held back (20 an hour limit)",
+}
+
+/**
+ * The notice for the owner when alert emails (D-061) failed or were held back in the last 7 days, or null when none
+ * did, when the reply does not say (an older today.php) or when the load failed. The records themselves are safe in
+ * Leads and Support; only the email is missing, and the notice says which.
+ */
+export function ownerAlertsNotice(view: TodayView): OwnerAlertsNotice | null {
+  const a = view.data?.owner_alerts
+  if (!a || typeof a.failed !== "number" || a.failed < 1) return null
+  const items = Array.isArray(a.items) ? a.items : []
+  const lines = items
+    .filter((i) => i && typeof i.detail === "string" && typeof i.kind === "string" && ALERT_KIND_LABELS[i.kind])
+    .map((i) => {
+      const at = typeof i.at === "string" ? new Date(i.at) : null
+      const when = at && !Number.isNaN(at.getTime()) ? `, ${at.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : ""
+      return `${ALERT_KIND_LABELS[i.kind]} ${i.detail}${when}`
+    })
+  if (a.failed > items.length) lines.push(`And ${a.failed - items.length} more.`)
+  return {
+    title: `${a.failed} alert ${a.failed === 1 ? "email" : "emails"} did not go out in the last 7 days`,
+    detail: "The enquiry or request is saved: open Leads or Support to see it. If this keeps happening, check the mail settings on the host.",
+    lines,
+  }
+}
+
 export type TodayRow =
   | { key: TodaySectionKey; label: string; state: "unavailable" }
   | { key: TodaySectionKey; label: string; state: "empty" }
@@ -140,6 +174,7 @@ export const TODAY_SECTION_SCREENS: Record<TodaySectionKey, string> = {
   overdue_tasks: "/app/projects",
   waiting_material: "/app/projects",
   unpaid_invoices: "/app/invoicing",
+  deletion_requests: "/app/support",
 }
 
 export const sectionRoute = (key: TodaySectionKey): string => TODAY_SECTION_SCREENS[key]

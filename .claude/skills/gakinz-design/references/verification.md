@@ -17,7 +17,7 @@ axe-core version in every report: newer versions add rules (4.14.0 flagged the l
 ## 1. Gate
 
 ```bash
-pnpm run build && pnpm test && pnpm run lint:ratchet && pnpm run docs:check
+pnpm run build && pnpm test && pnpm run lint && pnpm run docs:check
 find server -name '*.php' -print0 | xargs -0 -n1 php -l
 ```
 

@@ -3,10 +3,13 @@
 #
 #   scripts/set-server-key.sh ANTHROPIC_KEY      # Anthropic, tried first
 #   scripts/set-server-key.sh OPENROUTER_KEY     # OpenRouter, the backup
+#   scripts/set-server-key.sh STRIPE_SECRET      # Stripe secret or restricted key (sk_test_, rk_test_, sk_live_, rk_live_)
+#   scripts/set-server-key.sh STRIPE_WEBHOOK_SECRET   # the endpoint's signing secret (whsec_...)
 #   scripts/set-server-key.sh                    # asks which
 #
 # Also takes ANTHROPIC_MODEL, ANTHROPIC_EFFORT, OR_MODEL and OR_FALLBACK_MODEL (the OpenRouter model tried when
-# OR_MODEL fails; shown as you type).
+# OR_MODEL fails; shown as you type). The two STRIPE_ settings are written as plain variables ($STRIPE_SECRET = '...';),
+# because payments.php reads them from $GLOBALS; the others are define() lines.
 #
 # The value is read with a hidden prompt and sent over SSH on standard input, so
 # it never appears on screen, in shell history, in a process list or in this
@@ -21,7 +24,7 @@
 set -euo pipefail
 
 HOST="${GK_SSH_HOST:-cpanel}"
-ALLOWED="ANTHROPIC_KEY OPENROUTER_KEY ANTHROPIC_MODEL ANTHROPIC_EFFORT OR_MODEL OR_FALLBACK_MODEL"
+ALLOWED="ANTHROPIC_KEY OPENROUTER_KEY ANTHROPIC_MODEL ANTHROPIC_EFFORT OR_MODEL OR_FALLBACK_MODEL STRIPE_SECRET STRIPE_WEBHOOK_SECRET"
 
 NAME="${1:-}"
 if [[ -z "$NAME" ]]; then
@@ -33,7 +36,7 @@ if [[ " $ALLOWED " != *" $NAME "* ]]; then
   exit 2
 fi
 
-if [[ "$NAME" == *_KEY ]]; then
+if [[ "$NAME" == *_KEY || "$NAME" == STRIPE_SECRET || "$NAME" == STRIPE_WEBHOOK_SECRET ]]; then
   read -rs -p "Paste the value for $NAME (hidden), then Enter: " VALUE
   echo
 else
@@ -48,7 +51,8 @@ fi
 # Runs on the server. Reads the setting name from argv and the value from stdin.
 read -r -d '' REMOTE <<'PHP' || true
 $name = $argv[1] ?? '';
-$allowed = ['ANTHROPIC_KEY', 'OPENROUTER_KEY', 'ANTHROPIC_MODEL', 'ANTHROPIC_EFFORT', 'OR_MODEL', 'OR_FALLBACK_MODEL'];
+$allowed = ['ANTHROPIC_KEY', 'OPENROUTER_KEY', 'ANTHROPIC_MODEL', 'ANTHROPIC_EFFORT', 'OR_MODEL', 'OR_FALLBACK_MODEL', 'STRIPE_SECRET', 'STRIPE_WEBHOOK_SECRET'];
+$asVariable = in_array($name, ['STRIPE_SECRET', 'STRIPE_WEBHOOK_SECRET'], true);
 if (!in_array($name, $allowed, true)) { fwrite(STDERR, "Unknown setting.\n"); exit(2); }
 $value = trim((string)stream_get_contents(STDIN));
 if (!preg_match('~^[A-Za-z0-9._:/-]{1,400}$~', $value)) { fwrite(STDERR, "That value has characters a key never has; nothing was changed.\n"); exit(2); }
@@ -56,8 +60,10 @@ $home = rtrim((string)getenv('HOME'), '/');
 $file = "$home/private-config/gakinz_com/config.php";
 if (!is_file($file)) { fwrite(STDERR, "No private config at ~/private-config/gakinz_com/config.php; nothing was changed.\n"); exit(1); }
 $src = (string)file_get_contents($file);
-$line = "define('$name', '$value');";
-$pattern = '~^[ \t]*define\(\s*[\'"]' . $name . '[\'"]\s*,.*$~m';
+$line = $asVariable ? "\$$name = '$value';" : "define('$name', '$value');";
+$pattern = $asVariable
+  ? '~^[ \t]*\$' . $name . '\s*=.*$~m'
+  : '~^[ \t]*define\(\s*[\'"]' . $name . '[\'"]\s*,.*$~m';
 if (preg_match($pattern, $src)) {
   $out = preg_replace_callback($pattern, fn() => $line, $src, 1);
 } elseif (preg_match('~\?>\s*$~', $src)) {

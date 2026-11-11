@@ -46,5 +46,3 @@ server/uploads/
 .local-test/
 .local-state/
 
-# GSD planning notes (local only; the task file stays .agent/CURRENT-TASK.md)
-.planning/

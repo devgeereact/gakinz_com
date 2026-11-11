@@ -44,12 +44,11 @@ section 8).
 | `pnpm run test:server` | PHP endpoints against a throwaway local `*_test` database |
 | `pnpm run test:watch` | Vitest in watch mode |
 | `pnpm run verify` | The release checks and build plus the upload guard, on uncommitted work. Never contacts the host |
-| `pnpm run release` | Dry run of a release over SSH; add `--go` to upload. A push to `main` does this from GitHub Actions |
+| `pnpm run release` | Dry run of a release over SSH; add `-- --go` to upload. A push to `main` does this from GitHub Actions |
 | `pnpm run check:live` | After a release: 16 read-only GET checks against the live site (`docs/DEPLOYMENT.md` section 5) |
 | `pnpm run typecheck` | `tsc -b --noEmit` |
-| `pnpm run lint` | ESLint. **Currently fails**; the count is in `docs/STATUS.md` section 0 and the backlog in `docs/KNOWN-ISSUES.md` K-002 |
-| `pnpm run lint:ratchet` | Fails if that count grows. CI runs it |
-| `pnpm run docs:check` | Fails on a broken document link, or (with `--base <ref>`) a server or schema change without its documents. CI runs it |
+| `pnpm run lint` | ESLint. Must report 0 errors and 0 warnings; CI and `release.json` run it (K-002 closed) |
+| `pnpm run docs:check` | Fails on a broken document link, or (with `-- --base <ref>`) a server or schema change without its documents. CI runs it |
 | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` | PHP syntax gate |
 
 ## Stack
@@ -75,7 +74,7 @@ src/
   index.css      design tokens for both surfaces, and the utility layer
 server/          PHP endpoints and shared includes, schema.sql, .htaccess, config template
 tests/server/    server integration tests, run against a local *_test database
-scripts/         release, prerender, lint ratchet and documentation check
+scripts/         release, prerender and documentation check
 docs/            project documentation, flat, see below
 .claude/skills/  the gakinz-design project skill (design rules and checks)
 ```
@@ -105,7 +104,7 @@ once.
 | `.agent/CURRENT-TASK.md` | The task in hand, its scope, authority and evidence |
 | `.agent/MCP-PROFILE.yml` | Which integrations an agent may read or change |
 | `server/README.md` | The server folder: install steps and what each file is for |
-| `docs/ROADMAP.md` | The frozen V1 finish line (what "finished" means), the parking lot, what was cut and what waits for the owner |
+| `docs/ROADMAP.md` | What is done, what is left and what is parked: the V1 and V1.1 finish lines, the planned V1.2 and V2, the parking lot by theme, what was cut and what waits for the owner |
 | `docs/CHANGELOG.md` | What changed in the product, newest first |
 | `docs/VERIFICATION.md` | What was actually run for the finish line, and the owner's own walk through it |
 | `docs/WORKBOOK.md` | The one page to work from: state, what is left, standing rules and order of work. Start here |

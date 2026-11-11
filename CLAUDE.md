@@ -34,10 +34,9 @@ through `src/lib/api.ts`.
 | Install | `pnpm install` |
 | Develop | `pnpm run dev` (port 5102, `strictPort`) |
 | Test | `pnpm test` (unit), `pnpm run test:server` (needs local MySQL or MariaDB) |
-| Lint ratchet | `pnpm run lint:ratchet` |
+| Lint | `pnpm run lint` (0 errors, 0 warnings) |
 | Documentation check | `pnpm run docs:check` |
 | Type check, build and prerender | `pnpm run build` (`tsc -b`, `vite build`, the SSR build, then `scripts/prerender.mjs`; no network) |
-| Lint | `pnpm run lint` |
 | PHP syntax gate | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` |
 
 ## Sources of truth
@@ -91,6 +90,9 @@ When this file and the code disagree, the code wins and this file is wrong.
   `docs/STATUS.md` and `docs/KNOWN-ISSUES.md` before starting, update the affected documents in
   the same pull request, and run `pnpm run docs:check`.
 
+- Plan before building: follow `AGENTS.md`, "How work is planned and built" (the Superpowers skills: brainstorming, writing-plans,
+  test-driven-development, verification-before-completion). Scope per version is in `docs/ROADMAP.md`.
+
 - TypeScript throughout. `pnpm run build` runs `tsc -b`, so a type error blocks the build and
   the deploy.
 - Public pages render inside the `.gk-site` wrapper (`src/marketing/site.css`, D-046) on a
@@ -104,7 +106,7 @@ When this file and the code disagree, the code wins and this file is wrong.
   hides the feature.
 - Public entrances (`.rise` in `src/marketing/site.css`) are visible at rest and animate only
   when motion is allowed. Never gate a marketing entrance on JavaScript.
-- Tailwind v4 through `@tailwindcss/vite`; the tokens live in `src/index.css` (D-062). There is no `tailwind.config.js` and no PostCSS config. Plain CSS outside a layer beats utilities, and `space-y-*` margins now sit on the earlier child, so a child's own `mb-*` overrides the gap. Packages: pnpm.
+- Tailwind v4 through `@tailwindcss/vite`; the tokens live in `src/index.css` (D-064). There is no `tailwind.config.js` and no PostCSS config. Plain CSS outside a layer beats utilities, and `space-y-*` margins now sit on the earlier child, so a child's own `mb-*` overrides the gap. Packages: pnpm.
 - Visual work follows the project skill `.claude/skills/gakinz-design/`; token values and their
   measured contrast are in `docs/DESIGN-SYSTEM.md`.
 
@@ -116,8 +118,8 @@ counts are in `docs/STATUS.md` section 0. This file does not repeat them, so it 
 
 - `main` is live. The last code release was `983606c` (2026-11-08) through `release.mjs`; each
   release is recorded in `docs/WORKBOOK.md` section 1 and its checks in `docs/AUDIT.md`.
-- `pnpm run lint` still fails (K-002). `pnpm run lint:ratchet` holds the ceiling in
-  `scripts/lint-ratchet.mjs`, and the count must not grow.
+- `pnpm run lint` passes with 0 errors and 0 warnings (K-002 closed 2026-11-11); CI and the release checks run it,
+  so a new problem blocks the build.
 - Anything checked only against mocked API responses is NOT TESTED on real data (K-044).
 - Gated features ship switched off (D-050). Do not switch one on without the named gates.
 - A live super-admin credential was published in an earlier revision of this file and is in

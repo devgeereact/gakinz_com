@@ -305,7 +305,7 @@ fresh audit is run.
 ## D-021 · The lint backlog is recorded, not fixed
 **Date:** 2026-09-04 · **Status:** active
 
-`npm run lint` fails with 60 errors and 7 warnings across 42 files. This documentation
+`pnpm run lint` fails with 60 errors and 7 warnings across 42 files. This documentation
 migration does not change application code, so the backlog is written into
 `docs/KNOWN-ISSUES.md` with its measured breakdown.
 
@@ -580,7 +580,7 @@ and is not edited. It is superseded here rather than amended, because the situat
 changed rather than the history.
 
 **What was measured, on 2026-09-22, against the production build served locally by
-`npm run preview` and driven through the Chrome DevTools protocol:**
+`pnpm run preview` and driven through the Chrome DevTools protocol:**
 
 | Measurement | Result |
 |---|---|
@@ -682,7 +682,7 @@ the owner's review (`docs/STATUS.md` section 5). **Why:** K-028.
 ## D-036 · Server behaviour is tested against a synthetic database, and deploy waits for CI
 **Date:** 2026-10-10 · **Status:** active
 
-`npm run test:server` runs the real PHP endpoints from a temporary copy of `server/` with a
+`pnpm run test:server` runs the real PHP endpoints from a temporary copy of `server/` with a
 synthetic `config.php`, against a local database whose name must end in `_test`, with a fake
 payment provider and `mail()` pointed at `/usr/bin/true`. It refuses any non-local host. CI
 runs it with unit tests, `php -l` and the lint ratchet, and `deploy.yml` runs only after CI
@@ -798,14 +798,14 @@ now follows the GEE OS standard-application layout (`docs/GEE-OS.md`).
 A change is not complete until the documents it affects are updated in the same pull request.
 The change-to-document map is in `AGENTS.md`, "Keeping documents current". Measured counts
 live only in `docs/STATUS.md` section 0, and server work not yet uploaded lives only in
-`docs/DEPLOYMENT.md` section 5. `npm run docs:check` (`scripts/docs-check.mjs`) runs in CI on
+`docs/DEPLOYMENT.md` section 5. `pnpm run docs:check` (`scripts/docs-check.mjs`) runs in CI on
 every pull request: relative links must resolve, the owner's temporary planning folder must not
 be referenced, a server PHP or `.htaccess` change must touch `docs/DEPLOYMENT.md`, and a schema
 change must touch `docs/DATA-MODEL.md` and `docs/DEPLOYMENT.md`.
 **Why:** by 2026-10-10 counts had drifted between documents, three partial upload lists
 competed in `docs/DEPLOYMENT.md`, and several fixed defects were still listed as open. A check
 that a document changed cannot prove it changed correctly; review still has to.
-**Evidence:** `npm run docs:check -- --base refs/remotes/origin/chore/codebase-hygiene` passes
+**Evidence:** `pnpm run docs:check --base refs/remotes/origin/chore/codebase-hygiene` passes
 on the branch, and fails, naming `docs/DEPLOYMENT.md`, when a server file is touched alone.
 
 ## D-046 · The public site and GAkinzOS move to the approved 2026 redesign
@@ -976,9 +976,9 @@ and a Lighthouse run are NOT TESTED.
 5. **Public site unchanged.** Clerk loads only on `/login` and under `/app` (the guard is a lazy
    route), so visitors to the marketing site download no extra script (entry bundle 198 KB, was 200 KB).
 
-Evidence: `npm run test:server` 527 passed on a throwaway database (`tests/server/clerk.test.ts`:
+Evidence: `pnpm run test:server` 527 passed on a throwaway database (`tests/server/clerk.test.ts`:
 linking by email and id, no takeover, unknown email, suspended, client role limits, bad tokens,
-existing sessions still work); `npm test` 545 passed; lint ratchet at its 5-error ceiling; build
+existing sessions still work); `pnpm test` 545 passed; lint ratchet at its 5-error ceiling; build
 with the live key has no secret keys. NOT TESTED: a real sign-in, the live server.
 
 6. **Exception to the kit's Never list, 2026-10-30.** The owner instructed the deletion of the merged branch `move/cpanel-clerk` on origin ("Fix this now", naming the branch note). It was fully contained in `main` (`a034e40`); deleted on origin and locally. This is a one-off, not a change to the rule.
@@ -1127,11 +1127,26 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 
 **Why:** the cheapest change that makes "a visitor sends an enquiry and the owner receives it" true without a cron entry, a queue, or a schema change.
 
+## D-062 · Recovery targets agreed; OpenRouter left uncapped by the owner
+**Date:** 2026-11-10 · **Status:** decided by the owner ("decide for me" on the targets; "unlimited" on the OpenRouter limit).
 
-## D-062 · Tailwind CSS v4 through the Vite plugin, pnpm, and tw-animate-css
+1. **Recovery targets:** back within one working day (RTO), lose at most 24 hours of ordinary changes (RPO). The daily 03:30 host backup (`gakinz-backup.sh`, 14 days kept) and the restore drill (`pnpm run drill:restore`) are what make them true; the first restore passed on the host's own dump on 2026-11-10.
+2. **Why these:** one owner, a small database (about 60 rows) and no client files yet; a tighter point would need a more frequent dump for no stated need. Tighten the cadence if invoices or bookings start to matter hourly.
+3. **Still open under K-010:** copy dumps off the host, and try a files restore once client uploads exist.
+4. **OpenRouter:** the owner chose no monthly limit. The risk is spend with no ceiling if the AI module is used or its key is abused; the AI module stays switched as it is (Cut in the roadmap) and the exposed key is to be rotated by the owner. Revisit if the AI features are switched on.
+
+## D-063 · V1.1 finish line: five items, chosen from the parking lot
+**Date:** 2026-11-11 · **Status:** decided by the owner's "Phase 2: open V1.1 from the parking lot" (the owner named no items; the run chose them and the owner may overrule).
+
+1. `docs/ROADMAP.md` holds the frozen list: public pages laid out cleanly at 375 and 1280 px; a data deletion request on Today with its reply-by date; a failed alert email visible on Today; every CMS screen laid out cleanly with realistic data; `pnpm run lint` passing and run by CI.
+2. **Chosen by two tests:** it guards a flaw class the V1 run never looked for (layout on real pages and screens, never seen by an agent), or it closes a way the owner could miss something that matters (a legal deadline, a lost alert). Everything else stays in the parking lot.
+3. **Left out on purpose:** anything that needs a schema change (a hand-applied SQL step), the owner's facts, the adviser, Stripe or the Tailwind and pnpm migration (PR #33 is its own piece of work and changes `package.json`, so this run adds no dependency).
+4. **Unchanged from V1:** items are ticked on local evidence only; what needs the live system or the owner is BLOCKED; nothing is pushed or released by the run.
+
+## D-064 · Tailwind CSS v4 through the Vite plugin, pnpm, and tw-animate-css
 **Date:** 2026-11-10 · **Status:** decided by the owner (house standard, 10 Nov 2026), done locally on `chore/tailwind-v4`, **not pushed or released**. **Mode A** (full `@import "tailwindcss";` with Preflight), because `src/index.css` is one 480-line file with the shadcn variables and the CMS is mostly utilities already.
 
-1. **pnpm first.** `package-lock.json` became `pnpm-lock.yaml` (`pnpm import`, so every version carried over). Install scripts of `esbuild`, `core-js` and `@clerk/shared` stay blocked (`pnpm-workspace.yaml`, reviewed: none is needed). `ci.yml` and `deploy.yml` now run `pnpm install --frozen-lockfile`. `release.json` is untouched: its `npm run ...` commands only run package scripts and still work.
+1. **pnpm first.** `package-lock.json` became `pnpm-lock.yaml` (`pnpm import`, so every version carried over). Install scripts of `esbuild`, `core-js` and `@clerk/shared` stay blocked (`pnpm-workspace.yaml`, reviewed: none is needed). `ci.yml` and `deploy.yml` now run `pnpm install --frozen-lockfile`. `release.json` is untouched: its `pnpm run ...` commands only run package scripts and still work.
 2. **Upgrade tool, then review.** `@tailwindcss/upgrade` moved the config into `@theme` and renamed v3 utilities. It also (a) rewrote the strings `"outline"` to `"outline-solid"` in Badge and Button variant props and in one line of public copy (reverted), and (b) silently dropped `tailwindcss-animate`.
 3. **Vite plugin, no PostCSS.** `tailwindcss()` first in `plugins`; `postcss.config.js`, `@tailwindcss/postcss`, `postcss` and `autoprefixer` removed; `tailwind.config.js` deleted; `components.json` names no config.
 4. **Tokens.** The shadcn variables remain the single source. Variable-backed tokens are in `@theme inline` (so `.dark` and the nested `.gk-public` palette still resolve where the element sits); literals (type scale, fonts, `gk-*` palette, two shadows) are in plain `@theme`. Map in `docs/DESIGN-SYSTEM.md`.

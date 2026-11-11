@@ -4,7 +4,7 @@
   "url": "https://gakinz.com",
   "checks": [
     "npm run typecheck",
-    "npm run lint:ratchet",
+    "npm run lint",
     "npm test",
     "find server -name '*.php' -print0 | xargs -0 -n1 php -l >/dev/null"
   ],

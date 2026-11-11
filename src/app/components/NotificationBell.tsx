@@ -7,6 +7,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { invoices as invoicesApi, support as supportApi } from "@/lib/api"
+import { canAccess } from "@/lib/access"
 import { useAuth } from "@/store/auth.store"
 
 type Note = { id: string; label: string; to: string }
@@ -22,7 +23,10 @@ export default function NotificationBell() {
     if (!role) return
     let alive = true
     const out: Note[] = []
-    Promise.allSettled([invoicesApi.list(), supportApi.list()]).then(([inv, sup]) => {
+    // invoices.php refuses every role but the owner roles with a 403, so only they are asked (a client or an
+    // editor would otherwise log a failed request on every screen).
+    const askInvoices = canAccess(role, "invoicing")
+    Promise.allSettled([askInvoices ? invoicesApi.list() : Promise.reject(new Error("not asked")), supportApi.list()]).then(([inv, sup]) => {
       if (!alive) return
       if (inv.status === "fulfilled" && inv.value.ok) {
         const overdue = inv.value.data.filter((i) => i.overdue).length

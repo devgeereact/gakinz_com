@@ -563,13 +563,14 @@ security-critical):
 `calls` (every `requested` call and `confirmed` calls in the next 7 days), `overdue_tasks`
 (not done, due before today, live project), `waiting_material` (assets `requested` for more
 than 3 days, or `supplied` and awaiting acceptance) and `unpaid_invoices` (`sent` and past
-`due_at`, the `overdue` rule of `invoices.php`). At most 20 items each, oldest or most urgent
+`due_at`, the `overdue` rule of `invoices.php`) and `deletion_requests` (a client's open "Data deletion request" ticket with its reply-by date, one month after it was filed; same roles as `support.php`). At most 20 items each, oldest or most urgent
 first; `count` is the full number. Each item is `{ type, id, title, reason, at, route }`,
 where `at` is a UTC time ending `Z` or a plain due date, and `route` a CMS deep link
 (`/app/leads?enquiry=`, `/app/leads?due=1&enquiry=`, `/app/leads?view=calls&call=`,
-`/app/projects?project=&task=`, `/app/projects?project=&asset=`, `/app/invoicing?invoice=`).
+`/app/projects?project=&task=`, `/app/projects?project=&asset=`, `/app/invoicing?invoice=`, `/app/support?ticket=`).
 A missing table or failed query marks only its section `unavailable`, never an empty `ok`.
 For `super_admin`, `admin` and `manager` the reply also carries `scheduled_jobs: { last_run, stale, off }`: `last_run` is the newest `cron_run` audit row (UTC, or `null`), `stale` is true when there is none in 36 hours, and `off` names what is not running then (2026-11-10, K-145; covered by `tests/server/cron-heartbeat.test.ts`). Other roles get no such key.
+The same three roles also get `owner_alerts: { failed, items[] }` (2026-11-11, V1.1 item 3; `tests/server/alert-failures.test.ts`): `failed` counts the `enquiry_notify_failed`, `deletion_notify_failed` and `alert_suppressed` audit rows of the last 7 days, `items` lists the newest five as `{ kind: enquiry | deletion | suppressed, detail, at }`. Other roles get no such key.
 Dates use the database clock (K-075). 405 for anything but GET. Covered by
 `tests/server/today.test.ts`.
 

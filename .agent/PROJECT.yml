@@ -2,10 +2,10 @@ project:
   name: "GAkinz (gakinz.com)"
   type: "application"
   lifecycle: "maintenance"
-  status: "finishing-v1"   # 7 of 10 finish-line items ticked; 3 wait for the owner. Becomes finished-v1 when docs/ROADMAP.md is fully ticked
+  status: "finished-v1.1"   # V1.1 finished locally 2026-11-11 (5 of 5, D-063, not released). V1 is 8 of 10: items 4 and 10 wait for the owner
   risk: "production"
 
-styling: "tailwind-v4"   # @tailwindcss/vite, tokens in src/index.css (D-062); package manager: pnpm
+styling: "tailwind-v4"   # @tailwindcss/vite, tokens in src/index.css (D-064); package manager: pnpm
 
 defaults:
   mode: "existing-application"

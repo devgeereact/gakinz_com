@@ -47,12 +47,9 @@ jobs:
       - name: Typecheck
         run: pnpm run typecheck
 
-      # Lint is a RATCHET: the existing backlog (the limits in
-      # scripts/lint-ratchet.mjs) is tolerated, but any new problem fails the
-      # build. Lower the limits as the backlog falls, then switch this step to
-      # `pnpm run lint` once it reaches zero.
-      - name: Lint (ratchet)
-        run: pnpm run lint:ratchet
+      # Lint is a plain gate: any ESLint error fails the build (K-002 closed 2026-11-11).
+      - name: Lint
+        run: pnpm run lint
 
       # Documents stay current (AGENTS.md, "Keeping documents current"): links
       # resolve, and on a pull request a server or schema change must update

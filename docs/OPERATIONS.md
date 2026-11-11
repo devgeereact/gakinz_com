@@ -36,10 +36,9 @@ to exercise the server is the synthetic test path in section 8.
 | `pnpm test` | Vitest unit tests, single run |
 | `pnpm run test:watch` | Vitest, watch mode |
 | `pnpm run test:server` | PHP endpoints against a throwaway local `*_test` database (section 8) |
-| `pnpm run lint` | ESLint. Currently fails, see `docs/KNOWN-ISSUES.md` K-002 |
-| `pnpm run lint:ratchet` | Fails if the lint backlog grows |
+| `pnpm run lint` | Fails on any lint error or warning |
 | `pnpm run typecheck` | Type check only |
-| `pnpm run docs:check` | Fails on a broken document link, or with `--base <ref>` on a server or schema change without its documents |
+| `pnpm run docs:check` | Fails on a broken document link, or with `-- --base <ref>` on a server or schema change without its documents |
 | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` | PHP syntax gate |
 
 ## 2. Scheduled jobs
@@ -61,7 +60,7 @@ wget -qO- "https://gakinz.com/cron.php?key=<CRON_KEY>&job=all"
 
 ### 2.1 Adding the cron entry (owner decision, K-145)
 
-**Done 2026-11-10 (owner's "do these"):** the host's crontab now has `15 6 * * * php ~/gakinz.com/cron.php job=all` and the daily backup at 03:30 (crontab saved first as `~/backups/gakinz_com/crontab.before-gakinz-entries.*`). Before that (read-only `crontab -l`, 2026-11-09) there was no GAkinz entry, so none of the jobs below ran. The two-step plan below was collapsed into one because the database held 0 clients, 0 invoices and 0 retainers, so the first `job=all` could email and bill nobody (counts read first; it was run once by hand: `chase` 0 sent, `billing` 0 created, `uptime` 0 checked, `digest` skipped for want of `$REPORT_RECIPIENTS`). **Re-read the "before switching" checks the day a first client or invoice exists.** The digest stays off until `$REPORT_RECIPIENTS` is set.
+**Done 2026-11-10 (owner's "do these"):** the host's crontab now has `15 6 * * * php ~/gakinz.com/cron.php job=all` and the daily backup at 03:30 (server time is EST, UTC-5; the script names `/usr/local/bin/php` because cron's PATH finds the CGI build; the first scheduled run on 2026-11-10 failed for that reason and was fixed; crontab saved first as `~/backups/gakinz_com/crontab.before-gakinz-entries.*`). Before that (read-only `crontab -l`, 2026-11-09) there was no GAkinz entry, so none of the jobs below ran. The two-step plan below was collapsed into one because the database held 0 clients, 0 invoices and 0 retainers, so the first `job=all` could email and bill nobody (counts read first; it was run once by hand: `chase` 0 sent, `billing` 0 created, `uptime` 0 checked, `digest` skipped for want of `$REPORT_RECIPIENTS`). **Re-read the "before switching" checks the day a first client or invoice exists.** The digest stays off until `$REPORT_RECIPIENTS` is set.
 
 For reference, the original reasoning: Since
 2026-11-10 Today shows a notice naming what is off, and every run of `cron.php` leaves a `cron_run` audit row that
@@ -326,7 +325,7 @@ recorded evidence. Status on 2026-10-10: every gate is open, and production read
 | Business integrity | Duplicate enquiry, conversion and acceptance handling; the legal quote version; accurate invoice tax and rounding; provider reconciliation |
 | Publication | Edit round trip, draft privacy, consent, publish and unpublish, approved media, safe links, metadata and sitemap |
 | UX and accessibility | No document overflow at the tested widths; form, keyboard and assistive-technology checks; owner and client task completion |
-| Delivery | Build, tests, PHP syntax and the documentation check pass in CI; deploy waits for CI; the lint ratchet is enforced and then the backlog reduced; dependency advisory exposure decisions recorded (K-041) |
+| Delivery | Build, tests, PHP syntax and the documentation check pass in CI; deploy waits for CI; lint is a plain gate (the backlog is cleared, K-002); dependency advisory exposure decisions recorded (K-041) |
 | Operations | Response expectations, error observation, renewal review, retention decisions, incident and owner-lockout procedure |
 
 Each gate's scenarios are in `docs/TEST-PLAN.md` section 7. Launch does not need every optional
@@ -337,10 +336,10 @@ until the authentication and ownership gates pass.
 
 ## 10. Recovery targets
 
-**Proposed, awaiting the owner's agreement** (`docs/STATUS.md` section 5). These are targets,
+**Agreed 2026-11-10** (the owner delegated the choice: "decide for me"; D-062). These are targets,
 not achieved service levels.
 
-| Measure | Proposal |
+| Measure | Target |
 |---|---|
 | Recovery time (RTO) | Back within one working day |
 | Recovery point (RPO) | Lose no more than 24 hours of ordinary changes. If that is too much for invoices or bookings, tighten the backup cadence |
@@ -351,6 +350,16 @@ limited, and restoration is tested periodically, not just the backup. A first re
 an isolated environment must check the database and uploaded files together, their
 relationships and their permissions (K-010). Financial records are never deleted on an
 arbitrary data-protection timer.
+
+## 10.2 Giving a client portal access
+
+A client record alone cannot sign in. Three things must all exist, and the first live attempt (2026-11-10) stopped at the third:
+
+1. **The client record** (Clients, or Convert on an enquiry).
+2. **A CMS client account** (Settings, then add a user: role `Client`, linked to that client, same email). It carries no password. `portal.php` trusts its `client_id` for isolation.
+3. **A Clerk user with the same email.** The production Clerk instance has `sign_up_mode: restricted`, so Clerk answers "Couldn't find your account" to anyone not created there, and the sign-in code is never sent. Create the user in the Clerk dashboard (Users, Create user, email only), or send a Clerk invitation. `server/_clerk.php` then links the Clerk user to the account by verified email on first sign-in.
+
+Removing access is the reverse: delete the CMS client account, then the Clerk user. Nothing creates any of these automatically (parked: a "Grant portal access" button that does steps 2 and 3, and a clearer message than Clerk's for someone who is not set up).
 
 ## 11. Production change discipline
 
@@ -371,7 +380,7 @@ hosting changes. The release mechanics are in `docs/DEPLOYMENT.md`.
 The dump header names the server that produced it, `11.4.13-MariaDB-cll-lve` with source database
 `devgeereact_gakinz_com`: that is the live engine as at 2026-10-30 (K-099), MariaDB and not MySQL.
 
-K-010 is closed when the owner agrees the targets in the table at the top of this section (proposed: back within one working
-day, lose at most 24 hours; the daily job at 03:30 supports that) and, once client files exist, a restore of the files
-tarball has been tried too.
+K-010: the targets are agreed (back within one working day, lose at most 24 hours; the daily 03:30 job supports that). What is
+left: once client files exist, try a restore of the files tarball too, and copy dumps off the host (they still sit only on it
+and in the Mac copies pulled by hand).
 

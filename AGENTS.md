@@ -51,7 +51,7 @@ decision.
 
 ## Styling
 
-Tailwind CSS v4 is the styling system (D-062): utility classes in the markup, `tailwindcss()` in `vite.config.ts`, `@import "tailwindcss";` and the `@theme inline` token map in `src/index.css`. The shadcn variables in `:root` and `.dark` stay the single source of every CMS colour, radius and shadow; add a token to the variable and to `@theme inline` together, and record it in `docs/DESIGN-SYSTEM.md`. No `tailwind.config.js`, PostCSS, Sass or CSS-in-JS. Element defaults go in `@layer base` so utilities can override them. Plain unlayered CSS (the rest of `src/index.css`, `src/marketing/site.css`) beats every utility, so do not put a utility on an element and expect it to win over a rule there. Installed per project (`pnpm add -D tailwindcss @tailwindcss/vite`), never relied on from a global install. Packages are managed with pnpm; `pnpm-lock.yaml` is the only lockfile.
+Tailwind CSS v4 is the styling system (D-064): utility classes in the markup, `tailwindcss()` in `vite.config.ts`, `@import "tailwindcss";` and the `@theme inline` token map in `src/index.css`. The shadcn variables in `:root` and `.dark` stay the single source of every CMS colour, radius and shadow; add a token to the variable and to `@theme inline` together, and record it in `docs/DESIGN-SYSTEM.md`. No `tailwind.config.js`, PostCSS, Sass or CSS-in-JS. Element defaults go in `@layer base` so utilities can override them. Plain unlayered CSS (the rest of `src/index.css`, `src/marketing/site.css`) beats every utility, so do not put a utility on an element and expect it to win over a rule there. Installed per project (`pnpm add -D tailwindcss @tailwindcss/vite`), never relied on from a global install. Packages are managed with pnpm; `pnpm-lock.yaml` is the only lockfile.
 
 ## Commands
 
@@ -60,10 +60,9 @@ Tailwind CSS v4 is the styling system (D-062): utility classes in the markup, `t
 | Install | `pnpm install` |
 | Develop | `pnpm run dev` (port 5102, `strictPort`, fails loudly on a clash) |
 | Test | `pnpm test` (unit), `pnpm run test:server` (needs local MySQL or MariaDB) |
-| Lint ratchet | `pnpm run lint:ratchet` |
-| Documentation check | `pnpm run docs:check` (add `--base origin/<branch>` to apply the sync rule locally) |
+| Lint | `pnpm run lint` (0 errors, 0 warnings) |
+| Documentation check | `pnpm run docs:check` (add `-- --base origin/<branch>` to apply the sync rule locally) |
 | Type check, build and prerender | `pnpm run build` (`tsc -b`, `vite build`, the SSR build, then `scripts/prerender.mjs`; no network) |
-| Lint | `pnpm run lint` |
 | PHP syntax gate | `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` |
 
 ## Non-negotiable constraints
@@ -99,6 +98,23 @@ Tailwind CSS v4 is the styling system (D-062): utility classes in the markup, `t
   production mutation, deploy, DNS change or database change without explicit approval in
   the current task contract.
 
+## How work is planned and built
+
+New behaviour is designed before it is built, with the Superpowers skills (Claude Code). The order:
+
+1. **Brainstorm** (`superpowers:brainstorming`) before any new feature or change of behaviour: the purpose, the options, one
+   recommendation. A decision that constrains later work goes in `docs/DECISIONS.md` as a dated D-number. There is no separate spec file.
+2. **Plan** (`superpowers:writing-plans`) for anything of more than one step: ordered steps, each with its check, written in
+   `.agent/CURRENT-TASK.md` (the only task file). What a version contains stays in `docs/ROADMAP.md`.
+3. **Build** test first (`superpowers:test-driven-development`), one step at a time. A bug or a red test goes through
+   `superpowers:systematic-debugging` before any fix.
+4. **Prove** (`superpowers:verification-before-completion`): run the ladder in "Completion standard" and report it with evidence.
+   Money, authentication, ownership and client-isolation changes also get `superpowers:requesting-code-review`.
+
+Those skills default to `docs/superpowers/` and `.superpowers/`; this project does not use them. Documents stay flat in `docs/`,
+there is one task file, and scratch goes in `.local-state/` or `.local-test/` (both gitignored). A small fix, such as a typo or a
+one-line defect with a failing test, skips steps 1 and 2.
+
 ## Completion standard
 
 A change is complete when all of the following hold and are stated with evidence. The full
@@ -107,8 +123,8 @@ list is `docs/AUDIT.md`.
 1. `pnpm run build` succeeds, which includes `tsc -b`.
 2. `pnpm test` passes, and any new behaviour that can be unit tested has a test. A server
    change passes `pnpm run test:server`, and a money, auth or ownership change adds a case there.
-3. `pnpm run lint:ratchet` passes. The backlog is recorded in `docs/KNOWN-ISSUES.md` K-002 and
-   measured in `docs/STATUS.md`; it may shrink, never grow.
+3. `pnpm run lint` passes with no error and no warning (K-002 is closed; the history is in
+   `docs/KNOWN-ISSUES.md`).
 4. Any touched PHP passes `php -l`.
 5. The documents the change affects are updated in the same pull request, as set out in
    "Keeping documents current" below, and `pnpm run docs:check` passes.

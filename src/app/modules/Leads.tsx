@@ -485,9 +485,8 @@ export default function Leads() {
                             setOverStage(null)
                           }}
                           onClick={() => setOpenId(lead.id)}
-                          aria-label={`${lead.company || lead.name}, ${lead.name}. ${stage.label}${foot ? `, ${foot}` : ""}. Open to change the stage.`}
                           className={cn(
-                            "grid w-full cursor-grab gap-1.5 rounded-xl border bg-card p-3 text-left transition-[border-color,box-shadow] hover:border-line-strong hover:shadow-os",
+                            "relative grid w-full cursor-grab gap-1.5 rounded-xl border bg-card p-3 text-left transition-[border-color,box-shadow] hover:border-line-strong hover:shadow-os",
                             dragId === lead.id && "opacity-50",
                           )}
                         >
@@ -505,6 +504,7 @@ export default function Leads() {
                               {lead.budget && <span className="min-w-0 font-mono tabular-nums wrap-anywhere">{lead.budget}</span>}
                             </span>
                           )}
+                          <span className="sr-only">. Open to change the stage.</span>
                         </button>
                       )
                     })

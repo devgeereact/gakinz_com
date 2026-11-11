@@ -10,7 +10,7 @@ Section 5 is the one list of server work a release cannot carry.
 
 | What moves | Mechanism | Trigger |
 |---|---|---|
-| `dist/` and `server/*.php` (not `config.php`, `.htaccess`, `schema.sql`, Markdown or `*.example`) | `scripts/release.mjs --go` over SSH (`release.json`): checks (typecheck, lint ratchet, Vitest, `php -l`), build with the live Clerk key, checksum upload, entry files last, never deletes, snapshot of every changed server file in `~/backups/gakinz_com/releases/`, automatic restore if the smoke test fails | Every push to `main` that changes more than documents, after CI passes (the `deploy` job of `.github/workflows/ci.yml`, which calls `.github/workflows/deploy.yml`; restricted SSH deploy key, secrets `CPANEL_SSH_KEY` and `CPANEL_KNOWN_HOSTS`); documentation-only pushes do not deploy (`scripts/deploy-needed.mjs`). By hand: `pnpm run release`, then `pnpm run release --go` |
+| `dist/` and `server/*.php` (not `config.php`, `.htaccess`, `schema.sql`, Markdown or `*.example`) | `scripts/release.mjs --go` over SSH (`release.json`): checks (typecheck, lint, Vitest, `php -l`), build with the live Clerk key, checksum upload, entry files last, never deletes, snapshot of every changed server file in `~/backups/gakinz_com/releases/`, automatic restore if the smoke test fails | Every push to `main` that changes more than documents, after CI passes (the `deploy` job of `.github/workflows/ci.yml`, which calls `.github/workflows/deploy.yml`; restricted SSH deploy key, secrets `CPANEL_SSH_KEY` and `CPANEL_KNOWN_HOSTS`); documentation-only pushes do not deploy (`scripts/deploy-needed.mjs`). By hand: `pnpm run release`, then `pnpm run release -- --go` |
 | `server/.htaccess`, `config.php`, SQL | By a person, backup first | A decision, never automatic |
 
 On 2026-10-30 a dry run showed the live server equal to `main` (545 tests passed). The FTP workflow and `scripts/deploy-ftps.sh` were replaced; the owner deletes the FTP secrets and account.
@@ -83,7 +83,7 @@ on that push; a red CI run means nothing is deployed.
 pnpm run build          # runs tsc -b first, so a type error blocks the deploy
 pnpm test               # unit tests (src/)
 pnpm run test:server    # PHP endpoints against a throwaway local *_test database
-pnpm run lint:ratchet   # fails if the lint backlog (K-002) grows
+pnpm run lint            # 0 errors, 0 warnings
 pnpm run docs:check     # links, and the document-sync rule in AGENTS.md
 pnpm run check:live     # after a release: read-only GETs against the live site (section 5 list)
 ```
@@ -97,9 +97,8 @@ Approved 2026-10-10. Until then CI ran no tests and the deploy did not wait for 
 - **Keep the Vite build and the existing client and server model.** CI runs unit tests, the
   server tests and PHP syntax, and gains targeted synthetic endpoint and browser checks as
   they become available.
-- **Lint is a ratchet first, then a gate.** `pnpm run lint:ratchet` enforces the ceiling
-  in `scripts/lint-ratchet.mjs`; the current figure is in `docs/STATUS.md` (K-002). Clear the errors in small batches, then make
-  lint blocking. `continue-on-error` alone is advisory, not a ratchet.
+- **Lint is a gate.** `pnpm run lint` must report nothing; CI and the release checks run it (K-002 was cleared in small
+  batches under a ratchet, then the ratchet was removed). `continue-on-error` alone is advisory, not a gate.
 - **Production deploys only after the required checks pass**, or through a deliberate,
   approved release trigger. Every push to `main` with code changes releases `dist/` and
   `server/*.php`; documentation-only pushes do not (`scripts/deploy-needed.mjs`, called from `ci.yml`), and a failing CI job stops the release (K-138).
@@ -110,7 +109,7 @@ Approved 2026-10-10. Until then CI ran no tests and the deploy did not wait for 
 - **Dependencies.** Identify reachable advisories, update compatible versions in small
   batches, and remove unnecessary exports only with approval (K-041). A CSV-only export may
   remove the `xlsx` problem if nobody needs workbooks (K-017). A Tailwind major migration is
-  never an automatic audit fix (v4 was done on purpose, D-062). Any lockfile update needs a fresh build and test run.
+  never an automatic audit fix (v4 was done on purpose, D-064). Any lockfile update needs a fresh build and test run.
 
 ## 3. Server deploy
 
@@ -506,3 +505,17 @@ notes, not here.
 DNS, TLS certificates, mail hosting and Cloudflare proxy state are **out of scope for this
 repository**. Earlier revisions of the project documentation gave instructions in those areas
 that were wrong and caused outages. Read the operator's global notes instead.
+
+### Hand-applied on 2026-11-10 (owner: "delete it all")
+- **Live TEST data removed** by one SQL transaction after a fresh dump (`gakinz_auto_db_20261110_114507.sql.gz`): the `TEST Walk Ltd` client, its enquiry, quote, project, three invoices and the revoked certificate; the June "Smoke Test / GAkinz QA" enquiry; and the `dev@gakinz.com` super_admin row (it had no sessions and no authored posts; Clerk has no such user). The `TEST owner` account (id 2) stays. Reference counters (`E`, `P` for 2026) were set to 0 and the auto-increment of invoices, quotes, clients, projects, enquiries and certificates reset, so the next enquiry is `GK-E-2026-0001` and the next invoice `GK-INV-0001`. `audit_log` was left alone (it is the trail).
+- `~/gakinz-backup.sh` was replaced with the repository copy (`scripts/gakinz-backup.sh`) after the first scheduled run failed on cron's PATH.
+
+### Connecting Stripe (owner steps; none done yet on 2026-11-10)
+State read on the host that day: `$STRIPE_SECRET` empty, no `$STRIPE_WEBHOOK_SECRET`, so "Pay link" is switched off and invoices are marked paid by hand. `payment_events` exists. The code (`server/payments.php`) is tested against a fake Stripe: a pay link is a Checkout Session for the VAT-inclusive total, and the signed webhook marks an invoice paid only if Stripe's amount and currency match it.
+
+1. **Test mode first**, while only TEST invoices exist (there is no staging copy). In the Stripe dashboard (test mode) create a **restricted** API key with *Checkout Sessions: Write*, and a webhook endpoint `https://gakinz.com/payments.php?action=webhook` for `checkout.session.completed` and `payment_intent.succeeded`. The CLI can do the second: `stripe webhook_endpoints create --url "https://gakinz.com/payments.php?action=webhook" --enabled-events checkout.session.completed --enabled-events payment_intent.succeeded` prints the endpoint's `whsec_` secret in your terminal.
+2. **Put both on the host without showing them:** from the repository folder run `scripts/set-server-key.sh STRIPE_SECRET`, then `scripts/set-server-key.sh STRIPE_WEBHOOK_SECRET`. Each takes a hidden prompt, backs up `config.php`, lints it and keeps it mode 600. Nothing goes in chat, git or shell history.
+3. **Check:** in Invoicing press "Pay link" on a TEST invoice, open it, pay with Stripe's test card (`4242 4242 4242 4242`, any future date, any CVC), and confirm the invoice turns paid with the exact amount and the method "stripe". Also try the portal "Pay" button as the test client.
+4. **Go live:** create the same restricted key and webhook endpoint in live mode, and run the two commands again with the live values (key and secret change together, or webhooks fail the signature check). The first real payment is the owner's own, on a real invoice; nothing in this project is exercised with real money.
+5. If a pay link fails, `error_log` on the host names the missing Stripe permission; add it to the restricted key.
+

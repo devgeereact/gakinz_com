@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react"
+import { useState } from "react"
+import { useLoad } from "@/hooks/use-load"
 import { Loader2, Plus, RefreshCw, Send, PenLine, FileDown, Trash2, AlertCircle, FileSignature } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -74,11 +75,10 @@ function fmt(d: string | null) {
 }
 
 export default function Contracts() {
-  const [items, setItems] = useState<Contract[]>([])
-  const [clientList, setClientList] = useState<Client[]>([])
-  const [projectList, setProjectList] = useState<Project[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const { data: items, loading, error, reload: load, setData: setItems } = useLoad(() => contracts.list(), [] as Contract[])
+  // The pickers for the create form. A failed load leaves a picker empty, as before.
+  const { data: clientList } = useLoad<Client[]>(() => clientsApi.list(), [])
+  const { data: projectList } = useLoad<Project[]>(() => projectsApi.list(), [])
   const [busyId, setBusyId] = useState<number | null>(null)
 
   // Create form
@@ -95,22 +95,6 @@ export default function Contracts() {
   // Sign dialog
   const [signFor, setSignFor] = useState<Contract | null>(null)
   const [signedName, setSignedName] = useState("")
-
-  const load = async () => {
-    setLoading(true)
-    const res = await contracts.list()
-    if (res.ok) {
-      setItems(res.data)
-      setError(null)
-    } else setError(res.error)
-    setLoading(false)
-  }
-
-  useEffect(() => {
-    load()
-    clientsApi.list().then((r) => r.ok && setClientList(r.data))
-    projectsApi.list().then((r) => r.ok && setProjectList(r.data))
-  }, [])
 
   // What a template produces for the chosen client and project, merged into the body.
   const renderTemplate = (key: string, cId = clientId, pId = projectId) => {
@@ -144,11 +128,6 @@ export default function Contracts() {
       setSignerName("")
       setOpen(false)
     })
-
-  useEffect(() => {
-    if (open) applyTemplate(template)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, template, clientId, projectId])
 
   const create = async () => {
     if (!title.trim()) return toast.error("A title is required.")
@@ -211,7 +190,12 @@ export default function Contracts() {
   }
 
   const newContractDialog = (
-    <Dialog open={open} onOpenChange={(o) => (o ? setOpen(true) : closeContract())}>
+    <Dialog open={open} onOpenChange={(o) => {
+      if (o) {
+        setOpen(true)
+        applyTemplate(template)
+      } else closeContract()
+    }}>
       <DialogTrigger asChild>
         <Button>
           <Plus /> New contract
@@ -225,7 +209,13 @@ export default function Contracts() {
           <div className="grid gap-[14px] sm:grid-cols-2">
             <div className="grid gap-1.5">
               <Label htmlFor="contracts-sel1">Template</Label>
-              <Select value={template} onValueChange={setTemplate}>
+              <Select
+                value={template}
+                onValueChange={(v) => {
+                  setTemplate(v)
+                  applyTemplate(v)
+                }}
+              >
                 <SelectTrigger id="contracts-sel1"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="service">Service Agreement</SelectItem>
@@ -235,7 +225,13 @@ export default function Contracts() {
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="contracts-sel2">Client</Label>
-              <Select value={clientId} onValueChange={setClientId}>
+              <Select
+                value={clientId}
+                onValueChange={(v) => {
+                  setClientId(v)
+                  applyTemplate(template, v, projectId)
+                }}
+              >
                 <SelectTrigger id="contracts-sel2"><SelectValue placeholder="No client" /></SelectTrigger>
                 <SelectContent>
                   {clientList.map((c) => (
@@ -246,7 +242,13 @@ export default function Contracts() {
             </div>
             <div className="grid gap-1.5">
               <Label htmlFor="contracts-sel3">Project</Label>
-              <Select value={projectId} onValueChange={setProjectId}>
+              <Select
+                value={projectId}
+                onValueChange={(v) => {
+                  setProjectId(v)
+                  applyTemplate(template, clientId, v)
+                }}
+              >
                 <SelectTrigger id="contracts-sel3"><SelectValue placeholder="No project" /></SelectTrigger>
                 <SelectContent>
                   {projectList.map((p) => (
@@ -377,8 +379,8 @@ export default function Contracts() {
                         <span className="text-muted-foreground">Not yet</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
+                    <TableCell className="min-w-[10rem] max-w-[18rem] text-right">
+                      <div className="flex flex-wrap justify-end gap-1">
                         <Button variant="ghost" size="sm" disabled={busyId === c.id} onClick={() => downloadPdf(c)} title="Download PDF" aria-label={`Download PDF of ${c.title}`}>
                           <FileDown />
                         </Button>

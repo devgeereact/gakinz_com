@@ -1,7 +1,7 @@
 /**
- * Today attention list (server/today.php). One staff read with six sections:
- * new enquiries, follow-ups due, calls, overdue tasks, waiting client material
- * and unpaid invoices. Each section is computed on the database clock, lists
+ * Today attention list (server/today.php). One staff read with seven sections:
+ * new enquiries, follow-ups due, calls, overdue tasks, waiting client material,
+ * unpaid invoices and data deletion requests. Each section is computed on the database clock, lists
  * at most 20 items oldest or most urgent first, and is marked `unavailable`
  * (never an empty zero) when its own table or column is missing. A role that
  * cannot read a section's source endpoint gets no key for that section.
@@ -18,7 +18,7 @@ type Item = { type: string; id: number; title: string; reason: string; at: strin
 type Section = { status: "ok" | "unavailable"; count: number | null; items: Item[] }
 type Today = { generated_at: string; sections: Record<string, Section>; error?: string }
 
-const ALL = ["new_enquiries", "follow_ups_due", "calls", "overdue_tasks", "waiting_material", "unpaid_invoices"]
+const ALL = ["new_enquiries", "follow_ups_due", "calls", "overdue_tasks", "waiting_material", "unpaid_invoices", "deletion_requests"]
 
 function today(token: string) {
   return api<Today>("today.php", { token })
@@ -67,6 +67,15 @@ function invoice(clientId: number, status: string, due: string, number: string):
   return lastId("invoices")
 }
 
+/** A support ticket. `cols` maps further columns to raw SQL values, test data only. */
+function ticket(clientId: number | null, subject: string, cols: Record<string, string> = {}): number {
+  const keys = ["client_id", "subject", "body", ...Object.keys(cols)]
+  const vals = [q(clientId), q(subject), q("Synthetic ticket"), ...Object.values(cols)]
+  sql(`INSERT INTO tickets (${keys.join(", ")}) VALUES (${vals.join(", ")})`)
+  return lastId("tickets")
+}
+
+const DELETION = "Data deletion request"
 const ids = (s: Section) => s.items.map((i) => i.id)
 
 describe("today.php attention list", () => {
@@ -216,6 +225,46 @@ describe("today.php attention list", () => {
     expect(Math.abs(Date.parse(r.json.generated_at) - Date.now())).toBeLessThan(5 * 60_000)
   })
 
+  it("lists open data deletion requests with their reply-by date, oldest first (V1.1 item 2)", async () => {
+    const acme = createClient("Acme Ltd")
+    const beta = createClient("Beta Ltd")
+    const newer = ticket(beta, DELETION, { priority: q("high"), created_at: "NOW() - INTERVAL 2 DAY" })
+    const older = ticket(acme, DELETION, { priority: q("high"), created_at: "NOW() - INTERVAL 10 DAY" })
+
+    const r = await today(owner)
+    const s = r.json.sections.deletion_requests
+    expect(s).toMatchObject({ status: "ok", count: 2 })
+    expect(ids(s)).toEqual([older, newer])
+    // The reply-by date is the ticket's creation date plus one month, the date the owner alert quotes (K-095).
+    const due = one(`SELECT DATE_FORMAT(created_at + INTERVAL 1 MONTH, '%Y-%m-%d') FROM tickets WHERE id = ${older}`)
+    expect(s.items[0]).toMatchObject({ type: "ticket", title: "Acme Ltd", at: due, route: `/app/support?ticket=${older}` })
+    expect(s.items[0].reason).toMatch(/^Reply due by \d{1,2} \w{3} \d{4}$/)
+    expect(s.items[1].title).toBe("Beta Ltd")
+  })
+
+  it("says a deletion request is past its reply-by date, and leaves out resolved, deleted and other tickets", async () => {
+    const c = createClient("Late Ltd")
+    const late = ticket(c, DELETION, { created_at: "NOW() - INTERVAL 40 DAY" })
+    ticket(c, DELETION, { status: q("resolved") })
+    ticket(c, DELETION, { deleted_at: "NOW()" })
+    ticket(c, "Site is slow")
+    ticket(null, "Data deletion request (typed by hand)")
+    const orphan = ticket(null, DELETION) // the client row was removed: still a request that needs an answer
+
+    const s = (await today(owner)).json.sections.deletion_requests
+    expect(s).toMatchObject({ status: "ok", count: 2 })
+    expect(ids(s)).toEqual([late, orphan])
+    expect(s.items[0].reason).toMatch(/^Reply was due \d{1,2} \w{3} \d{4}, overdue$/)
+    expect(s.items[1].title).toBe("A client")
+  })
+
+  it("shows an empty deletion section as empty, and uses the subject support.php creates", async () => {
+    expect((await today(owner)).json.sections.deletion_requests).toEqual({ status: "ok", count: 0, items: [] })
+    const support = fs.readFileSync(path.resolve(__dirname, "../../server/support.php"), "utf8")
+    expect(support).toContain(`const DELETION_SUBJECT = '${DELETION}';`)
+    expect(fs.readFileSync(path.resolve(__dirname, "../../server/today.php"), "utf8")).toContain(`'${DELETION}'`)
+  })
+
   it("omits the sections a role cannot read, and refuses non-staff", async () => {
     createUser({ email: "editor@example.test", role: "editor" })
     createUser({ email: "employee@example.test", role: "employee" })
@@ -234,7 +283,7 @@ describe("today.php attention list", () => {
     expect(JSON.stringify(editor.json)).not.toContain("GK-INV-0100")
 
     const employee = await today(await login("employee@example.test"))
-    expect(Object.keys(employee.json.sections)).toEqual(["overdue_tasks", "waiting_material"])
+    expect(Object.keys(employee.json.sections)).toEqual(["overdue_tasks", "waiting_material", "deletion_requests"])
 
     expect((await today(await login("trainer@example.test"))).status).toBe(403)
     const client = await today(await login("client@example.test"))

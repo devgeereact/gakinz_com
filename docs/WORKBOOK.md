@@ -21,11 +21,11 @@ document disagree, the linked document wins and this page is wrong.
 | 2026-10-31 | `a907824` | The D-053 design finalisation | GitHub Actions, owner-approved |
 | 2026-10-31 | `fdc5d94` | Clerk's grey footer panel removed | GitHub Actions, owner-approved |
 | 2026-11-01 | `bde12c7` | Cleanup; AI on Anthropic first with OpenRouter as backup (D-054) | GitHub Actions, owner-approved ("push live") |
-| 2026-11-08 | `ae01cec` | The go-live hardening (13 commits, K-120 to K-126: Clerk second factor, CSP and HSTS, bcrypt, contact form, SEO schema) and `npm run check:live`; `.htaccess` uploaded by hand first | GitHub Actions, owner-approved at each gate; CI green on PR #24 |
+| 2026-11-08 | `ae01cec` | The go-live hardening (13 commits, K-120 to K-126: Clerk second factor, CSP and HSTS, bcrypt, contact form, SEO schema) and `pnpm run check:live`; `.htaccess` uploaded by hand first | GitHub Actions, owner-approved at each gate; CI green on PR #24 |
 | 2026-11-08 | `983606c` | AI backup model: `OR_FALLBACK_MODEL` tried when `OR_MODEL` fails (D-056) | GitHub Actions, owner-approved; CI green on PR #25 |
 | 2026-11-08 | `b301ec7` | Phase 3: staff downloads send the Clerk token, sharing keeps a public image's link, the gate and ticket panel no longer hang, the project dropdown keeps its value (K-127, K-128, K-140); the first release to wait for CI | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #27 |
 | 2026-11-09 | `ed58064` | Phase 5: Clerk is the only sign-in; password, magic-link, Google and reference routes answer 404; My account opens Clerk's panel (D-057, K-132, K-133) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #29 |
-| (not released) | `chore/tailwind-v4` | Tailwind v4 through the Vite plugin, pnpm, tw-animate-css (D-062); pushed as a branch only, awaiting the owner's push approval | none yet |
+| (not released) | `chore/tailwind-v4` | Tailwind v4 through the Vite plugin, pnpm, tw-animate-css (D-064); pushed as a branch only, awaiting the owner's push approval | none yet |
 | 2026-11-09 | `825600e` | Phase 7: reminders and the digest remember what they sent; edit a client; edit, assign and date a task; a quote opens its project; Draft a quote from an enquiry (D-059, K-141 to K-144) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #31 |
 | 2026-11-09 | `01d2269` | Phase 6: certificates issued, listed and revoked in the CMS; `/verify` throttled, uniform and uncached (D-058, K-134, K-061) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #30 |
 | 2026-11-10 | `4bdaed7` | Finish-line run: owner email on a new enquiry and on a data deletion request, per-job cron heartbeat and Today notice, the public phone number, `scripts/gakinz-backup.sh` (D-060, D-061, K-146, K-095, K-145) | GitHub Actions through `ci.yml`, owner-approved ("Go ahead and Push"); CI green on PR #32 including MySQL 8 |
@@ -40,7 +40,9 @@ Gated features ship switched off (D-050): `$RETENTION_APPLY`,
 
 ## 2. In progress
 
-**Finish-line run, 2026-11-10 (released as `4bdaed7`, PR #32, D-060 and D-061).** `docs/ROADMAP.md` freezes V1 at ten items; seven are ticked with evidence and three wait for the owner (business facts, the restore of the host's copy and recovery targets, retention periods). New in the branch: an email to `$OWNER_ALERTS` when an enquiry or a data deletion request arrives, a per-job scheduled-jobs notice on Today, `npm run test:browser`, `check:facts`, `drill:restore`, and a compacted KNOWN-ISSUES. Also done on the host the same day: `$OWNER_ALERTS` set, a daily backup job, and the first GAkinz cron entries (`docs/OPERATIONS.md` 2.1 and 5); the public phone number is live.
+**V1.1 run, 2026-11-11 (local branch `goal/finish`, not released, D-063).** Five items from the parking lot, all ticked in `docs/ROADMAP.md`: layout tests for every public page and CMS screen, Today for deletion requests and failed alerts, lint as the gate. The nine GSD phases are mapped onto versions in `docs/ROADMAP.md`; V1.2 (rest of Phase 8) and V2 (rest of Phase 9) are planned, not started.
+
+**Finish-line run, 2026-11-10 (released as `4bdaed7`, PR #32, D-060 and D-061).** `docs/ROADMAP.md` freezes V1 at ten items; seven are ticked with evidence and three wait for the owner (business facts, the restore of the host's copy and recovery targets, retention periods). New in the branch: an email to `$OWNER_ALERTS` when an enquiry or a data deletion request arrives, a per-job scheduled-jobs notice on Today, `pnpm run test:browser`, `check:facts`, `drill:restore`, and a compacted KNOWN-ISSUES. Also done on the host the same day: `$OWNER_ALERTS` set, a daily backup job, and the first GAkinz cron entries (`docs/OPERATIONS.md` 2.1 and 5); the public phone number is live.
 
 The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md). Phase 7 (daily-flow speed-ups, D-059) was released as `825600e`; nothing else is in progress. Open: the host has no GAkinz cron entry (K-145), an owner decision. Phase 5 (retire the legacy sign-in, D-057) was released as `ed58064`; nothing else is in progress.
 
@@ -48,9 +50,7 @@ The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md). Phase 7 (daily
 
 ### 3a. Engineering (no owner needed)
 
-1. **Lint, K-002.** 5 errors left: Contracts, Portal (security review first: its effect decides
-   which client's data a `client` caller sees) and the theme toggle. Then replace `lint:ratchet`
-   with `lint` in CI and close K-002.
+1. ~~**Lint, K-002.**~~ Done 2026-11-11 (V1.1 item 5): 0 errors; CI and `release.json` run `pnpm run lint`; the ratchet script is gone.
 2. **Analytics shows zero for a single failed source** (K-031 follow-up): decide whether each KPI
    should say "unavailable" instead.
 3. **Demo status in the CMS.** A Work record can only be Live or In build; add a demo flag to
@@ -121,7 +121,7 @@ The full list: [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
 ## 5. How to work
 
 1. **One branch per concern, short-lived**, merged once checked and approved.
-2. **Small batches with a gate:** build, unit and server tests, lint ratchet, docs check, and a
+2. **Small batches with a gate:** build, unit and server tests, lint, docs check, and a
    browser run for anything visible; then the owner decides on the release.
 3. **Evidence over summaries.** Report command output, not an agent's word.
 4. **Keep the code graph current.** `graphify-out/` (untracked) is rebuilt by git hooks after
