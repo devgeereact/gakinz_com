@@ -2,7 +2,7 @@ project:
   name: "GAkinz (gakinz.com)"
   type: "application"
   lifecycle: "maintenance"
-  status: "building"   # V1: 8 of 10 ticked, 4 and 10 wait for the owner. V1.1 opened 2026-11-11 (D-063), 5 items. Becomes finished-v1.1 when docs/ROADMAP.md V1.1 is fully ticked
+  status: "finished-v1.1"   # V1.1 finished locally 2026-11-11 (5 of 5, D-063, not released). V1 is 8 of 10: items 4 and 10 wait for the owner
   risk: "production"
 
 defaults:

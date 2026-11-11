@@ -2,6 +2,16 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-11 · V1.1 finish-line run (local branch `goal/finish`, not released)
+
+**Scope:** the five V1.1 items (D-063): layout of every public page and CMS screen, Today for deletion requests and failed alerts, lint as the gate. Method: tests first where there was behaviour to test, a visual review of side-by-side screenshots, axe-core over every page and screen. Commands and counts: `docs/VERIFICATION.md`.
+
+**Findings fixed:** the notification bell asked `invoices.php` as a client or editor and got a 403 on every screen; accessible names dropped visible text on the Today lead lists and the Leads cards (WCAG 2.5.3); Invoicing and Contracts row actions ran past the table at 1280 px; five `set-state-in-effect` lint errors (Portal, Contracts, the theme toggle).
+**Findings recorded, not fixed:** K-147 (live: two of the three built-in articles in the sitemap are not in the live CMS, so they render the not-found view once loaded; read-only `curl` of `blog.php?slug=`), K-148 (eight CMS tables scroll sideways inside their box on a phone), plus the V1 placeholders still on Pricing, Privacy and Work (item 4, owner).
+**Checks:** `npm run lint` 0; `npm test` 678; `npm run test:server` 669; `npm run test:browser` 140, three runs in a row; axe 0 violations on 132 loads; `npm run verify` passes; `php -l` 68 clean; `docs:check` below.
+**Not checked:** anything on the live system except one read-only `curl` per article; Safari and Firefox; a real phone; real data (K-044); the Portal screen with real client data (it was rewritten onto `useLoad`: covered by the layout test as a client login and by the unchanged server isolation tests, not by a signed-in session).
+**Still open for the owner:** V1 items 4 and 10 (facts, retention periods), the signed-in walk of the new Today sections, deciding whether to release.
+
 ## 2026-11-10 (later) · Live owner walk on gakinz.com
 
 **Scope:** `docs/VERIFICATION.md` "Owner walk" steps 1 to 7, run through Chrome on the live site by the agent while the owner was signed in (the owner asked for it; TEST records only; no payment taken, nothing emailed except the owner's own enquiry alert). **Result:** steps 1, 2, 3, 5, 7 PASS; steps 4 and 6 NOT TESTED (need a test client sign-in); the invoice PDF NOT TESTED. Evidence and the TEST records left are in `docs/VERIFICATION.md`. **Findings:** the quotes list shows the amount before VAT under "Total"; Invoicing tiles refresh only after a reload (both parked); the first real invoice will be 0004 because the walk used 0001 to 0003 (owner decision). No bug that makes a ticked item untrue.

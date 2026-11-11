@@ -39,6 +39,8 @@ Gated features ship switched off (D-050): `$RETENTION_APPLY`,
 
 ## 2. In progress
 
+**V1.1 run, 2026-11-11 (local branch `goal/finish`, not released, D-063).** Five items from the parking lot, all ticked in `docs/ROADMAP.md`: layout tests for every public page and CMS screen, Today for deletion requests and failed alerts, lint as the gate. The nine GSD phases are mapped onto versions in `docs/ROADMAP.md`; V1.2 (rest of Phase 8) and V2 (rest of Phase 9) are planned, not started.
+
 **Finish-line run, 2026-11-10 (released as `4bdaed7`, PR #32, D-060 and D-061).** `docs/ROADMAP.md` freezes V1 at ten items; seven are ticked with evidence and three wait for the owner (business facts, the restore of the host's copy and recovery targets, retention periods). New in the branch: an email to `$OWNER_ALERTS` when an enquiry or a data deletion request arrives, a per-job scheduled-jobs notice on Today, `npm run test:browser`, `check:facts`, `drill:restore`, and a compacted KNOWN-ISSUES. Also done on the host the same day: `$OWNER_ALERTS` set, a daily backup job, and the first GAkinz cron entries (`docs/OPERATIONS.md` 2.1 and 5); the public phone number is live.
 
 The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md). Phase 7 (daily-flow speed-ups, D-059) was released as `825600e`; nothing else is in progress. Open: the host has no GAkinz cron entry (K-145), an owner decision. Phase 5 (retire the legacy sign-in, D-057) was released as `ed58064`; nothing else is in progress.

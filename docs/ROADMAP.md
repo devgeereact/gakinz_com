@@ -94,7 +94,7 @@ pages and screens) or closes a way the owner could miss something that matters (
 Dashboard show "unavailable" for a failed source (K-031), and the browser holds no session token in `localStorage` (K-033).
 They are closed with that evidence in the same commit that proves it.
 
-**Progress V1.1 (2026-11-11): 5 of 5 ticked** (final ladder and report pending).
+**Progress V1.1 (2026-11-11): 5 of 5 ticked. Finished locally, not released.** The ladder is in `docs/VERIFICATION.md` (lint 0, 678 unit, 669 server, 140 browser three runs in a row, axe 0, `npm run verify`).
 
 ## Versions and the nine GSD phases (2026-11-11)
 
@@ -105,7 +105,7 @@ authority; the table says where each phase went so the two cannot disagree.
 |---|---|---|---|
 | **V0** (go-live and repair) | Hardening, docs and CI gate, Clerk repairs, safe writes, Clerk-only sign-in, certificates, daily-flow speed-ups | 1 to 7 | **Released** (`ae01cec`, `b301ec7`, `cbfd527`, `ed58064`, `01d2269`, `825600e`; Phase 2 closed 2026-11-08 with the CI gate, K-138, and the `release.mjs` wording) |
 | **V1** (frozen 2026-11-10) | Ten outcomes from enquiry to paid invoice | the owner-input core of 8 (items 4 and 10) | Released `4bdaed7`; 8 of 10 ticked; 4 and 10 BLOCKED on the owner |
-| **V1.1** (frozen 2026-11-11) | The five items above | the lint slice of 9 (item 5); layout and Today safety nets are new | **In progress**, local only |
+| **V1.1** (frozen 2026-11-11) | The five items above | the lint slice of 9 (item 5); layout and Today safety nets are new | **Finished locally 2026-11-11**, not released |
 | **V1.2** (PLANNED, not frozen) | The buildable rest of Phase 8: cookie policy that names Clerk, spam protection beyond the per-IP limit, a real 404 status for unknown paths (hand-applied rewrite, K-139), prerendered pages and sitemap entries for CMS-published posts and work | 8 | Waits for V1.1, and for the owner's legal inputs on the cookie and legal wording |
 | **V2** (PLANNED, not frozen) | Phase 9 rest: dead code (K-139), drop the orphan `items` table and legacy auth columns (hand-applied SQL after a backup), unique keys and the `audit_log` index, one formatter and one error banner, large-file splits, ESLint 10 (K-041), refresh the codebase map, and the owner's signed-in walk on real data (K-044) | 9 | Opens only when the owner says so |
 
@@ -133,7 +133,7 @@ opens a new scope. Nothing here was deleted from the code or the issue list.
 - Phase 8 public-site trust beyond the placeholders (needs legal inputs) and Phase 9 (drop retired legacy columns and tables).
 - Certificates screen checked live (issue, verify, revoke); recipient consent per certificate (K-061).
 - Demo flag for Work records in the CMS (WORKBOOK 3a.3); the three portfolio demos are already labelled "Demo" on the site.
-- Enforce the app-shell CSP; move the session token out of `localStorage` (K-033).
+- Enforce the app-shell CSP (K-033). The session token is already out of `localStorage` (checked 2026-11-11, D-057).
 - ESLint 10 for the 13 moderate advisories (K-041).
 - The home-page H1 read twice by crawlers.
 - Strict tsc leftovers: K-072, K-074, K-077, K-078, K-083, K-020.

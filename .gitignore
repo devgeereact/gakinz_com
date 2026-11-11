@@ -48,4 +48,3 @@ server/uploads/
 
 # GSD planning notes (local only; the task file stays .agent/CURRENT-TASK.md)
 .planning/
-dist-cms-test

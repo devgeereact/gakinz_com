@@ -17,7 +17,7 @@ import { seedRealistic } from "./seed"
 import { launch, startStack, type Stack } from "./stack"
 
 const ROOT = path.resolve(__dirname, "../..")
-const DIST = path.join(ROOT, "dist-cms-test")
+const DIST = path.join(ROOT, ".local-test", "dist-cms")
 
 /** Every CMS screen the owner can open (src/routes/index.tsx). */
 const OWNER_ROUTES = [

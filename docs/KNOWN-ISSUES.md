@@ -31,7 +31,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-021 | The legal pages have no review date and several compliance gaps | Medium | Open. Owner decision |
 | K-025 | Stripe charged the ex-VAT amount and marked the invoice fully paid | **Critical** | **Fixed 2026-10-10**, uploaded 2026-10-21. Past Stripe payments still need checking against their VAT-inclusive totals |
 | K-026 | PayPal payment is recorded only if the customer's browser returns | High | **Mitigated 2026-10-10:** PayPal checkout switched off |
-| K-033 | The bearer token lives in `localStorage`, and unlocking the lock screen issues a second token | Medium | **Partly fixed 2026-10-10:** unlock revokes the old token; not deployed. Storage, lifetime and CSP open |
+| K-033 | The bearer token lived in `localStorage`, and unlocking the lock screen issued a second token | Medium | **Fixed for the token (D-057, released `ed58064`; checked 2026-11-11):** the browser stores only the user record (`partialize` in `src/store/auth.store.ts`, which also drops an old stored token on load); the session is Clerk's and each request asks Clerk for a fresh token; the lock screen is gone. **Still open:** enforcing the app-shell CSP (it is Report-Only) |
 | K-034 | A contract "signature" is a staff-typed name, not client signing | Medium | Open |
 | K-038 | Public fallback copy shows engineering counts and internal file paths | Medium | **Partly fixed:** engineering copy removed 2026-10-10; screenshot placeholders gone in the D-046 rebuild. **Correction 2026-10-17:** "Portrait to come" (About) and "Outcome figures: not measured yet" (every work page) are still shown, as D-027 labelled gaps, with the legal review date. Not deployed. **Update 2026-10-19:** the six service pages are built from spec 4.3 and not deployed; coverage and area, IT prices and package price confirmation remain owner inputs (K-090 to K-092) |
 | K-041 | `npm audit` reported 25 affected packages (1 critical, 7 high) | Medium | **Fixed for runtime 2026-11-01**: 0 critical, 0 high. 13 moderate left, all ESLint dev tooling (needs ESLint 10, a planned major) |
@@ -413,8 +413,7 @@ webhook or a manual reconciliation step.
 ---
 
 ## K-033 · The bearer token lives in `localStorage`, and unlocking issues a second token
-**Severity:** medium · **Status:** **partly fixed 2026-10-10, not deployed.** The second-token
-half is fixed (below). Storage, lifetime and the CSP remain open.
+**Severity:** medium · **Status:** **token fixed (D-057, `ed58064`, checked 2026-11-11); CSP enforcement open.** The text below is the 2026-10 record, kept for history: it describes a stored session token that no longer exists.
 
 `src/store/auth.store.ts` persists the bearer token in `localStorage` under `gk-auth`, where
 any script running on the same origin can read it, and public and private pages share that

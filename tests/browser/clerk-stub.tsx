@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- a stand-in for a package that exports hooks and components together; test build only, never hot-reloaded */
 /**
  * A stand-in for `@clerk/clerk-react`, used only by the test build (vite.cms-test.config.ts). It is always signed in
  * and returns the session token the browser test put on `window.__GK_TEST_TOKEN`. Nothing here is bundled into the

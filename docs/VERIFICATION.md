@@ -4,6 +4,26 @@ What was actually run, with the result, and what only the owner can show. Result
 [AUDIT.md](AUDIT.md); the finish line they serve is [ROADMAP.md](ROADMAP.md). Status words: DONE (seen), PARTIAL,
 NOT TESTED, BLOCKED.
 
+## Local ladder, 2026-11-11, branch `goal/finish` (V1.1)
+
+Same worktree, Node 24.22.1, PHP 8.5.12, local MariaDB 11.4.13 on port 3329 (throwaway databases `gakinz_v11_test`, `gakinz_v11_srv_test`; nothing on the live host or live data). Commands as in the 2026-11-10 table, with `npm run lint` in place of the ratchet.
+
+| Rung | Result |
+|---|---|
+| `npx tsc -b --noEmit` | DONE, clean |
+| `npm run lint` | DONE, 0 errors, 0 warnings (the gate caught a lint error in the new test stub; fixed) |
+| `npm test` | DONE, 678 tests in 61 files |
+| `npm run test:server` | DONE, 669 tests in 53 files (283 s) |
+| `npm run build` | DONE, 32 public pages, `app-shell.html`, 32 sitemap URLs |
+| `npm run test:browser`, three runs in a row, with `GK_AXE` | DONE, 140 of 140 each time: contact form 6, public pages 66, CMS screens 68; axe 0 violations on 132 page loads |
+| PHP syntax | DONE, 68 files clean |
+| `npm run verify` | DONE, checks and build pass, every file uploadable, nothing sent |
+| `npm run docs:check -- --base main` | see AUDIT.md 2026-11-11 |
+
+**Visual review:** public pages 11 of 32 viewed side by side at 375 and 1280 px (home, services, one service page, pricing, work, one work page, about, contact, privacy, an article, the 404; every template class is among them, the other pages share their templates and pass the automated checks). CMS: 8 screens viewed side by side at both sizes (Enquiries, Clients, Invoicing, Contracts and four more); the other screens rest on the automated checks and axe. Defects found by looking: blank cards in a screenshot (lazy images, a capture artefact, not a defect), an article page showing the not-found view (K-147), tables that scroll in their box on a phone (K-148), invoice actions cut off at 1280 px (fixed).
+
+**NOT TESTED:** real phones, Safari, Firefox, signed-in use of the live system, real data, a real Clerk sign-in, a screen reader. The CMS test build replaces Clerk with a stub, so the Clerk sign-in screen itself is not exercised.
+
 ## Local ladder, 2026-11-10, branch `goal/finish`
 
 Run in the worktree `.local-state/wt-finish`, Node 24.22.1, PHP 8.5.12, local MariaDB 11.4.13 on its own port
