@@ -8,7 +8,7 @@ Every audit, review and checklist run for this project, newest first. Add new re
 
 **Findings fixed:** the notification bell asked `invoices.php` as a client or editor and got a 403 on every screen; accessible names dropped visible text on the Today lead lists and the Leads cards (WCAG 2.5.3); Invoicing and Contracts row actions ran past the table at 1280 px; five `set-state-in-effect` lint errors (Portal, Contracts, the theme toggle).
 **Findings recorded, not fixed:** K-147 (live: two of the three built-in articles in the sitemap are not in the live CMS, so they render the not-found view once loaded; read-only `curl` of `blog.php?slug=`), K-148 (eight CMS tables scroll sideways inside their box on a phone), plus the V1 placeholders still on Pricing, Privacy and Work (item 4, owner).
-**Checks:** `npm run lint` 0; `npm test` 678; `npm run test:server` 669; `npm run test:browser` 140, three runs in a row; axe 0 violations on 132 loads; `npm run verify` passes; `php -l` 68 clean; `docs:check` below.
+**Checks:** `npm run lint` 0; `npm test` 678; `npm run test:server` 669; `npm run test:browser` 140, three runs in a row; axe 0 violations on 132 loads; `npm run verify` passes; `php -l` 68 clean; `docs:check -- --base main` PASS.
 **Not checked:** anything on the live system except one read-only `curl` per article; Safari and Firefox; a real phone; real data (K-044); the Portal screen with real client data (it was rewritten onto `useLoad`: covered by the layout test as a client login and by the unchanged server isolation tests, not by a signed-in session).
 **Still open for the owner:** V1 items 4 and 10 (facts, retention periods), the signed-in walk of the new Today sections, deciding whether to release.
 

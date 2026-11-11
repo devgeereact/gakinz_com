@@ -18,7 +18,7 @@ Same worktree, Node 24.22.1, PHP 8.5.12, local MariaDB 11.4.13 on port 3329 (thr
 | `npm run test:browser`, three runs in a row, with `GK_AXE` | DONE, 140 of 140 each time: contact form 6, public pages 66, CMS screens 68; axe 0 violations on 132 page loads |
 | PHP syntax | DONE, 68 files clean |
 | `npm run verify` | DONE, checks and build pass, every file uploadable, nothing sent |
-| `npm run docs:check -- --base main` | see AUDIT.md 2026-11-11 |
+| `npm run docs:check -- --base main` | DONE, PASS (27 documents; the sync rule applied against `main`, 74 changed files) |
 
 **Visual review:** public pages 11 of 32 viewed side by side at 375 and 1280 px (home, services, one service page, pricing, work, one work page, about, contact, privacy, an article, the 404; every template class is among them, the other pages share their templates and pass the automated checks). CMS: 8 screens viewed side by side at both sizes (Enquiries, Clients, Invoicing, Contracts and four more); the other screens rest on the automated checks and axe. Defects found by looking: blank cards in a screenshot (lazy images, a capture artefact, not a defect), an article page showing the not-found view (K-147), tables that scroll in their box on a phone (K-148), invoice actions cut off at 1280 px (fixed).
 
