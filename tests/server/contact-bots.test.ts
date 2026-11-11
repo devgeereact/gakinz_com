@@ -94,4 +94,38 @@ describe("contact.php bot signals", () => {
     expect(r.status).toBe(429)
     expect(one("SELECT COUNT(*) FROM enquiries")).toBe("5")
   })
+
+  it("twenty-five honeypot hits from one IP write at most twenty audit rows and the rest are refused with 429", async () => {
+    const statuses: number[] = []
+    for (let i = 0; i < 25; i++) statuses.push((await api("contact.php", { body: { ...ENQUIRY, hp_site: "x" } })).status)
+    expect(statuses.slice(0, 20).every((c) => c === 201)).toBe(true)
+    expect(statuses.slice(20)).toEqual([429, 429, 429, 429, 429])
+    expect(one("SELECT COUNT(*) FROM audit_log WHERE action IN ('enquiry_bot_dropped', 'enquiry_too_fast')")).toBe("20")
+    expect(one("SELECT COUNT(*) FROM enquiries")).toBe("0")
+  })
+
+  it("the bot bucket also counts too-fast refusals, and the refusal at the cap says to wait", async () => {
+    for (let i = 0; i < 20; i++) {
+      expect((await api("contact.php", { body: { ...ENQUIRY, openedAt: Date.now() - 100 } })).status).toBe(429)
+    }
+    const r = await api<{ error: string }>("contact.php", { body: { ...ENQUIRY, openedAt: Date.now() - 100 } })
+    expect(r.status).toBe(429)
+    expect(r.json.error).toBe("Too many enquiries from this connection. Please wait a few minutes and try again.")
+    expect(one("SELECT COUNT(*) FROM audit_log WHERE action = 'enquiry_too_fast'")).toBe("20")
+  })
+
+  it("a real person who is refused for being too fast twice still gets through on the third try", async () => {
+    for (let i = 0; i < 2; i++) {
+      expect((await api("contact.php", { body: { ...ENQUIRY, openedAt: Date.now() - 200 } })).status).toBe(429)
+    }
+    expect((await api("contact.php", { body: { ...ENQUIRY, openedAt: Date.now() - 4_000 } })).status).toBe(201)
+    expect(one("SELECT COUNT(*) FROM enquiries")).toBe("1")
+  })
+
+  it("a structured hp_site value is treated as filled (a form never sends one); an empty one is no signal", async () => {
+    expect((await api<{ id: number }>("contact.php", { body: { ...ENQUIRY, hp_site: ["x"] } })).json.id).toBe(0)
+    expect(one("SELECT COUNT(*) FROM enquiries")).toBe("0")
+    expect((await api("contact.php", { body: { ...ENQUIRY, hp_site: [] } })).status).toBe(201)
+    expect(one("SELECT COUNT(*) FROM enquiries")).toBe("1")
+  })
 })

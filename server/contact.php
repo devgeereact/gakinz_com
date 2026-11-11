@@ -29,6 +29,14 @@ if ($ctype !== 'application/json') fail('Send the enquiry as JSON.', 415);
 // and far below what an unattended script would send.
 const CONTACT_WINDOW_MINUTES = 15;
 const CONTACT_MAX_PER_WINDOW = 5;
+// A second, looser bucket for the bot signals below. A honeypot hit or a too-fast post writes an audit row but is not
+// an `enquiry_submit`, so the bucket above would never see it; without this one a script could write unlimited rows.
+// Twenty in the window is far above a person who is asked to try again once or twice.
+const CONTACT_MAX_BOT_PER_WINDOW = 20;
+// A post under this many milliseconds after the form opened (`openedAt`) is asked to try again.
+const CONTACT_MIN_FILL_MS = 2500;
+// An `openedAt` older than this is not believed (a stale tab, a wrong clock) and is no signal.
+const CONTACT_MAX_OPEN_AGE_MS = 86400000;
 
 $ip = $_SERVER['REMOTE_ADDR'] ?? '';
 $stmt = $conn->prepare(
@@ -41,6 +49,17 @@ $stmt->execute();
 if ((int)($stmt->get_result()->fetch_assoc()['c'] ?? 0) >= CONTACT_MAX_PER_WINDOW) {
   fail('Too many enquiries from this connection. Please wait a few minutes and try again.', 429);
 }
+// The refusal writes no audit row, so a flood stops growing the log at the cap.
+$stmt = $conn->prepare(
+  "SELECT COUNT(*) AS c FROM audit_log
+   WHERE action IN ('enquiry_bot_dropped', 'enquiry_too_fast') AND ip = ?
+     AND created_at > (NOW() - INTERVAL " . CONTACT_WINDOW_MINUTES . " MINUTE)"
+);
+$stmt->bind_param('s', $ip);
+$stmt->execute();
+if ((int)($stmt->get_result()->fetch_assoc()['c'] ?? 0) >= CONTACT_MAX_BOT_PER_WINDOW) {
+  fail('Too many enquiries from this connection. Please wait a few minutes and try again.', 429);
+}
 
 $in = body();
 
@@ -48,7 +67,8 @@ $in = body();
 // that POSTs JSON directly can leave both fields out, so the per-IP throttle above is still the real limit.
 //
 // 1. Honeypot. `hp_site` is a field the page hides from people (off screen, out of the tab order, aria-hidden), so
-//    only a bot completes it. The answer looks exactly like success (201, no reference) so the bot learns nothing;
+//    only a bot completes it. The form sends a string; a string counts when it is not blank, and any structured
+//    value (an array) that is not empty counts too, because a form never sends one. The answer looks exactly like success (201, no reference) so the bot learns nothing;
 //    nothing is saved and nobody is mailed. It is not counted by the throttle (that counts `enquiry_submit` rows).
 $hp = $in['hp_site'] ?? '';
 if (is_array($hp) ? count($hp) > 0 : trim((string)$hp) !== '') {
@@ -60,10 +80,9 @@ if (is_array($hp) ? count($hp) > 0 : trim((string)$hp) !== '') {
 //    later is a script, or a very fast autofill; the sender is told to check and send again, and the retry works
 //    because the opening time does not move. A missing, non-numeric, future or over-a-day-old value is NO signal:
 //    an older cached page, a wrong clock or another test posts without it, and a genuine enquiry must never be
-//    refused for something the sender cannot fix. Browser and server clocks are compared, so a visitor whose clock
-//    is slightly ahead is asked to wait a moment longer, never locked out.
-const CONTACT_MIN_FILL_MS = 2500;
-const CONTACT_MAX_OPEN_AGE_MS = 86400000;
+//    refused for something the sender cannot fix. Browser and server clocks are compared: for a visitor whose clock
+//    is ahead by d ms the computed age is negative for the first d ms (no signal) and a post is refused only between
+//    d and d + 2500 ms, so the window shifts but never lengthens, and the retry always works.
 $opened = $in['openedAt'] ?? null;
 if ((is_int($opened) || is_float($opened) || (is_string($opened) && is_numeric($opened)))) {
   $age = (int)round(microtime(true) * 1000) - (float)$opened;
