@@ -106,7 +106,11 @@ Measured on the local build of 2026-09-22:
    from its head, so the sitemap follows the canonicals' slash policy (none, except `/`).
    `<lastmod>` is a post's own date, and the build date (UTC) for every other page. There is
    no `public/sitemap.xml` any more, so nothing hand-written can drift;
-7. deletes `dist-ssr/`.
+7. writes `dist/404.html`, the public not-found page rendered at `/404` outside the loop of
+   step 3 (which refuses a page that renders the 404), noindex, never in the sitemap, and its
+   inline script checked against the Content-Security-Policy with the other pages
+   (`src/prerender/not-found.ts`). `server/notfound.php` serves it with status 404;
+8. deletes `dist-ssr/`.
 
 The paths are `/`, `/work`, `/services`, `/pricing`, `/about`, `/resources`, `/contact`,
 `/sectors`, `/privacy`, `/terms`, `/cookies`, and a detail page for every built-in project,
@@ -190,7 +194,10 @@ mirrors them for navigation only.
 
 1. Apache or LiteSpeed serves the request. `server/.htaccess` serves a prerendered public
    page from its own `index.html` (`/work` and `/work/` both get `work/index.html`, with no
-   redirect), lets real files and PHP through, and sends everything else to `app-shell.html`
+   redirect), lets real files and PHP through, sends a path whose first segment the browser
+   app does not own (anything but `app`, `login`, `set-password`, `p`, `verify`, `work`,
+   `services`, `resources`, `blog`) to `notfound.php` for a real 404 with `404.html` (V1.2,
+   once the owner uploads that `.htaccess`), and sends everything else to `app-shell.html`
    so React Router handles the path in the browser.
 2. The `.htaccess` re-exposes the `Authorization` header into `HTTP_AUTHORIZATION`, because
    the CGI and FastCGI setup strips it. Without this every bearer check would fail with 401.

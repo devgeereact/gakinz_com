@@ -17,6 +17,7 @@
     "test:browser": "vitest run -c vitest.browser.config.ts",
     "docs:check": "node scripts/docs-check.mjs",
     "check:live": "node scripts/live-check.mjs",
+    "check:htaccess": "node scripts/htaccess-check.mjs",
     "check:facts": "node scripts/facts-check.mjs",
     "drill:restore": "node scripts/restore-drill.mjs"
   },

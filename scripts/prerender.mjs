@@ -8,6 +8,7 @@
  *   dist/index.html            the template, read once, then overwritten by "/"
  *   dist/app-shell.html        the SPA shell: default head, empty #root
  *   dist/<path>/index.html     one page per path in prerenderPaths()
+ *   dist/404.html              the not-found page, served with a 404 by server/notfound.php; noindex, not in the sitemap
  *   dist/sitemap.xml           every indexable page above, at its canonical URL (K-019)
  *
  * The build fails if any page's metadata is not its own (checkHeads: canonical,
@@ -83,9 +84,17 @@ for (const path of paths) {
   built.push({ path, html: page })
 }
 
+// The not-found page, built here and not in the loop above, which refuses a page that renders the 404.
+// server/.htaccess sends an unknown address to notfound.php, which answers 404 with this file (V1.2 item 5).
+const notFound = ssr.buildNotFoundPage(template, ssr.render(ssr.notFoundPath))
+const notFoundThirdParty = ssr.thirdPartyProblems(notFound)
+if (notFoundThirdParty.length) throw new Error(`prerender: ${ssr.notFoundFile} carries third-party code:\n  ${notFoundThirdParty.join("\n  ")}`)
+await writeFile(join(dist, ssr.notFoundFile), notFound)
+
 // The public pages' CSP (server/.htaccess) allows inline scripts by hash only. A changed inline
 // script would be blocked in the browser, so the build stops here instead (src/prerender/csp.ts).
-const cspProblems = ssr.cspHashProblems(built, await readFile(join(root, "server", ".htaccess"), "utf8"))
+// notfound.php sends the same policy, so the not-found page is checked with the others.
+const cspProblems = ssr.cspHashProblems([...built, { path: ssr.notFoundPath, html: notFound }], await readFile(join(root, "server", ".htaccess"), "utf8"))
 if (cspProblems.length) throw new Error(`prerender: update the hashes in server/.htaccess (and upload it):\n  ${cspProblems.join("\n  ")}`)
 
 const problems = ssr.checkHeads(heads)
@@ -95,7 +104,9 @@ if (problems.length) throw new Error(`prerender: page metadata is wrong:\n  ${pr
 const indexable = heads.filter(({ head }) => ssr.isIndexable(head))
 const sitemap = ssr.buildSitemap(indexable.map(({ path, head }) => ({ loc: head.canonical, lastmod: ssr.contentDate(path) ?? undefined })))
 await writeFile(join(dist, "sitemap.xml"), sitemap)
+const notFoundIssues = ssr.notFoundProblems(notFound, sitemap)
+if (notFoundIssues.length) throw new Error(`prerender: ${ssr.notFoundFile} is wrong:\n  ${notFoundIssues.join("\n  ")}`)
 
 await rm(ssrDir, { recursive: true, force: true })
-console.log(`prerender: ${paths.length} public pages and app-shell.html written to dist/`)
+console.log(`prerender: ${paths.length} public pages, ${ssr.notFoundFile} and app-shell.html written to dist/`)
 console.log(`prerender: sitemap.xml lists ${indexable.length} URLs`)

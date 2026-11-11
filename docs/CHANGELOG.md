@@ -4,6 +4,17 @@ What changed in the product, newest first. The checks behind each change are in 
 [VERIFICATION.md](VERIFICATION.md); why is in [DECISIONS.md](DECISIONS.md). Releases before 2026-11-10 are listed in
 [WORKBOOK.md](WORKBOOK.md) section 1.
 
+## 2026-11-11 (V1.2) · An unknown URL gets a real 404 (item 5, K-139; on `goal/v1.2`, not released)
+
+**Fixed**
+- An address that is not a page, a file or one of the browser app's own paths now answers **404** with the site's own not-found page ("That page is not here."), `X-Robots-Tag: noindex`, `Cache-Control: no-store` and the public pages' Content-Security-Policy, instead of the app page with 200 (a soft 404 in Search Console). `/work/...`, `/services/...` and `/resources/...` records published only in the CMS, `/login`, `/app/...`, `/p/<token>`, `/verify/...` and every prerendered page are unchanged.
+
+**Added**
+- The build writes `dist/404.html`: the not-found page in the same template as every page, noindex, not in the sitemap, its inline script checked against the policy like the others (`src/prerender/not-found.ts`).
+- `server/notfound.php` answers 404 with that file (or a short built-in page if it is missing). It is not an `ErrorDocument`, so the API's JSON 404 replies stay JSON.
+- `server/.htaccess` sends unknown first segments to `notfound.php` and gives it the public pages' policy. **The owner uploads it by hand** after the release (`docs/DEPLOYMENT.md` section 5); until then the live site is unchanged.
+- `pnpm run check:htaccess` runs the real `server/.htaccess` under Apache with PHP-FPM on this Mac over a copy of `dist/` and checks the routing (60 checks). `pnpm run check:live` gains `unknown URL answers 404`, which fails on the live site until the `.htaccess` is uploaded.
+
 ## 2026-11-11 (V1.2) · The contact form turns bots away (item 3; on `goal/v1.2`, not released)
 
 **Added**

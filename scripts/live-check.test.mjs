@@ -114,6 +114,11 @@ describe("CHECKS", () => {
     expect(bundle.includes["cache-control"]).toEqual(expect.arrayContaining(["max-age=31536000", "immutable"]))
   })
 
+  it("expects an unknown URL to answer 404, not the app page with 200 (V1.2 item 5)", () => {
+    const unknown = CHECKS.find((c) => c.name === "unknown URL answers 404")
+    expect(unknown).toMatchObject({ path: "/this-page-does-not-exist", status: 404 })
+  })
+
   it("only ever reads: no check carries a method other than GET", () => {
     expect(CHECKS.every((c) => (c.method ?? "GET") === "GET")).toBe(true)
   })

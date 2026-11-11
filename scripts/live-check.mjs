@@ -24,6 +24,9 @@ export const CHECKS = [
   { name: "API refuses an anonymous caller", path: "/auth.php?action=me", status: 401 },
   { name: "no directory listing for assets", path: "/assets/", status: 404 },
   { name: "no directory listing for uploads", path: "/uploads/", status: 404 },
+  // A real 404, not the app page with 200 (V1.2 item 5). Fails until the owner uploads the server/.htaccess
+  // that sends unknown addresses to notfound.php (docs/DEPLOYMENT.md section 5).
+  { name: "unknown URL answers 404", path: "/this-page-does-not-exist", status: 404 },
   { name: "config.php is denied", path: "/config.php", status: 403 },
   // `denied`: these files are not uploaded, so the server may answer 403/404 or just the app page.
   // What must never happen is a real, different file being served.
@@ -73,7 +76,12 @@ export function evaluate(check, response) {
   return { ok: true, detail: `${path} ${response.status}` }
 }
 
-/** The body served for a path that cannot exist, or null when the server does not answer 200 for it. */
+/**
+ * The body served for a path that cannot exist, or null when the server does not answer 200 for it.
+ * Before the V1.2 404 rule the server answered such a path with the app page and 200, so a denied file that
+ * also came back 200 was judged by comparing it with this body. Once server/.htaccess sends unknown addresses
+ * to notfound.php the probe answers 404 and this returns null, so any 200 for a denied file is a failure.
+ */
 async function fetchFallback(base, fetchFn) {
   try {
     const r = await fetchFn(new URL("/__gk-live-check-missing__", base).href, { method: "GET", redirect: "manual", signal: AbortSignal.timeout(10_000) })

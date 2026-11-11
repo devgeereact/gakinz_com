@@ -63,10 +63,23 @@ RewriteRule ^(api|contact|ai|verify)\.php$ - [L]
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteRule \.php$ - [R=404,L]
 
+# An unknown address answers a real 404 with the site's own not-found page
+# (V1.2 item 5): before this, it got the app page with 200, a soft 404.
+# notfound.php sends the status, noindex and no-store, then dist/404.html.
+# Exempt by first segment, because the browser app owns them or the CMS can
+# publish a record there that has no prerendered page: app, login,
+# set-password, p, verify, work, services, resources, blog. Real files,
+# directories and prerendered pages never get here (the rules above end them).
+# No ErrorDocument on purpose: LiteSpeed could then differ from Apache, and the
+# API's JSON 404 replies (blog.php?slug=...) must stay JSON.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule !^(app|login|set-password|p|verify|work|services|resources|blog)(/|$) notfound.php [L]
+
 # Everything else → the SPA shell: the CMS (/app/*), /login, /set-password,
-# /p/:token, /verify/:id, a record published only in the CMS, and unknown
-# paths. Not index.html, which is now the prerendered home page. Until a build
-# with app-shell.html has been deployed, fall back to index.html as before, so
+# /p/:token, /verify/:id and a record published only in the CMS. Not
+# index.html, which is now the prerendered home page. Until a build with
+# app-shell.html has been deployed, fall back to index.html as before, so
 # this file can be uploaded before or after that deploy; the client renders
 # the right page either way (src/main.tsx).
 RewriteCond %{DOCUMENT_ROOT}/app-shell.html -f
@@ -99,16 +112,17 @@ ServerSignature Off
 </IfModule>
 
 # Content-Security-Policy (K-033). Enforced on the prerendered public pages
-# (each is an index.html): checked locally on all 32 pages at 390 and 1440px
-# with no violation. The hash is the one inline script (the next-themes theme
-# setter); `npm run build` fails if it changes and is not updated here
-# (src/prerender/csp.ts). Style attributes need 'unsafe-inline'. Switching on
-# ads or a consent platform (D-050) needs their hosts added here first.
+# (each is an index.html) and on notfound.php, which serves the built 404.html:
+# checked locally on all 32 pages at 390 and 1440px with no violation. The
+# hash is the one inline script (the next-themes theme setter); `npm run build`
+# fails if it changes and is not updated here (src/prerender/csp.ts). Style
+# attributes need 'unsafe-inline'. Switching on ads or a consent platform
+# (D-050) needs their hosts added here first.
 # The SPA shell (CMS, sign-in, shared proposals) reports only: Clerk cannot be
 # run locally, so its needs are listed but not yet enforced. Watch the browser
 # console after release, then enforce.
 <IfModule mod_headers.c>
-  <FilesMatch "^index\.html$">
+  <FilesMatch "^(index\.html|notfound\.php)$">
     Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-cd+HpnSsLaEz1lKWBNn+k+xOe1m2p5ZgfjoyNvHy9eU='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
   </FilesMatch>
   <FilesMatch "^app-shell\.html$">

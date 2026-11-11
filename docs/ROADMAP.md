@@ -150,18 +150,25 @@ user outcome with a check, ticked on **local** evidence; what needs the host or 
 - [x] ~~**4. The contact throttle sees the real visitor IP behind Cloudflare.**~~ **Dropped 2026-11-11 after the builder check: already
   true.** `server/.htaccess` documents that Cloudflare IP restoration is on, and K-123 was closed with evidence (a forged
   `CF-Connecting-IP` ignored; 45 audit rows held visitor addresses). K-102 belongs to the retired reference sign-in.
-- [ ] **5. An unknown URL gets a real 404.** Today it answers 200 with the not-found page (a soft 404 in Search Console, K-139).
+- [x] **5. An unknown URL gets a real 404.** Today it answers 200 with the not-found page (a soft 404 in Search Console, K-139).
   The build writes `404.html`; `server/notfound.php` sends it with status 404 and `noindex` for any path whose first segment is not
   one the CMS can publish under (`app`, `login`, `set-password`, `p`, `verify`, `work`, `services`, `resources`, `blog`). Check: a
   build test for `404.html`; a server test for `notfound.php`; a local Apache run (`pnpm run check:htaccess`) shows 404 for an
   unknown path and 200 for every sitemap page, `/login`, `/app`, `/p/<token>` and a CMS-only article or service. **Live: BLOCKED,
   owner** (the rule goes in the host's `.htaccess`, `docs/DEPLOYMENT.md`).
+  **Evidence 2026-11-11 (local, on `goal/v1.2`, not released):** `src/prerender/not-found.test.ts` (3 tests: `404.html` titled "Page not found",
+  noindex, its inline script covered by the CSP in `server/.htaccess`, not in the sitemap); `tests/server/notfound.test.ts` (3 tests: 404 with the
+  page, `noindex`, `no-store`; the short fallback page; `blog.php?slug=<unknown>` still a JSON 404); `pnpm run check:htaccess` 60 of 60 under the
+  Mac's Apache with PHP-FPM (every prerendered page, `/login`, `/app/leads`, `/p/abc`, `/verify/x` and CMS-only `/services`, `/work` and
+  `/resources` slugs 200; unknown paths 404 with the built page, `noindex`, `no-store` and the same CSP as `/`; `/missing.php` and `/assets/` 404);
+  all written first and seen failing. The build writes 32 pages, `404.html` and 32 sitemap URLs; `pnpm test` 697, `test:server` 684 and
+  `test:browser` 146, all passing. **Live: BLOCKED, owner** until the `.htaccess` upload; `check:live`'s new `unknown URL answers 404` fails until then.
 - [ ] **6. The home page's headline is read once by crawlers.** The animated words are marked so a crawler or a screen reader gets
   the sentence one time. Check: a test on the prerendered home page. **Needs the owner's OK** (asked 2026-11-11; "Go ahead").
 
 **Not in V1.2 (parked or the owner's):** the legal "[to supply]" gaps (V1 item 4), prerendering CMS posts and work automatically
 (parked: new posts work in the browser but are not in the sitemap until the next build), the phone tables (K-148), the owner
-list. **Progress V1.2: 0 of 5 open items ticked (item 4 dropped as already true).**
+list. **Progress V1.2: 4 of 5 open items ticked on local evidence (1, 2, 3, 5; item 5 live BLOCKED on the owner's `.htaccess` upload; item 4 dropped as already true).**
 
 ## Versions and the nine GSD phases (2026-11-11)
 

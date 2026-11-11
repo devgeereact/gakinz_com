@@ -9,6 +9,8 @@ export { buildPage, buildShell, splitHead, thirdPartyProblems, withFontPreloads 
 export { readHead, checkHeads, isIndexable } from "@/prerender/head"
 export { buildSitemap } from "@/prerender/sitemap"
 export { cspHashProblems } from "@/prerender/csp"
+// Lower-case names here: an upper-case export reads to the fast-refresh lint rule as a component.
+export { buildNotFoundPage, notFoundProblems, NOT_FOUND_FILE as notFoundFile, NOT_FOUND_PATH as notFoundPath } from "@/prerender/not-found"
 
 /**
  * Build-time renderer for the public site (scripts/prerender.mjs).

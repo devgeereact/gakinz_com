@@ -38,14 +38,15 @@ section 8).
 | Command | Purpose |
 |---|---|
 | `pnpm run dev` | Dev server on port 5102 |
-| `pnpm run build` | `tsc -b`, `vite build`, an SSR build, then `scripts/prerender.mjs` (32 public pages, `app-shell.html`, `sitemap.xml`); output in `dist/`, no network |
+| `pnpm run build` | `tsc -b`, `vite build`, an SSR build, then `scripts/prerender.mjs` (32 public pages, `404.html`, `app-shell.html`, `sitemap.xml`); output in `dist/`, no network |
 | `pnpm run preview` | Serve the built output on port 5102 |
 | `pnpm test` | Vitest unit tests, single run |
 | `pnpm run test:server` | PHP endpoints against a throwaway local `*_test` database |
 | `pnpm run test:watch` | Vitest in watch mode |
 | `pnpm run verify` | The release checks and build plus the upload guard, on uncommitted work. Never contacts the host |
 | `pnpm run release` | Dry run of a release over SSH; add `-- --go` to upload. A push to `main` does this from GitHub Actions |
-| `pnpm run check:live` | After a release: 16 read-only GET checks, plus one per sitemap article, against the live site (`docs/DEPLOYMENT.md` section 5) |
+| `pnpm run check:live` | After a release: 17 read-only GET checks, plus one per sitemap article, against the live site (`docs/DEPLOYMENT.md` section 5). `unknown URL answers 404` fails until the V1.2 `server/.htaccess` is uploaded |
+| `pnpm run check:htaccess` | After `pnpm run build`: runs `server/.htaccess` under the Mac's Apache with PHP-FPM (ports 5491 and 5492) over a copy of `dist/` and checks its routing and 404s. Exit 2 (BLOCKED) without `httpd` or `php-fpm` |
 | `pnpm run typecheck` | `tsc -b --noEmit` |
 | `pnpm run lint` | ESLint. Must report 0 errors and 0 warnings; CI and `release.json` run it (K-002 closed) |
 | `pnpm run docs:check` | Fails on a broken document link, or (with `-- --base <ref>`) a server or schema change without its documents. CI runs it |

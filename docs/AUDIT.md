@@ -2,6 +2,13 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-11 (V1.2 task 4) · An unknown URL gets a real 404 (item 5, K-139)
+
+**Scope:** `src/prerender/not-found.ts`, `scripts/prerender.mjs` (`dist/404.html`), `server/notfound.php`, `server/.htaccess` (the unknown-path rule and the CSP `FilesMatch`), `scripts/live-check.mjs` (`unknown URL answers 404`), `scripts/htaccess-check.mjs` (new, `pnpm run check:htaccess`). Method: test first: `src/prerender/not-found.test.ts` failed (no module), `tests/server/notfound.test.ts` failed 2 of 3 (the JSON test is a guard and passed), the new `live-check` test failed, and `check:htaccess` failed 12 of 62 (unknown paths answered 200 with the app page) before any implementation.
+**Checks:** `php -l server/notfound.php` clean; `tests/server/notfound.test.ts` 3 of 3; `pnpm run test:server` 684 of 684 (55 files); `pnpm test` 697 of 697; `pnpm run lint` 0 problems; `pnpm run build` writes 32 pages, `404.html` and 32 sitemap URLs (no `/404`); `pnpm run check:htaccess` 60 of 60 (every prerendered page, `/login`, `/app/leads`, `/p/abc`, `/verify/x`, CMS-only `/services`, `/work` and `/resources` slugs and `/blog/...` 200; `/definitely-not-a-page`, a nested unknown path and `/workshop` 404 with the built page, `noindex`, `no-store` and the same CSP as `/`; `/missing.php` and `/assets/` 404; no `CF-RAY` 403); `pnpm run test:browser` 146 of 146 with axe on; `pnpm run docs:check --base main` PASS.
+**Harness note:** Apache 2.4 (macOS) with `mod_proxy_fcgi` and Homebrew PHP-FPM, `AllowOverride All`, directory listing on. `DirectorySlash Off` in the temporary config, because Apache's `mod_dir` would 301 `/work` to `/work/` where the host's LiteSpeed serves it directly (live `check:live`: `/work` 200).
+**Not checked:** LiteSpeed itself (the host); the live site (the `.htaccess` is the owner's upload, BLOCKED until then; `check:live`'s new check fails until it is up); a browser look at the not-found page served at an unknown address (the browser test stack does not apply `.htaccess`); `/404.html` asked for by name answers 200 with the noindex page and without the CSP header (a real file, not linked anywhere).
+
 ## 2026-11-11 (V1.2 task 3) · The contact form turns bots away (item 3)
 
 **Scope:** `server/contact.php`, `src/lib/api.ts` (`EnquiryPayload`), `src/marketing/pages/Contact.tsx`, `src/marketing/site.css` (`.hp`). Method: test first (`tests/server/contact-bots.test.ts` seen failing 5 of 8 before any server change; the browser tests seen failing on the missing field), then the change.
