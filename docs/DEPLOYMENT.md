@@ -156,7 +156,9 @@ upload the file (uploaded before the release, an unknown address would reach a `
 the `.php` 404 rule's plain 404 instead of the page). Before uploading, run `pnpm run build && pnpm run check:htaccess`: it
 runs this exact file under Apache with PHP-FPM on this Mac over a copy of `dist/` and must pass (60 of 60 on 2026-11-11). Back
 up the live file first (`cp -p ~/gakinz.com/.htaccess ~/backups/gakinz_com/htaccess.before-v1.2-404.<UTC time>`), upload,
-then confirm with `pnpm run check:live`: the new check `unknown URL answers 404` (`/this-page-does-not-exist`) passes, and every
+then confirm with `pnpm run check:live`: the new check `unknown URL answers 404` (`/this-page-does-not-exist`) passes, which
+also needs the `Content-Security-Policy` and `X-Robots-Tag` headers on that 404 (the only alarm for whether LiteSpeed applies the
+CSP `FilesMatch` to `notfound.php`), and every
 other check still passes, `/work`, `/services/web-design`, `/login` and `/app` at 200 included. Until the file is uploaded that
 one check FAILS on the live site, which is the honest signal that this step is still open. Also open one CMS-only record (for
 example a service added in the CMS) and see it load. Undo: copy the backup in `~/backups/gakinz_com/` back over

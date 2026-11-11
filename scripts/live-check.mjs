@@ -25,8 +25,9 @@ export const CHECKS = [
   { name: "no directory listing for assets", path: "/assets/", status: 404 },
   { name: "no directory listing for uploads", path: "/uploads/", status: 404 },
   // A real 404, not the app page with 200 (V1.2 item 5). Fails until the owner uploads the server/.htaccess
-  // that sends unknown addresses to notfound.php (docs/DEPLOYMENT.md section 5).
-  { name: "unknown URL answers 404", path: "/this-page-does-not-exist", status: 404 },
+  // that sends unknown addresses to notfound.php (docs/DEPLOYMENT.md section 5). The two headers are the only alarm
+  // for whether LiteSpeed applies the CSP FilesMatch to notfound.php (x-robots-tag comes from notfound.php itself).
+  { name: "unknown URL answers 404", path: "/this-page-does-not-exist", status: 404, present: ["content-security-policy", "x-robots-tag"] },
   { name: "config.php is denied", path: "/config.php", status: 403 },
   // `denied`: these files are not uploaded, so the server may answer 403/404 or just the app page.
   // What must never happen is a real, different file being served.

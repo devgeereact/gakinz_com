@@ -119,6 +119,16 @@ describe("CHECKS", () => {
     expect(unknown).toMatchObject({ path: "/this-page-does-not-exist", status: 404 })
   })
 
+  it("fails an unknown URL that answers 404 without the CSP or noindex (LiteSpeed skipped the FilesMatch for notfound.php)", () => {
+    const unknown = CHECKS.find((c) => c.name === "unknown URL answers 404")
+    expect(unknown.present).toEqual(expect.arrayContaining(["content-security-policy", "x-robots-tag"]))
+    const bare = evaluate(unknown, res(404, { "x-robots-tag": "noindex" }))
+    expect(bare.ok).toBe(false)
+    expect(bare.detail).toContain("content-security-policy")
+    expect(evaluate(unknown, res(404, { "content-security-policy": "default-src 'self'" })).ok).toBe(false)
+    expect(evaluate(unknown, res(404, { "content-security-policy": "default-src 'self'", "x-robots-tag": "noindex" })).ok).toBe(true)
+  })
+
   it("only ever reads: no check carries a method other than GET", () => {
     expect(CHECKS.every((c) => (c.method ?? "GET") === "GET")).toBe(true)
   })

@@ -2,6 +2,11 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-11 (V1.2 fix wave) · Whole-branch review fixes
+
+**Scope:** the six items of the whole-branch review of `d355c49..20ab7ad`, each test first (the red and green runs are in the fix-wave report).
+**1. Live check headers:** `check:live`'s `unknown URL answers 404` now also requires `content-security-policy` and `x-robots-tag`; `scripts/live-check.test.mjs` fails a 404 without either (24 of 24).
+
 ## 2026-11-11 (V1.2 task 5) · The home headline is read once (item 6)
 
 **Scope:** `src/marketing/pages/Home.tsx` (the hero `<h1>`), `src/marketing/pages/home-heading.test.tsx` (new). Method: test first (`pnpm exec vitest run src/marketing/pages/home-heading.test.tsx` seen failing, the lead counted 2 times, before any change), then the change.
