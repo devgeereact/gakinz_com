@@ -149,12 +149,12 @@ private `config.php`. A change that needs one of them records it here in the sam
 No SQL and no `config.php` key. The release carries the rest: `server/notfound.php` (new) and `dist/404.html` (built by
 `scripts/prerender.mjs`, noindex, not in the sitemap). The new `server/.htaccess` is the host step: a rule before the app-shell
 fallback sends a path to `notfound.php` when it is not a file or directory and its first segment is not `app`, `login`,
-`set-password`, `p`, `verify`, `work`, `services`, `resources` or `blog` (the browser app's own paths and the CMS's
-`/work`, `/services` and `/resources` records); and the public pages' Content-Security-Policy `FilesMatch` becomes
-`^(index\.html|notfound\.php)$`. No `ErrorDocument`, so the API's JSON 404 replies stay JSON. Order: release first, then
+`set-password`, `p`, `verify`, `work`, `services` or `resources`, matched without regard to case (the browser app's own paths
+and the CMS's `/work`, `/services` and `/resources` records; not `blog`, which the app has no route for, so an old `/blog/...`
+link is a 404); and the public pages' Content-Security-Policy `FilesMatch` becomes `^(index\.html|404\.html|notfound\.php)$`. No `ErrorDocument`, so the API's JSON 404 replies stay JSON. Order: release first, then
 upload the file (uploaded before the release, an unknown address would reach a `notfound.php` that is not there yet and get
 the `.php` 404 rule's plain 404 instead of the page). Before uploading, run `pnpm run build && pnpm run check:htaccess`: it
-runs this exact file under Apache with PHP-FPM on this Mac over a copy of `dist/` and must pass (60 of 60 on 2026-11-11). Back
+runs this exact file under Apache with PHP-FPM on this Mac over a copy of `dist/` and must pass (67 of 67 on 2026-11-11). Back
 up the live file first (`cp -p ~/gakinz.com/.htaccess ~/backups/gakinz_com/htaccess.before-v1.2-404.<UTC time>`), upload,
 then confirm with `pnpm run check:live`: the new check `unknown URL answers 404` (`/this-page-does-not-exist`) passes, which
 also needs the `Content-Security-Policy` and `X-Robots-Tag` headers on that 404 (the only alarm for whether LiteSpeed applies the

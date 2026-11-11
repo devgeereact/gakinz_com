@@ -62,9 +62,10 @@ remaining places where the public site says something false, shows something tha
 - The honeypot field is `hp_site`, not `website`, because password managers fill `website`.
 - A missing timing field is no signal, so older clients and direct posts still work; the limit of this protection is stated
   in `docs/SECURITY.md`: it stops form-filling bots, and a script that posts JSON directly is limited only by the IP throttle.
-- The 404 rule covers unknown first path segments only; `app`, `login`, `set-password`, `p`, `verify`, `work`, `services`,
-  `resources` and `blog` keep the app shell, because the CMS can publish pages there that the build never saw (a service
-  added in the CMS has its own slug).
+- The 404 rule covers unknown first path segments only; `app`, `login`, `set-password`, `p`, `verify`, `work`, `services`
+  and `resources` keep the app shell, in any case, because the browser app owns them or the CMS can publish pages there that
+  the build never saw (a service added in the CMS has its own slug). `blog` is not exempt (fix wave, 2026-11-11): the app has
+  no `/blog` route and posts publish under `/resources`.
 - The 404 page is served by a small PHP file (`server/notfound.php`) that sends the 404 status and the built `404.html`, not by
   a global `ErrorDocument`, so Apache and LiteSpeed behave the same and the JSON 404s of `blog.php` and `work.php` are untouched.
 - Wording on the cookie page is facts and a citation of Clerk's documentation, not legal advice; the adviser reviews it.

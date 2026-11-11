@@ -193,13 +193,16 @@ try {
   for (const p of [
     "/services/a-service-only-in-the-cms", "/work/a-project-only-in-the-cms",
     "/resources/a-post-only-in-the-cms", "/login", "/login/factor-one", "/set-password", "/app", "/app/leads",
-    "/p/abc", "/verify", "/verify/x", "/blog/an-old-link",
+    "/p/abc", "/verify", "/verify/x",
+    // The exemption matches the first segment case-insensitively, as before V1.2, so a mistyped capital keeps the app page.
+    "/App/leads", "/Work/anything",
   ]) await expectStatus(p, 200)
 
   // An unknown address: a real 404 with the site's own not-found page and the public pages' policy.
   const homeCsp = home.headers.get("content-security-policy")
   check("/ sends the Content-Security-Policy", Boolean(homeCsp), homeCsp ? "present" : "missing")
-  for (const p of ["/definitely-not-a-page", "/definitely/not/a-page", "/workshop"]) {
+  // /blog is not exempt: the app has no /blog route (posts publish under /resources), so an old /blog link is a real 404.
+  for (const p of ["/definitely-not-a-page", "/definitely/not/a-page", "/workshop", "/blog/an-old-link"]) {
     const r = await get(p)
     check(`${p} answers 404`, r.status === 404, `${p} ${r.status}`)
     const built = r.body.includes("<title>Page not found") && r.body.includes('data-prerendered="/404"')
@@ -209,6 +212,13 @@ try {
     check(`${p} is noindex and no-store`, r.headers.get("x-robots-tag") === "noindex" && r.headers.get("cache-control") === "no-store",
       `x-robots-tag ${r.headers.get("x-robots-tag")}, cache-control ${r.headers.get("cache-control")}`)
   }
+
+  // /404.html asked for by name is a real file, so the pass-through serves it with 200 (it is noindex in its own
+  // markup and linked from nowhere); the CSP FilesMatch names it, so it carries the same policy as /.
+  const named = await get("/404.html")
+  check("/404.html by name answers 200 (a real file)", named.status === 200, `/404.html ${named.status}`)
+  const namedCsp = named.headers.get("content-security-policy")
+  check("/404.html by name sends the same Content-Security-Policy as /", Boolean(namedCsp) && namedCsp === homeCsp, namedCsp ?? "missing")
 
   // The 404s and refusals the file already gave.
   await expectStatus("/missing.php", 404)

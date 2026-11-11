@@ -6,6 +6,7 @@ Every audit, review and checklist run for this project, newest first. Add new re
 
 **Scope:** the six items of the whole-branch review of `d355c49..20ab7ad`, each test first (the red and green runs are in the fix-wave report).
 **1. Live check headers:** `check:live`'s `unknown URL answers 404` now also requires `content-security-policy` and `x-robots-tag`; `scripts/live-check.test.mjs` fails a 404 without either (24 of 24).
+**2. `server/.htaccess`:** `blog` is no longer exempt (no `/blog` route; posts publish under `/resources`), the first-segment exemption matches without regard to case (`[NC]`, so `/App/leads` and `/Work/anything` keep the app page with 200 as before V1.2), and the CSP `FilesMatch` names `404.html`, so `/404.html` asked for by name (a real file, 200) carries the same policy as `/`. `pnpm run check:htaccess` failed 7 of 67 before the change and passes 67 of 67 after, under local Apache; LiteSpeed itself NOT TESTED.
 
 ## 2026-11-11 (V1.2 task 5) · The home headline is read once (item 6)
 

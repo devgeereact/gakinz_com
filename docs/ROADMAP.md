@@ -152,7 +152,7 @@ user outcome with a check, ticked on **local** evidence; what needs the host or 
   `CF-Connecting-IP` ignored; 45 audit rows held visitor addresses). K-102 belongs to the retired reference sign-in.
 - [x] **5. An unknown URL gets a real 404.** Today it answers 200 with the not-found page (a soft 404 in Search Console, K-139).
   The build writes `404.html`; `server/notfound.php` sends it with status 404 and `noindex` for any path whose first segment is not
-  one the CMS can publish under (`app`, `login`, `set-password`, `p`, `verify`, `work`, `services`, `resources`, `blog`). Check: a
+  one the CMS can publish under (`app`, `login`, `set-password`, `p`, `verify`, `work`, `services`, `resources`, any case; not `blog`, which has no route). Check: a
   build test for `404.html`; a server test for `notfound.php`; a local Apache run (`pnpm run check:htaccess`) shows 404 for an
   unknown path and 200 for every sitemap page, `/login`, `/app`, `/p/<token>` and a CMS-only article or service. **Live: BLOCKED,
   owner** (the rule goes in the host's `.htaccess`, `docs/DEPLOYMENT.md`).

@@ -4,7 +4,7 @@
  *
  * server/.htaccess sends here any path that is not a file, a directory, a
  * prerendered page or one of the browser app's own first segments (app, login,
- * set-password, p, verify, work, services, resources, blog). Before that rule an
+ * set-password, p, verify, work, services, resources, in any case). Before that rule an
  * unknown address got the app page with 200, which Search Console reports as a
  * soft 404.
  *

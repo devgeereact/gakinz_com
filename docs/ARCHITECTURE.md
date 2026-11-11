@@ -196,7 +196,7 @@ mirrors them for navigation only.
    page from its own `index.html` (`/work` and `/work/` both get `work/index.html`, with no
    redirect), lets real files and PHP through, sends a path whose first segment the browser
    app does not own (anything but `app`, `login`, `set-password`, `p`, `verify`, `work`,
-   `services`, `resources`, `blog`) to `notfound.php` for a real 404 with `404.html` (V1.2,
+   `services`, `resources`, in any case) to `notfound.php` for a real 404 with `404.html` (V1.2,
    once the owner uploads that `.htaccess`), and sends everything else to `app-shell.html`
    so React Router handles the path in the browser.
 2. The `.htaccess` re-exposes the `Authorization` header into `HTTP_AUTHORIZATION`, because

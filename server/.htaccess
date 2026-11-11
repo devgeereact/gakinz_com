@@ -68,13 +68,16 @@ RewriteRule \.php$ - [R=404,L]
 # notfound.php sends the status, noindex and no-store, then dist/404.html.
 # Exempt by first segment, because the browser app owns them or the CMS can
 # publish a record there that has no prerendered page: app, login,
-# set-password, p, verify, work, services, resources, blog. Real files,
-# directories and prerendered pages never get here (the rules above end them).
+# set-password, p, verify, work, services, resources. Matched without regard to
+# case ([NC]), so /App/leads keeps the app page as it did before this rule. Not
+# blog: the app has no /blog route (posts publish under /resources), so an old
+# /blog link is a real 404. Real files, directories and prerendered pages never
+# get here (the rules above end them).
 # No ErrorDocument on purpose: LiteSpeed could then differ from Apache, and the
 # API's JSON 404 replies (blog.php?slug=...) must stay JSON.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule !^(app|login|set-password|p|verify|work|services|resources|blog)(/|$) notfound.php [L]
+RewriteRule !^(app|login|set-password|p|verify|work|services|resources)(/|$) notfound.php [NC,L]
 
 # Everything else → the SPA shell: the CMS (/app/*), /login, /set-password,
 # /p/:token, /verify/:id and a record published only in the CMS. Not
@@ -112,7 +115,8 @@ ServerSignature Off
 </IfModule>
 
 # Content-Security-Policy (K-033). Enforced on the prerendered public pages
-# (each is an index.html) and on notfound.php, which serves the built 404.html:
+# (each is an index.html), on notfound.php, which serves the built 404.html,
+# and on 404.html itself when it is asked for by name:
 # checked locally on all 32 pages at 390 and 1440px with no violation. The
 # hash is the one inline script (the next-themes theme setter); `npm run build`
 # fails if it changes and is not updated here (src/prerender/csp.ts). Style
@@ -122,7 +126,7 @@ ServerSignature Off
 # run locally, so its needs are listed but not yet enforced. Watch the browser
 # console after release, then enforce.
 <IfModule mod_headers.c>
-  <FilesMatch "^(index\.html|notfound\.php)$">
+  <FilesMatch "^(index\.html|404\.html|notfound\.php)$">
     Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'sha256-cd+HpnSsLaEz1lKWBNn+k+xOe1m2p5ZgfjoyNvHy9eU='; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; upgrade-insecure-requests"
   </FilesMatch>
   <FilesMatch "^app-shell\.html$">
