@@ -2,7 +2,7 @@
 /**
  * Public enquiry endpoint. The corporate contact form posts here; each enquiry
  * lands in the `enquiries` table, which feeds the GAkinzOS leads pipeline (§6).
- *   POST /contact.php {name, email, company?, budget?, projectType?, message, hp_site?, openedAt?}
+ *   POST /contact.php {name, email, company?, budget?, projectType?, message, hp_site?, fillMs?}
  *     → 201 {id, reference}
  *
  * `reference` is the enquiry's GK-E-YYYY-NNNN (SQL 19, _reference.php), shown
@@ -33,9 +33,9 @@ const CONTACT_MAX_PER_WINDOW = 5;
 // an `enquiry_submit`, so the bucket above would never see it; without this one a script could write unlimited rows.
 // Twenty in the window is far above a person who is asked to try again once or twice.
 const CONTACT_MAX_BOT_PER_WINDOW = 20;
-// A post under this many milliseconds after the form opened (`openedAt`) is asked to try again.
+// A post sent under this many milliseconds after the form opened (`fillMs`) is asked to try again.
 const CONTACT_MIN_FILL_MS = 2500;
-// An `openedAt` older than this is not believed (a stale tab, a wrong clock) and is no signal.
+// A `fillMs` over this (a day) is not believed and is no signal.
 const CONTACT_MAX_OPEN_AGE_MS = 86400000;
 
 $ip = $_SERVER['REMOTE_ADDR'] ?? '';
@@ -76,17 +76,17 @@ if (is_array($hp) ? count($hp) > 0 : trim((string)$hp) !== '') {
   ok(['id' => 0, 'reference' => null], 201);
 }
 
-// 2. Minimum fill time. `openedAt` is the browser's Date.now() when the form opened. A post under CONTACT_MIN_FILL_MS
-//    later is a script, or a very fast autofill; the sender is told to check and send again, and the retry works
-//    because the opening time does not move. A missing, non-numeric, future or over-a-day-old value is NO signal:
-//    an older cached page, a wrong clock or another test posts without it, and a genuine enquiry must never be
-//    refused for something the sender cannot fix. Browser and server clocks are compared: for a visitor whose clock
-//    is ahead by d ms the computed age is negative for the first d ms (no signal) and a post is refused only between
-//    d and d + 2500 ms, so the window shifts but never lengthens, and the retry always works.
-$opened = $in['openedAt'] ?? null;
-if ((is_int($opened) || is_float($opened) || (is_string($opened) && is_numeric($opened)))) {
-  $age = (int)round(microtime(true) * 1000) - (float)$opened;
-  if ($age >= 0 && $age <= CONTACT_MAX_OPEN_AGE_MS && $age < CONTACT_MIN_FILL_MS) {
+// 2. Minimum fill time. `fillMs` is how long the form was open before this send, measured by the browser alone
+//    (Date.now() at sending minus Date.now() when the form mounted). It is an elapsed time, not a timestamp, so the
+//    server never compares the browser's clock with its own: a visitor's wrong clock cannot move the window. Under
+//    CONTACT_MIN_FILL_MS is a script, or a very fast autofill; the sender is told to check and send again, and the
+//    retry works because the form keeps counting from when it opened. A missing, non-numeric, negative or over-a-day
+//    value is NO signal: an older cached page or another test posts without it, and a genuine enquiry must never be
+//    refused for something the sender cannot fix.
+$fill = $in['fillMs'] ?? null;
+if ((is_int($fill) || is_float($fill) || (is_string($fill) && is_numeric($fill)))) {
+  $fill = (float)$fill;
+  if ($fill >= 0 && $fill <= CONTACT_MAX_OPEN_AGE_MS && $fill < CONTACT_MIN_FILL_MS) {
     audit($conn, null, 'enquiry_too_fast', '');
     fail('That was quick. Please check your details and send again.', 429);
   }

@@ -54,10 +54,12 @@ export default function Contact() {
   const messageRef = useRef<HTMLTextAreaElement>(null)
   const code = useRef<HTMLElement>(null)
   const hpRef = useRef<HTMLInputElement>(null)
-  // When the form opened, sent as openedAt. Set after mount so prerendering stays free of the clock.
-  const openedAt = useRef(0)
+  // When the form mounted. At sending, the time since then goes to the server as fillMs: an elapsed time measured
+  // by this browser alone, so the server never compares this machine's clock with its own. Set after mount so
+  // prerendering stays free of the clock.
+  const mountedAt = useRef(0)
   useEffect(() => {
-    openedAt.current = Date.now()
+    mountedAt.current = Date.now()
   }, [])
 
   // A pricing button links here with ?package=Name. Only a real package name is
@@ -102,7 +104,8 @@ export default function Contact() {
     const first = ORDER.find((k) => found[k])
     if (first) return ({ name: nameRef, email: emailRef, message: messageRef })[first].current?.focus()
     setSending(true)
-    const res = await contact.send({ ...form, hp_site: hpRef.current?.value ?? "", openedAt: openedAt.current || undefined })
+    const fillMs = mountedAt.current ? Date.now() - mountedAt.current : undefined
+    const res = await contact.send({ ...form, hp_site: hpRef.current?.value ?? "", fillMs })
     setSending(false)
     if (res.ok) {
       setSentTo(form.name.trim().split(/\s+/)[0])

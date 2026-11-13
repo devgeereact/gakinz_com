@@ -50,7 +50,7 @@ async function fill(page: Page) {
   await page.getByLabel("What do you need?").fill("A site for my bakery, please, with an order form.")
 }
 
-/** The form refuses a post under 2.5 s after it opened (CONTACT_MIN_FILL_MS), so a test that means to send waits first. */
+/** The form refuses a post sent under 2.5 s after it opened (`fillMs` < CONTACT_MIN_FILL_MS), so a test that means to send waits first. */
 const settle = (page: Page) => page.waitForTimeout(2600)
 
 const noHorizontalScroll = (page: Page) =>
@@ -69,7 +69,9 @@ for (const [label, w, h] of [["mobile 375", 375, 812], ["desktop 1280", 1280, 80
       await page.getByRole("status").getByText(/Thanks, Ada/).waitFor()
       expect(posted).toHaveLength(1)
       expect(posted[0].hp_site).toBe("")
-      expect(typeof posted[0].openedAt).toBe("number")
+      // An elapsed time measured by the browser alone, never a timestamp for the server to compare with its own clock.
+      expect(posted[0].fillMs).toBeGreaterThanOrEqual(2600)
+      expect(posted[0]).not.toHaveProperty("openedAt")
       await expect(page.getByRole("status").textContent()).resolves.toMatch(/GK-E-\d{4}-\d{4}/)
       expect(one("SELECT COUNT(*) FROM enquiries")).toBe("1")
       expect(one("SELECT email FROM enquiries")).toBe("ada@example.test")
@@ -104,9 +106,9 @@ for (const [label, w, h] of [["mobile 375", 375, 812], ["desktop 1280", 1280, 80
 
     it("sending at once shows the friendly retry and keeps what was typed, then the retry goes through", async () => {
       const { page } = await open(w, h)
-      // Make the post look 500 ms old to the server, whatever the machine's speed.
+      // Make the post say the form was filled in 500 ms, whatever the machine's speed.
       await page.route("**/contact.php", (r) => {
-        const body = { ...r.request().postDataJSON(), openedAt: Date.now() - 500 }
+        const body = { ...r.request().postDataJSON(), fillMs: 500 }
         return r.continue({ postData: JSON.stringify(body) })
       })
       await fill(page)
@@ -117,7 +119,7 @@ for (const [label, w, h] of [["mobile 375", 375, 812], ["desktop 1280", 1280, 80
       await expect(page.getByLabel("Email", { exact: true }).inputValue()).resolves.toBe("ada@example.test")
       expect(one("SELECT COUNT(*) FROM enquiries")).toBe("0")
       expect(smtp.mails).toHaveLength(0)
-      // The visitor checks and sends again: the real opening time is now old enough.
+      // The visitor checks and sends again: the form has now been open long enough, and fillMs is measured afresh.
       await page.unroute("**/contact.php")
       await settle(page)
       await page.getByRole("button", { name: /send enquiry/i }).click()

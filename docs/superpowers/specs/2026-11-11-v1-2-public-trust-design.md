@@ -60,6 +60,9 @@ remaining places where the public site says something false, shows something tha
 - The honeypot silently drops a bot's post (looks like success); a too-fast post gets a visible friendly retry, because a
   real person with autofill might trigger it. The minimum is 2.5 seconds.
 - The honeypot field is `hp_site`, not `website`, because password managers fill `website`.
+- The timing field is `fillMs`, the time the browser measured from the form opening to the send, not a timestamp: the
+  server never compares a visitor's clock with its own, so a wrong clock cannot move the window (fix wave, 2026-11-11; the
+  first version sent `openedAt`, a timestamp).
 - A missing timing field is no signal, so older clients and direct posts still work; the limit of this protection is stated
   in `docs/SECURITY.md`: it stops form-filling bots, and a script that posts JSON directly is limited only by the IP throttle.
 - The 404 rule covers unknown first path segments only; `app`, `login`, `set-password`, `p`, `verify`, `work`, `services`
