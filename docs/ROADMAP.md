@@ -171,6 +171,34 @@ user outcome with a check, ticked on **local** evidence; what needs the host or 
 (parked: new posts work in the browser but are not in the sitemap until the next build), the phone tables (K-148), the owner
 list. **Progress V1.2: 5 of 5 open items ticked (item 4 dropped as already true); released 2026-11-13 as `ea6164c`.** Ticked on local evidence (1, 2, 3, 5, 6); item 5 was then verified live (`check:live` 20 of 20). The final ladder is in `docs/VERIFICATION.md` (types clean, lint 0, 701 unit, 687 server, 148 browser three runs in a row with axe 0, `check:htaccess` 67 of 67, `php -l` 69, `verify` PASS); the review record is in `docs/AUDIT.md`.
 
+## V1.3 finish line (frozen)
+
+**Frozen on 2026-11-13** (D-068) · the owner approved the list below ("Yes approved") after a proposal. Goal: the daily CMS screens
+and the first public screen stop making the owner work around them. Same rules as before: at most ten items, each a user outcome
+with a check, ticked on **local** evidence; what needs the host or the owner is BLOCKED and says so.
+
+- [ ] **1. The home page eyebrow shows "London" once.** Today "Designer and developer · London" sits beside the live clock
+  "London hh:mm" (a duplicate, from `9859760`). Check: a test on the prerendered home page (the word appears once in the hero
+  eyebrow block) and screenshots at 375 and 1280 px.
+- [ ] **2. The Quotes list shows what the client pays.** The list's "Total" is the amount before VAT. Check: for a quote with VAT,
+  the Quotes list, the client's shared proposal page and the PDF show the same labelled figures (net, VAT, total); the existing
+  VAT tests plus a new list test.
+- [ ] **3. Invoicing refreshes itself after "Mark paid" or "Record payment".** The tiles keep their old figures until a reload.
+  Check: a browser test marks an invoice paid and sees the tiles and the row change without a reload.
+- [ ] **4. The eight CMS tables are readable on a phone (K-148).** Blog, Certificates, Clients, Contracts, Invoicing, Platform,
+  Proposals and Time scroll sideways today. Check: below 640 px each row becomes a stacked card with its actions reachable, and
+  `tests/browser/cms-layout.test.ts` fails on any CMS table that still needs a sideways swipe at 375 px; axe stays at 0.
+- [ ] **5. The audit log text is safe to read.** `gk_oneline()` strips only C0 controls and DEL. Check: a unit or server test
+  that C1 controls, U+2028, U+2029 and bidirectional overrides are removed from the honeypot email in the audit `detail`.
+- [ ] **6. One command refreshes the built-in articles from the live CMS (`pnpm run sync:articles`).** Today the snapshot in
+  `src/marketing/data/site.ts` is copied by hand, which is how K-147 happened. Check: a unit test of the refresh (CMS JSON in,
+  the `insights` array out, verbatim); a dry run against the live CMS changes nothing when the snapshot is current; the build
+  stays offline and `check:live` stays the alarm.
+
+**Not in V1.3 (parked or the owner's):** anything needing the owner's hand-applied SQL or `.htaccess` (an `audit_log` index, a
+wrong-case `/Contact` redirect), the Clerk "Grant portal access" button (needs a Clerk secret), dead-code and file-split
+clean-up and ESLint 10 (V2), CSP enforcement, V1 items 4 and 10 (the owner's facts and adviser). **Progress V1.3: 0 of 6 ticked.**
+
 ## Versions and the nine GSD phases (2026-11-11)
 
 The nine phases of the earlier planning sheet are mapped onto versions so the two cannot disagree.
@@ -232,7 +260,6 @@ Every other idea, refactor and audit finding, one line each, grouped by theme; t
 Do not build from this list until the owner opens a new scope. Nothing here was deleted from the code or the issue list.
 
 **Public site**
-- The home hero eyebrow shows "London" twice ("Designer and developer · London" beside "London 21:11"; it dates from `9859760`, not V1.2). [V2]
 - A wrong-case public path such as `/Contact` answers 404 (it used to get the app page); redirect it or fold case, and add a `check:htaccess` case. [V2]
 - Prerender CMS-published posts and work and list them in the sitemap automatically (a build that reads the live CMS; today the built-in articles mirror the CMS by hand, V1.2 item 2). [V2]
 - Certificates screen checked live (issue, verify, revoke); recipient consent per certificate (K-061). [V1.2]
@@ -240,14 +267,11 @@ Do not build from this list until the owner opens a new scope. Nothing here was 
 - Acknowledgement email to the visitor with the enquiry reference (K-097; held back on purpose, a spam-relay risk). [later]
 
 **CMS and daily use**
-- Eight CMS tables scroll sideways inside their box on a phone (K-148); stacked rows or a column picker would fix it. [V1.2]
-- Quotes list "Total" is the amount before VAT (label it, or show the VAT-inclusive total); Invoicing tiles refresh after "Mark paid" without a reload. [V1.2]
 - One-step "Grant portal access" (CMS client account plus Clerk user) and a friendlier message than Clerk's "Couldn't find your account"; the manual steps are in `docs/OPERATIONS.md` 10.2. [V1.2]
 - Real assistive-technology pass (screen reader, keyboard-only) on the public site and the CMS; axe in V1.1 is not the same thing. [V2]
 
 **Safety, privacy and money**
 - An index on `audit_log (ip, action, created_at)`: `contact.php` runs two counts per post (the throttle and the bot-signal cap); fine at today's size. [V2]
-- `gk_oneline()` strips only C0 controls and DEL, so C1 controls, U+2028/U+2029 and bidi overrides pass into the audit `detail` (the honeypot email); low risk. [V2]
 - The privacy export and erasure by email do not find a honeypot-only address (they need an enquiry for the same address); handled by hand today (`docs/SECURITY.md`). [V2]
 - Enforce the app-shell CSP, which is Report-Only today (K-033; the session token is already out of `localStorage`, checked 2026-11-11, D-057). [V2]
 - Cloudflare Authenticated Origin Pulls. [V2]
