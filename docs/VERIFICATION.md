@@ -4,7 +4,28 @@ What was actually run, with the result, and what only the owner can show. Result
 [AUDIT.md](AUDIT.md); the finish line they serve is [ROADMAP.md](ROADMAP.md). Status words: DONE (seen), PARTIAL,
 NOT TESTED, BLOCKED.
 
-## Local ladder, 2026-11-11, branch `goal/v1.2` (V1.2)
+## Final ladder, 2026-11-11, branch `goal/v1.2` (V1.2, after the review fix wave)
+
+Head `e4774e3` (the fifteen V1.2 commits over `d355c49`, fix wave included; the records commit follows). Node 24.22.1, PHP 8.5.12, local MariaDB 11.4.13 on port 3329, throwaway databases only (`gakinz_t6c_test` for the server suite, `gakinz_t6d_test` for the browser suite); nothing touched the live host or live data. Every rung below was run fresh in this session, after the whole-branch review and the fix wave; the first run, before the fix wave, is the next section.
+
+| Rung | Result |
+|---|---|
+| `pnpm exec tsc -b --noEmit` | DONE, clean (exit 0) |
+| `pnpm run lint` | DONE, 0 errors, 0 warnings (exit 0) |
+| `pnpm test` | DONE, 701 tests in 66 files |
+| `pnpm run test:server` (about 5 minutes) | DONE, 687 tests in 55 files |
+| `pnpm run build` | DONE, 32 public pages, `404.html` and `app-shell.html` written, 32 sitemap URLs |
+| `pnpm run test:browser` with `GK_AXE` (axe-core, WCAG 2.0 to 2.2 A and AA), three runs in a row | DONE, 148 of 148 each time (3 files: contact 12, public pages 68 including the not-found view, CMS screens 68), axe 0 violations (a violation fails its test), no intermittent failure |
+| `pnpm run check:htaccess` (the real `server/.htaccess` under local Apache, `notfound.php` under PHP-FPM) | DONE, 67 of 67 (the first run had 60; the fix wave added the `[NC]` exemption, `blog` as an unknown path and `/404.html` by name with the CSP) |
+| `find server -name '*.php' -print0 \| xargs -0 -n1 php -l` | DONE, 69 of 69 files clean (51 endpoints and 18 `_` includes) |
+| `pnpm run verify` (release dry run) | DONE, PASS, nothing sent (typecheck, lint, unit, build, upload guard) |
+| `pnpm run docs:check --base main` | DONE, PASS (29 documents, 31 relative links, 481 files scanned, 48 changed files against `main`; run on the finished records) |
+
+The browser runs were started while the server suite was still running (different databases and ports), and `pnpm run verify` ran after them because it rebuilds `dist/`. `check:live` was NOT run: it asks the live site, which still lacks this branch (and the `.htaccess` upload), so its `unknown URL answers 404` check would fail by design.
+
+**NOT TESTED** (unchanged by the fix wave): a real phone, Safari, Firefox, a real password manager filling the honeypot, a real screen reader, LiteSpeed (the `.htaccess` rule is proved under Apache only), `server/.htaccess` and `server/notfound.php` on the live host (not uploaded), Clerk's real cookie names in a signed-in browser, anything on the live site, the first CI run of this branch.
+
+## First ladder, 2026-11-11, branch `goal/v1.2` (V1.2, before the review fix wave)
 
 Head `d4ddac3` (five V1.2 commits over `d355c49`). Node 24.22.1, PHP 8.5.12, local MariaDB 11.4.13 on port 3329, throwaway databases only (`gakinz_t6_test`, `gakinz_t6b_test`); nothing touched the live host or live data. Every rung was run fresh in this session.
 

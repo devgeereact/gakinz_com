@@ -1,7 +1,9 @@
 # Status
 
 **As at:** 2026-11-11. `main` is `ed5a724`, which is live on
-gakinz.com through `scripts/release.mjs` (released 2026-11-11 08:34 UTC). The order of work and what is left are in
+gakinz.com through `scripts/release.mjs` (released 2026-11-11 08:34 UTC). **V1.2 (public-site trust) is built locally on
+`goal/v1.2` and not released:** nothing in this file's V1.2 figures is live until the owner releases it and uploads
+`server/.htaccess` (`docs/DEPLOYMENT.md` section 5). The order of work and what is left are in
 [WORKBOOK.md](WORKBOOK.md); open issues are in [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
 
 This is the one home for measured counts: other documents point here rather than repeat a number.
@@ -26,24 +28,25 @@ Anything about signed-in use of the live system is NOT TESTED unless a row says 
 
 ## 0. Current measurements
 
-Measured on 2026-11-11 on the Mac before the release of `ed5a724` (V1.1 with Tailwind v4 and pnpm); the live checks (`pnpm run check:live`, 16 of 16) are from 2026-11-11 after that release, the host's PHP version from 2026-11-09. Re-measure and update
+Measured on 2026-11-11 on the Mac on branch `goal/v1.2` (V1.2 built, not released; the ladder is in `docs/VERIFICATION.md` "Final ladder"); the live checks (`pnpm run check:live`, 16 of 16) are from 2026-11-11 after the release of `ed5a724` and do not cover V1.2, the host's PHP version from 2026-11-09. Re-measure and update
 this table when a count changes; the previous figures are in the history above.
 
 | Measure | Command | Result |
 |---|---|---|
 | Styling and packages | `vite.config.ts`, `package.json` | Tailwind CSS v4 through `@tailwindcss/vite`, pnpm (`pnpm-lock.yaml`), **released 2026-11-11 as `ed5a724`** (D-064, `docs/AUDIT.md` 2026-11-11) |
-| Unit tests | `pnpm test` | **PASS.** 678 tests in 61 files (V1.1: the Today deletion section and the owner-alert notice added to `todayModel.test.ts`) |
-| Server integration tests | `pnpm run test:server`, local throwaway `*_test` database | **PASS.** 669 tests in 53 files on local MariaDB 11.4.13 (V1.1: `today` 3 added, `alert-failures` 5 added), run as `GK_TEST_DB_HOST=127.0.0.1 GK_TEST_DB_PORT=3329 GK_TEST_DB_USER=root GK_TEST_DB=<name>_test GK_TEST_PHP_PORT=<port> GK_TEST_PROVIDER_PORT=<port> pnpm run test:server` |
-| Browser tests | `pnpm run build && pnpm run test:browser` | **PASS.** 140 tests in 3 files, three runs in a row: the contact form (6); all 32 public pages at 375 and 1280 px (66); 34 CMS screens at both sizes as owner, client and editor against real PHP and a seeded throwaway database, with Clerk stubbed in a test-only build (68). `GK_AXE=<axe.min.js>` adds axe (0 violations). Signed-in use with real data, Safari and a real phone are NOT covered |
+| Unit tests | `pnpm test` | **PASS.** 701 tests in 66 files (V1.2: the cookie list and page, the built-in articles, the 404 page build, the home headline, the live-check header and article checks) |
+| Server integration tests | `pnpm run test:server`, local throwaway `*_test` database | **PASS.** 687 tests in 55 files on local MariaDB 11.4.13 (V1.2: `contact-bots` and `notfound` added), run as `GK_TEST_DB_HOST=127.0.0.1 GK_TEST_DB_PORT=3329 GK_TEST_DB_USER=root GK_TEST_DB=<name>_test GK_TEST_PHP_PORT=<port> GK_TEST_PROVIDER_PORT=<port> pnpm run test:server` |
+| Browser tests | `pnpm run build && pnpm run test:browser` | **PASS.** 148 tests in 3 files, three runs in a row: the contact form (12, V1.2: honeypot, too-fast retry); all 32 public pages and the not-found view at 375 and 1280 px (68); 34 CMS screens at both sizes as owner, client and editor against real PHP and a seeded throwaway database, with Clerk stubbed in a test-only build (68). `GK_AXE=<axe.min.js>` adds axe (0 violations). Signed-in use with real data, Safari and a real phone are NOT covered |
 | Server suite on MySQL 8 | `pnpm run test:server` against MySQL 8.0 (`docs/OPERATIONS.md` section 8) | Last PASS 2026-10-20 (519 tests). MySQL 5.7 NOT TESTED; the live engine is UNVERIFIED (K-099) |
-| Type check and build | `pnpm run build` | **PASS.** 32 public pages and `app-shell.html` prerendered, `sitemap.xml` with 32 URLs |
+| Type check and build | `pnpm run build` | **PASS.** 32 public pages, `404.html` and `app-shell.html` prerendered, `sitemap.xml` with 32 URLs (`404.html` is not in it) |
+| Apache routing check | `pnpm run check:htaccess` | **PASS.** 67 of 67 under local Apache with PHP-FPM (V1.2: unknown paths answer 404, known pages, the app and CMS-only records 200; LiteSpeed NOT TESTED) |
 | Lint | `pnpm run lint` | **PASS.** 0 errors, 0 warnings (K-002 closed 2026-11-11); the ratchet script is gone |
-| Documentation | `pnpm run docs:check` | **PASS.** 27 documents |
-| PHP files | `ls server/*.php`, `php -l` | 68: 50 endpoints and 18 `_`-prefixed includes (`_notify.php` added 2026-11-10), all passing `php -l` (PHP 8.5.12 locally; the host runs 8.4.27, checked 2026-11-08) |
+| Documentation | `pnpm run docs:check` | **PASS.** 29 documents, 31 relative links, 481 files scanned (`pnpm run docs:check --base main`, 2026-11-11) |
+| PHP files | `ls server/*.php`, `php -l` | 69: 51 endpoints and 18 `_`-prefixed includes (`notfound.php` added by V1.2), all passing `php -l` (PHP 8.5.12 locally; the host runs 8.4.27, checked 2026-11-08) |
 | Tables | `grep -c "^CREATE TABLE IF NOT EXISTS" server/schema.sql` | 42 |
 | CMS screens | `src/routes/index.tsx` under `/app` | 26: Today, 24 module routes and My account, in seven navigation groups |
 | Client API groups | `grep -cE "^export const [a-zA-Z]+ *= *\{" src/lib/api.ts` | 46 (the unused `weather` group removed 2026-11-01) |
-| `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 43 of 66 files, 167 call sites (`_ai.php` is an include and calls none; `weather.php` is a 404 stub since 2026-11-02) |
+| `require_auth` | `grep -c "require_auth(" server/*.php` | Called in 44 of 69 files, 166 lines (re-measured 2026-11-11; `_ai.php` is an include and calls none; `weather.php` is a 404 stub since 2026-11-02; the public `contact.php`, `notfound.php` and the 404 stubs call none by design) |
 
 `npm audit` on 2026-11-02: 0 critical, 0 high, 13 moderate (dev tooling, K-041). Semgrep 0 findings; gitleaks clean over the full history. Not measured on this run: anything signed in on the live system.
 The design verification of 2026-10-31 (screens at five widths, axe 4.14) is in `docs/AUDIT.md`.
