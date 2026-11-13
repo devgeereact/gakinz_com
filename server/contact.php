@@ -70,9 +70,13 @@ $in = body();
 //    only a bot completes it. The form sends a string; a string counts when it is not blank, and any structured
 //    value (an array) that is not empty counts too, because a form never sends one. The answer looks exactly like success (201, no reference) so the bot learns nothing;
 //    nothing is saved and nobody is mailed. It is not counted by the throttle (that counts `enquiry_submit` rows).
+//    A password manager can fill the hidden field for a real person, who then sees a thank-you and nothing else, so
+//    the row keeps the email they typed (one line, at most 200 characters, not validated) for the owner to write
+//    back: "honeypot <email>". Nothing else they sent is kept. The bucket above bounds how many such rows one IP writes.
 $hp = $in['hp_site'] ?? '';
 if (is_array($hp) ? count($hp) > 0 : trim((string)$hp) !== '') {
-  audit($conn, null, 'enquiry_bot_dropped', 'honeypot');
+  $hpEmail = is_string($in['email'] ?? null) ? gk_oneline($in['email'], 200) : '';
+  audit($conn, null, 'enquiry_bot_dropped', $hpEmail !== '' ? 'honeypot ' . $hpEmail : 'honeypot');
   ok(['id' => 0, 'reference' => null], 201);
 }
 

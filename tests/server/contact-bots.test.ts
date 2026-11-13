@@ -31,6 +31,28 @@ beforeEach(() => {
 afterEach(clearOverrides)
 
 describe("contact.php bot signals", () => {
+  it("a honeypot hit records the email the sender typed, so the owner can write back to a real person", async () => {
+    // A password manager that fills the hidden field makes a real person look like a bot: they see a thank-you and
+    // nothing else. The audit row keeps the address they typed, on one line and truncated, and nothing more.
+    const r = await api("contact.php", { body: { ...ENQUIRY, email: " ada@example.test\r\nBcc: x@example.test ", hp_site: "x" } })
+    expect(r.status).toBe(201)
+    expect(one("SELECT detail FROM audit_log WHERE action = 'enquiry_bot_dropped'")).toBe("honeypot ada@example.test Bcc: x@example.test")
+    await api("contact.php", { body: { ...ENQUIRY, email: `${"a".repeat(400)}@example.test`, hp_site: "x" } })
+    const long = String(one("SELECT detail FROM audit_log WHERE action = 'enquiry_bot_dropped' ORDER BY id DESC LIMIT 1"))
+    expect(long.startsWith("honeypot aaaa")).toBe(true)
+    expect(long.length).toBeLessThanOrEqual(9 + 200)
+    expect(one("SELECT COUNT(*) FROM enquiries")).toBe("0")
+  })
+
+  it("a honeypot hit without an email still records honeypot", async () => {
+    for (const email of [undefined, "", ["ada@example.test"]]) {
+      const body: Record<string, unknown> = { name: "Ada", message: "Hello there, a bakery site.", hp_site: "x" }
+      if (email !== undefined) body.email = email
+      expect((await api("contact.php", { body })).status).toBe(201)
+    }
+    expect(one("SELECT COUNT(*) FROM audit_log WHERE action = 'enquiry_bot_dropped' AND detail = 'honeypot'")).toBe("3")
+  })
+
   it("a filled honeypot saves nothing, sends no alert and looks like success", async () => {
     const r = await api<{ id: number; reference: string | null }>("contact.php", {
       body: { ...ENQUIRY, hp_site: "https://spam.example.test", fillMs: 60_000 },
@@ -39,7 +61,7 @@ describe("contact.php bot signals", () => {
     expect(r.json).toEqual({ id: 0, reference: null })
     expect(one("SELECT COUNT(*) FROM enquiries")).toBe("0")
     expect(smtp.mails).toHaveLength(0)
-    expect(one("SELECT COUNT(*) FROM audit_log WHERE action = 'enquiry_bot_dropped' AND detail = 'honeypot'")).toBe("1")
+    expect(one("SELECT COUNT(*) FROM audit_log WHERE action = 'enquiry_bot_dropped' AND detail = 'honeypot ada@example.test'")).toBe("1")
     expect(one("SELECT COUNT(*) FROM audit_log WHERE action = 'enquiry_submit'")).toBe("0")
   })
 
