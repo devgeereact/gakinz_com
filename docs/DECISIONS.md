@@ -1190,3 +1190,11 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 **Residual risk.** A real enquiry is silently dropped if a password manager still fills `hp_site` despite those measures; the owner can recover the sender's email from the audit row, but only if someone looks. The manual autofill pass (Chrome, Safari, Firefox and one password manager) is **NOT TESTED**; the owner watches `enquiry_bot_dropped` rows for a few weeks after release. A honeypot-only address is not found by the privacy export or erasure by email (those reach audit rows only for an address that also has an enquiry); that is handled by hand (`docs/SECURITY.md`).
 
 **Evidence:** `tests/server/contact-bots.test.ts` (15 tests), `tests/browser/contact.test.ts` (12 tests), `docs/AUDIT.md` (V1.2 section). Not a CAPTCHA and no third-party code: the public pages still set no cookies or storage.
+
+## D-068 · V1.3 finish line: six items on the daily CMS screens and the first public screen
+**Date:** 2026-11-13 · **Status:** decided by the owner's "Go ahead with v1.3 /finish-app" and "Yes approved" after a proposal.
+
+1. `docs/ROADMAP.md` holds the frozen list: "London" once in the home eyebrow; the Quotes list showing what the client pays; Invoicing refreshing after a payment; the eight CMS tables readable on a phone (K-148); a safer audit-log text sanitiser; `pnpm run sync:articles`.
+2. **Left out on purpose:** hand-applied SQL or `.htaccess` work, the Clerk grant button (needs a secret), dead-code clean-up and file splits (V2), CSP enforcement, V1 items 4 and 10.
+3. **Method:** D-066 stands (spec and plan in `docs/superpowers/`, fresh agents build and review, all work inside the project folder). The `finish-app` skill's newer house text says plans go in `docs/<scope>/plans/` and never in `docs/superpowers/`; this project follows the owner's explicit D-066 instead, because the project's own rules override the generic ones.
+
