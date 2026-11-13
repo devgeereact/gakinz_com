@@ -43,6 +43,18 @@ afterAll(async () => {
 
 const pages = sitemapPaths()
 
+/** Optional: GK_AXE=<path to axe.min.js> also runs axe-core (WCAG 2.0 to 2.2 A and AA). It is not a project
+ * dependency (adding one would collide with the pending package changes), so it is a manual gate step. */
+async function axeProblems(page: import("playwright-core").Page): Promise<string[]> {
+  if (!process.env.GK_AXE) return []
+  await page.addScriptTag({ path: process.env.GK_AXE })
+  return page.evaluate(async () => {
+    // @ts-expect-error axe is injected by the script tag above
+    const r = await axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] } })
+    return r.violations.map((v: { id: string; nodes: { target: string[] }[] }) => `axe ${v.id} x${v.nodes.length}: ${v.nodes[0].target.join(" ")}`)
+  })
+}
+
 for (const [label, w, h] of [["phone 375", 375, 812], ["desktop 1280", 1280, 800]] as const) {
   describe(`public pages, ${label}`, () => {
     it("the build lists the pages the V1 roadmap counts", () => {
@@ -62,17 +74,7 @@ for (const [label, w, h] of [["phone 375", 375, 812], ["desktop 1280", 1280, 800
       expect(await page.locator("main h1, #main h1").count(), `${route} has an h1`).toBeGreaterThanOrEqual(1)
       expect(await page.getByText("That page is not here").count(), `${route} shows the not-found page`).toBe(0)
       bad.push(...(await page.evaluate(pageProblems)))
-      // Optional: GK_AXE=<path to axe.min.js> also runs axe-core (WCAG 2.0 to 2.2 A and AA). It is not a project
-      // dependency (adding one would collide with the pending package changes), so it is a manual gate step.
-      if (process.env.GK_AXE) {
-        await page.addScriptTag({ path: process.env.GK_AXE })
-        const found = await page.evaluate(async () => {
-          // @ts-expect-error axe is injected by the script tag above
-          const r = await axe.run(document, { runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"] } })
-          return r.violations.map((v: { id: string; nodes: { target: string[] }[] }) => `axe ${v.id} x${v.nodes.length}: ${v.nodes[0].target.join(" ")}`)
-        })
-        bad.push(...found)
-      }
+      bad.push(...(await axeProblems(page)))
       const shots = process.env.GK_SHOTS
       if (shots) {
         fs.mkdirSync(shots, { recursive: true })
@@ -88,6 +90,27 @@ for (const [label, w, h] of [["phone 375", 375, 812], ["desktop 1280", 1280, 800
         const name = (route === "/" ? "home" : route.replace(/^\/|\/$/g, "").replace(/\//g, "-")) + `-${w}.png`
         await page.screenshot({ path: path.join(shots, name), fullPage: true })
       }
+      await ctx.close()
+      expect(bad, `${route} at ${w}px`).toEqual([])
+    })
+
+    // Separate from the sitemap loop on purpose: that loop fails any page that shows the not-found view, and the
+    // not-found page is not in the sitemap, so it would otherwise never be held to the layout and axe checks. The
+    // test stack serves the SPA shell for an unknown path, and the browser app renders the not-found view there.
+    it("the not-found view at an unknown address is laid out cleanly", async () => {
+      const route = "/definitely-not-a-page"
+      const ctx = await browser.newContext({ viewport: { width: w, height: h }, reducedMotion: "reduce" })
+      const page = await ctx.newPage()
+      const bad: string[] = []
+      page.on("console", (m) => m.type() === "error" && bad.push(`console error: ${m.text()}`))
+      page.on("pageerror", (e) => bad.push(`page error: ${String(e)}`))
+      page.on("requestfailed", (r) => bad.push(`request failed: ${r.method()} ${r.url()} ${r.failure()?.errorText}`))
+      page.on("response", (r) => r.status() >= 400 && bad.push(`HTTP ${r.status()}: ${r.url()}`))
+      await page.goto(`${stack.origin}${route}`, { waitUntil: "networkidle" })
+      await expect.poll(() => page.locator("main h1, #main h1").first().textContent()).toBe("That page is not here.")
+      await expect.poll(() => page.title()).toMatch(/^Page not found/)
+      bad.push(...(await page.evaluate(pageProblems)))
+      bad.push(...(await axeProblems(page)))
       await ctx.close()
       expect(bad, `${route} at ${w}px`).toEqual([])
     })

@@ -36,7 +36,7 @@ Full-page screenshots at 375 and 1280 px, 13 contact sheets, every one looked at
 | `/cookies`, `/privacy` | Lay out cleanly; the "to supply" boxes are visible (see findings) |
 | `/resources` and the three articles | Lay out cleanly; the "Test post." text and the date come from the throwaway database, not from the build |
 
-Defects in V1.2 found by the review: none, so no code change and no new guard was needed (the existing public-layout test already fails on sideways scroll, clipped text, console errors and failed requests for all 32 pages at both sizes).
+Defects in V1.2 found by the review: none, so no code change and no new guard was needed (the existing public-layout test already fails on sideways scroll, clipped text, console errors and failed requests for all 32 pages at both sizes). The whole-branch review then found that this test never covered the not-found view (its sitemap loop rejects that view), so the fix wave added a separate test that loads an unknown address at both sizes with the same checks and axe.
 
 **Findings, not V1.2 defects, not fixed:**
 - The home hero eyebrow reads "Designer and developer · London" and, beside it, "London 21:11": London twice, and on a phone the clock wraps to its own line. It dates from the public rebuild (`9859760`), not from V1.2.
