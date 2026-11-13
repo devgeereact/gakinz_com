@@ -1,9 +1,7 @@
 # Status
 
-**As at:** 2026-11-11. `main` is `ed5a724`, which is live on
-gakinz.com through `scripts/release.mjs` (released 2026-11-11 08:34 UTC). **V1.2 (public-site trust) is built locally on
-`goal/v1.2` and not released:** nothing in this file's V1.2 figures is live until the owner releases it and uploads
-`server/.htaccess` (`docs/DEPLOYMENT.md` section 5). The order of work and what is left are in
+**As at:** 2026-11-13. `main` is `ea6164c`, which is live on
+gakinz.com through `scripts/release.mjs` (released 2026-11-13 08:06 UTC): **V1.2 (public-site trust) is released**, and `server/.htaccess` was uploaded by hand earlier that day. The order of work and what is left are in
 [WORKBOOK.md](WORKBOOK.md); open issues are in [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
 
 This is the one home for measured counts: other documents point here rather than repeat a number.
@@ -28,7 +26,7 @@ Anything about signed-in use of the live system is NOT TESTED unless a row says 
 
 ## 0. Current measurements
 
-Measured on 2026-11-11 on the Mac on branch `goal/v1.2` (V1.2 built, not released; the ladder is in `docs/VERIFICATION.md` "Final ladder"); the live checks (`pnpm run check:live`, 16 of 16) are from 2026-11-11 after the release of `ed5a724` and do not cover V1.2, the host's PHP version from 2026-11-09. Re-measure and update
+Measured on 2026-11-11 on the Mac on branch `goal/v1.2` (V1.2, released 2026-11-13 as `ea6164c`; the ladder is in `docs/VERIFICATION.md` "Final ladder"); the live checks (`pnpm run check:live`, **20 of 20**) are from 2026-11-13 after the release of `ea6164c` and do cover V1.2 (the unknown-URL headers and the sitemap articles; 17 of 20 before the release), the host's PHP version from 2026-11-09. Re-measure and update
 this table when a count changes; the previous figures are in the history above.
 
 | Measure | Command | Result |

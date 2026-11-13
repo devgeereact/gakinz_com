@@ -2,7 +2,7 @@ project:
   name: "GAkinz (gakinz.com)"
   type: "application"
   lifecycle: "maintenance"
-  status: "finished-v1.2"   # V1.2 built locally on goal/v1.2 2026-11-11 (D-065, 5 open items ticked), not released; V1.1 is live as `ed5a724`; V1 is 8 of 10 (items 4 and 10 wait for the owner)
+  status: "finished-v1.2"   # V1.2 released 2026-11-13 as `ea6164c` (D-065, 5 open items ticked, check:live 20 of 20); V1.1 went live as `ed5a724`; V1 is 8 of 10 (items 4 and 10 wait for the owner)
   risk: "production"
 
 styling: "tailwind-v4"   # @tailwindcss/vite, tokens in src/index.css (D-064); package manager: pnpm

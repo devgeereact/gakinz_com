@@ -45,7 +45,7 @@ section 8).
 | `pnpm run test:watch` | Vitest in watch mode |
 | `pnpm run verify` | The release checks and build plus the upload guard, on uncommitted work. Never contacts the host |
 | `pnpm run release` | Dry run of a release over SSH; add `-- --go` to upload. A push to `main` does this from GitHub Actions |
-| `pnpm run check:live` | After a release: 17 read-only GET checks, plus one per sitemap article, against the live site (`docs/DEPLOYMENT.md` section 5). `unknown URL answers 404` fails until the V1.2 `server/.htaccess` is uploaded |
+| `pnpm run check:live` | After a release: 17 read-only GET checks, plus one per sitemap article, against the live site (`docs/DEPLOYMENT.md` section 5). `unknown URL answers 404` passes since the V1.2 release and `server/.htaccess` upload (2026-11-13; 20 of 20) |
 | `pnpm run check:htaccess` | After `pnpm run build`: runs `server/.htaccess` under the Mac's Apache with PHP-FPM (ports 5491 and 5492) over a copy of `dist/` and checks its routing and 404s. Exit 2 (BLOCKED) without `httpd` or `php-fpm` |
 | `pnpm run typecheck` | `tsc -b --noEmit` |
 | `pnpm run lint` | ESLint. Must report 0 errors and 0 warnings; CI and `release.json` run it (K-002 closed) |
@@ -105,7 +105,7 @@ once.
 | `.agent/CURRENT-TASK.md` | The task in hand, its scope, authority and evidence |
 | `.agent/MCP-PROFILE.yml` | Which integrations an agent may read or change |
 | `server/README.md` | The server folder: install steps and what each file is for |
-| `docs/ROADMAP.md` | What is done, what is left and what is parked: the V1 and V1.1 finish lines, the planned V1.2 and V2, the parking lot by theme, what was cut and what waits for the owner |
+| `docs/ROADMAP.md` | What is done, what is left and what is parked: the V1, V1.1 and V1.2 finish lines, the planned V2, the parking lot by theme, what was cut and what waits for the owner |
 | `docs/superpowers/` | The planning: `specs/` (what and why, with the constraints) and `plans/` (the tasks agents build from), one pair per piece of work |
 | `docs/CHANGELOG.md` | What changed in the product, newest first |
 | `docs/VERIFICATION.md` | What was actually run for the finish line, and the owner's own walk through it |

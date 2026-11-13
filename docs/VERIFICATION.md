@@ -4,6 +4,26 @@ What was actually run, with the result, and what only the owner can show. Result
 [AUDIT.md](AUDIT.md); the finish line they serve is [ROADMAP.md](ROADMAP.md). Status words: DONE (seen), PARTIAL,
 NOT TESTED, BLOCKED.
 
+## Release and live checks, 2026-11-13 (V1.2, `ea6164c`)
+
+V1.2 (D-065, D-066, D-067) was released on the owner's approval. The checks below are read-only; the agent wrote nothing to the live site except the early `.htaccess` upload the owner asked for.
+
+| Step | Result |
+|---|---|
+| `server/.htaccess` uploaded by hand, 2026-11-13 07:41 UTC (owner's request) | Backup `~/backups/gakinz_com/htaccess.before-v1.2-404.20261113T074141Z`; probes right after as expected (`docs/DEPLOYMENT.md` section 5); `check:live` 17 of 20 until the release (the unknown-URL headers and the two retired sitemap articles) |
+| Re-check before the merge (owner approved) | The live `.htaccess` was still byte-identical (md5 `d8fd06d9...`) to the repo file; nothing uploaded again |
+| Merge | PR #34 merged by fast-forward of `main` from `ed5a724` to `ea6164c` (22 commits) |
+| CI on `main`, run 43389323251 | Green on every job: "does this push need a release", typecheck, lint, docs, unit, build, PHP and server tests on MySQL 8, gitleaks, Semgrep |
+| Release job, 2026-11-13 08:06 UTC | Snapshot `~/backups/gakinz_com/releases/20261113T080551Z`, smoke checks passed, "Released ea6164c" |
+| `pnpm run check:live` (`node scripts/live-check.mjs`, read-only GETs) | DONE, **20 of 20** (17 of 20 before the release) |
+| Unknown URL | DONE: 404 with the branded "Page not found" page, `X-Robots-Tag: noindex`, `Cache-Control: no-store` and the same Content-Security-Policy as the other pages; `/blog/old` 404 |
+| Pages | `/`, `/work`, `/services/web-design`, `/resources`, the three CMS articles (`fixed-price-how-we-scope`, `what-makes-a-website-fast`, `why-one-team-design-and-build`), `/services/a-service-only-in-the-cms`, `/Work/x`, `/cookies`, `/contact`, `/sitemap.xml` all 200 |
+| Sitemap | DONE: lists exactly the three CMS articles |
+| `/cookies/` | DONE: names `gk-auth` and `__session`; no longer contains `gk_oauth_state` or `gk-locked` |
+| Home headline | DONE: the `<h1>` carries the `aria-label` sentence |
+
+**NOT TESTED:** the contact form on the live site (no real enquiry was sent), the branded 404 and the honeypot in a real browser, Safari, Firefox, a real phone, a real password manager or screen reader, Clerk's real cookie names in devtools. **Owner steps unchanged:** a manual autofill pass on the contact form, a look at Clerk's cookie names on `/app`, the adviser's review of the cookie wording, the decision on redirecting the two retired article URLs, V1 items 4 and 10. Undo: `npm run release -- --rollback --go` (as the release prints it; the project's own commands are pnpm).
+
 ## Final ladder, 2026-11-11, branch `goal/v1.2` (V1.2, after the review fix wave)
 
 Head `e4774e3` (the fifteen V1.2 commits over `d355c49`, fix wave included; the records commit follows). Node 24.22.1, PHP 8.5.12, local MariaDB 11.4.13 on port 3329, throwaway databases only (`gakinz_t6c_test` for the server suite, `gakinz_t6d_test` for the browser suite); nothing touched the live host or live data. Every rung below was run fresh in this session, after the whole-branch review and the fix wave; the first run, before the fix wave, is the next section.

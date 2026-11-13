@@ -1159,7 +1159,7 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 **Why:** one styling system across every project, a smaller config surface (no PostCSS, one token file), and a toolchain Tailwind still maintains. **Evidence:** `docs/AUDIT.md`, 2026-11-10.
 
 ## D-065 · V1.2 finish line: six items on public-site trust
-**Date:** 2026-11-11 · **Status:** decided by the owner's "Let's go with V1.2 /finish-app" and "Go ahead" after a short brainstorm (the run proposed the list; the owner approved it as written, including dropping the two built-in articles the CMS does not hold and changing the home headline).
+**Date:** 2026-11-11 · **Status:** decided by the owner's "Let's go with V1.2 /finish-app" and "Go ahead" after a short brainstorm (the run proposed the list; the owner approved it as written, including dropping the two built-in articles the CMS does not hold and changing the home headline). Built on `goal/v1.2` and **released 2026-11-13 as `ea6164c`** (live checks 20 of 20, `docs/VERIFICATION.md`).
 
 1. `docs/ROADMAP.md` holds the frozen list: a true cookie policy; a sitemap that lists exactly the articles that exist (K-147); bot protection on the contact form; ~~the real visitor IP behind Cloudflare~~ (dropped, see 4); a real 404 status; the home headline read once.
 2. **My calls, for the owner to overrule:** the built-in articles mirror the CMS by hand (the build stays offline and deterministic) instead of the build reading the live CMS; the honeypot silently drops a bot's post so it learns nothing; ~~the Cloudflare IP is off by default behind `$TRUST_CLOUDFLARE_IP`~~ (struck: item 4 was dropped, no code reads that key, `git grep TRUST_CLOUDFLARE_IP -- server` finds nothing); the 404 rule is prepared and tested locally but never applied by the run.
@@ -1168,7 +1168,7 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 5. **Changed later the same day (review fix wave, D-067):** the contact form's timing field is `fillMs`, an elapsed time the browser measures, and no longer `openedAt`, a timestamp the server compared with its own clock; the 404 rule's exemption list no longer holds `blog` (the app has no `/blog` route; posts publish under `/resources`) and matches in any case; the live 404 check also requires the `Content-Security-Policy` and `X-Robots-Tag` headers; a honeypot hit now records the email the sender typed.
 
 ## D-066 · Spec-driven work with agents, planned in `docs/superpowers/`, built inside the project folder
-**Date:** 2026-11-11 · **Status:** decided by the owner ("a superpower SDD ... in docs/superpowers where the planning takes place ... I don't want the code built outside this workspace ... I send agents to do the planning, the job, the review and the fix").
+**Date:** 2026-11-11 · **Status:** decided by the owner ("a superpower SDD ... in docs/superpowers where the planning takes place ... I don't want the code built outside this workspace ... I send agents to do the planning, the job, the review and the fix"). Applied to the V1.2 work, which was **released 2026-11-13 as `ea6164c`**.
 
 1. Each piece of work has a spec in `docs/superpowers/specs/` and a plan in `docs/superpowers/plans/` before any code. A fresh agent checks the spec cold; fresh agents build the plan task by task and review each task; one fresh reviewer reads the whole branch. This replaces the rule written earlier the same day in `AGENTS.md` (plans in the task file, no `docs/superpowers/`).
 2. All work is done in `~/Developer/Projects/gakinz_com` on a branch. No worktree or clone outside the folder; `.local-state/` and `.local-test/` are the scratch places.
@@ -1177,7 +1177,7 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 **Why:** planning that lives in one visible folder, and work that happens where the owner can see it, cannot drift or be missed.
 
 ## D-067 · The contact form gets a honeypot after all, with mitigations (supersedes D-055 item 4 for the honeypot)
-**Date:** 2026-11-11 · **Status:** decided as part of V1.2 item 3 (D-065, the owner's "Go ahead"), built on `goal/v1.2`, **not released**. Reversible: remove the `hp_site` check from `server/contact.php` and the field from `src/marketing/pages/Contact.tsx` and nothing else depends on it.
+**Date:** 2026-11-11 · **Status:** decided as part of V1.2 item 3 (D-065, the owner's "Go ahead"), built on `goal/v1.2`, **released 2026-11-13 as `ea6164c`**. Reversible: remove the `hp_site` check from `server/contact.php` and the field from `src/marketing/pages/Contact.tsx` and nothing else depends on it.
 
 **What D-055 rejected and why.** D-055 item 4 rejected a honeypot field on the contact form because a browser or password manager that autofills the hidden field would make a real person's enquiry vanish: they would see a thank-you and the owner would never hear of it. The per-IP throttle stayed the only protection (K-136).
 

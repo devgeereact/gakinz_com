@@ -2,11 +2,11 @@
 
 The one place for what is done, what is left and what is parked on GAkinz. Everything planned lives here; the task in
 progress is `.agent/CURRENT-TASK.md`, the history is `docs/WORKBOOK.md`, the issue list is `docs/KNOWN-ISSUES.md`.
-Updated 2026-11-11 (V1.2 built locally, not released). An earlier planning folder (`.planning/`, nine GSD phases) was folded into this file on that date.
+Updated 2026-11-13 (V1.2 released as `ea6164c`). An earlier planning folder (`.planning/`, nine GSD phases) was folded into this file on that date.
 
 ## At a glance
 
-**Live today:** V0, V1 (8 of 10) and V1.1 (5 of 5), released together with Tailwind v4 and pnpm as `ed5a724` on 2026-11-11.
+**Live today:** V0, V1 (8 of 10), V1.1 (5 of 5) and V1.2 (5 of 5 open items). V1.1 was released together with Tailwind v4 and pnpm as `ed5a724` on 2026-11-11; V1.2 as `ea6164c` on 2026-11-13.
 
 | | What | State |
 |---|---|---|
@@ -15,7 +15,7 @@ Updated 2026-11-11 (V1.2 built locally, not released). An earlier planning folde
 | **Done** | **V1.1**, safety nets (five items): layout tests for every public page and CMS screen, Today shows deletion requests and failed alerts, lint is the gate | **Released 2026-11-11** (`ed5a724`) |
 | **Left 1** | Look once, signed in, at Today (deletion requests, alert notice) and at the restyled CMS | You; the agent has only seen them against test data |
 | **Left 2** | V1 items 4 and 10, and the small owner list | Waiting for you: business facts, the adviser's retention periods, rotate one key, two clean-ups (table "Needs the owner") |
-| **Built, not released** | **V1.2**, public-site trust (rest of GSD phase 8) | **Built locally 2026-11-11, not released:** 5 of 5 open items ticked on local evidence (item 4 dropped as already true); needs your release and one `.htaccess` upload (table "Needs the owner") |
+| **Done** | **V1.2**, public-site trust (rest of GSD phase 8) | **Released 2026-11-13** (`ea6164c`): 5 of 5 open items ticked (item 4 dropped as already true); `check:live` 20 of 20 after the release; the owner's checks are in the table "Needs the owner" |
 | **Left 3** | **V2**, clean-up and live verification (rest of GSD phase 9) | Planned, not frozen; scope notes below |
 | **Parked** | Everything else, grouped by theme | "Parking lot" below; nothing deleted |
 
@@ -126,7 +126,7 @@ user outcome with a check, ticked on **local** evidence; what needs the host or 
   (`sidebar_state`, `gkos-groups`, `theme`, `gk-auth`) and with Clerk's documented cookies; it fails if the page lists the retired
   `gk_oauth_state` or `gk-locked`, or if a key used in `src/` is missing. Google sign-in is enabled in Clerk (read 2026-11-11), so
   the page says it is handled by Clerk and Google rather than denying it. Facts only; the adviser still reviews the wording (V1 item 4).
-  **Evidence 2026-11-11 (local, on `goal/v1.2`, not released):** `src/marketing/data/storage-items.ts` is the one list (`STORED_ITEMS`: the four
+  **Evidence 2026-11-11 (local, on `goal/v1.2`; released 2026-11-13 as `ea6164c`):** `src/marketing/data/storage-items.ts` is the one list (`STORED_ITEMS`: the four
   items this site stores plus Clerk's `__client`, `__client_uat`, `__session`) and `/cookies` renders it; `storage-items.test.ts` (6 tests) fails
   on the retired items, on any file in `src/` that uses cookies or storage but is not in its list of four, on any storage name those files use that `STORED_ITEMS` lacks, and on a `gk-auth` lifetime that does not follow the "Lasts:" label; `cookies.test.tsx` (5 tests) checks the
   rendered pages (Clerk named, the suffixed copies of its cookies allowed for, no claim of a complete Clerk list); `public-layout.test.ts` 68 of 68 with axe 0 violations (`/cookies`, `/privacy` included). The review fix wave dropped the claim that Clerk sets only three cookies. **Owner, still open:** look at the cookies on `/app` once in the browser's developer tools to confirm Clerk's names, and the adviser's review of the wording.
@@ -134,20 +134,19 @@ user outcome with a check, ticked on **local** evidence; what needs the host or 
   the live CMS (`fixed-price-how-we-scope`, `what-makes-a-website-fast`, `why-one-team-design-and-build`); the two built-in
   articles the CMS does not hold are dropped (they stay in git). Check: a unit test ties the sitemap's article URLs to that list;
   `check:live` gains a read-only check that every article in the live sitemap answers 200 from `blog.php?slug=`.
-  **Evidence 2026-11-11 (local, on `goal/v1.2`, not released):** `src/marketing/data/insights.test.ts` (3 tests) ties `insights` and the
+  **Evidence 2026-11-11 (local, on `goal/v1.2`; released 2026-11-13 as `ea6164c`):** `src/marketing/data/insights.test.ts` (3 tests) ties `insights` and the
   prerendered `/resources/` pages to the three CMS slugs; `scripts/live-check.test.mjs` (24 tests, 3 of them new for this item) covers `articleSlugsFromSitemap` and the
-  per-article check; the build still writes 32 pages and 32 sitemap URLs; `public-layout.test.ts` 68 of 68 with axe 0 violations. The live
-  sitemap only changes at the next release, so the first `check:live` after it is the live proof. The two retired article URLs may still be indexed and are not redirected (owner decision, "Needs the owner").
+  per-article check; the build still writes 32 pages and 32 sitemap URLs; `public-layout.test.ts` 68 of 68 with axe 0 violations. Live proof 2026-11-13: the live sitemap lists exactly the three CMS articles and `check:live` is 20 of 20. The two retired article URLs may still be indexed and are not redirected (owner decision, "Needs the owner").
 - [x] **3. The contact form turns bots away without bothering people.** A hidden honeypot field and a minimum fill time. A
   honeypot hit saves nothing and sends no alert; a too-fast post gets a friendly retry; a real enquiry is unaffected. Check:
   server tests (honeypot, too fast, normal, the throttle still works) and `tests/browser/contact.test.ts` at 375 and 1280 px. This reverses D-055's rejection of a honeypot, with mitigations (D-067).
-  **Evidence 2026-11-11 (local, on `goal/v1.2`, not released):** `tests/server/contact-bots.test.ts` (15 tests, written first and seen failing) with the
+  **Evidence 2026-11-11 (local, on `goal/v1.2`; released 2026-11-13 as `ea6164c`):** `tests/server/contact-bots.test.ts` (15 tests, written first and seen failing) with the
   existing `contact-hardening`, `enquiry-notify`, `enquiry-services`, `journey`, `references` and `alert-failures` files; `tests/browser/contact.test.ts`
   12 of 12 at 375 and 1280 px (friendly retry keeps what was typed and the retry goes through; a filled hidden field gets a thank-you and stores nothing;
   `tabindex=-1`, `aria-hidden`, `autocomplete=off`, off screen, never reached by Tab); full `test:browser` 148 of 148 with axe on (0 violations on `/contact`).
   The form sends `fillMs`, an elapsed time the browser measures (minimum 2500 ms), not a timestamp, so a visitor's wrong clock changes nothing; a honeypot hit records the sender's email so a real person caught by autofill can be written back to; a second cap bounds the audit rows the refusals write (20 per IP in 15 minutes).
   The limit is stated in `docs/SECURITY.md` section 4 and `docs/API-SPEC.md`: it stops form-filling bots; a script that POSTs JSON directly is limited only by the throttle. **Owner, still open:** the manual autofill pass (NOT TESTED).
-  The server half is live only after the next release uploads `server/contact.php`.
+  The server half is live since the release of `ea6164c` (2026-11-13); the contact form itself was not exercised on the live site (no real enquiry was sent).
 - [x] ~~**4. The contact throttle sees the real visitor IP behind Cloudflare.**~~ **Dropped 2026-11-11 after the builder check: already
   true.** `server/.htaccess` documents that Cloudflare IP restoration is on, and K-123 was closed with evidence (a forged
   `CF-Connecting-IP` ignored; 45 audit rows held visitor addresses). K-102 belongs to the retired reference sign-in.
@@ -155,23 +154,22 @@ user outcome with a check, ticked on **local** evidence; what needs the host or 
   The build writes `404.html`; `server/notfound.php` sends it with status 404 and `noindex` for any path whose first segment is not
   one the CMS can publish under (`app`, `login`, `set-password`, `p`, `verify`, `work`, `services`, `resources`, any case; not `blog`, which has no route; a wrong-case public path such as `/Contact` is a 404 too). Check: a
   build test for `404.html`; a server test for `notfound.php`; a local Apache run (`pnpm run check:htaccess`) shows 404 for an
-  unknown path and 200 for every sitemap page, `/login`, `/app`, `/p/<token>` and a CMS-only article or service. **Live: BLOCKED,
-  owner** (the rule goes in the host's `.htaccess`, `docs/DEPLOYMENT.md`).
-  **Evidence 2026-11-11 (local, on `goal/v1.2`, not released):** `src/prerender/not-found.test.ts` (3 tests: `404.html` titled "Page not found",
+  unknown path and 200 for every sitemap page, `/login`, `/app`, `/p/<token>` and a CMS-only article or service. **Live: done 2026-11-13** (the rule is in the host's `.htaccess`, uploaded by hand, `docs/DEPLOYMENT.md`; the release carried `notfound.php` and `404.html`).
+  **Evidence 2026-11-11 (local, on `goal/v1.2`; released 2026-11-13 as `ea6164c`):** `src/prerender/not-found.test.ts` (3 tests: `404.html` titled "Page not found",
   noindex, its inline script covered by the CSP in `server/.htaccess`, not in the sitemap); `tests/server/notfound.test.ts` (3 tests: 404 with the
   page, `noindex`, `no-store`; the short fallback page; `blog.php?slug=<unknown>` still a JSON 404); `pnpm run check:htaccess` 67 of 67 under the
   Mac's Apache with PHP-FPM (every prerendered page, `/login`, `/app/leads`, `/App/leads` (any case), `/p/abc`, `/verify/x` and CMS-only `/services`, `/work` and
   `/resources` slugs 200; unknown paths and `/blog/...` 404 with the built page, `noindex`, `no-store` and the same CSP as `/`; `/404.html` by name 200 with the CSP; `/missing.php` and `/assets/` 404);
   all written first and seen failing. `scripts/live-check.mjs`'s `unknown URL answers 404` also requires the `Content-Security-Policy` and `X-Robots-Tag` headers, the one alarm for whether LiteSpeed applies the CSP rule to `notfound.php`. The build writes 32 pages, `404.html` and 32 sitemap URLs; the final ladder (`docs/VERIFICATION.md`): `pnpm test` 701, `test:server` 687 and
-  `test:browser` 148, all passing. **Live: the `.htaccess` is already uploaded (2026-11-13); the branded 404 needs the release (`notfound.php`, `404.html`); `check:live` shows 17 of 20 until then (the unknown-URL headers and the two retired sitemap articles).** LiteSpeed NOT TESTED.
+  `test:browser` 148, all passing. **Live proof 2026-11-13 (after the release of `ea6164c`):** an unknown URL answers 404 with the branded "Page not found" page, `X-Robots-Tag: noindex`, `Cache-Control: no-store` and the same Content-Security-Policy as the other pages; `/blog/old` 404; `/`, `/work`, `/services/web-design`, `/resources`, the three CMS articles, `/services/a-service-only-in-the-cms`, `/Work/x`, `/cookies`, `/contact` and `/sitemap.xml` 200; `check:live` 20 of 20 (17 of 20 before the release). The branded 404 and the honeypot in a real browser are NOT TESTED.
 - [x] **6. The home page's headline is read once by crawlers.** The animated words are marked so a crawler or a screen reader gets
   the sentence one time. Check: a test on the prerendered home page. **Needs the owner's OK** (asked 2026-11-11; "Go ahead").
-  Done on `goal/v1.2` (not released): the `.sr` span is removed and the `<h1>` carries the sentence in `aria-label`; the animated words stay `aria-hidden`.
+  Done on `goal/v1.2` (released 2026-11-13 as `ea6164c`): the `.sr` span is removed and the `<h1>` carries the sentence in `aria-label`; the animated words stay `aria-hidden`.
   Evidence: `src/marketing/pages/home-heading.test.tsx` (seen failing, the lead twice; then passing: the lead once, each name once, label equals the sentence); built `dist/index.html` checked; final ladder: `pnpm test` 701, `pnpm run lint` 0, `pnpm run build` 32 pages, `test:browser` 148 with axe 0 violations on `/`. A real screen reader and a crawler's own reading are NOT TESTED.
 
 **Not in V1.2 (parked or the owner's):** the legal "[to supply]" gaps (V1 item 4), prerendering CMS posts and work automatically
 (parked: new posts work in the browser but are not in the sitemap until the next build), the phone tables (K-148), the owner
-list. **Progress V1.2: 5 of 5 open items ticked (item 4 dropped as already true), built locally, not released.** Ticked on local evidence (1, 2, 3, 5, 6); item 5 is live only after the owner's `.htaccess` upload. The final ladder is in `docs/VERIFICATION.md` (types clean, lint 0, 701 unit, 687 server, 148 browser three runs in a row with axe 0, `check:htaccess` 67 of 67, `php -l` 69, `verify` PASS); the review record is in `docs/AUDIT.md`.
+list. **Progress V1.2: 5 of 5 open items ticked (item 4 dropped as already true); released 2026-11-13 as `ea6164c`.** Ticked on local evidence (1, 2, 3, 5, 6); item 5 was then verified live (`check:live` 20 of 20). The final ladder is in `docs/VERIFICATION.md` (types clean, lint 0, 701 unit, 687 server, 148 browser three runs in a row with axe 0, `check:htaccess` 67 of 67, `php -l` 69, `verify` PASS); the review record is in `docs/AUDIT.md`.
 
 ## Versions and the nine GSD phases (2026-11-11)
 
@@ -182,7 +180,7 @@ The nine phases of the earlier planning sheet are mapped onto versions so the tw
 | **V0** (go-live and repair) | Hardening, docs and CI gate, Clerk repairs, safe writes, Clerk-only sign-in, certificates, daily-flow speed-ups | 1 to 7 | **Released** (`ae01cec`, `b301ec7`, `cbfd527`, `ed58064`, `01d2269`, `825600e`; Phase 2 closed 2026-11-08 with the CI gate, K-138, and the `release.mjs` wording) |
 | **V1** (frozen 2026-11-10) | Ten outcomes from enquiry to paid invoice | the owner-input core of 8 (items 4 and 10) | Released `4bdaed7`; 8 of 10 ticked; 4 and 10 BLOCKED on the owner |
 | **V1.1** (frozen 2026-11-11) | The five items above | the lint slice of 9 (item 5); layout and Today safety nets are new | **Released 2026-11-11** (`ed5a724`) |
-| **V1.2** (frozen 2026-11-11) | Five open items (one dropped), the buildable rest of Phase 8 | 8 | **Built locally 2026-11-11, not released** (5 of 5 ticked); the legal wording still waits for the owner's V1 inputs |
+| **V1.2** (frozen 2026-11-11) | Five open items (one dropped), the buildable rest of Phase 8 | 8 | **Released 2026-11-13** (`ea6164c`; 5 of 5 ticked); the legal wording still waits for the owner's V1 inputs |
 | **V2** (PLANNED, not frozen) | The rest of Phase 9 | 9 | Opens only when the owner says so |
 
 A planned version is not started and not frozen: its items are chosen when it opens, by the same two tests as D-063.
@@ -192,7 +190,7 @@ A planned version is not started and not frozen: its items are chosen when it op
 Carried over from the planning sheet (goals, what is in, what is out, how we will know). They are starting points for the
 design step, not a frozen list.
 
-**V1.2, public-site trust.** Built; the frozen list and its evidence are above ("V1.2 finish line"). The original note also named the
+**V1.2, public-site trust.** Released 2026-11-13 as `ea6164c`; the frozen list and its evidence are above ("V1.2 finish line"). The original note also named the
 legal "[to supply]" gaps (V1 item 4, the owner's inputs, never invented) and prerendering CMS-published posts and work (parked, V2);
 neither was in the frozen list.
 
@@ -218,11 +216,11 @@ Prepared in this run: the scripts, tests and instructions below. None of these w
 | f | ~~One live walk~~ **done 2026-11-10, all seven steps** (`docs/VERIFICATION.md`). Left: the invoice PDF, a real phone | gate 6 (real browser and phone) | `docs/VERIFICATION.md` "Owner walk" |
 | g | ~~`$OWNER_ALERTS`~~ **done 2026-11-10** (`hello@gakinz.com`, SMTP login proven). Confirmed by the owner: the TEST email arrived | item 3 live | `docs/DEPLOYMENT.md` section 5 |
 
-**V1.2 (built locally, not released): what needs you**
+**V1.2 (released 2026-11-13, `ea6164c`): what still needs you**
 
 | # | Owner action | Unblocks | How |
 |---|---|---|---|
-| h | ~~Upload `server/.htaccess` after the release~~ **Done early on 2026-11-13 (owner's request; backup `htaccess.before-v1.2-404.20261113T074141Z`)**. After the release, run `pnpm run check:live` (the `unknown URL answers 404` check fails on purpose until then) | item 5 live | back up the live file first; exact steps in `docs/DEPLOYMENT.md` section 5 |
+| h | ~~Upload `server/.htaccess` after the release~~ **Done 2026-11-13** (early, at the owner's request; backup `htaccess.before-v1.2-404.20261113T074141Z`; re-checked byte-identical before the merge). ~~Run `pnpm run check:live`~~ **Done: 20 of 20** | item 5 live (verified) | `docs/DEPLOYMENT.md` section 5 |
 | i | **A manual autofill pass on the contact form** in Chrome, Safari, Firefox and one password manager (local build or live), then watch `enquiry_bot_dropped` rows for a few weeks (each holds the sender's email, so a misfire can be written back to) | item 3 (NOT TESTED) | `docs/SECURITY.md` section 4, D-067 |
 | j | Sign in at `/app` once and look at the cookies in the browser's developer tools, to confirm Clerk's cookie names (the cookie page allows for suffixed copies) | item 1 | `/cookies` lists `__client`, `__client_uat`, `__session` |
 | k | The adviser's review of the cookie wording (facts and a citation of Clerk's documentation, not legal advice) | item 1, V1 item 4 | `/cookies`, `src/marketing/data/storage-items.ts` |

@@ -1,7 +1,7 @@
 # V1.2: public-site trust (design)
 
 Date: 2026-11-11 · Owner: Gideon Akinlotan · Status: approved by the owner ("Go ahead", D-065); amended after the builder check and again after the review fix wave on 2026-11-11 (see
-"Builder check" below); **built locally on `goal/v1.2`, not released** (D-067 records the honeypot). The frozen item list is in `docs/ROADMAP.md`; the plan that implements this is
+"Builder check" below); **built on `goal/v1.2` and released 2026-11-13 as `ea6164c`** (D-067 records the honeypot). The frozen item list is in `docs/ROADMAP.md`; the plan that implements this is
 `docs/superpowers/plans/2026-11-11-v1-2-public-trust.md`.
 
 ## Intent
