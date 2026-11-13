@@ -163,7 +163,7 @@ user outcome with a check, ticked on **local** evidence; what needs the host or 
   Mac's Apache with PHP-FPM (every prerendered page, `/login`, `/app/leads`, `/App/leads` (any case), `/p/abc`, `/verify/x` and CMS-only `/services`, `/work` and
   `/resources` slugs 200; unknown paths and `/blog/...` 404 with the built page, `noindex`, `no-store` and the same CSP as `/`; `/404.html` by name 200 with the CSP; `/missing.php` and `/assets/` 404);
   all written first and seen failing. `scripts/live-check.mjs`'s `unknown URL answers 404` also requires the `Content-Security-Policy` and `X-Robots-Tag` headers, the one alarm for whether LiteSpeed applies the CSP rule to `notfound.php`. The build writes 32 pages, `404.html` and 32 sitemap URLs; the final ladder (`docs/VERIFICATION.md`): `pnpm test` 701, `test:server` 687 and
-  `test:browser` 148, all passing. **Live: BLOCKED, owner** until the `.htaccess` upload; `check:live`'s `unknown URL answers 404` fails until then, on purpose. LiteSpeed NOT TESTED.
+  `test:browser` 148, all passing. **Live: the `.htaccess` is already uploaded (2026-11-13); the branded 404 needs the release (`notfound.php`, `404.html`); `check:live` shows 17 of 20 until then (the unknown-URL headers and the two retired sitemap articles).** LiteSpeed NOT TESTED.
 - [x] **6. The home page's headline is read once by crawlers.** The animated words are marked so a crawler or a screen reader gets
   the sentence one time. Check: a test on the prerendered home page. **Needs the owner's OK** (asked 2026-11-11; "Go ahead").
   Done on `goal/v1.2` (not released): the `.sr` span is removed and the `<h1>` carries the sentence in `aria-label`; the animated words stay `aria-hidden`.
@@ -222,7 +222,7 @@ Prepared in this run: the scripts, tests and instructions below. None of these w
 
 | # | Owner action | Unblocks | How |
 |---|---|---|---|
-| h | **Upload `server/.htaccess` after the release**, then run `pnpm run check:live` (the `unknown URL answers 404` check fails on purpose until then) | item 5 live | back up the live file first; exact steps in `docs/DEPLOYMENT.md` section 5 |
+| h | ~~Upload `server/.htaccess` after the release~~ **Done early on 2026-11-13 (owner's request; backup `htaccess.before-v1.2-404.20261113T074141Z`)**. After the release, run `pnpm run check:live` (the `unknown URL answers 404` check fails on purpose until then) | item 5 live | back up the live file first; exact steps in `docs/DEPLOYMENT.md` section 5 |
 | i | **A manual autofill pass on the contact form** in Chrome, Safari, Firefox and one password manager (local build or live), then watch `enquiry_bot_dropped` rows for a few weeks (each holds the sender's email, so a misfire can be written back to) | item 3 (NOT TESTED) | `docs/SECURITY.md` section 4, D-067 |
 | j | Sign in at `/app` once and look at the cookies in the browser's developer tools, to confirm Clerk's cookie names (the cookie page allows for suffixed copies) | item 1 | `/cookies` lists `__client`, `__client_uat`, `__session` |
 | k | The adviser's review of the cookie wording (facts and a citation of Clerk's documentation, not legal advice) | item 1, V1 item 4 | `/cookies`, `src/marketing/data/storage-items.ts` |
