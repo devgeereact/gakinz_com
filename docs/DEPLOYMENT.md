@@ -151,7 +151,7 @@ No SQL and no `config.php` key. The release carries the rest: `server/notfound.p
 fallback sends a path to `notfound.php` when it is not a file or directory and its first segment is not `app`, `login`,
 `set-password`, `p`, `verify`, `work`, `services` or `resources`, matched without regard to case (the browser app's own paths
 and the CMS's `/work`, `/services` and `/resources` records; not `blog`, which the app has no route for, so an old `/blog/...`
-link is a 404); and the public pages' Content-Security-Policy `FilesMatch` becomes `^(index\.html|404\.html|notfound\.php)$`. No `ErrorDocument`, so the API's JSON 404 replies stay JSON. Order: release first, then
+link is a 404; a wrong-case public path such as `/Contact` is a 404 too); and the public pages' Content-Security-Policy `FilesMatch` becomes `^(index\.html|404\.html|notfound\.php)$`. No `ErrorDocument`, so the API's JSON 404 replies stay JSON. Order: release first, then
 upload the file (uploaded before the release, an unknown address would reach a `notfound.php` that is not there yet and get
 the `.php` 404 rule's plain 404 instead of the page). Before uploading, run `pnpm run build && pnpm run check:htaccess`: it
 runs this exact file under Apache with PHP-FPM on this Mac over a copy of `dist/` and must pass (67 of 67 on 2026-11-11). Back

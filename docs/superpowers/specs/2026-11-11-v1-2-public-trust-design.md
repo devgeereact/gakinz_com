@@ -1,7 +1,7 @@
 # V1.2: public-site trust (design)
 
-Date: 2026-11-11 · Owner: Gideon Akinlotan · Status: approved by the owner ("Go ahead", D-065); amended after the builder check on 2026-11-11 (see "Builder check" below);
-awaiting the owner's go to build. The frozen item list is in `docs/ROADMAP.md`; the plan that implements this is
+Date: 2026-11-11 · Owner: Gideon Akinlotan · Status: approved by the owner ("Go ahead", D-065); amended after the builder check and again after the review fix wave on 2026-11-11 (see
+"Builder check" below); **built locally on `goal/v1.2`, not released** (D-067 records the honeypot). The frozen item list is in `docs/ROADMAP.md`; the plan that implements this is
 `docs/superpowers/plans/2026-11-11-v1-2-public-trust.md`.
 
 ## Intent
@@ -100,5 +100,5 @@ Apache check script builds its temporary config, and the copy of the friendly re
 ## Done when
 
 Each item's check in `docs/ROADMAP.md` passes, the ladder and axe are clean, a fresh reviewer has read the whole branch, and
-what needs the owner is listed (upload `server/.htaccess`, set `$TRUST_CLOUDFLARE_IP`, the adviser's review of the cookie
-wording).
+what needs the owner is listed (upload `server/.htaccess` after the release, a manual autofill pass on the contact form, a look at
+Clerk's cookie names, the adviser's review of the cookie wording).

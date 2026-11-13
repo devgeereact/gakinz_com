@@ -1044,7 +1044,8 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
    needs their hosts added to the policy first.
 4. **The contact form takes JSON only**, which stops other sites posting through visitors' browsers.
    Rejected: a honeypot field (a browser that autofills it would silently lose a real enquiry) and a site-wide
-   hourly cap (it turns spam into a way to block real enquiries).
+   hourly cap (it turns spam into a way to block real enquiries). **Superseded for the honeypot by D-067
+   (2026-11-11, with mitigations); the site-wide hourly cap stays rejected.**
 5. **Mail certificate checks are a switch, off by default (K-126):** turning them on blind could stop all mail.
 6. **`xlsx` comes from the SheetJS CDN, pinned by integrity (K-017):** SheetJS stopped publishing to npm, and
    the export feature stays. Rejected: a CSV-only export (removes a feature the owner has not given up).
@@ -1160,10 +1161,11 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 ## D-065 · V1.2 finish line: six items on public-site trust
 **Date:** 2026-11-11 · **Status:** decided by the owner's "Let's go with V1.2 /finish-app" and "Go ahead" after a short brainstorm (the run proposed the list; the owner approved it as written, including dropping the two built-in articles the CMS does not hold and changing the home headline).
 
-1. `docs/ROADMAP.md` holds the frozen list: a true cookie policy; a sitemap that lists exactly the articles that exist (K-147); bot protection on the contact form; the real visitor IP behind Cloudflare; a real 404 status; the home headline read once.
-2. **My calls, for the owner to overrule:** the built-in articles mirror the CMS by hand (the build stays offline and deterministic) instead of the build reading the live CMS; the honeypot silently drops a bot's post so it learns nothing; the Cloudflare IP is off by default behind `$TRUST_CLOUDFLARE_IP`; the 404 rule is prepared and tested locally but never applied by the run.
+1. `docs/ROADMAP.md` holds the frozen list: a true cookie policy; a sitemap that lists exactly the articles that exist (K-147); bot protection on the contact form; ~~the real visitor IP behind Cloudflare~~ (dropped, see 4); a real 404 status; the home headline read once.
+2. **My calls, for the owner to overrule:** the built-in articles mirror the CMS by hand (the build stays offline and deterministic) instead of the build reading the live CMS; the honeypot silently drops a bot's post so it learns nothing; ~~the Cloudflare IP is off by default behind `$TRUST_CLOUDFLARE_IP`~~ (struck: item 4 was dropped, no code reads that key, `git grep TRUST_CLOUDFLARE_IP -- server` finds nothing); the 404 rule is prepared and tested locally but never applied by the run.
 3. **Left out on purpose:** the legal placeholders (V1 item 4), automatic prerender of CMS posts and work, the phone tables (K-148).
 4. **Amended the same day after the builder check (a fresh agent read the spec cold):** item 4 (the real visitor IP) is dropped because it is already true (`server/.htaccess`, K-123); the 404 page is served by `server/notfound.php`, not a global `ErrorDocument`, and `services` joins the paths the CMS can publish under; the cookie page keeps Google sign-in because it is enabled in Clerk. Details: `docs/superpowers/specs/2026-11-11-v1-2-public-trust-design.md`.
+5. **Changed later the same day (review fix wave, D-067):** the contact form's timing field is `fillMs`, an elapsed time the browser measures, and no longer `openedAt`, a timestamp the server compared with its own clock; the 404 rule's exemption list no longer holds `blog` (the app has no `/blog` route; posts publish under `/resources`) and matches in any case; the live 404 check also requires the `Content-Security-Policy` and `X-Robots-Tag` headers; a honeypot hit now records the email the sender typed.
 
 ## D-066 · Spec-driven work with agents, planned in `docs/superpowers/`, built inside the project folder
 **Date:** 2026-11-11 · **Status:** decided by the owner ("a superpower SDD ... in docs/superpowers where the planning takes place ... I don't want the code built outside this workspace ... I send agents to do the planning, the job, the review and the fix").
@@ -1174,3 +1176,17 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 
 **Why:** planning that lives in one visible folder, and work that happens where the owner can see it, cannot drift or be missed.
 
+## D-067 · The contact form gets a honeypot after all, with mitigations (supersedes D-055 item 4 for the honeypot)
+**Date:** 2026-11-11 · **Status:** decided as part of V1.2 item 3 (D-065, the owner's "Go ahead"), built on `goal/v1.2`, **not released**. Reversible: remove the `hp_site` check from `server/contact.php` and the field from `src/marketing/pages/Contact.tsx` and nothing else depends on it.
+
+**What D-055 rejected and why.** D-055 item 4 rejected a honeypot field on the contact form because a browser or password manager that autofills the hidden field would make a real person's enquiry vanish: they would see a thank-you and the owner would never hear of it. The per-IP throttle stayed the only protection (K-136).
+
+**What changed.**
+1. The field is named `hp_site` (not `website`, which password managers fill), has `autocomplete="off"` and the ignore hints for 1Password, LastPass and Bitwarden, sits off screen (never `display:none`), and carries `aria-hidden="true"` and `tabindex="-1"`, so a keyboard, screen-reader or password-manager user does not meet it.
+2. A post sent too fast is refused visibly, not silently: `429 "That was quick. Please check your details and send again."` with what the visitor typed kept. The measure is `fillMs`, an elapsed time the browser computes (minimum 2500 ms); a missing, negative, non-numeric or over-a-day value is no signal.
+3. A honeypot hit still answers like success (so a bot learns nothing), but it now **records the sender's email** in the audit row (`enquiry_bot_dropped`, detail `honeypot <email>`, one line, at most 200 characters), so a real person caught by autofill can be found and written back to. A second audit cap (20 refusal rows per IP in 15 minutes, then the throttle's 429 with no row) bounds the log.
+4. `docs/SECURITY.md` section 4 states the limit: this stops form-filling bots; a script that POSTs JSON directly is limited only by the IP throttle (5 enquiries in 15 minutes).
+
+**Residual risk.** A real enquiry is silently dropped if a password manager still fills `hp_site` despite those measures; the owner can recover the sender's email from the audit row, but only if someone looks. The manual autofill pass (Chrome, Safari, Firefox and one password manager) is **NOT TESTED**; the owner watches `enquiry_bot_dropped` rows for a few weeks after release. A honeypot-only address is not found by the privacy export or erasure by email (those reach audit rows only for an address that also has an enquiry); that is handled by hand (`docs/SECURITY.md`).
+
+**Evidence:** `tests/server/contact-bots.test.ts` (15 tests), `tests/browser/contact.test.ts` (12 tests), `docs/AUDIT.md` (V1.2 section). Not a CAPTCHA and no third-party code: the public pages still set no cookies or storage.
