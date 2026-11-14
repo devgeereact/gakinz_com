@@ -2,6 +2,17 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-14 · House-standard rollout, stages 0 to 3 (documents only; `chore/house-standard`)
+
+Checked against git, the files and a fresh gate on this branch, not against the old notes.
+- **Repository:** `main` `a30a018`, clean, 0 behind and 0 ahead of `origin/main`; no stash; no other worktree or local branch (the board's local branches and `.local-state/wt-finish` were already gone); remote branches `chore/tailwind-v4`, `goal/finish`, `goal/v1.2`, `goal/v1.3` all merged into `main`; `chore/graphify-merge-attribute` (1 line in `.gitattributes`, pushed by another session about an hour before the run) is unmerged and left alone. Open PRs: none. CI on `main`: run 43499565198 (PR #35 merge) success; the two before it success.
+- **Backup:** `~/Backups/projects/gakinz_com/gakinz_com-<stamp>.bundle`, `git bundle verify` passed; `.local-state/backups` links to it. No uncommitted work existed to patch.
+- **Docs:** 26 documents after the merge (29 before); `pnpm run docs:check` PASS; no remaining path to the three removed files except `server/auth.php` (a comment; a server edit would be a release) and dated history lines that now say where the text went.
+- **Left as separate files, with the reason:** STATUS, AUDIT, VERIFICATION, SECURITY, PRIVACY-READINESS, OPERATIONS, DEPLOYMENT (D-069 item 2).
+- **Tracked images (not untracked, for approval):** 25 `webp`/`png` files, 1.3 MB in total, the largest `public/images/work/heritage-d.webp` (172 KB); no `.idea/`, `.pyc` or screenshots.
+- **Tailwind v4:** `tailwindcss` and `@tailwindcss/vite` 4.3.5 in `devDependencies`, `tailwindcss()` first in `vite.config.ts` and `vite.cms-test.config.ts`, `@import 'tailwindcss'` in `src/index.css`, two `@theme inline` blocks, no `tailwind.config.*` or PostCSS config, `.flex{` present in the built CSS. DONE earlier (D-064), verified now.
+- **NOT TESTED:** the browser suite on this computer (Chromium `1248` missing); a real phone; anything on the live site.
+
 ## 2026-11-13 (V1.2 release) · `ea6164c` released and checked live
 
 **Scope:** the release of V1.2 (D-065, D-066, D-067) and the read-only live checks after it. **CI findings: none** (run 43389323251, every job green: typecheck, lint, docs, unit, build, PHP and server tests on MySQL 8, gitleaks, Semgrep, "does this push need a release"). **Early `.htaccess` upload:** `server/.htaccess` was uploaded by hand on 2026-11-13 07:41 UTC at the owner's request (backup `htaccess.before-v1.2-404.20261113T074141Z`), probed right after (all as expected), and found byte-identical to the repo file in a re-check before the merge. **Release:** 08:06 UTC, snapshot `20261113T080551Z`, smoke checks passed. **Live results:** `pnpm run check:live` 20 of 20 (17 of 20 before the release); an unknown URL answers 404 with the branded page, `noindex`, `no-store` and the same Content-Security-Policy as the other pages; the live sitemap lists exactly the three CMS articles; `/cookies/` names `gk-auth` and `__session` and no longer contains `gk_oauth_state` or `gk-locked`; the home `<h1>` carries the `aria-label` sentence. **NOT TESTED:** the contact form live, the branded 404 and the honeypot in a real browser, Safari, Firefox, a real phone, a password manager, a screen reader, Clerk's real cookie names. Detail: `docs/VERIFICATION.md` "Release and live checks, 2026-11-13".

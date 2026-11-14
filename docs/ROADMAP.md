@@ -2,7 +2,7 @@
 
 The one place for what is done, what is left and what is parked on GAkinz. Everything planned lives here; the task in
 progress is `.agent/CURRENT-TASK.md`, the history is `docs/CHANGELOG.md`, the issue list is `docs/KNOWN-ISSUES.md`.
-Updated 2026-11-13 (V1.2 released as `ea6164c`). An earlier planning folder (`.planning/`, nine GSD phases) was folded into this file on that date.
+Updated 2026-11-14 (V1.2 released as `ea6164c`; V1.3 frozen, 0 of 6, not started; house-standard docs merge D-069). An earlier planning folder (`.planning/`, nine GSD phases) was folded into this file on that date.
 
 ## At a glance
 
@@ -17,6 +17,7 @@ Updated 2026-11-13 (V1.2 released as `ea6164c`). An earlier planning folder (`.p
 | **Left 2** | V1 items 4 and 10, and the small owner list | Waiting for you: business facts, the adviser's retention periods, rotate one key, two clean-ups (table "Needs the owner") |
 | **Done** | **V1.2**, public-site trust (rest of GSD phase 8) | **Released 2026-11-13** (`ea6164c`): 5 of 5 open items ticked (item 4 dropped as already true); `check:live` 20 of 20 after the release; the owner's checks are in the table "Needs the owner" |
 | **Left 3** | **V2**, clean-up and live verification (rest of GSD phase 9) | Planned, not frozen; scope notes below |
+| **Planned** | **V1.3**, the daily CMS screens and the first public screen (D-068, six items) | Frozen 2026-11-13, **0 of 6 ticked, not started**; the owner says "go" |
 | **Parked** | Everything else, grouped by theme | "Parking lot" below; nothing deleted |
 
 How a new version opens: you say so, I propose at most ten items from the parking lot by value to users, we freeze the list

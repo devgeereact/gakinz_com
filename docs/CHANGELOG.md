@@ -3,6 +3,12 @@
 What changed in the product, newest first. The checks behind each change are in [AUDIT.md](AUDIT.md) and
 [VERIFICATION.md](VERIFICATION.md); why is in [DECISIONS.md](DECISIONS.md). The release log (how each release went out, 2026-10-21 onwards) is at the foot of this file.
 
+## 2026-11-14 · House standard: one docs tree and the working method (documents only, D-069)
+
+- `docs/WORKBOOK.md`, `docs/GEE-OS.md` and `docs/TEST-PLAN.md` are merged away (into `docs/CHANGELOG.md` "Release log", `docs/ARCHIVE.md` and `docs/VERIFICATION.md` "Test plan"); `CODEX.md` is deleted; `CLAUDE.md` is `@AGENTS.md`. Nothing was dropped: the old text is in `docs/ARCHIVE.md`.
+- `AGENTS.md` gains the shape of the system, the working agreements, "How we work" (the real gate, map before search, agent models) and the standing rules from the Workbook.
+- Tailwind v4 was already in place (D-064); checked, not changed. No product code changed and nothing was released.
+
 ## 2026-11-11 (V1.2) · Public-site trust: a true cookie page, a sitemap that matches the CMS, bot signals on the contact form, a real 404, a headline read once (released 2026-11-13 as `ea6164c`)
 
 Five items of the V1.2 finish line (`docs/ROADMAP.md`, D-065), built and reviewed locally, then **released on 2026-11-13 as `ea6164c`** (PR #34, 22 commits, a fast-forward of `main` from `ed5a724`; CI run 43389323251 green; released 08:06 UTC, snapshot `20261113T080551Z`, smoke checks passed). `server/.htaccess` had been uploaded by hand earlier that day at the owner's request, and was found byte-identical to the repo file before the merge. **Live results (read-only):** `pnpm run check:live` 20 of 20 (17 of 20 before the release); an unknown URL answers 404 with the branded "Page not found" page, `X-Robots-Tag: noindex`, `Cache-Control: no-store` and the same Content-Security-Policy as the other pages; `/blog/old` answers 404; the live sitemap lists exactly the three CMS articles; `/cookies/` names `gk-auth` and `__session` and no longer contains `gk_oauth_state` or `gk-locked`; the home `<h1>` carries the `aria-label` sentence. NOT TESTED: the contact form on the live site (no real enquiry was sent), the branded 404 and the honeypot in a real browser, Safari, Firefox, a real phone, a password manager or screen reader, Clerk's real cookie names in devtools. The checks are in [VERIFICATION.md](VERIFICATION.md) and [AUDIT.md](AUDIT.md).

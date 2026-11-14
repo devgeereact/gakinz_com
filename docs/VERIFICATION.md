@@ -4,6 +4,21 @@ What was actually run, with the result, and what only the owner can show. Result
 [AUDIT.md](AUDIT.md); the finish line they serve is [ROADMAP.md](ROADMAP.md). Status words: DONE (seen), PARTIAL,
 NOT TESTED, BLOCKED.
 
+## Ladder, 2026-11-14, branch `chore/house-standard` (documents only, on the tree of `main` `a30a018`)
+
+Ubuntu computer, Node 24.22.1, local MariaDB on port 3329 (socket `/tmp/gk3329.sock`; database `gakinz_dev_test`), machine load about 31 from other sessions.
+
+| Step | Result |
+|---|---|
+| `pnpm exec tsc -b --noEmit` | DONE, clean |
+| `pnpm run lint` | DONE, 0 errors, 0 warnings |
+| `pnpm test` | DONE, 701 tests in 66 files |
+| `pnpm run test:server` | DONE, 687 tests in 55 files (2,074 s: the first attempt hung with no output and was stopped; the second ran under heavy load) |
+| `pnpm run build` | DONE, 32 public pages, `404.html`, `app-shell.html`, 32 sitemap URLs |
+| `pnpm run test:browser` | **BLOCKED**: all 3 files failed to start, `browserType.launch: Executable doesn't exist ... chromium_headless_shell-1248` (installed: 1243 and 1254). Action: `pnpm exec playwright install chromium-headless-shell`, or run it on the Mac. The last good run is 148 of 148 (V1.2 below) |
+| `pnpm run verify` | DONE, PASS, nothing sent |
+| `pnpm run docs:check -- --base origin/main` | DONE, PASS (26 documents, 30 links, 477 files, 20 changed files) |
+
 ## Release and live checks, 2026-11-13 (V1.2, `ea6164c`)
 
 V1.2 (D-065, D-066, D-067) was released on the owner's approval. The checks below are read-only; the agent wrote nothing to the live site except the early `.htaccess` upload the owner asked for.
