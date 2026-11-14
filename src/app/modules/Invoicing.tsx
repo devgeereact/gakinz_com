@@ -176,7 +176,12 @@ export default function Invoicing() {
     const res = await invoices.setStatus(inv.id, status)
     setBusyId(null)
     if (res.ok) {
-      setItems((xs) => xs.map((x) => (x.id === inv.id ? { ...x, status, overdue: status === "paid" ? false : x.overdue } : x)))
+      // "Paid this month" reads paid_at, so a manual mark-paid sets it now; the reload then takes the server's own figures.
+      const paidAt = status === "paid" ? `${localIsoDate()} 00:00:00` : null
+      setItems((xs) =>
+        xs.map((x) => (x.id === inv.id ? { ...x, status, overdue: status === "paid" ? false : x.overdue, ...(paidAt ? { paid_at: paidAt } : {}) } : x)),
+      )
+      load()
     } else {
       toast.error(res.error || "Could not update the invoice.")
     }
@@ -232,6 +237,7 @@ export default function Invoicing() {
       )
       toast.success(`Payment recorded on ${payFor.number || `invoice ${payFor.id}`}.`)
       setPayFor(null)
+      load()
     } else {
       // 503 carries the server's own message that SQL 13 has not run yet. A
       // 400 on the amount carries the server's payable total in expected_pence.
