@@ -1,3 +1,4 @@
+import { quoteFigures } from "@/lib/quote-figures"
 import { useEffect, useState, type ReactNode } from "react"
 import { useParams } from "react-router-dom"
 import { proposals, type PublicProposal } from "@/lib/api"
@@ -54,8 +55,7 @@ export default function ProposalView() {
     return () => document.documentElement.classList.remove("gk-force-light")
   }, [token])
 
-  const subtotal = p ? p.items.reduce((s, it) => s + it.qty * it.unit_price, 0) : 0
-  const vat = p ? subtotal * (p.vat_rate / 100) : 0
+  const { net: subtotal, vat, gross } = quoteFigures(p ? p.items.reduce((s, it) => s + it.qty * it.unit_price, 0) : 0, p ? p.vat_rate : 0)
 
   const heading = p ? p.title : error ? "Proposal unavailable" : "Proposal"
 
@@ -156,7 +156,7 @@ export default function ProposalView() {
                     )}
                     <div className="mt-2 flex items-baseline justify-between gap-6 border-t border-gk-edge pt-3">
                       <dt className="uppercase text-gk-ink-mute">Total</dt>
-                      <dd className="text-t4 text-gk-ink">{gbp(subtotal + vat, p.currency)}</dd>
+                      <dd className="text-t4 text-gk-ink">{gbp(gross, p.currency)}</dd>
                     </div>
                   </dl>
 
