@@ -11,6 +11,11 @@ import { services as baseServices, packages as basePackages, addOns, paymentTerm
  * default whole. A section the CMS has never published keeps the default.
  */
 
+/** The hero shows a live "London hh:mm" clock beside the status line, so the status line never repeats the city. */
+function withoutLondon(status: string): string {
+  return status.replace(/\s*[·|,-]\s*London\s*$/i, "").trim() || status
+}
+
 export type HeroCopy = { status: string; lead: string; cta1: string; cta2: string; secs: number }
 export type ServiceCopy = {
   slug: string
@@ -63,7 +68,7 @@ export type SiteCopy = {
 }
 
 export const DEFAULT_COPY: SiteCopy = {
-  hero: { status: "Designer and developer · London", lead: "I design and build websites for", cta1: "Start a project", cta2: "See all the work", secs: 5.6 },
+  hero: { status: "Designer and developer", lead: "I design and build websites for", cta1: "Start a project", cta2: "See all the work", secs: 5.6 },
   services: baseServices.map((s) => ({
     slug: s.slug,
     group: s.group,
@@ -256,7 +261,7 @@ export function mergeCopy(p: PublishedSections | null | undefined): SiteCopy {
   const pkg = rows<{ name?: string; price?: string; best?: string; featured?: boolean }>(p.packages)
   const contact = { email: str(p.contact?.email, d.contact.email), reply: str(p.contact?.reply, d.contact.reply), footer: str(p.contact?.footer, d.contact.footer) }
   return {
-    hero: { status: str(h.status, d.hero.status), lead: str(h.lead, d.hero.lead), cta1: str(h.cta1, d.hero.cta1), cta2: str(h.cta2, d.hero.cta2), secs },
+    hero: { status: withoutLondon(str(h.status, d.hero.status)), lead: str(h.lead, d.hero.lead), cta1: str(h.cta1, d.hero.cta1), cta2: str(h.cta2, d.hero.cta2), secs },
     services: mergeServices(p.services),
     process: rows<{ title?: string; detail?: string }>(p.process)?.filter((s) => str(s.title)).map((s) => ({ title: str(s.title), detail: str(s.detail) })) ?? d.process,
     packages: pkg

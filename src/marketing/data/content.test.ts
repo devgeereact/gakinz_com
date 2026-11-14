@@ -27,6 +27,8 @@ describe("mergeCopy", () => {
   })
 
   it("ignores blank fields and an out-of-range slide time", () => {
+    expect(mergeCopy({ hero: { status: "Designer and developer · London" } }).hero.status).toBe("Designer and developer")
+    expect(mergeCopy({ hero: { status: "London" } }).hero.status).toBe("London")
     const c = mergeCopy({ hero: { lead: "  ", secs: 30 }, contact: { email: "" } })
     expect(c.hero.lead).toBe(DEFAULT_COPY.hero.lead)
     expect(c.hero.secs).toBe(DEFAULT_COPY.hero.secs)
