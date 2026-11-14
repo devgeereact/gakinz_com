@@ -2,7 +2,7 @@
 
 The one place for what is done, what is left and what is parked on GAkinz. Everything planned lives here; the task in
 progress is `.agent/CURRENT-TASK.md`, the history is `docs/CHANGELOG.md`, the issue list is `docs/KNOWN-ISSUES.md`.
-Updated 2026-11-14 (V1.2 released as `ea6164c`; V1.3 frozen, 0 of 6, not started; house-standard docs merge D-069). An earlier planning folder (`.planning/`, nine GSD phases) was folded into this file on that date.
+Updated 2026-11-14 (V1.2 released as `ea6164c`; V1.3 frozen, 0 of 6, not started; house-standard docs merge D-069). An earlier planning folder (`.planning/`, nine GSD phases) was folded into this file on 2026-11-13.
 
 ## At a glance
 

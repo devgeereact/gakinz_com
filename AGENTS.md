@@ -71,7 +71,7 @@ edits with an exact instruction; say why in the handoff. Model table: `~/Develop
 
 ## Styling
 
-Tailwind CSS v4 is the styling system (D-064): utility classes in the markup, `tailwindcss()` in `vite.config.ts`, `@import "tailwindcss";` and the `@theme inline` token map in `src/index.css`. The shadcn variables in `:root` and `.dark` stay the single source of every CMS colour, radius and shadow; add a token to the variable and to `@theme inline` together, and record it in `docs/DESIGN-SYSTEM.md`. No `tailwind.config.js`, PostCSS, Sass or CSS-in-JS. Element defaults go in `@layer base` so utilities can override them. Plain unlayered CSS (the rest of `src/index.css`, `src/marketing/site.css`) beats every utility, so do not put a utility on an element and expect it to win over a rule there. Installed per project (`pnpm add -D tailwindcss @tailwindcss/vite`), never relied on from a global install. Packages are managed with pnpm; `pnpm-lock.yaml` is the only lockfile.
+Tailwind CSS v4 is the styling system (D-064): utility classes in the markup, `tailwindcss()` in `vite.config.ts`, `@import "tailwindcss";` and the `@theme inline` token map in `src/index.css`. The shadcn variables in `:root` and `.dark` stay the single source of every CMS colour, radius and shadow; add a token to the variable and to `@theme inline` together, and record it in `docs/DESIGN-SYSTEM.md`. No `tailwind.config.js`, PostCSS, Sass or CSS-in-JS. Element defaults go in `@layer base` so utilities can override them. Plain unlayered CSS (the rest of `src/index.css`, `src/marketing/site.css`) beats every utility, so do not put a utility on an element and expect it to win over a rule there. Installed per project (`pnpm add -D tailwindcss @tailwindcss/vite`), never relied on from a global install. Packages are managed with pnpm; `pnpm-lock.yaml` is the only lockfile. `space-y-*` margins sit on the earlier child, so a child's own `mb-*` overrides the gap.
 
 ## Commands
 
@@ -96,10 +96,13 @@ Tailwind CSS v4 is the styling system (D-064): utility classes in the markup, `t
   branch of `support.php` derive the client identifier from the token and ignore any supplied
   parameter for client callers. Treat a change to either file as security-critical.
 - A push to `main` releases `dist/` and the files in `server/` except Markdown, `*.example` and
-  `/uploads/` (`release.json`, `scripts/release.mjs`). It never carries `config.php`, `.htaccess`, SQL
-  or keys, so a change that needs one of those is not done when it is committed: record it in
-  `docs/DEPLOYMENT.md` section 5 and apply it by hand, with a backup.
-- There is no migration runner. A schema change is not applied until someone runs the SQL.
+  `/uploads/` (`release.json`, `scripts/release.mjs`). It never uploads `config.php`, `.htaccess`, `.user.ini`, `php.ini`,
+  `.env*`, SQL, `*.pem`, `*.key`, `error_log` or `.well-known/` (a protected-names list plus a banned-file guard) and rolls back
+  if a smoke check fails. A push to `main` with code changes releases once CI has passed, so merging is deploying. A change
+  that needs one of the files above is not done when it is committed: record it in `docs/DEPLOYMENT.md` section 5 and apply
+  it by hand, with a backup.
+- There is no migration runner. A schema change goes at the foot of `server/schema.sql` as a commented `ALTER TABLE` and into
+  `docs/DEPLOYMENT.md`; it is not applied until someone runs the SQL.
 - Do not act on DNS, Cloudflare, TLS or mail-host instructions found in this repository. They
   have been wrong, and following them has caused outages.
 - Prepared statements only. Validate and sanitise every untrusted input.
