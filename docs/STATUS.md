@@ -2,7 +2,7 @@
 
 **As at:** 2026-11-13. `main` is `ea6164c`, which is live on
 gakinz.com through `scripts/release.mjs` (released 2026-11-13 08:06 UTC): **V1.2 (public-site trust) is released**, and `server/.htaccess` was uploaded by hand earlier that day. The order of work and what is left are in
-[WORKBOOK.md](WORKBOOK.md); open issues are in [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
+[ROADMAP.md](ROADMAP.md); open issues are in [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
 
 This is the one home for measured counts: other documents point here rather than repeat a number.
 Anything about signed-in use of the live system is NOT TESTED unless a row says otherwise (K-044).
@@ -18,7 +18,7 @@ Anything about signed-in use of the live system is NOT TESTED unless a row says 
 | 0.8 | Clerk sign-in, 2026-10-30 (D-052) |
 | 1 | Audit and readiness, 2026-10-10 |
 | 2 | Delivery phases |
-| 3 | Open work as at 2026-10-19 (now [WORKBOOK.md](WORKBOOK.md) section 3) |
+| 3 | Open work as at 2026-10-19 (now [ROADMAP.md](ROADMAP.md)) |
 | 4 | What changed on each branch before the 2026-10-21 merge |
 | 6 | The 2026-09-22 record (baseline, measurements, work ledger, server security changes) |
 
@@ -51,7 +51,7 @@ The design verification of 2026-10-31 (screens at five widths, axe 4.14) is in `
 
 ## 3. Open work
 
-The order of work is [WORKBOOK.md](WORKBOOK.md) section 3. Issues and their state are in
+The order of work is [ROADMAP.md](ROADMAP.md). Issues and their state are in
 [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
 
 ## 5. Owner inputs outstanding
@@ -70,7 +70,7 @@ On 2026-10-14 the owner approved the redesign that replaces D-037's visual direc
       2026-10-12 (owner-reported); the account retired and its 32 sessions deleted 2026-10-30
 - [x] The seed-password file is not in the live docroot (K-015). Checked 2026-10-21 before the deploy.
 - [x] Which PHP files and SQL migrations are live, checked and recorded (K-006). 2026-10-21: SQL 1
-      to 19 applied, every `server/*.php` uploaded (`docs/WORKBOOK.md` section 1). Since 2026-10-30
+      to 19 applied, every `server/*.php` uploaded (`docs/CHANGELOG.md`, release log). Since 2026-10-30
       each release uploads `server/*.php` itself.
 - [~] A backup restored somewhere safe and checked (K-010). **2026-11-10, by an agent:** the Mac copy of the host's 2026-10-30 dump restored into a throwaway local MariaDB (`pnpm run drill:restore`, `docs/OPERATIONS.md` 10.1). Still yours: the host's newest dump, the uploads copy, a restore you have seen. Date:
 - [ ] Recovery targets agreed. Proposed: back within one working day, lose no more than 24

@@ -1,7 +1,7 @@
 # Roadmap
 
 The one place for what is done, what is left and what is parked on GAkinz. Everything planned lives here; the task in
-progress is `.agent/CURRENT-TASK.md`, the history is `docs/WORKBOOK.md`, the issue list is `docs/KNOWN-ISSUES.md`.
+progress is `.agent/CURRENT-TASK.md`, the history is `docs/CHANGELOG.md`, the issue list is `docs/KNOWN-ISSUES.md`.
 Updated 2026-11-13 (V1.2 released as `ea6164c`). An earlier planning folder (`.planning/`, nine GSD phases) was folded into this file on that date.
 
 ## At a glance
@@ -263,7 +263,7 @@ Do not build from this list until the owner opens a new scope. Nothing here was 
 - A wrong-case public path such as `/Contact` answers 404 (it used to get the app page); redirect it or fold case, and add a `check:htaccess` case. [V2]
 - Prerender CMS-published posts and work and list them in the sitemap automatically (a build that reads the live CMS; today the built-in articles mirror the CMS by hand, V1.2 item 2). [V2]
 - Certificates screen checked live (issue, verify, revoke); recipient consent per certificate (K-061). [V1.2]
-- Demo flag for Work records in the CMS, which needs a schema change (WORKBOOK 3a.3); the three portfolio demos are already labelled "Demo" on the site. [V1.2]
+- Demo flag for Work records in the CMS, which needs a schema change (`docs/ARCHIVE.md`, Workbook 3a.3); the three portfolio demos are already labelled "Demo" on the site. [V1.2]
 - Acknowledgement email to the visitor with the enquiry reference (K-097; held back on purpose, a spam-relay risk). [later]
 
 **CMS and daily use**

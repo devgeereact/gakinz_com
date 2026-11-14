@@ -1,8 +1,7 @@
 # Changelog
 
 What changed in the product, newest first. The checks behind each change are in [AUDIT.md](AUDIT.md) and
-[VERIFICATION.md](VERIFICATION.md); why is in [DECISIONS.md](DECISIONS.md). Releases before 2026-11-10 are listed in
-[WORKBOOK.md](WORKBOOK.md) section 1.
+[VERIFICATION.md](VERIFICATION.md); why is in [DECISIONS.md](DECISIONS.md). The release log (how each release went out, 2026-10-21 onwards) is at the foot of this file.
 
 ## 2026-11-11 (V1.2) · Public-site trust: a true cookie page, a sitemap that matches the CMS, bot signals on the contact form, a real 404, a headline read once (released 2026-11-13 as `ea6164c`)
 
@@ -84,3 +83,27 @@ Five items of the V1.2 finish line (`docs/ROADMAP.md`, D-065), built and reviewe
 **On the host, the same day:** `$OWNER_ALERTS` set, a daily database and uploads backup (`scripts/gakinz-backup.sh`), and the first GAkinz cron entries ([OPERATIONS.md](OPERATIONS.md) sections 2.1 and 5). No SQL, no `.htaccess`.
 
 **Not changed:** public copy, prices, legal pages, sign-in, payments, schema.
+
+## Release log (moved from the retired Workbook, 2026-11-14)
+
+Releases since the stack was merged (`3fc6a31`, 2026-10-21). The checks of each release are in [AUDIT.md](AUDIT.md) (newest first); measured counts are in [STATUS.md](STATUS.md) section 0.
+
+| Date | Commit | What | How |
+|---|---|---|---|
+| 2026-10-21 to 22 | `3fc6a31` | The whole branch stack: server files, SQL 5 to 19, `dist/` | By hand over SSH, `rsync` (Actions was off) |
+| 2026-10-30 | `a034e40` | Clerk sign-in (D-052), SQL 20, the old super-admin retired | By hand over SSH, owner-approved |
+| 2026-10-30 | `608dc7b` | Actions back on (K-109); no-delete upload | GitHub Actions |
+| 2026-10-30 | `560949d` onwards | Releases over SSH through `scripts/release.mjs` | GitHub Actions on push to `main` |
+| 2026-10-31 | `a907824` | The D-053 design finalisation | GitHub Actions, owner-approved |
+| 2026-10-31 | `fdc5d94` | Clerk's grey footer panel removed | GitHub Actions, owner-approved |
+| 2026-11-01 | `bde12c7` | Cleanup; AI on Anthropic first with OpenRouter as backup (D-054) | GitHub Actions, owner-approved ("push live") |
+| 2026-11-08 | `ae01cec` | The go-live hardening (13 commits, K-120 to K-126: Clerk second factor, CSP and HSTS, bcrypt, contact form, SEO schema) and `pnpm run check:live`; `.htaccess` uploaded by hand first | GitHub Actions, owner-approved at each gate; CI green on PR #24 |
+| 2026-11-08 | `983606c` | AI backup model: `OR_FALLBACK_MODEL` tried when `OR_MODEL` fails (D-056) | GitHub Actions, owner-approved; CI green on PR #25 |
+| 2026-11-08 | `b301ec7` | Phase 3: staff downloads send the Clerk token, sharing keeps a public image's link, the gate and ticket panel no longer hang, the project dropdown keeps its value (K-127, K-128, K-140); the first release to wait for CI | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #27 |
+| 2026-11-09 | `ed58064` | Phase 5: Clerk is the only sign-in; password, magic-link, Google and reference routes answer 404; My account opens Clerk's panel (D-057, K-132, K-133) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #29 |
+| 2026-11-09 | `825600e` | Phase 7: reminders and the digest remember what they sent; edit a client; edit, assign and date a task; a quote opens its project; Draft a quote from an enquiry (D-059, K-141 to K-144) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #31 |
+| 2026-11-09 | `01d2269` | Phase 6: certificates issued, listed and revoked in the CMS; `/verify` throttled, uniform and uncached (D-058, K-134, K-061) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #30 |
+| 2026-11-10 | `4bdaed7` | Finish-line run: owner email on a new enquiry and on a data deletion request, per-job cron heartbeat and Today notice, the public phone number, `scripts/gakinz-backup.sh` (D-060, D-061, K-146, K-095, K-145) | GitHub Actions through `ci.yml`, owner-approved ("Go ahead and Push"); CI green on PR #32 including MySQL 8 |
+| 2026-11-09 | `cbfd527` | Phase 4: updates keep unsent fields and missing ids answer 404 (K-129, K-130); one function records the same payment evidence on every path (K-131); a role-drift guard and a fixed editor dashboard (K-135) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #28 |
+| 2026-11-11 | `ed5a724` | V1.1 (Today lists data deletion requests and failed alert emails, layout and axe tests for every public page and CMS screen, lint as the CI gate; D-063) together with Tailwind CSS v4 and pnpm (D-064). Fixes: the notification bell no longer asks `invoices.php` as a client or editor, accessible names on two lists, invoice and contract action cells wrap. The first push (`e73748f`) built and tested green but its release check failed on pnpm (K-149), so nothing was released until `ed5a724` | GitHub Actions through `ci.yml`, owner-approved ("Push and Deploy now"); CI green on `ed5a724` including MySQL 8; released 08:34 UTC, snapshot `20261111T083401Z`, `check:live` 16 of 16 |
+| 2026-11-13 | `ea6164c` | V1.2, public-site trust (D-065, D-066, D-067): a cookie page that matches what the site sets, a sitemap that lists only the three CMS articles, bot signals on the contact form, an unknown URL answering 404 with the branded not-found page, the home headline read once. PR #34 merged by fast-forward of `main` from `ed5a724` (22 commits). `server/.htaccess` had been uploaded by hand earlier the same day at the owner's request (07:41 UTC, backup `htaccess.before-v1.2-404.20261113T074141Z`) and was re-checked byte-identical before the merge, so nothing was uploaded again | GitHub Actions through `ci.yml`, owner-approved; CI green on run 43389323251 (typecheck, lint, docs, unit, build, PHP and server tests on MySQL 8, gitleaks, Semgrep, "does this push need a release"); released 2026-11-13 08:06 UTC, snapshot `20261113T080551Z`, smoke checks passed, `check:live` 20 of 20 (17 of 20 before the release). Undo: `npm run release -- --rollback --go` |

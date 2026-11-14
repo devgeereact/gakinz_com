@@ -328,7 +328,7 @@ recorded evidence. Status on 2026-10-10: every gate is open, and production read
 | Delivery | Build, tests, PHP syntax and the documentation check pass in CI; deploy waits for CI; lint is a plain gate (the backlog is cleared, K-002); dependency advisory exposure decisions recorded (K-041) |
 | Operations | Response expectations, error observation, renewal review, retention decisions, incident and owner-lockout procedure |
 
-Each gate's scenarios are in `docs/TEST-PLAN.md` section 7. Launch does not need every optional
+Each gate's scenarios are in `docs/VERIFICATION.md` (Test plan section 7). Launch does not need every optional
 historical module, AdSense approval or social posting. It does need safe enquiry intake, owner
 follow-up, simple booking requests, accurate quotes and invoices, scoped customer access and
 messages, recoverable records and honest public content. Customer reference access cannot ship

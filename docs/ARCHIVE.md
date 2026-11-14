@@ -1,45 +1,16 @@
-# Workbook
+# Archive
 
-The one page to work from: where things stand, what is left and in what order, and the standing
-rules. It points to the detailed documents rather than copying them; when this page and a linked
-document disagree, the linked document wins and this page is wrong.
+Superseded documents, kept whole so nothing is lost. Newest first. A document lands here only when its still-true content has
+moved to its proper home (named in each section). Older text is also in git history.
 
-**As at:** 2026-11-01. `main` is the only long-lived branch; the earlier record of this page is
-`git show ee1281f:docs/WORKBOOK.md`.
+## 2026-11-14 · `docs/WORKBOOK.md` retired (house standard, branch `chore/house-standard`)
 
-## 1. Where things stand
+The Workbook was a fourth record beside `.agent/CURRENT-TASK.md`, `docs/ROADMAP.md` and `docs/CHANGELOG.md`. Where each part went:
+the release log (its section 1) is the "Release log" section of `docs/CHANGELOG.md`; the standing rules (section 4) are in
+`AGENTS.md`; what is left (section 3) is `docs/ROADMAP.md` ("Needs the owner" and "Parking lot"); the rest is below as it stood
+on 2026-11-13 (last written 2026-11-01, with notes added up to V1.2).
 
-**Live.** gakinz.com runs the build of `main`. Releases since the stack was merged (`3fc6a31`,
-2026-10-21):
-
-| Date | Commit | What | How |
-|---|---|---|---|
-| 2026-10-21 to 22 | `3fc6a31` | The whole branch stack: server files, SQL 5 to 19, `dist/` | By hand over SSH, `rsync` (Actions was off) |
-| 2026-10-30 | `a034e40` | Clerk sign-in (D-052), SQL 20, the old super-admin retired | By hand over SSH, owner-approved |
-| 2026-10-30 | `608dc7b` | Actions back on (K-109); no-delete upload | GitHub Actions |
-| 2026-10-30 | `560949d` onwards | Releases over SSH through `scripts/release.mjs` | GitHub Actions on push to `main` |
-| 2026-10-31 | `a907824` | The D-053 design finalisation | GitHub Actions, owner-approved |
-| 2026-10-31 | `fdc5d94` | Clerk's grey footer panel removed | GitHub Actions, owner-approved |
-| 2026-11-01 | `bde12c7` | Cleanup; AI on Anthropic first with OpenRouter as backup (D-054) | GitHub Actions, owner-approved ("push live") |
-| 2026-11-08 | `ae01cec` | The go-live hardening (13 commits, K-120 to K-126: Clerk second factor, CSP and HSTS, bcrypt, contact form, SEO schema) and `pnpm run check:live`; `.htaccess` uploaded by hand first | GitHub Actions, owner-approved at each gate; CI green on PR #24 |
-| 2026-11-08 | `983606c` | AI backup model: `OR_FALLBACK_MODEL` tried when `OR_MODEL` fails (D-056) | GitHub Actions, owner-approved; CI green on PR #25 |
-| 2026-11-08 | `b301ec7` | Phase 3: staff downloads send the Clerk token, sharing keeps a public image's link, the gate and ticket panel no longer hang, the project dropdown keeps its value (K-127, K-128, K-140); the first release to wait for CI | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #27 |
-| 2026-11-09 | `ed58064` | Phase 5: Clerk is the only sign-in; password, magic-link, Google and reference routes answer 404; My account opens Clerk's panel (D-057, K-132, K-133) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #29 |
-| 2026-11-09 | `825600e` | Phase 7: reminders and the digest remember what they sent; edit a client; edit, assign and date a task; a quote opens its project; Draft a quote from an enquiry (D-059, K-141 to K-144) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #31 |
-| 2026-11-09 | `01d2269` | Phase 6: certificates issued, listed and revoked in the CMS; `/verify` throttled, uniform and uncached (D-058, K-134, K-061) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #30 |
-| 2026-11-10 | `4bdaed7` | Finish-line run: owner email on a new enquiry and on a data deletion request, per-job cron heartbeat and Today notice, the public phone number, `scripts/gakinz-backup.sh` (D-060, D-061, K-146, K-095, K-145) | GitHub Actions through `ci.yml`, owner-approved ("Go ahead and Push"); CI green on PR #32 including MySQL 8 |
-| 2026-11-09 | `cbfd527` | Phase 4: updates keep unsent fields and missing ids answer 404 (K-129, K-130); one function records the same payment evidence on every path (K-131); a role-drift guard and a fixed editor dashboard (K-135) | GitHub Actions through `ci.yml`, owner-approved; CI green on PR #28 |
-| 2026-11-11 | `ed5a724` | V1.1 (Today lists data deletion requests and failed alert emails, layout and axe tests for every public page and CMS screen, lint as the CI gate; D-063) together with Tailwind CSS v4 and pnpm (D-064). Fixes: the notification bell no longer asks `invoices.php` as a client or editor, accessible names on two lists, invoice and contract action cells wrap. The first push (`e73748f`) built and tested green but its release check failed on pnpm (K-149), so nothing was released until `ed5a724` | GitHub Actions through `ci.yml`, owner-approved ("Push and Deploy now"); CI green on `ed5a724` including MySQL 8; released 08:34 UTC, snapshot `20261111T083401Z`, `check:live` 16 of 16 |
-| 2026-11-13 | `ea6164c` | V1.2, public-site trust (D-065, D-066, D-067): a cookie page that matches what the site sets, a sitemap that lists only the three CMS articles, bot signals on the contact form, an unknown URL answering 404 with the branded not-found page, the home headline read once. PR #34 merged by fast-forward of `main` from `ed5a724` (22 commits). `server/.htaccess` had been uploaded by hand earlier the same day at the owner's request (07:41 UTC, backup `htaccess.before-v1.2-404.20261113T074141Z`) and was re-checked byte-identical before the merge, so nothing was uploaded again | GitHub Actions through `ci.yml`, owner-approved; CI green on run 43389323251 (typecheck, lint, docs, unit, build, PHP and server tests on MySQL 8, gitleaks, Semgrep, "does this push need a release"); released 2026-11-13 08:06 UTC, snapshot `20261113T080551Z`, smoke checks passed, `check:live` 20 of 20 (17 of 20 before the release). Undo: `npm run release -- --rollback --go` |
-
-The checks of each release are in [AUDIT.md](AUDIT.md) (newest first). Measured counts are in
-[STATUS.md](STATUS.md) section 0. Signed-in use of the live system is mostly NOT TESTED by an agent: on 2026-11-08 the
-owner signed in and an agent confirmed `/app` loads and 24 CMS screens render with no CSP violations or console errors; no data flow was exercised.
-
-Gated features ship switched off (D-050): `$RETENTION_APPLY`,
-`$CLIENT_ANONYMISE_ENABLED`, PayPal, the ad slots. (`$REFERENCE_SIGNIN_ENABLED` is gone: the reference sign-in was retired, D-057.)
-
-## 2. In progress
+#### 2. In progress
 
 **V1.2 run, 2026-11-11 (released as `ea6164c` on 2026-11-13, D-065, D-066 and D-067).** Public-site trust: five open items ticked in `docs/ROADMAP.md`, live checks 20 of 20 after the release. Nothing is in progress; what is open is the owner's (autofill pass on the contact form, a look at Clerk's cookie names on `/app`, the adviser's review of the cookie wording, the decision on redirecting the two retired article URLs, V1 items 4 and 10) or a V1.3 scope.
 
@@ -49,9 +20,9 @@ Gated features ship switched off (D-050): `$RETENTION_APPLY`,
 
 The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md). Phase 7 (daily-flow speed-ups, D-059) was released as `825600e`; nothing else is in progress. Open: the host has no GAkinz cron entry (K-145), an owner decision. Phase 5 (retire the legacy sign-in, D-057) was released as `ed58064`; nothing else is in progress.
 
-## 3. What is left
+#### 3. What is left
 
-### 3a. Engineering (no owner needed)
+##### 3a. Engineering (no owner needed)
 
 1. ~~**Lint, K-002.**~~ Done 2026-11-11 (V1.1 item 5): 0 errors; CI and `release.json` run `pnpm run lint`; the ratchet script is gone.
 2. **Analytics shows zero for a single failed source** (K-031 follow-up): decide whether each KPI
@@ -69,7 +40,7 @@ The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md). Phase 7 (daily
    Report-Only one (K-033); the ESLint 10 major for the last 13 moderate advisories (K-041); the home-page H1 read
    twice by crawlers (needs the owner's OK); move the session token out of `localStorage` (K-033).
 
-### 3b. Owner actions, in order
+##### 3b. Owner actions, in order
 
 0. **Go-live: done 2026-11-08.** The `totp_enabled` query (0 accounts), `server/.htaccess`, the section 5 list
    (stub, `CLERK_CACHE_DIR`, CORS entry, `$MAIL_VERIFY_TLS`) and K-123 (closed by a probe) are finished; `ae01cec` and
@@ -90,7 +61,7 @@ The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md). Phase 7 (daily
    (K-021), lawful bases.
 7. **Switch-on decisions** for features that ship off: the ad pilot (K-104 to K-107), client anonymisation.
 
-### 3c. Not tested or unverified
+##### 3c. Not tested or unverified
 
 - Signed-in journeys on the live host for every role, uploads, cron under cPanel, PHP and
   database time zones (K-067, K-075, K-085), the real client IP behind Cloudflare (K-101, K-102).
@@ -98,13 +69,13 @@ The current task is [CURRENT-TASK.md](../.agent/CURRENT-TASK.md). Phase 7 (daily
 - Real assistive technology on the public site and the CMS.
 - The motion on real devices, Safari and trackpads.
 
-### 3d. Highest risks
+##### 3d. Highest risks
 
 K-010 backup never restored outside a drill, K-062 no retention periods, K-021 and K-063 legal
 placeholders, K-025 past Stripe charges ex-VAT, K-044 nothing tested on real data by an agent.
 The full list: [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
 
-## 4. Standing rules
+#### 4. Standing rules
 
 - **GAkinzOS is not a website builder.** It runs the studio: leads, clients, invoices, files,
   support, time and content. A new module gets one record type and a plain form.
@@ -121,7 +92,7 @@ The full list: [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
 - **Merging is deploying.** A push to `main` with code changes releases; agents merge and push
   only with the owner's approval for that action.
 
-## 5. How to work
+#### 5. How to work
 
 1. **One branch per concern, short-lived**, merged once checked and approved.
 2. **Small batches with a gate:** build, unit and server tests, lint, docs check, and a
@@ -130,7 +101,7 @@ The full list: [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
 4. **Keep the code graph current.** `graphify-out/` (untracked) is rebuilt by git hooks after
    each commit; run `/graphify --update` after a documentation batch.
 
-## 6. Where the detail lives
+#### 6. Where the detail lives
 
 | Need | Document |
 |---|---|
@@ -141,3 +112,65 @@ The full list: [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
 | Why things are the way they are | [DECISIONS.md](DECISIONS.md) |
 | Scope | [PRODUCT-SPEC.md](PRODUCT-SPEC.md) |
 | Current agent task and the handoff log | [CURRENT-TASK.md](../.agent/CURRENT-TASK.md), [HANDOFF.md](../.agent/HANDOFF.md) |
+
+## 2026-11-14 · `docs/GEE-OS.md` retired (house standard, branch `chore/house-standard`)
+
+The GEE OS adoption record. `AGENTS.md` and `.agent/PROJECT.yml` carry the live contract; the documentation profile table below
+records decision D-044 as it stood. Two rows are out of date: `CHANGELOG.md` now exists (`docs/CHANGELOG.md`), and `docs/TEST-PLAN.md`
+has moved into `docs/VERIFICATION.md`. `CODEX.md` was deleted the same day.
+
+
+- Project: GAkinz, `gakinz.com`
+- Minimum GEE OS version: 0.5.0
+- Adoption stage: Active shared contract
+- Default mode: Existing application
+- Lifecycle: Maintenance
+- Risk: Production
+
+#### Purpose
+
+Give Claude Code, Codex and compatible agents one shared route while keeping GAkinz product facts, production boundaries and verification rules inside this repository.
+
+#### Entry points
+
+| Agent or concern | Source |
+|---|---|
+| Shared authority | `AGENTS.md` |
+| Claude mapping | `CLAUDE.md` |
+| Codex mapping | `CODEX.md` |
+| Project route and risk | `.agent/PROJECT.yml` |
+| Current task | `.agent/CURRENT-TASK.md` |
+| MCP authority | `.agent/MCP-PROFILE.yml` |
+| Shared constitution and loop | `~/.agents/gee-os` |
+
+#### Project sources of truth
+
+The detailed map is in `AGENTS.md` and `.agent/PROJECT.yml`. Product scope lives in `docs/PRODUCT-SPEC.md`. Routes, API boundaries, permissions and deployment facts must be checked against the named code and operations documents before they are treated as current.
+
+#### Documentation profile
+
+The repository follows the GEE OS "Standard application" profile, with these recorded
+differences (D-044):
+
+| Profile file | Here | Reason |
+|---|---|---|
+| Root `KNOWN-ISSUES.md` | `docs/KNOWN-ISSUES.md` | Kept with the other flat docs; every reference already points there |
+| `CHANGELOG.md` | N/A | Commit history, `docs/STATUS.md` and `docs/DECISIONS.md` already record change; a fourth record would drift |
+| `docs/UX-SPEC.md` | N/A | Journeys and screen requirements are in `docs/PRODUCT-SPEC.md`; screen patterns in `docs/DESIGN-SYSTEM.md` section 10.6 |
+| `docs/ACCESSIBILITY.md` | N/A | Requirements in `docs/DESIGN-SYSTEM.md` section 10.7; evidence in `docs/AUDIT.md` |
+| `docs/NOTIFICATIONS-SPEC.md` | N/A | One notification route, specified in `docs/PRODUCT-SPEC.md` section 6.2 |
+| `qa/FUNCTIONAL-AUDIT.md`, `qa/REGRESSION-AUDIT.md` | `docs/TEST-PLAN.md` | One test record: suites, gaps and the J01 to J12 acceptance scenarios |
+| `qa/LAUNCH-CHECKLIST.md` | `docs/AUDIT.md` | Same purpose; launch gates in `docs/OPERATIONS.md` section 9 |
+| Not in the profile | `docs/OPERATIONS.md`, `docs/STATUS.md`, `docs/DECISIONS.md`, `docs/GEE-OS.md`, `docs/CONTENT-AND-GROWTH.md`, `CODEX.md`, `server/README.md` | Operations, current state, decisions, this route, the content policy, the Codex entry point, and the server folder's own guide |
+
+#### Boundaries
+
+- No production deploy, database change, DNS change, payment, email send or other live mutation without explicit authority in the current request.
+- MCP and skill availability does not grant permission.
+- Development calls the live API, so test writes require the same care as production writes.
+- Record decisions, unresolved problems and manual deployment steps in their existing canonical documents.
+- Report PASS, FAIL, PARTIAL, NOT APPLICABLE, NOT TESTED or BLOCKED with evidence.
+
+#### Maintenance
+
+Update this file only when the GEE route changes. Update project facts in their canonical documents rather than duplicating them here, as `AGENTS.md`, "Keeping documents current", sets out; `npm run docs:check` checks links and the server-to-document rule in CI.

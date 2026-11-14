@@ -346,7 +346,7 @@ release never deletes on the server, so removing it from git would leave an untr
 `feat/design-finalisation` deleted (origin has `main` only); no stash; empty `qa/`, `.playwright-mcp/` logs and
 `.DS_Store` files removed. `.superpowers/` (owner plans) and `graphify-out/` kept.
 
-**Documents:** STATUS (1,211 to about 200 lines), WORKBOOK, DEPLOYMENT section 5, DESIGN-SYSTEM, CLAUDE,
+**Documents:** STATUS (1,211 to about 200 lines), WORKBOOK (now in `docs/ARCHIVE.md`), DEPLOYMENT section 5, DESIGN-SYSTEM, CLAUDE,
 README, ARCHITECTURE and the task contract rewritten to the current state; history left the tree under D-044
 and is read at `ee1281f`. Stale rows corrected: K-025, K-082, K-113, and K-001 and K-015 in STATUS section 5.
 
@@ -1530,7 +1530,7 @@ Each is PASS on source inspection and NOT TESTED at runtime.
 5. Add a MIME allowlist to uploads (S-004) rather than relying on one generated `.htaccess`.
 6. Add a Content-Security-Policy and `integrity` attributes, or self-host the two icon fonts
    (S-005).
-7. Write the authorisation tests described in `docs/TEST-PLAN.md` priority 1, so this audit can
+7. Write the authorisation tests described in `docs/VERIFICATION.md` (Test plan) priority 1, so this audit can
    be repeated with evidence rather than by reading.
 
 ## 30 Oct 2026: config.php moved out of the web root

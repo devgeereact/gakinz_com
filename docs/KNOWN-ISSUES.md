@@ -8,7 +8,7 @@ in the same pull request as a fix (`AGENTS.md`, "Keeping documents current").
 
 **Reading old statuses (2026-11-01).** Every branch was merged and released by 2026-10-31 (`fdc5d94`), and the
 server files go up with each release (`scripts/release.mjs`). "Not deployed" or "not uploaded" in a row
-dated before 2026-10-22 describes that date only; check `docs/WORKBOOK.md` for what is live now.
+dated before 2026-10-22 describes that date only; check the release log in `docs/CHANGELOG.md` for what is live now.
 
 Severity is judged on impact to the live business, not on how hard it is to fix. Entries
 K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` section 1.
@@ -22,7 +22,7 @@ K-025 onward came from the 2026-10-10 audit summarised in `docs/STATUS.md` secti
 | K-001 | A live super-admin credential is in git history | Critical | **Password rotated 2026-10-12 (owner-reported). Sessions revoked and the account retired 2026-10-30:** the 32 session tokens of that account were deleted and the account soft-deleted (`users` id 1). The repository is now public, so the credential in history stays exposed to the web; it is rotated and its account is gone |
 | K-002 | Lint fails | Medium | **Fixed 2026-11-11** (V1.1 item 5): the last 5 `set-state-in-effect` errors (Contracts, Portal, the theme toggle) are gone; `pnpm run lint` reports 0 errors and 0 warnings, CI and `release.json` run it, and `scripts/lint-ratchet.mjs` is deleted. History: 60 errors and 7 warnings on 2026-09-04, 33 on 2026-10-19, 5 on 2026-10-21 |
 | K-003 | `config.php.example` named a retired mail host | Medium | Fixed in the template. Server value UNVERIFIED |
-| K-006 | Deployed server state is unknown | Medium | Mitigated 2026-10-21: everything to `3fc6a31` uploaded and checked (WORKBOOK section 1) |
+| K-006 | Deployed server state is unknown | Medium | Mitigated 2026-10-21: everything to `3fc6a31` uploaded and checked (CHANGELOG release log) |
 | K-010 | No backup procedure is known to exist | High | **Mostly closed 2026-11-10.** There was no daily GAkinz backup (only two manual dumps of 2026-10-30). `scripts/gakinz-backup.sh` now runs daily on the host (03:30; database and uploads, 14 days kept) and the host's own newest dump was restored once locally (`pnpm run drill:restore`: 42 of 42 tables, 0 orphans; `docs/OPERATIONS.md` 10.1). Targets agreed 2026-11-10 (D-062: 1 working day / 24 hours). Open: copy dumps off the host on a schedule; try a files restore once client files exist; the first scheduled 03:30 (EST) run failed on cron's PATH (php was the CGI build) and was fixed; the next scheduled run is not yet seen |
 | K-011 | `access.ts` can drift from the server role lists | Low | **Mostly closed 2026-09-22.** Three mismatches fixed, tests added |
 | K-018 | The public site is an empty shell to any client that does not run JavaScript | Medium | **Fixed in code 2026-10-16** for the 30 built-in public pages (prerender), not deployed. CMS-only records remain. The soft 404 lost its noindex in the D-046 rebuild; restored 2026-10-17 (K-066) |
@@ -1363,7 +1363,7 @@ stub, and set `CLERK_CACHE_DIR` (`docs/DEPLOYMENT.md` section 5).
 
 ## Closed issues
 
-Dates are when the fix was written or confirmed. A phrase such as "not uploaded" in the pre-compaction text described that date only: the note "Reading old statuses" above applies, and `docs/WORKBOOK.md` section 1 records what is live.
+Dates are when the fix was written or confirmed. A phrase such as "not uploaded" in the pre-compaction text described that date only: the note "Reading old statuses" above applies, and the release log in `docs/CHANGELOG.md` records what is live.
 
 | ID | Issue | How it was closed |
 |---|---|---|
