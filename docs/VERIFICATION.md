@@ -4,6 +4,20 @@ What was actually run, with the result, and what only the owner can show. Result
 [AUDIT.md](AUDIT.md); the finish line they serve is [ROADMAP.md](ROADMAP.md). Status words: DONE (seen), PARTIAL,
 NOT TESTED, BLOCKED.
 
+## Ladder, 2026-11-14, branch `goal/v1.3-items` (V1.3, six items; stacked on `chore/house-standard`)
+
+| Step | Result |
+|---|---|
+| `pnpm exec tsc -b --noEmit`, `pnpm run lint` | PASS, clean; 0 errors, 0 warnings |
+| `pnpm test` | PASS, 715 tests in 68 files |
+| `pnpm run test:server` (local MariaDB 11.4) | PASS, 689 tests in 55 files |
+| `pnpm run build && pnpm run test:browser` with `GK_AXE` | PASS, 149 tests in 4 files (one run; axe 0 violations; Chromium 1248 installed this session). Three-in-a-row flakiness runs NOT DONE (deliberately, to save CI and time) |
+| `pnpm run verify` | PASS, nothing sent |
+| `php -l server/*.php` | PASS |
+| `pnpm run check:htaccess` | BLOCKED: no Apache on this Ubuntu machine; `server/.htaccess` is unchanged on this branch |
+| `pnpm run docs:check -- --base chore/house-standard` | PASS (26 documents) |
+| Visual | Invoicing, Clients, Proposals and Platform stacked cards looked at at 375 px; home eyebrow covered by a prerender test, not looked at; desktop 1280 px unchanged by CSS (media query) and covered by the layout suite. Real phone and VoiceOver: NOT TESTED |
+
 ## Ladder, 2026-11-14, branch `chore/house-standard` (documents only, on the tree of `main` `a30a018`)
 
 Ubuntu computer, Node 24.22.1, local MariaDB on port 3329 (socket `/tmp/gk3329.sock`; database `gakinz_dev_test`), machine load about 31 from other sessions.

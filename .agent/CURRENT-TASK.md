@@ -2,6 +2,9 @@
 
 ## Outcome
 
+**V1.3 (D-068, D-070) is BUILT LOCALLY, 6 of 6 ticked (2026-11-14, branch `goal/v1.3-items`, stacked on `chore/house-standard` = draft PR #36; not pushed, not released).** Ladder: types clean, lint 0, 715 unit (68 files), 689 server (55 files), build 32 pages, 149 browser (4 files) with axe 0, `verify` PASS, `php -l` clean. `check:htaccess` BLOCKED (no Apache here; `.htaccess` untouched). One server file changed (`server/_notify.php`), so merging to `main` releases it once CI passes. Next: the owner says "approved: push gakinz_com" for the V1.3 branch; merge #36 first. Then Stage 4 continues with V1.4 scope or the owner's items.
+
+
 **House-standard rollout, stages 0 to 3, 2026-11-14: READY TO BUILD (local only, branch `chore/house-standard`, not pushed).** `main` is `a30a018` (clean, in step with `origin/main`, CI run 43499565198 green). The docs are one tree and one task file, Tailwind v4 and the working method are adopted (D-069). The product state is unchanged: V1.2 released as `ea6164c`; **V1.3 is frozen at 0 of 6 ticked and not started** (`docs/ROADMAP.md`, D-068). Gate on this branch: types clean, lint 0, 701 unit, 687 server, build 32 pages, `pnpm run verify` PASS, `docs:check` PASS; `pnpm run test:browser` NOT TESTED on this Ubuntu computer (BLOCKED: Playwright needs `chromium_headless_shell-1248`, which is not installed; the docs-only diff touches no browser-tested file).
 
 Below: the V1.2 release record, kept as it was.
@@ -23,7 +26,7 @@ Local ladder (2026-11-11, `docs/VERIFICATION.md`): types clean, lint 0, 701 unit
 
 1. **V1.2 owner steps** (`docs/ROADMAP.md`, "Needs the owner", rows i to l): a manual autofill pass on the contact form (Chrome, Safari, Firefox, one password manager) and a few weeks watching `enquiry_bot_dropped` rows (each holds the sender's email); sign in at `/app` once and read the cookie names in the browser's developer tools; the adviser's review of the cookie wording; optionally decide whether to redirect the two retired article URLs (`what-makes-a-site-fast`, `accessibility-is-not-optional`).
 2. **Still the owner's from before:** V1 items 4 and 10 (business facts, retention periods), rotate the OpenRouter key, delete the Clerk dev user, rename the `TEST owner` row, look once signed in at Today and the restyled CMS.
-3. **Next build:** V1.3 is frozen (6 items, 0 ticked, D-068): say "go" and `/finish-app` works it on `goal/v1.3`. Before that, approve the push of `chore/house-standard` (docs only; a merge to `main` deploys nothing, but `main` is deploy-on-push: ask first).
+3. **Next build:** V1.3 is built (6 of 6, local). Merge draft PR #36 (docs), then push `goal/v1.3-items` and merge it to release (`main` is deploy-on-push: the owner decides). After that, open a V1.4 scope.
 4. Undo for the release, if ever needed: `pnpm run release -- --rollback --go` (the script's closing line says `npm run release`: same command).
 
 ## Where things are

@@ -2,6 +2,10 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-14 · V1.3 review (branch `goal/v1.3-items`)
+
+Opus review of the whole branch, read-only. No high findings. Four medium, all fixed in `e5a2754`: the card CSS used colour variables without `hsl()` (cards had no border or background); `quoteFigures` used floats and was a penny out against `terms_pence()` at 5%, 12.5%, 17.5% and on half-penny quantities (now integer pence, half away from zero, with those cases tested); a reload after Mark paid swapped the screen for a skeleton and dropped focus (reload removed); the stacked-table accessibility was asserted, not tested (ARIA roles added, label hidden from the accessible name; VoiceOver still NOT TESTED). Lows fixed: the "Action" label rule hit the audit log's data column (now keyed on `data-actions`), the empty-state row got a label, the ref callback churn, dash variants in the London trim and the CMS preview. Item 5 regex and `gk_oneline` callers: nothing found. NOT TESTED: the Quotes list is not rendered by a unit test; real phones; VoiceOver.
+
 ## 2026-11-14 · House-standard rollout, stages 0 to 3 (documents only; `chore/house-standard`)
 
 Checked against git, the files and a fresh gate on this branch, not against the old notes.
