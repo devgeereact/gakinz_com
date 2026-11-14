@@ -1,4 +1,4 @@
-import { quoteFigures } from "@/lib/quote-figures"
+import { netOfItems, quoteFigures } from "@/lib/quote-figures"
 import { useEffect, useState, type ReactNode } from "react"
 import { useParams } from "react-router-dom"
 import { proposals, type PublicProposal } from "@/lib/api"
@@ -55,7 +55,7 @@ export default function ProposalView() {
     return () => document.documentElement.classList.remove("gk-force-light")
   }, [token])
 
-  const { net: subtotal, vat, gross } = quoteFigures(p ? p.items.reduce((s, it) => s + it.qty * it.unit_price, 0) : 0, p ? p.vat_rate : 0)
+  const { net: subtotal, vat, gross } = quoteFigures(p ? netOfItems(p.items) : 0, p ? p.vat_rate : 0)
 
   const heading = p ? p.title : error ? "Proposal unavailable" : "Proposal"
 

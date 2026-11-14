@@ -2,7 +2,7 @@
 
 The one place for what is done, what is left and what is parked on GAkinz. Everything planned lives here; the task in
 progress is `.agent/CURRENT-TASK.md`, the history is `docs/CHANGELOG.md`, the issue list is `docs/KNOWN-ISSUES.md`.
-Updated 2026-11-14 (V1.2 released as `ea6164c`; V1.3 frozen, 0 of 6, not started; house-standard docs merge D-069). An earlier planning folder (`.planning/`, nine GSD phases) was folded into this file on 2026-11-13.
+Updated 2026-11-14 (V1.2 released as `ea6164c`; V1.3 built, 6 of 6 ticked locally, not pushed; house-standard docs merge D-069). An earlier planning folder (`.planning/`, nine GSD phases) was folded into this file on 2026-11-13.
 
 ## At a glance
 
@@ -17,7 +17,7 @@ Updated 2026-11-14 (V1.2 released as `ea6164c`; V1.3 frozen, 0 of 6, not started
 | **Left 2** | V1 items 4 and 10, and the small owner list | Waiting for you: business facts, the adviser's retention periods, rotate one key, two clean-ups (table "Needs the owner") |
 | **Done** | **V1.2**, public-site trust (rest of GSD phase 8) | **Released 2026-11-13** (`ea6164c`): 5 of 5 open items ticked (item 4 dropped as already true); `check:live` 20 of 20 after the release; the owner's checks are in the table "Needs the owner" |
 | **Left 3** | **V2**, clean-up and live verification (rest of GSD phase 9) | Planned, not frozen; scope notes below |
-| **Planned** | **V1.3**, the daily CMS screens and the first public screen (D-068, six items) | Frozen 2026-11-13, **0 of 6 ticked, not started**; the owner says "go" |
+| **Built, not released** | **V1.3**, the daily CMS screens and the first public screen (D-068, six items) | Frozen 2026-11-13; **6 of 6 ticked** on local evidence 2026-11-14 (`goal/v1.3-items`); awaiting the owner's push and release |
 | **Parked** | Everything else, grouped by theme | "Parking lot" below; nothing deleted |
 
 How a new version opens: you say so, I propose at most ten items from the parking lot by value to users, we freeze the list
@@ -178,27 +178,33 @@ list. **Progress V1.2: 5 of 5 open items ticked (item 4 dropped as already true)
 and the first public screen stop making the owner work around them. Same rules as before: at most ten items, each a user outcome
 with a check, ticked on **local** evidence; what needs the host or the owner is BLOCKED and says so.
 
-- [ ] **1. The home page eyebrow shows "London" once.** Today "Designer and developer · London" sits beside the live clock
+- [x] **1. The home page eyebrow shows "London" once.** Today "Designer and developer · London" sits beside the live clock
   "London hh:mm" (a duplicate, from `9859760`). Check: a test on the prerendered home page (the word appears once in the hero
   eyebrow block) and screenshots at 375 and 1280 px.
-- [ ] **2. The Quotes list shows what the client pays.** The list's "Total" is the amount before VAT. Check: for a quote with VAT,
+  **Evidence 2026-11-14:** `src/prerender/pages.test.tsx` ("home hero eyebrow": the prerendered hero status block holds "London" once and still says "Designer and developer"), `src/marketing/data/content.test.ts` (a published "· London" is trimmed); the default status line no longer carries the city. Visual: looked at in the delivery gate.
+- [x] **2. The Quotes list shows what the client pays.** The list's "Total" is the amount before VAT. Check: for a quote with VAT,
   the Quotes list, the client's shared proposal page and the PDF show the same labelled figures (net, VAT, total); the existing
   VAT tests plus a new list test.
-- [ ] **3. Invoicing refreshes itself after "Mark paid" or "Record payment".** The tiles keep their old figures until a reload.
+  **Evidence 2026-11-14:** one function, `src/lib/quote-figures.ts` (tested in `src/lib/quote-figures.test.ts`: whole pence, half away from zero, the same rule as `terms_pence()` in `server/proposals.php`, including the 5%, 12.5% and 17.5% and half-penny cases a float version got wrong), feeds the Quotes list ("Total (inc VAT)" with net + VAT beneath; the two tiles say "ex VAT") and the shared proposal page. **NOT TESTED:** the Quotes list itself is not rendered by a test (no DOM test environment); the browser layout run opens the screen. **Not applicable:** there is no quote PDF in the product (only the invoice PDF), so that part of the check has nothing to compare.
+- [x] **3. Invoicing refreshes itself after "Mark paid" or "Record payment".** The tiles keep their old figures until a reload.
   Check: a browser test marks an invoice paid and sees the tiles and the row change without a reload.
-- [ ] **4. The eight CMS tables are readable on a phone (K-148).** Blog, Certificates, Clients, Contracts, Invoicing, Platform,
+  **Evidence 2026-11-14:** `tests/browser/invoicing-refresh.test.ts` marks a sent invoice paid and sees "Paid this month" and "Outstanding" move and the Mark-paid count drop by one, with no page navigation. It was red first (the tile did not move: "Mark paid" never set `paid_at`). Fix: `setStatus` sets `paid_at` on the row (no reload, so focus stays on the button and the screen does not flash a skeleton); Record payment already carried `paid_at`.
+- [x] **4. The eight CMS tables are readable on a phone (K-148).** Blog, Certificates, Clients, Contracts, Invoicing, Platform,
   Proposals and Time scroll sideways today. Check: below 640 px each row becomes a stacked card with its actions reachable, and
   `tests/browser/cms-layout.test.ts` fails on any CMS table that still needs a sideways swipe at 375 px; axe stays at 0.
-- [ ] **5. The audit log text is safe to read.** `gk_oneline()` strips only C0 controls and DEL. Check: a unit or server test
+  **Evidence 2026-11-14:** `<Table stack>` (`src/components/ui/table.tsx`, CSS at the foot of `src/index.css`) on the eight modules (Platform has three tables). `tests/browser/layout.ts` now fails any `main table` whose box scrolls sideways below 640 px; it was red on exactly the eight, green after, at 375 px for all 27 owner screens, axe in the final run. The ARIA table roles are set explicitly because CSS blocks drop native table semantics in WebKit: **NOT TESTED with VoiceOver or a screen reader**. Looked at: Invoicing, Clients, Proposals, Platform cards.
+- [x] **5. The audit log text is safe to read.** `gk_oneline()` strips only C0 controls and DEL. Check: a unit or server test
   that C1 controls, U+2028, U+2029 and bidirectional overrides are removed from the honeypot email in the audit `detail`.
-- [ ] **6. One command refreshes the built-in articles from the live CMS (`pnpm run sync:articles`).** Today the snapshot in
+  **Evidence 2026-11-14:** `tests/server/enquiry-notify.test.ts`: `gk_oneline` removes C1 controls, U+2028 and U+2029 (to a space) and the bidirectional marks, embeddings, overrides and isolates (removed); the honeypot audit detail carries none of them. Red first, green after. Server file changed: `docs/DEPLOYMENT.md` section 5.
+- [x] **6. One command refreshes the built-in articles from the live CMS (`pnpm run sync:articles`).** Today the snapshot in
   `src/marketing/data/site.ts` is copied by hand, which is how K-147 happened. Check: a unit test of the refresh (CMS JSON in,
   the `insights` array out, verbatim); a dry run against the live CMS changes nothing when the snapshot is current; the build
   stays offline and `check:live` stays the alarm.
+  **Evidence 2026-11-14:** `scripts/sync-articles.mjs` (`pnpm run sync:articles`, `-- --dry-run`), tested in `scripts/sync-articles.test.mjs` (CMS JSON in, `insights` array out verbatim; two read-only GETs per post; refuses an empty CMS). Dry run against the live CMS: "already match", exit 0, nothing changed. The build stays offline; `check:live` stays the alarm.
 
 **Not in V1.3 (parked or the owner's):** anything needing the owner's hand-applied SQL or `.htaccess` (an `audit_log` index, a
 wrong-case `/Contact` redirect), the Clerk "Grant portal access" button (needs a Clerk secret), dead-code and file-split
-clean-up and ESLint 10 (V2), CSP enforcement, V1 items 4 and 10 (the owner's facts and adviser). **Progress V1.3: 0 of 6 ticked.**
+clean-up and ESLint 10 (V2), CSP enforcement, V1 items 4 and 10 (the owner's facts and adviser). **Progress V1.3: 6 of 6 ticked on local evidence (2026-11-14, branch `goal/v1.3-items`); not pushed, not released.**
 
 ## Versions and the nine GSD phases (2026-11-11)
 

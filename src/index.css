@@ -701,9 +701,9 @@ h1.gk-app-grad,
   }
   table[data-stack] tbody tr {
     display: block;
-    border: 1px solid var(--border);
+    border: 1px solid hsl(var(--border));
     border-radius: 0.75rem;
-    background: var(--card);
+    background: hsl(var(--card));
     padding: 0.25rem 0.75rem;
   }
   table[data-stack] tbody td {
@@ -721,10 +721,11 @@ h1.gk-app-grad,
     overflow-wrap: anywhere;
   }
   table[data-stack] tbody td + td {
-    border-top: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+    border-top: 1px solid color-mix(in oklab, hsl(var(--border)) 60%, transparent);
   }
   table[data-stack] tbody td[data-label]::before {
-    content: attr(data-label);
+    /* The label is for the eye: the ARIA column header already says it, so assistive technology skips this copy. */
+    content: attr(data-label) / "";
     flex: none;
     font-family: var(--font-sans);
     font-size: 0.75rem;
@@ -732,17 +733,16 @@ h1.gk-app-grad,
     font-variant-numeric: normal;
     letter-spacing: normal;
     text-transform: none;
-    color: var(--muted-foreground);
+    color: hsl(var(--muted-foreground));
     text-align: left;
   }
-  table[data-stack] tbody td[data-label="Actions"]::before,
-  table[data-stack] tbody td[data-label="Action"]::before {
+  table[data-stack] tbody td[data-actions]::before {
     display: none;
   }
-  table[data-stack] tbody td:last-child {
+  table[data-stack] tbody td[data-actions] {
     justify-content: flex-end;
   }
-  table[data-stack] tbody td:last-child > div {
+  table[data-stack] tbody td[data-actions] > div {
     flex-wrap: wrap;
     justify-content: flex-start;
   }

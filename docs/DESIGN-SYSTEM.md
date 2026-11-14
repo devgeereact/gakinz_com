@@ -166,6 +166,8 @@ sites with the skill's `capture.mjs`.
   keys, never `.cl-*` selectors), its own card and footer panel removed.
 - **AI blocks:** labelled, saying what they were written from, edited by a person before use.
 
+**Stacked tables (D-070).** `<Table stack>` shows each row as a card below 640 px: label on the left from the column header, value on the right, a cell holding the row's buttons (header "Action" or "Actions") unlabelled and aligned right (`data-actions`); a cell that spans columns (an empty-state row) has no label. Use it for any CMS table with more than three columns. The rules sit unlayered at the foot of `src/index.css` so they beat the `min-w-*` utilities.
+
 ## 6. Open design questions
 
 - J1: many sections use the same small label, big heading and grey lede formula.

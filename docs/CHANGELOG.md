@@ -3,6 +3,16 @@
 What changed in the product, newest first. The checks behind each change are in [AUDIT.md](AUDIT.md) and
 [VERIFICATION.md](VERIFICATION.md); why is in [DECISIONS.md](DECISIONS.md). The release log (how each release went out, 2026-10-21 onwards) is at the foot of this file.
 
+## 2026-11-14 (V1.3, built locally, not released) · Daily screens: London once, quote figures, Invoicing refresh, phone tables, safe audit text, article sync
+
+- Home hero: "London" appears once (the live clock carries it).
+- Quotes list: "Total (inc VAT)" with net + VAT beneath, the same figures as the shared proposal page (`src/lib/quote-figures.ts`); the two tiles say "ex VAT".
+- Invoicing: "Mark paid" now moves the "Paid this month" tile at once (it never set the paid date, so the tile stayed stale until a reload).
+- Eight CMS screens (ten tables: Platform has three) become labelled cards on a phone (K-148 fixed locally).
+- Audit and alert text: `gk_oneline` also removes C1 controls, U+2028/2029 and bidirectional overrides (server change; the release carries it).
+- `pnpm run sync:articles` refreshes the built-in articles from the live CMS (`--dry-run` changes nothing).
+- Branch `goal/v1.3-items`; nothing pushed or released. Checks: `docs/VERIFICATION.md`; review: `docs/AUDIT.md`.
+
 ## 2026-11-14 · House standard: one docs tree and the working method (documents only, D-069)
 
 - `docs/WORKBOOK.md`, `docs/GEE-OS.md` and `docs/TEST-PLAN.md` are merged away (into `docs/CHANGELOG.md` "Release log", `docs/ARCHIVE.md` and `docs/VERIFICATION.md` "Test plan"); `CODEX.md` is deleted; `CLAUDE.md` is `@AGENTS.md`. Nothing was dropped: the old text is in `docs/ARCHIVE.md`.

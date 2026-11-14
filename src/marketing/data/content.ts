@@ -12,8 +12,8 @@ import { services as baseServices, packages as basePackages, addOns, paymentTerm
  */
 
 /** The hero shows a live "London hh:mm" clock beside the status line, so the status line never repeats the city. */
-function withoutLondon(status: string): string {
-  return status.replace(/\s*[·|,-]\s*London\s*$/i, "").trim() || status
+export function withoutLondon(status: string): string {
+  return status.replace(/\s*[·|,\-–—]\s*London\s*$/i, "").trim() || status
 }
 
 export type HeroCopy = { status: string; lead: string; cta1: string; cta2: string; secs: number }

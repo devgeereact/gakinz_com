@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { SOCIAL_PLATFORMS, siteContent, work, type SiteBusiness, type SiteContent, type SiteDrafts, type SiteSection, type SiteSocial, type SiteSocialPlatform } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import { PageHeader } from "@/app/components/page-kit"
-import { PLATFORM_LABELS } from "@/marketing/data/content"
+import { PLATFORM_LABELS, withoutLondon } from "@/marketing/data/content"
 import { useUnsavedGuard } from "@/hooks/use-unsaved-guard"
 import { UnsavedGuardDialog } from "@/components/unsaved-guard-dialog"
 import {
@@ -283,7 +283,7 @@ function MiniHero({ hero, slots }: { hero: SiteContent["hero"]; slots: HeroSlot[
       )}
       style={bg ? { background: bg, color: on } : undefined}
     >
-      <span className="font-mono text-xs opacity-80">{hero.status}</span>
+      <span className="font-mono text-xs opacity-80">{withoutLondon(hero.status)}</span>
       <b className="wrap-break-word text-[1.35rem] font-bold leading-[1.05] tracking-tight">
         {hero.lead} <u className="decoration-2 underline-offset-[3px]">{w?.word || "…"}.</u>
       </b>
