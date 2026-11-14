@@ -458,7 +458,7 @@ export default function Proposals() {
           />
         ) : (
           <div className="overflow-hidden rounded-[14px] border bg-card">
-            <Table className="min-w-[760px]">
+            <Table stack className="min-w-[760px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>

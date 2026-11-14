@@ -175,7 +175,7 @@ export default function Blog() {
           />
         ) : (
           <div className="overflow-hidden rounded-[14px] border bg-card">
-            <Table className="min-w-[640px]">
+            <Table stack className="min-w-[640px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>

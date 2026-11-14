@@ -256,7 +256,7 @@ export default function Time() {
         )
       ) : (
         <div className="overflow-hidden rounded-[14px] border bg-card">
-          <Table>
+          <Table stack>
             <TableHeader>
               <TableRow>
                 <TableHead>Date</TableHead>

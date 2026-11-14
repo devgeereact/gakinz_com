@@ -110,7 +110,7 @@ export default function Certificates() {
           />
         ) : (
           <div className="overflow-x-auto rounded-2xl border bg-card">
-            <Table>
+            <Table stack>
               <TableHeader>
                 <TableRow>
                   <TableHead>Reference</TableHead>

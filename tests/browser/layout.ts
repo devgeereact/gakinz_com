@@ -18,10 +18,24 @@ export function pageProblems(): string[] {
     // laptop and phone frames crop their screenshots by design (object-fit: cover inside overflow: hidden).
     if (el.matches("input, textarea, select, .sr, .sr-only, svg, svg *, .laptop, .laptop *, .phone, .phone *")) continue
     const cs = getComputedStyle(el)
+    // A 1px box is visually hidden on purpose (the screen-reader-only technique, such as a stacked table's header row).
+    if (el.clientWidth <= 1 && el.clientHeight <= 1) continue
     // Deliberate truncation (an ellipsis, a line clamp) is not a flaw either.
     if (cs.textOverflow === "ellipsis" || cs.webkitLineClamp !== "none" && cs.webkitLineClamp !== undefined && cs.webkitLineClamp !== "") continue
     if ((cs.overflowX === "hidden" || cs.overflowX === "clip") && el.scrollWidth > el.clientWidth + 1 && visible(el)) {
       problems.push(`content clipped in <${el.tagName.toLowerCase()} class="${String(el.className).slice(0, 60)}">`)
+    }
+  }
+  // V1.3 item 4 (K-148): below 640 px a table must not need a sideways swipe. Rows stack into cards instead.
+  if (vw < 640) {
+    for (const t of document.querySelectorAll("main table")) {
+      const box = t.parentElement
+      if (box && visible(t) && box.scrollWidth > box.clientWidth + 1) {
+        const head = t.querySelector("th")?.textContent?.trim() ?? ""
+        const wide = Array.from(t.querySelectorAll("*")).find((el) => el.getBoundingClientRect().right > box.getBoundingClientRect().right + 1)
+        const named = wide ? ` <${wide.tagName.toLowerCase()} class="${String(wide.className).slice(0, 50)}"> "${(wide.textContent ?? "").trim().slice(0, 30)}"` : ""
+        problems.push(`a table scrolls sideways at ${vw}px (${box.clientWidth}px box shows ${box.scrollWidth}px; first column "${head}"); sticks out:${named}`)
+      }
     }
   }
   // Something sticking out past the right edge is what makes a phone page scroll sideways; name the first few.

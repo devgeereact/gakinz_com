@@ -339,7 +339,7 @@ export default function Contracts() {
           />
         ) : (
           <div className="overflow-hidden rounded-[14px] border bg-card">
-            <Table className="min-w-[820px]">
+            <Table stack className="min-w-[820px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>

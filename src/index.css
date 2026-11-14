@@ -677,3 +677,73 @@ h1.gk-app-grad,
   --info-bg: color-mix(in srgb, hsl(var(--ring)) 7%, hsl(var(--card)));
   --info-border: color-mix(in srgb, hsl(var(--ring)) 28%, hsl(var(--card)));
 }
+
+/* Stacked tables (V1.3 item 4, K-148). Below 640 px a <Table stack> shows each row as a card: the header row is hidden
+   visually (screen readers keep the table), each cell prints its column name from data-label, and the actions cell
+   spans the card. Unlayered on purpose: it must beat the min-w-* utilities the tables carry for wider screens. */
+@media (max-width: 639px) {
+  table[data-stack] {
+    min-width: 0;
+    display: block;
+  }
+  table[data-stack] thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  table[data-stack] tbody {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+  table[data-stack] tbody tr {
+    display: block;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    background: var(--card);
+    padding: 0.25rem 0.75rem;
+  }
+  table[data-stack] tbody td {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.25rem 0.75rem;
+    min-width: 0 !important;
+    max-width: none !important;
+    padding: 0.5rem 0;
+    border: 0;
+    text-align: right;
+    white-space: normal !important;
+    overflow-wrap: anywhere;
+  }
+  table[data-stack] tbody td + td {
+    border-top: 1px solid color-mix(in oklab, var(--border) 60%, transparent);
+  }
+  table[data-stack] tbody td[data-label]::before {
+    content: attr(data-label);
+    flex: none;
+    font-family: var(--font-sans);
+    font-size: 0.75rem;
+    font-weight: 500;
+    font-variant-numeric: normal;
+    letter-spacing: normal;
+    text-transform: none;
+    color: var(--muted-foreground);
+    text-align: left;
+  }
+  table[data-stack] tbody td[data-label="Actions"]::before,
+  table[data-stack] tbody td[data-label="Action"]::before {
+    display: none;
+  }
+  table[data-stack] tbody td:last-child {
+    justify-content: flex-end;
+  }
+  table[data-stack] tbody td:last-child > div {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}
