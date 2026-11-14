@@ -72,6 +72,23 @@ describe("owner notification on a new enquiry", () => {
     expect(out[1]).toHaveLength(20)
   })
 
+  it("gk_oneline removes C1 controls, line and paragraph separators and bidirectional overrides (V1.3 item 5)", () => {
+    const hostile = "a\u{85}b\u{9f}c\u{2028}d\u{2029}e\u{202e}f\u{202d}g\u{202a}h\u{202b}i\u{202c}j\u{2066}k\u{2067}l\u{2068}m\u{2069}n\u{200e}o\u{200f}p\u{61c}q"
+    const code = `require ${JSON.stringify(path.join(WORK_DIR, "_notify.php"))};
+      echo json_encode(gk_oneline(json_decode('"' . '${hostile.replace(/[^\x20-\x7e]/g, (c) => "\\u" + c.codePointAt(0)!.toString(16).padStart(4, "0")).replace(/\\u/g, "\\\\u")}' . '"'), 200), JSON_UNESCAPED_UNICODE);`
+    const out = JSON.parse(spawnSync("php", ["-r", code], { encoding: "utf8" }).stdout) as string
+    expect(out).not.toMatch(/[\u0080-\u009f\u2028\u2029\u200e\u200f\u061c\u202a-\u202e\u2066-\u2069]/)
+    expect(out.replace(/\s+/g, "")).toBe("abcdefghijklmnopq")
+  })
+
+  it("keeps hostile characters out of the honeypot audit detail", async () => {
+    const r = await api("contact.php", { body: { ...ENQUIRY, hp_site: "x", email: "bot\u{202e}@x\u{2028}.test\u{85}" } })
+    expect(r.status).toBe(201)
+    const detail = one("SELECT detail FROM audit_log WHERE action = 'enquiry_bot_dropped' ORDER BY id DESC LIMIT 1")
+    expect(detail).toMatch(/^honeypot bot/)
+    expect(detail).not.toMatch(/[\u0080-\u009f\u2028\u2029\u202a-\u202e\u2066-\u2069]/)
+  })
+
   it("does not mail for an enquiry that is refused", async () => {
     expect((await api("contact.php", { body: { ...ENQUIRY, email: "not-an-email" } })).status).toBe(400)
     expect((await api("contact.php", { body: { ...ENQUIRY, message: "short" } })).status).toBe(400)

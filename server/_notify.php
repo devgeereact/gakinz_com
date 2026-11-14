@@ -30,10 +30,16 @@ function gk_owner_alert_recipients(): array {
   return array_values(array_filter(array_map('trim', preg_split('/[,;]+/', $raw))));
 }
 
-/** One line, valid UTF-8, no control characters, at most $max characters: safe in a subject line or an audit detail. */
+/**
+ * One line, valid UTF-8, no control characters, at most $max characters: safe in a subject line or an audit detail.
+ * C0 and C1 controls, DEL, U+2028 and U+2029 become a space; the bidirectional marks, embeddings, overrides and
+ * isolates (U+061C, U+200E, U+200F, U+202A to U+202E, U+2066 to U+2069) are removed, because they reorder how the
+ * line is displayed and a space in their place would change the text.
+ */
 function gk_oneline(string $s, int $max): string {
   $s = mb_scrub($s); // invalid UTF-8 would make the /u match below return null
-  $s = trim((string)preg_replace('/[\x00-\x1f\x7f]+/u', ' ', $s));
+  $s = (string)preg_replace('/[\x{061C}\x{200E}\x{200F}\x{202A}-\x{202E}\x{2066}-\x{2069}]+/u', '', $s);
+  $s = trim((string)preg_replace('/[\x00-\x1f\x7f-\x{9f}\x{2028}\x{2029}]+/u', ' ', $s));
   return mb_strlen($s) > $max ? mb_substr($s, 0, $max - 1) . '…' : $s;
 }
 
