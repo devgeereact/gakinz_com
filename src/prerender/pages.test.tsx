@@ -36,6 +36,16 @@ describe("prerendered page metadata", () => {
   })
 })
 
+describe("home hero eyebrow", () => {
+  it("shows London once: the live clock carries it, the status line does not repeat it", () => {
+    const html = render("/")
+    const block = /<p class="hero__status[^>]*>([\s\S]*?)<\/p>/.exec(html)?.[1] ?? ""
+    expect(block).not.toBe("")
+    expect(block.match(/London/g) ?? []).toHaveLength(1)
+    expect(block).toContain("Designer and developer")
+  })
+})
+
 describe("contentDate", () => {
   it("dates a post by its own date and nothing else", () => {
     for (const p of insights) expect(contentDate(`/resources/${p.slug}/`)).toBe(p.date)

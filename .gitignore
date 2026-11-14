@@ -46,3 +46,5 @@ server/uploads/
 .local-test/
 .local-state/
 
+# Code map built by graphify on the Mac (not tracked)
+graphify-out/

@@ -322,7 +322,7 @@ export default function Clients() {
           className="rounded-2xl border border-dashed border-line-strong bg-card py-14" icon={Search} title="No matching clients" description={`Nothing matches “${query.trim()}”. Try a company, contact or email.`} />
       ) : (
         <div className="overflow-hidden rounded-[14px] border bg-card">
-          <Table className="min-w-[640px]">
+          <Table stack className="min-w-[640px]">
             <TableHeader>
               <TableRow className="hover:bg-transparent">
                 <TableHead scope="col">Company</TableHead>

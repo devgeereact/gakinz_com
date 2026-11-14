@@ -288,7 +288,7 @@ function TeamTab({ open, setOpen }: { open: boolean; setOpen: (open: boolean) =>
         )
       ) : (
         <div className="overflow-hidden rounded-[14px] border bg-card">
-          <Table>
+          <Table stack>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
@@ -581,7 +581,7 @@ function AuditTab() {
         !error && <p className="rounded-[14px] border bg-card px-5 py-10 text-center text-muted-foreground">No actions logged yet.</p>
       ) : (
         <div className="overflow-hidden rounded-[14px] border bg-card">
-          <Table>
+          <Table stack>
             <TableHeader>
               <TableRow>
                 <TableHead>When</TableHead>
@@ -722,7 +722,7 @@ function RetentionCard() {
           className="overflow-x-auto rounded-xl focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30 [&>div]:overflow-visible"
         >
           {/* The Table's own wrapper is made not to scroll, so this focusable region is the one scroll container. */}
-          <Table>
+          <Table stack>
             <TableHeader>
               <TableRow>
                 <TableHead>Rule</TableHead>

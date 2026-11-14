@@ -2,6 +2,21 @@
 
 Every audit, review and checklist run for this project, newest first. Add new results here as a dated section; do not create separate audit files.
 
+## 2026-11-14 · V1.3 review (branch `goal/v1.3-items`)
+
+Opus review of the whole branch, read-only. No high findings. Four medium, all fixed in `e5a2754`: the card CSS used colour variables without `hsl()` (cards had no border or background); `quoteFigures` used floats and was a penny out against `terms_pence()` at 5%, 12.5%, 17.5% and on half-penny quantities (now integer pence, half away from zero, with those cases tested); a reload after Mark paid swapped the screen for a skeleton and dropped focus (reload removed); the stacked-table accessibility was asserted, not tested (ARIA roles added, label hidden from the accessible name; VoiceOver still NOT TESTED). Lows fixed: the "Action" label rule hit the audit log's data column (now keyed on `data-actions`), the empty-state row got a label, the ref callback churn, dash variants in the London trim and the CMS preview. Item 5 regex and `gk_oneline` callers: nothing found. NOT TESTED: the Quotes list is not rendered by a unit test; real phones; VoiceOver.
+
+## 2026-11-14 · House-standard rollout, stages 0 to 3 (documents only; `chore/house-standard`)
+
+Checked against git, the files and a fresh gate on this branch, not against the old notes.
+- **Repository:** `main` `a30a018`, clean, 0 behind and 0 ahead of `origin/main`; no stash; no other worktree or local branch (the board's local branches and `.local-state/wt-finish` were already gone); remote branches `chore/tailwind-v4`, `goal/finish`, `goal/v1.2`, `goal/v1.3` all merged into `main`; `chore/graphify-merge-attribute` (1 line in `.gitattributes`, pushed by another session about an hour before the run) is unmerged and left alone. Open PRs: none. CI on `main`: run 43499565198 (PR #35 merge) success; the two before it success.
+- **Backup:** `~/Backups/projects/gakinz_com/gakinz_com-<stamp>.bundle`, `git bundle verify` passed; `.local-state/backups` links to it. No uncommitted work existed to patch.
+- **Docs:** 26 documents after the merge (29 before); `pnpm run docs:check` PASS; no remaining path to the three removed files except `server/auth.php` (a comment; a server edit would be a release) and dated history lines that now say where the text went.
+- **Left as separate files, with the reason:** STATUS, AUDIT, VERIFICATION, SECURITY, PRIVACY-READINESS, OPERATIONS, DEPLOYMENT (D-069 item 2).
+- **Tracked images (not untracked, for approval):** 25 `webp`/`png` files, 1.3 MB in total, the largest `public/images/work/heritage-d.webp` (172 KB); no `.idea/`, `.pyc` or screenshots.
+- **Tailwind v4:** `tailwindcss` and `@tailwindcss/vite` 4.3.5 in `devDependencies`, `tailwindcss()` first in `vite.config.ts` and `vite.cms-test.config.ts`, `@import 'tailwindcss'` in `src/index.css`, two `@theme inline` blocks, no `tailwind.config.*` or PostCSS config, `.flex{` present in the built CSS. DONE earlier (D-064), verified now.
+- **NOT TESTED:** the browser suite on this computer (Chromium `1248` missing); a real phone; anything on the live site.
+
 ## 2026-11-13 (V1.2 release) · `ea6164c` released and checked live
 
 **Scope:** the release of V1.2 (D-065, D-066, D-067) and the read-only live checks after it. **CI findings: none** (run 43389323251, every job green: typecheck, lint, docs, unit, build, PHP and server tests on MySQL 8, gitleaks, Semgrep, "does this push need a release"). **Early `.htaccess` upload:** `server/.htaccess` was uploaded by hand on 2026-11-13 07:41 UTC at the owner's request (backup `htaccess.before-v1.2-404.20261113T074141Z`), probed right after (all as expected), and found byte-identical to the repo file in a re-check before the merge. **Release:** 08:06 UTC, snapshot `20261113T080551Z`, smoke checks passed. **Live results:** `pnpm run check:live` 20 of 20 (17 of 20 before the release); an unknown URL answers 404 with the branded page, `noindex`, `no-store` and the same Content-Security-Policy as the other pages; the live sitemap lists exactly the three CMS articles; `/cookies/` names `gk-auth` and `__session` and no longer contains `gk_oauth_state` or `gk-locked`; the home `<h1>` carries the `aria-label` sentence. **NOT TESTED:** the contact form live, the branded 404 and the honeypot in a real browser, Safari, Firefox, a real phone, a password manager, a screen reader, Clerk's real cookie names. Detail: `docs/VERIFICATION.md` "Release and live checks, 2026-11-13".
@@ -346,7 +361,7 @@ release never deletes on the server, so removing it from git would leave an untr
 `feat/design-finalisation` deleted (origin has `main` only); no stash; empty `qa/`, `.playwright-mcp/` logs and
 `.DS_Store` files removed. `.superpowers/` (owner plans) and `graphify-out/` kept.
 
-**Documents:** STATUS (1,211 to about 200 lines), WORKBOOK, DEPLOYMENT section 5, DESIGN-SYSTEM, CLAUDE,
+**Documents:** STATUS (1,211 to about 200 lines), WORKBOOK (now in `docs/ARCHIVE.md`), DEPLOYMENT section 5, DESIGN-SYSTEM, CLAUDE,
 README, ARCHITECTURE and the task contract rewritten to the current state; history left the tree under D-044
 and is read at `ee1281f`. Stale rows corrected: K-025, K-082, K-113, and K-001 and K-015 in STATUS section 5.
 
@@ -1530,7 +1545,7 @@ Each is PASS on source inspection and NOT TESTED at runtime.
 5. Add a MIME allowlist to uploads (S-004) rather than relying on one generated `.htaccess`.
 6. Add a Content-Security-Policy and `integrity` attributes, or self-host the two icon fonts
    (S-005).
-7. Write the authorisation tests described in `docs/TEST-PLAN.md` priority 1, so this audit can
+7. Write the authorisation tests described in `docs/VERIFICATION.md` (Test plan) priority 1, so this audit can
    be repeated with evidence rather than by reading.
 
 ## 30 Oct 2026: config.php moved out of the web root

@@ -42,6 +42,7 @@ import {
   type AcceptanceMethod,
 } from "@/lib/api"
 import { localIsoDate } from "@/lib/format"
+import { quoteFigures } from "@/lib/quote-figures"
 import { linkMark, projectsPath, proposalsLink } from "@/lib/deepLink"
 import { useApplyLink } from "@/hooks/use-reveal"
 import { quotePrefill } from "./quotePrefillModel"
@@ -437,8 +438,8 @@ export default function Proposals() {
 
         {!loading && !error && items.length > 0 && (
           <StatGrid className="last:mb-0">
-            <StatTile label="Sent, awaiting reply" value={gbp(sum(sent))} note={plural(sent.length, "quote")} />
-            <StatTile label="Accepted" value={gbp(sum(accepted))} note={plural(accepted.length, "quote")} tone={accepted.length ? "up" : undefined} />
+            <StatTile label="Sent, awaiting reply" value={gbp(sum(sent))} note={`${plural(sent.length, "quote")}, ex VAT`} />
+            <StatTile label="Accepted" value={gbp(sum(accepted))} note={`${plural(accepted.length, "quote")}, ex VAT`} tone={accepted.length ? "up" : undefined} />
             <StatTile label="Win rate" value={`${winRate}%`} note="Of decided quotes" />
             <StatTile label="Drafts" value={String(drafts)} note="Not sent yet" />
           </StatGrid>
@@ -457,13 +458,13 @@ export default function Proposals() {
           />
         ) : (
           <div className="overflow-hidden rounded-[14px] border bg-card">
-            <Table className="min-w-[760px]">
+            <Table stack className="min-w-[760px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Title</TableHead>
                   <TableHead>Client</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Total (inc VAT)</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -492,7 +493,21 @@ export default function Proposals() {
                     <TableCell>
                       <StatusBadge status={p.status} />
                     </TableCell>
-                    <TableCell className="whitespace-nowrap text-right font-mono tabular-nums">{gbp(p.total)}</TableCell>
+                    <TableCell className="whitespace-nowrap text-right font-mono tabular-nums">
+                      {(() => {
+                        const f = quoteFigures(p.total, p.vat_rate)
+                        return (
+                          <>
+                            <span className="block font-semibold">{gbp(f.gross)}</span>
+                            {f.vat > 0 && (
+                              <span className="block text-xs font-normal text-muted-foreground">
+                                {gbp(f.net)} + {gbp(f.vat)} VAT
+                              </span>
+                            )}
+                          </>
+                        )
+                      })()}
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         {p.views > 0 && (

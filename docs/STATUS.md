@@ -2,7 +2,7 @@
 
 **As at:** 2026-11-13. `main` is `ea6164c`, which is live on
 gakinz.com through `scripts/release.mjs` (released 2026-11-13 08:06 UTC): **V1.2 (public-site trust) is released**, and `server/.htaccess` was uploaded by hand earlier that day. The order of work and what is left are in
-[WORKBOOK.md](WORKBOOK.md); open issues are in [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
+[ROADMAP.md](ROADMAP.md); open issues are in [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
 
 This is the one home for measured counts: other documents point here rather than repeat a number.
 Anything about signed-in use of the live system is NOT TESTED unless a row says otherwise (K-044).
@@ -18,7 +18,7 @@ Anything about signed-in use of the live system is NOT TESTED unless a row says 
 | 0.8 | Clerk sign-in, 2026-10-30 (D-052) |
 | 1 | Audit and readiness, 2026-10-10 |
 | 2 | Delivery phases |
-| 3 | Open work as at 2026-10-19 (now [WORKBOOK.md](WORKBOOK.md) section 3) |
+| 3 | Open work as at 2026-10-19 (now [ROADMAP.md](ROADMAP.md)) |
 | 4 | What changed on each branch before the 2026-10-21 merge |
 | 6 | The 2026-09-22 record (baseline, measurements, work ledger, server security changes) |
 
@@ -32,8 +32,8 @@ this table when a count changes; the previous figures are in the history above.
 | Measure | Command | Result |
 |---|---|---|
 | Styling and packages | `vite.config.ts`, `package.json` | Tailwind CSS v4 through `@tailwindcss/vite`, pnpm (`pnpm-lock.yaml`), **released 2026-11-11 as `ed5a724`** (D-064, `docs/AUDIT.md` 2026-11-11) |
-| Unit tests | `pnpm test` | **PASS.** 701 tests in 66 files (V1.2: the cookie list and page, the built-in articles, the 404 page build, the home headline, the live-check header and article checks) |
-| Server integration tests | `pnpm run test:server`, local throwaway `*_test` database | **PASS.** 687 tests in 55 files on local MariaDB 11.4.13 (V1.2: `contact-bots` and `notfound` added), run as `GK_TEST_DB_HOST=127.0.0.1 GK_TEST_DB_PORT=3329 GK_TEST_DB_USER=root GK_TEST_DB=<name>_test GK_TEST_PHP_PORT=<port> GK_TEST_PROVIDER_PORT=<port> pnpm run test:server` |
+| Unit tests | `pnpm test` | **PASS.** 715 tests in 68 files (V1.3 branch `goal/v1.3-items`, not released; main: 701 in 66) (V1.2: the cookie list and page, the built-in articles, the 404 page build, the home headline, the live-check header and article checks) |
+| Server integration tests | `pnpm run test:server`, local throwaway `*_test` database | **PASS.** 689 tests in 55 files (V1.3 branch; main: 687) on local MariaDB 11.4.13 (V1.2: `contact-bots` and `notfound` added), run as `GK_TEST_DB_HOST=127.0.0.1 GK_TEST_DB_PORT=3329 GK_TEST_DB_USER=root GK_TEST_DB=<name>_test GK_TEST_PHP_PORT=<port> GK_TEST_PROVIDER_PORT=<port> pnpm run test:server` |
 | Browser tests | `pnpm run build && pnpm run test:browser` | **PASS.** 148 tests in 3 files, three runs in a row: the contact form (12, V1.2: honeypot, too-fast retry); all 32 public pages and the not-found view at 375 and 1280 px (68); 34 CMS screens at both sizes as owner, client and editor against real PHP and a seeded throwaway database, with Clerk stubbed in a test-only build (68). `GK_AXE=<axe.min.js>` adds axe (0 violations). Signed-in use with real data, Safari and a real phone are NOT covered |
 | Server suite on MySQL 8 | `pnpm run test:server` against MySQL 8.0 (`docs/OPERATIONS.md` section 8) | Last PASS 2026-10-20 (519 tests). MySQL 5.7 NOT TESTED; the live engine is UNVERIFIED (K-099) |
 | Type check and build | `pnpm run build` | **PASS.** 32 public pages, `404.html` and `app-shell.html` prerendered, `sitemap.xml` with 32 URLs (`404.html` is not in it) |
@@ -51,7 +51,7 @@ The design verification of 2026-10-31 (screens at five widths, axe 4.14) is in `
 
 ## 3. Open work
 
-The order of work is [WORKBOOK.md](WORKBOOK.md) section 3. Issues and their state are in
+The order of work is [ROADMAP.md](ROADMAP.md). Issues and their state are in
 [KNOWN-ISSUES.md](KNOWN-ISSUES.md).
 
 ## 5. Owner inputs outstanding
@@ -70,7 +70,7 @@ On 2026-10-14 the owner approved the redesign that replaces D-037's visual direc
       2026-10-12 (owner-reported); the account retired and its 32 sessions deleted 2026-10-30
 - [x] The seed-password file is not in the live docroot (K-015). Checked 2026-10-21 before the deploy.
 - [x] Which PHP files and SQL migrations are live, checked and recorded (K-006). 2026-10-21: SQL 1
-      to 19 applied, every `server/*.php` uploaded (`docs/WORKBOOK.md` section 1). Since 2026-10-30
+      to 19 applied, every `server/*.php` uploaded (`docs/CHANGELOG.md`, release log). Since 2026-10-30
       each release uploads `server/*.php` itself.
 - [~] A backup restored somewhere safe and checked (K-010). **2026-11-10, by an agent:** the Mac copy of the host's 2026-10-30 dump restored into a throwaway local MariaDB (`pnpm run drill:restore`, `docs/OPERATIONS.md` 10.1). Still yours: the host's newest dump, the uploads copy, a restore you have seen. Date:
 - [ ] Recovery targets agreed. Proposed: back within one working day, lose no more than 24

@@ -8,7 +8,7 @@ features is kept with a disposition in Appendix B.
 The file records three things, and keeps them apart: what the repository **contains today**,
 what the approved scope **requires**, and what is **deliberately not built**. A requirement in
 this file is not a claim that it works. Current evidence lives in `docs/STATUS.md`, open
-defects in `docs/KNOWN-ISSUES.md`, and the acceptance scenarios in `docs/TEST-PLAN.md`.
+defects in `docs/KNOWN-ISSUES.md`, and the acceptance scenarios in `docs/VERIFICATION.md` (Test plan).
 
 Phase numbers used below are the delivery phases in `docs/STATUS.md` section 2.
 

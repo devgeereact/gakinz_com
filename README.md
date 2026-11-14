@@ -99,17 +99,15 @@ once.
 | File | What it holds |
 |---|---|
 | `AGENTS.md` | The contract every agent works to, including the document-sync rule |
-| `CLAUDE.md` | The Claude Code pointer into it; points to the workbook for current state |
-| `CODEX.md` | The Codex pointer into it |
-| `.agent/PROJECT.yml` | The GEE OS project contract: route, risk and sources |
-| `.agent/CURRENT-TASK.md` | The task in hand, its scope, authority and evidence |
+| `CLAUDE.md` | One line, `@AGENTS.md`: Claude Code reads the same contract |
+| `.agent/PROJECT.yml` | The project contract: route, risk and sources |
+| `.agent/CURRENT-TASK.md` | The one task file: the task in hand, its scope, authority and evidence. Dated history: `.agent/HANDOFF.md` |
 | `.agent/MCP-PROFILE.yml` | Which integrations an agent may read or change |
 | `server/README.md` | The server folder: install steps and what each file is for |
-| `docs/ROADMAP.md` | What is done, what is left and what is parked: the V1, V1.1 and V1.2 finish lines, the planned V2, the parking lot by theme, what was cut and what waits for the owner |
+| `docs/ROADMAP.md` | Start here. What is done, what is left and what is parked: the V1, V1.1 and V1.2 finish lines, the planned V2, the parking lot by theme, what was cut and what waits for the owner |
 | `docs/superpowers/` | The planning: `specs/` (what and why, with the constraints) and `plans/` (the tasks agents build from), one pair per piece of work |
 | `docs/CHANGELOG.md` | What changed in the product, newest first |
-| `docs/VERIFICATION.md` | What was actually run for the finish line, and the owner's own walk through it |
-| `docs/WORKBOOK.md` | The one page to work from: state, what is left, standing rules and order of work. Start here |
+| `docs/VERIFICATION.md` | What was actually run for the finish line, the owner's own walk through it, and the standing test plan (suites, gaps, J01 to J12 acceptance scenarios) |
 | `docs/STATUS.md` | Current state and every measured count, delivery phases, open work, owner inputs. The file that changes most |
 | `docs/KNOWN-ISSUES.md` | Open and fixed problems, with evidence and status |
 | `docs/DECISIONS.md` | Dated decision records, including superseded ones |
@@ -124,8 +122,7 @@ once.
 | `docs/DESIGN-SYSTEM.md` | The design system as implemented, with measured tokens (D-046 and D-053) |
 | `.claude/skills/gakinz-design/` | The project design skill: layout rules, findings register and the verification routine |
 | `docs/CONTENT-AND-GROWTH.md` | Resources standard, affiliate and AdSense pilots, measurement and the social profile kit |
-| `docs/GEE-OS.md` | How this repository uses the GEE OS agent contract, and its documentation profile |
-| `docs/TEST-PLAN.md` | What is tested, what is not, the order to close the gaps, and the J01 to J12 acceptance scenarios |
+| `docs/ARCHIVE.md` | Retired documents (the Workbook, the GEE OS record), kept whole |
 | `docs/AUDIT.md` | Every audit and review, newest first: security, accessibility, performance, design and release checks |
 
 Superseded and completed documents remain in git history (`docs/DECISIONS.md` D-044): the original

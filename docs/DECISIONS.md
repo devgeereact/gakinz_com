@@ -244,7 +244,7 @@ asserted explicitly.
 was left to the type checker and the build.
 
 **Consequence:** there is no component test, no endpoint test and no end-to-end test. This
-now includes `server/work.php`, which has never been executed. See `docs/TEST-PLAN.md`.
+now includes `server/work.php`, which has never been executed. See `docs/VERIFICATION.md` (Test plan).
 
 ---
 
@@ -790,7 +790,7 @@ the completed relaunch specification (D-023 to D-032, `docs/STATUS.md`). Every o
 readable at `c57eb4a`, for example `git show c57eb4a:GAkinzOS.html`. **Why:** D-019 kept the
 superseded design file to explain global details, but D-006 already does that, and an
 out-of-date file in the tree is read as current by people and agents alike. The documentation
-now follows the GEE OS standard-application layout (`docs/GEE-OS.md`).
+now follows the GEE OS standard-application layout (`docs/ARCHIVE.md`, the retired GEE OS record).
 
 ## D-045 · Documents change in the same pull request as the code, and CI checks it
 **Date:** 2026-10-10 · **Status:** active
@@ -1198,3 +1198,17 @@ me"); built on `golive/2026-11`, not released. Each can be reversed by a later d
 2. **Left out on purpose:** hand-applied SQL or `.htaccess` work, the Clerk grant button (needs a secret), dead-code clean-up and file splits (V2), CSP enforcement, V1 items 4 and 10.
 3. **Method:** D-066 stands (spec and plan in `docs/superpowers/`, fresh agents build and review, all work inside the project folder). The `finish-app` skill's newer house text says plans go in `docs/<scope>/plans/` and never in `docs/superpowers/`; this project follows the owner's explicit D-066 instead, because the project's own rules override the generic ones.
 
+
+## D-069 · House standard: one docs tree, one task file, the working method (2026-11-14)
+**Date:** 2026-11-14 · **Status:** decided by the owner's rollout prompt ("Start here: bring every project onto the house standard", `~/Developer/build-kit/App-Kit/LAUNCH-PROMPTS.md`), built on `chore/house-standard`, local only.
+
+1. **Merged away, nothing lost:** `docs/WORKBOOK.md` (its release table is the "Release log" in `docs/CHANGELOG.md`, its standing rules are in `AGENTS.md`, what is left is `docs/ROADMAP.md`, the remainder is in `docs/ARCHIVE.md`); `docs/GEE-OS.md` (to `docs/ARCHIVE.md`); `docs/TEST-PLAN.md` (to `docs/VERIFICATION.md`, "Test plan"); `CODEX.md` deleted; `CLAUDE.md` is `@AGENTS.md` and its unique content moved into `AGENTS.md`. This supersedes the GEE OS documentation profile of D-044.
+2. **Kept as separate files on purpose, each with one job:** `docs/STATUS.md` (measured counts, one home by `AGENTS.md`), `docs/AUDIT.md` (audits, newest first) beside `docs/VERIFICATION.md` (what ran for a release), `docs/SECURITY.md` beside `docs/PRIVACY-READINESS.md` (the adviser's working draft), `docs/OPERATIONS.md` (running the host) beside `docs/DEPLOYMENT.md` (releasing to it). Merging them would be a rewrite, not a tidy.
+3. **Working method:** Superpowers (spec, plan, test first, review), already the method since D-066; the "How we work" block and the graph rule are in `AGENTS.md`. GSD is not this project's plan flow.
+
+## D-070 · V1.3 build choices: stacked tables, one quote-figures function, the article sync (2026-11-14)
+**Date:** 2026-11-14 · **Status:** decided inside the frozen V1.3 list (D-068); nothing outside it was added.
+
+1. **Phone tables:** `Table` takes an opt-in `stack` prop. It copies each column header onto its cells (`data-label`) and CSS below 640 px shows each row as a card, the header row kept in the DOM, visually hidden, and explicit ARIA table roles added because CSS blocks drop native table semantics in WebKit (not yet tried with VoiceOver: NOT TESTED). The visible label is excluded from the accessible name (`content: attr(data-label) / ""`). Chosen over a column picker (more UI, more state) and over editing every cell in eight modules (eight places to forget). The guard is the shared `pageProblems` check, which fails any `main table` that needs a sideways swipe below 640 px.
+2. **Quote figures:** `src/lib/quote-figures.ts` is the one place net, VAT and total are computed for a quote, worked in whole pence and rounded half away from zero exactly as `terms_pence()` in `proposals.php` does (an Opus review found the first float version one penny out at 5% and on half-penny quantities). There is no quote PDF, so the frozen check's PDF clause is recorded as not applicable.
+3. **Article sync:** `pnpm run sync:articles` (`scripts/sync-articles.mjs`) rewrites only the `insights` array from two read-only public GETs per post; the build stays offline and `check:live` stays the alarm.

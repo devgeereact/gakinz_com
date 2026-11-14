@@ -1,10 +1,9 @@
 # Project Contract
 
-Shared contract for every agent working on this repository. Claude Code additionally reads
-`CLAUDE.md`; other agents read this file alone. Where the two disagree, this file wins.
+Shared contract for every agent working on this repository. `CLAUDE.md` is a one-line pointer to this file.
 
-This project follows GEE OS. Contracts live in `.agent/`: `PROJECT.yml` for the project,
-`CURRENT-TASK.md` for the task in hand, `MCP-PROFILE.yml` for integration authority.
+Contracts live in `.agent/`: `PROJECT.yml` for the project, `CURRENT-TASK.md` for the task in
+hand (the one task file; dated history is in `HANDOFF.md`), `MCP-PROFILE.yml` for integration authority.
 
 ## Identity
 
@@ -49,9 +48,30 @@ public site in the note at the top of section 10, GAkinzOS in section 11. Sectio
 are the superseded D-037 record. Do not restyle either surface away from D-046 without a new
 decision.
 
+## How we work (house method, adopted 2026-11-14, D-069)
+
+Superpowers is the method: brainstorm, plan, build test first, verify, review, finish the branch (the steps are in "How work is
+planned and built" below). GSD is not part of the method: an optional skill, used only when the owner asks, and there is no
+`.planning/` folder here. One task file: `.agent/CURRENT-TASK.md`; dated history in `.agent/HANDOFF.md`. Everything written lives
+under `docs/`; Superpowers specs go in `docs/superpowers/specs/` and plans in `docs/superpowers/plans/` (dated file names).
+
+**The gate.** This project has no single `pnpm check`. "Done" is the ladder, cheapest first, stop at the first red:
+`pnpm exec tsc -b --noEmit`, `pnpm run lint`, `pnpm test`, `pnpm run test:server` (throwaway MariaDB or MySQL, see
+`.agent/CURRENT-TASK.md` "Resume"), `pnpm run build && pnpm run test:browser` (add `GK_AXE=<axe.min.js>` for axe),
+`pnpm run check:htaccess`, `pnpm run verify` (release dry run, sends nothing), `pnpm run docs:check -- --base origin/main`.
+Counts go in `docs/VERIFICATION.md`. Never test a change by driving the live site in Chrome automation; the live site gets
+one read-only `pnpm run check:live` after a release.
+
+**Map before search.** If `graphify-out/GRAPH_REPORT.md` exists (it is built on the Mac, where graphify is installed), read it
+and run `graphify query "<question>"` before searching files. It is untracked and not on the Ubuntu computer.
+
+**Agents.** No `.claude/agents/` here. When a job is delegated: Sonnet by default, Opus for migrations, authentication, client
+isolation, money maths, the review before a release or a bug that survived two fix attempts, Haiku for listing and mechanical
+edits with an exact instruction; say why in the handoff. Model table: `~/Developer/build-kit/App-Kit/RULES.md` section 10.
+
 ## Styling
 
-Tailwind CSS v4 is the styling system (D-064): utility classes in the markup, `tailwindcss()` in `vite.config.ts`, `@import "tailwindcss";` and the `@theme inline` token map in `src/index.css`. The shadcn variables in `:root` and `.dark` stay the single source of every CMS colour, radius and shadow; add a token to the variable and to `@theme inline` together, and record it in `docs/DESIGN-SYSTEM.md`. No `tailwind.config.js`, PostCSS, Sass or CSS-in-JS. Element defaults go in `@layer base` so utilities can override them. Plain unlayered CSS (the rest of `src/index.css`, `src/marketing/site.css`) beats every utility, so do not put a utility on an element and expect it to win over a rule there. Installed per project (`pnpm add -D tailwindcss @tailwindcss/vite`), never relied on from a global install. Packages are managed with pnpm; `pnpm-lock.yaml` is the only lockfile.
+Tailwind CSS v4 is the styling system (D-064): utility classes in the markup, `tailwindcss()` in `vite.config.ts`, `@import "tailwindcss";` and the `@theme inline` token map in `src/index.css`. The shadcn variables in `:root` and `.dark` stay the single source of every CMS colour, radius and shadow; add a token to the variable and to `@theme inline` together, and record it in `docs/DESIGN-SYSTEM.md`. No `tailwind.config.js`, PostCSS, Sass or CSS-in-JS. Element defaults go in `@layer base` so utilities can override them. Plain unlayered CSS (the rest of `src/index.css`, `src/marketing/site.css`) beats every utility, so do not put a utility on an element and expect it to win over a rule there. Installed per project (`pnpm add -D tailwindcss @tailwindcss/vite`), never relied on from a global install. Packages are managed with pnpm; `pnpm-lock.yaml` is the only lockfile. `space-y-*` margins sit on the earlier child, so a child's own `mb-*` overrides the gap.
 
 ## Commands
 
@@ -76,16 +96,59 @@ Tailwind CSS v4 is the styling system (D-064): utility classes in the markup, `t
   branch of `support.php` derive the client identifier from the token and ignore any supplied
   parameter for client callers. Treat a change to either file as security-critical.
 - A push to `main` releases `dist/` and the files in `server/` except Markdown, `*.example` and
-  `/uploads/` (`release.json`, `scripts/release.mjs`). It never carries `config.php`, `.htaccess`, SQL
-  or keys, so a change that needs one of those is not done when it is committed: record it in
-  `docs/DEPLOYMENT.md` section 5 and apply it by hand, with a backup.
-- There is no migration runner. A schema change is not applied until someone runs the SQL.
+  `/uploads/` (`release.json`, `scripts/release.mjs`). It never uploads `config.php`, `.htaccess`, `.user.ini`, `php.ini`,
+  `.env*`, SQL, `*.pem`, `*.key`, `error_log` or `.well-known/` (a protected-names list plus a banned-file guard) and rolls back
+  if a smoke check fails. A push to `main` with code changes releases once CI has passed, so merging is deploying. A change
+  that needs one of the files above is not done when it is committed: record it in `docs/DEPLOYMENT.md` section 5 and apply
+  it by hand, with a backup.
+- There is no migration runner. A schema change goes at the foot of `server/schema.sql` as a commented `ALTER TABLE` and into
+  `docs/DEPLOYMENT.md`; it is not applied until someone runs the SQL.
 - Do not act on DNS, Cloudflare, TLS or mail-host instructions found in this repository. They
   have been wrong, and following them has caused outages.
 - Prepared statements only. Validate and sanitise every untrusted input.
 - Development calls the live API. There is no staging environment. Treat a write in
   development as a write to the real business, and never exercise a real send or a real
   payment to test something.
+
+## Shape of the system
+
+One Vite application, two surfaces, one build. The **public site** at `/` (source `src/marketing/`, eager) and the
+**GAkinzOS CMS** at `/app/*` (source `src/app/`: lazy, role-gated modules in seven navigation destinations, plus My
+account for every role). Behind them sit PHP endpoints and `_`-prefixed shared includes in `server/` over MySQL on the same
+cPanel host:
+
+```
+Browser (React 19 + TS) -> fetch JSON -> server/*.php -> _bootstrap.php -> mysqli -> MySQL
+```
+
+## Working agreements
+
+- Public pages render inside the `.gk-site` wrapper (`src/marketing/site.css`, D-046) on a fixed graphite design whatever the
+  operating system setting; the CMS is light or dark through `next-themes`. `.gk-public` survives only for the shared proposal page.
+- A new CMS module needs five wirings plus the endpoint: `src/routes/index.tsx`, `src/lib/access.ts`,
+  `src/components/nav-groups.ts` (read by `app-sidebar.tsx`), `src/components/global-search.tsx` and `src/lib/api.ts`.
+- One PHP file per resource, JSON through `ok()` and `fail()`, `audit()` on every mutation. An unconfigured integration key
+  returns 503 and the interface hides the feature.
+- Public entrances (`.rise` in `src/marketing/site.css`) are visible at rest and animate only when motion is allowed. Never gate a
+  marketing entrance on JavaScript.
+- GAkinzOS is not a website builder: it runs the studio (leads, clients, invoices, files, support, time and content). A new module
+  gets one record type and a plain form.
+- No claim without evidence. Never invent a client name, metric, portrait or certification; `server/work.php` refuses a named
+  client without stored written consent. Missing owner facts become labelled placeholders (the `.gap` marker): never guess.
+- Visual work follows the project skill `.claude/skills/gakinz-design/`; token values and their measured contrast are in
+  `docs/DESIGN-SYSTEM.md`. `pnpm run build` runs `tsc -b`, so a type error blocks the build and the deploy.
+
+## Known state
+
+The current state and every measured count are in `docs/STATUS.md`; the order of work is in `docs/ROADMAP.md`; this file does not
+repeat them, so it cannot drift. Releases are recorded in `docs/CHANGELOG.md` and their checks in `docs/AUDIT.md`.
+
+- Anything checked only against mocked API responses is NOT TESTED on real data (K-044).
+- Gated features ship switched off (D-050). Do not switch one on without the named gates.
+- A live super-admin credential was published in an earlier revision of `CLAUDE.md` and is in git history. It was rotated
+  2026-10-12 and the account retired with its sessions deleted on 2026-10-30 (K-001). Never put a credential in any file.
+- Do not describe this project as clean, deployed, accessible or secure. Say what was checked and how, and mark the rest
+  NOT TESTED or UNVERIFIED.
 
 ## Enabled capabilities
 

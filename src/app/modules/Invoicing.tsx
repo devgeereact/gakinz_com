@@ -176,7 +176,12 @@ export default function Invoicing() {
     const res = await invoices.setStatus(inv.id, status)
     setBusyId(null)
     if (res.ok) {
-      setItems((xs) => xs.map((x) => (x.id === inv.id ? { ...x, status, overdue: status === "paid" ? false : x.overdue } : x)))
+      // "Paid this month" reads paid_at, so a manual mark-paid sets it now. No reload: it would swap the screen for a
+      // skeleton and drop keyboard focus from the button that was just pressed.
+      const paidAt = status === "paid" ? `${localIsoDate()} 00:00:00` : null
+      setItems((xs) =>
+        xs.map((x) => (x.id === inv.id ? { ...x, status, overdue: status === "paid" ? false : x.overdue, ...(paidAt ? { paid_at: paidAt } : {}) } : x)),
+      )
     } else {
       toast.error(res.error || "Could not update the invoice.")
     }
@@ -526,7 +531,7 @@ export default function Invoicing() {
             </div>
 
             <div className="overflow-hidden rounded-[14px] border bg-card">
-              <Table className="min-w-[760px]">
+              <Table stack className="min-w-[760px]">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Number</TableHead>

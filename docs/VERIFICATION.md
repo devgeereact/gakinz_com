@@ -4,6 +4,35 @@ What was actually run, with the result, and what only the owner can show. Result
 [AUDIT.md](AUDIT.md); the finish line they serve is [ROADMAP.md](ROADMAP.md). Status words: DONE (seen), PARTIAL,
 NOT TESTED, BLOCKED.
 
+## Ladder, 2026-11-14, branch `goal/v1.3-items` (V1.3, six items; stacked on `chore/house-standard`)
+
+| Step | Result |
+|---|---|
+| `pnpm exec tsc -b --noEmit`, `pnpm run lint` | PASS, clean; 0 errors, 0 warnings |
+| `pnpm test` | PASS, 715 tests in 68 files |
+| `pnpm run test:server` (local MariaDB 11.4) | PASS, 689 tests in 55 files |
+| `pnpm run build && pnpm run test:browser` with `GK_AXE` | PASS, 149 tests in 4 files (one run; axe 0 violations; Chromium 1248 installed this session). Three-in-a-row flakiness runs NOT DONE (deliberately, to save CI and time) |
+| `pnpm run verify` | PASS, nothing sent |
+| `php -l server/*.php` | PASS |
+| `pnpm run check:htaccess` | BLOCKED: no Apache on this Ubuntu machine; `server/.htaccess` is unchanged on this branch |
+| `pnpm run docs:check -- --base chore/house-standard` | PASS (26 documents) |
+| Visual | Invoicing, Clients, Proposals and Platform stacked cards looked at at 375 px; home eyebrow covered by a prerender test, not looked at; desktop 1280 px unchanged by CSS (media query) and covered by the layout suite. Real phone and VoiceOver: NOT TESTED |
+
+## Ladder, 2026-11-14, branch `chore/house-standard` (documents only, on the tree of `main` `a30a018`)
+
+Ubuntu computer, Node 24.22.1, local MariaDB on port 3329 (socket `/tmp/gk3329.sock`; database `gakinz_dev_test`), machine load about 31 from other sessions.
+
+| Step | Result |
+|---|---|
+| `pnpm exec tsc -b --noEmit` | DONE, clean |
+| `pnpm run lint` | DONE, 0 errors, 0 warnings |
+| `pnpm test` | DONE, 701 tests in 66 files |
+| `pnpm run test:server` | DONE, 687 tests in 55 files (2,074 s: the first attempt hung with no output and was stopped; the second ran under heavy load) |
+| `pnpm run build` | DONE, 32 public pages, `404.html`, `app-shell.html`, 32 sitemap URLs |
+| `pnpm run test:browser` | **BLOCKED**: all 3 files failed to start, `browserType.launch: Executable doesn't exist ... chromium_headless_shell-1248` (installed: 1243 and 1254). Action: `pnpm exec playwright install chromium-headless-shell`, or run it on the Mac. The last good run is 148 of 148 (V1.2 below) |
+| `pnpm run verify` | DONE, PASS, nothing sent |
+| `pnpm run docs:check -- --base origin/main` | DONE, PASS (26 documents, 30 links, 477 files, 20 changed files) |
+
 ## Release and live checks, 2026-11-13 (V1.2, `ea6164c`)
 
 V1.2 (D-065, D-066, D-067) was released on the owner's approval. The checks below are read-only; the agent wrote nothing to the live site except the early `.htaccess` upload the owner asked for.
@@ -221,3 +250,180 @@ Do these once, signed in as yourself, on your phone and on a laptop. Tick, and t
 ## Tailwind v4 and pnpm (branch `chore/tailwind-v4`, 2026-11-11)
 
 What ran: `pnpm run typecheck`, `pnpm run lint:ratchet` (5 of 5), `pnpm test`, `pnpm run build` (32 pages), `pnpm run docs:check --base origin/main`, `pnpm verify` (nothing sent), and an offline before/after harness (128 captures per browser, Chromium and WebKit: 0 element boxes moved). Counts and the NOT TESTED list: `docs/AUDIT.md`, 2026-11-10.
+
+# Test plan
+
+(Moved here from `docs/TEST-PLAN.md` on 2026-11-14; section numbers are the old ones, so "Test plan section 7" is the release acceptance scenarios.)
+
+**Status of the suite on 2026-10-10:** unit tests and server integration tests pass, the
+latter against a throwaway local database. The counts are in `docs/STATUS.md` section 0. This document records what exists, what does not,
+the order in which the gaps are worth closing, and the acceptance scenarios a release must
+pass (section 7).
+
+---
+
+## Test plan 1. What runs today
+
+| Layer | Tool | Coverage | Result |
+|---|---|---|---|
+| Types | `tsc -b`, inside `pnpm run build` | Whole client | **PASS**, 2026-10-10 |
+| Unit | Vitest, `pnpm test` | `src/lib/access.ts`, `csv.ts`, `format.ts`, `session-revoke.ts`, `src/marketing/lib/articleFormat.ts`, `src/marketing/data/cmsResult.ts` | **PASS**, 2026-10-10 |
+| Server integration | Vitest, `pnpm run test:server` | Sign-in, My account, payments, quote acceptance, blog editing, create ids, enquiry follow-ups, the work ledger (`work.php`), the enquiry-to-paid-deposit journey and the `support.php` client branch, against a local `*_test` database (D-036) | **PASS**, 2026-10-10 |
+| PHP syntax | `php -l` | Every server file | **PASS**, 2026-10-10 |
+| Lint | ESLint, `pnpm run lint` | Whole client | **PASS**, 0 errors and 0 warnings (K-002 closed 2026-11-11) |
+| Documentation | `pnpm run docs:check` | Links and the document-sync rule (`AGENTS.md`) | **PASS**, 2026-10-10 |
+| Accessibility | axe-core 4.10.2 in Chrome, plus computed contrast, focus, reflow and target-size sweeps | All 16 public routes | **PASS**, 0 violations, 2026-09-22. `docs/AUDIT.md` |
+| Performance | Chrome DevTools trace and Lighthouse, production build served locally | Public surface | **PARTIAL.** Lab only, no field data, 2026-09-22. `docs/AUDIT.md` |
+| Component | none | n/a | **NOT TESTED** |
+| Other endpoints | none | Everything outside the server suite | **NOT TESTED** |
+| End-to-end | none | n/a | **NOT TESTED** |
+| Screen reader | none | n/a | **NOT TESTED**. The largest remaining accessibility gap |
+
+`src/lib/access.test.ts` covers `canAccess`, `moduleKeyForPath` and `defaultPathForRole`,
+with the client-isolation rules asserted explicitly. It is deliberately narrow: role gating is
+where a mistake is silent and expensive. See `docs/DECISIONS.md` D-016.
+
+## Test plan 2. Gates before any change is complete
+
+Run them all. Report the real output, including a failure. CI runs the same set and the deploy
+waits for it (`docs/DEPLOYMENT.md` section 2).
+
+```bash
+pnpm run build                                              # tsc -b then vite build
+pnpm test                                                   # unit tests
+pnpm run test:server                                        # PHP endpoints, local *_test database
+pnpm run lint                                               # 0 errors, 0 warnings
+pnpm run docs:check                                         # documents current, links resolve
+find server -name '*.php' -print0 | xargs -0 -n1 php -l     # any touched PHP
+```
+
+The lint backlog does not block, but it **must not grow**. See `docs/KNOWN-ISSUES.md` K-002.
+
+## Test plan 3. What cannot be tested from this repository
+
+Stated plainly so nobody claims otherwise.
+
+- Any PHP behaviour outside the server suite. `php -l` proves syntax and nothing more. The
+  rules for the synthetic test path are in `docs/OPERATIONS.md` section 8.
+- Anything depending on the live server, database, mailbox, DNS or configuration.
+- Every external integration: OpenRouter, OpenWeather, SMTP, IMAP, Twilio, Stripe, PayPal,
+  Google, GitHub, Figma, Slack, Calendly. None is configured locally, and none should be
+  exercised without approval, because several of them send real messages or move real money.
+  The server suite uses a fake payment provider and a mail stub instead.
+
+The dev server calls the **live** API, so no write-path test runs through it.
+
+## Test plan 4. Risk-ranked gaps
+
+Ordered by what a defect would cost.
+
+### Priority 1 · Server-side authorisation
+
+The highest-value untested logic in the project. Every endpoint calls `require_auth` on its
+own, with no shared middleware, so a missing call is a silent hole.
+
+What a test would assert, per endpoint and per branch, including read branches:
+
+- An anonymous request returns 401.
+- A valid token with a disallowed role returns 403.
+- A `client`-role token reaches `portal.php`, the client branch of `support.php` and its own
+  account actions in `auth.php`, and nothing else.
+- `portal.php` ignores `?client_id` for a `client` caller and returns only that client's rows.
+  `support.php` already has this coverage (`tests/server/support-client.test.ts`).
+- An expired token, a soft-deleted user and a non-active account are all rejected.
+
+A static check is a cheap partial substitute: assert that every routed file in `server/`
+contains `require_auth` in every request branch.
+
+### Priority 2 · The `access.ts` mirror against the server
+
+`src/lib/access.ts` duplicates the server role constants by hand and nothing checks the two.
+A script that parses the `STAFF`, `ADMINS`, `EDITORS`, `MAIL_ROLES` and `PAY_STAFF` constants
+out of `server/*.php` and compares them with `MODULE_ROLES` would close K-011 and could run in
+the same command as the tests.
+
+### Priority 3 · Money paths
+
+Errors here are visible to clients and hard to reverse.
+
+- VAT: subtotal from items, `vat_rate` applied at read, total inclusive. Asserted the same way
+  in `invoices.php`, `portal.php`, `clients.php` and `cron.php`, so a change to one must not
+  drift from the others.
+- Proposal acceptance producing the 40, 30, 30 invoice schedule.
+- Overdue-invoice reminders and the weekly digest (2026-11-09, Phase 7): `tests/server/cron-reminders.test.ts`, 13 tests against a fake SMTP server on 127.0.0.1 (one reminder per invoice per interval, a hand-sent reminder counts, a configurable interval, a failed send is retried, the named lock, the digest at most once in 6 days, `job=all` mails nobody twice). `tests/server/tasks.test.ts`, 12 tests: task update, date validation, staff-only, and a move to the same status.
+- The Stripe webhook: a valid signature, a bad signature, a replayed timestamp, a
+  `checkout.session.completed` that is not `payment_status = paid`, and a repeat of an event
+  for an already-paid invoice.
+
+Since 2026-10-10 the server suite covers the VAT-inclusive Stripe amount, amount and currency
+mismatch, event de-duplication and the PayPal switch (`tests/server/payments.test.ts`), and
+sent-only, single-use quote acceptance (`tests/server/proposals.test.ts`). The cross-endpoint
+VAT agreement and the remaining webhook cases are still open.
+
+### Priority 4 · Public entry points
+
+`contact.php`, `verify.php`, `blog.php`, `testimonials.php`, and the two token endpoints. `verify.php` and `certificates.php` are covered since 2026-11-09 by `tests/server/certificates.test.ts` (21 tests: issue, roles, validation, revoke, uniform 404, throttle and its window, no guess in the audit log) and `src/app/modules/certificatesModel.test.ts` (6). For
+each: the happy path, a malformed input, and for the token endpoints an invalid, an expired and
+a deleted target.
+
+### Priority 5 · Accessibility
+
+See `docs/AUDIT.md`. The public surface was measured on 2026-09-22; the CMS and
+real assistive technology are not measured at all.
+
+### Priority 6 · Component behaviour
+
+Lowest value per unit of effort here, because the type checker already catches a large class
+of these and the modules are thin over the API.
+
+## Test plan 5. Manual smoke test
+
+Until endpoint tests exist, this is the check to run by hand after a server upload. It
+requires production access, so it is a deliberate act, not a routine one.
+
+1. Load the public home page. Confirm it renders and the blog section populates.
+2. Submit the contact form with a real message. Confirm it appears in Leads.
+3. Sign in. Confirm the role lands on the right default route.
+4. Open one module per role group and confirm no error banner.
+5. Sign in as a `client`-role account. Confirm only the portal and My account are reachable,
+   and that editing the URL to another client's identifier changes nothing. Do not send a
+   portal message unless a real client conversation calls for one.
+6. Check Platform, Integrations, and confirm the booleans match what was configured.
+7. Check the Care Plan module for a site returning a non-2xx status.
+
+Record what was checked and what was not. A partial smoke test reported as a full one is worse
+than no smoke test.
+
+## Test plan 6. Adding a test
+
+`vitest.config.ts` picks up any `src/**/*.test.{ts,tsx}` file beside the unit under test; it is
+not bundled into `dist/`. Server tests live in `tests/server/` and run under
+`vitest.server.config.ts`. A money, sign-in or ownership change adds a server case.
+
+Keep tests free of network calls. Nothing in either suite should be able to reach the live API.
+
+## Test plan 7. Release acceptance scenarios
+
+These supplement the module acceptance criteria in `docs/PRODUCT-SPEC.md` section 5.5 and the
+production gates in `docs/OPERATIONS.md` section 9. They are checks, not twelve new modules,
+and none has passed at runtime unless its status says so. Phases are the delivery phases in
+`docs/STATUS.md` section 2. Before coding, each approved batch names its endpoints and screens,
+its acceptance cases, its rollback and its remaining owner inputs.
+
+| ID | Scenario | Phase and proof | Status on 2026-10-10 |
+|---|---|---|---|
+| J01 | The owner handles a new enquiry, follow-up, confirmed call and one conversion without duplicate records | Phase 2; a synthetic journey plus retry | PARTIAL. Enquiry to client conversion, including a repeated conversion that creates no duplicate, passes locally in `tests/server/journey.test.ts`; follow-up and confirmed call NOT TESTED |
+| J02 | A reference alone, or with the wrong email, discloses no customer record or account existence | Phases 1 and 2; response and throttling checks | RETIRED 2026-11-09 (D-057). It passed locally on 2026-10-19 for the switched-off reference sign-in; that flow and `tests/server/client-access.test.ts` were deleted. Now `client_access.php` answers 404 for every action (`tests/server/legacy-retired.test.ts`), and `tests/server/references.test.ts` still shows no endpoint reads a reference as input |
+| J03 | A link expires, re-use fails, concurrent consumption allows at most one redemption, and privileged two-factor cannot be skipped | Phase 1; isolated authentication tests | RETIRED 2026-11-09 (D-057). It passed locally on 2026-10-19 for the magic and reference links; those flows and `tests/server/auth.test.ts` were deleted. Now `magic_request`, `magic_consume`, `reset` and the other former `auth.php` actions answer 404 (`tests/server/legacy-retired.test.ts`) and no link table is written |
+| J04 | Client A cannot read or write Client B's projects, tickets, messages, files, invoices or feedback by changing identifiers | Phase 2; endpoint tests with two fake clients | PARTIAL. Tickets and messages pass locally, `tests/server/support-client.test.ts` (K-039); the portal ignores another client's id for projects and invoices, `tests/server/journey.test.ts`; files and feedback NOT TESTED |
+| J05 | A customer message survives a failed send; a retry creates no duplicate, and the owner sees the notification failure | Phase 2; transport fixtures | NOT TESTED |
+| J06 | Permitted customer updates work; financial and internal fields and unverified email changes are rejected | Phase 2; positive and negative endpoint cases | NOT TESTED |
+| J07 | Private feedback stays private; publication needs recorded permission and approval | Phases 2 to 4; publish, unpublish and response inspection | NOT TESTED |
+| J08 | The project brief stays client-linked, shared milestones exclude owner notes, and the export omits restricted information | Phases 2 and 3; record and sanitised export checks | NOT TESTED |
+| J09 | The enquiry-to-handover task works on phone and desktop with keyboard, zoom and reduced motion | Phases 3 and 4; observable owner and client usability checks | NOT TESTED |
+| J10 | Accurate quote, invoice and payment evidence, backup restoration, and publish and edit checks pass | Phases 1 to 4; the production gates | PARTIAL. Quote to invoice to paid deposit passes locally against a fake provider, `tests/server/journey.test.ts`; backup restoration and the live checks NOT TESTED |
+| J11 | A draft or declined quote cannot be accepted or converted; a sent quote converts exactly once under double-click and concurrent requests | Phase 1; endpoint tests | PASS locally, `tests/server/proposals.test.ts` (K-028). Not on the live server |
+| J12 | The Stripe charge equals the invoice's payable total including VAT; a mismatched amount or currency is rejected and not marked paid | Phase 1; sandbox fixtures | PASS locally against a fake provider, `tests/server/payments.test.ts` (K-025). Not on the live server |
+
+No credible schedule exists until the deployed state and recovery have been established.
+
